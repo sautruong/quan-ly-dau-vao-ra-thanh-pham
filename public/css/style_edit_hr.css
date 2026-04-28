@@ -1,0 +1,76 @@
+.main-content {
+    padding: 15px 40px !important;
+    overflow-y: auto !important;
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 5px;
+}
+.form-group input,
+.form-group select {
+
+    padding: 0px 5px 5px 5px;
+    border: none;
+    border-bottom: 1px solid #e7e7e7;
+    outline: none;
+    transition: all 0.2s ease;
+}
+.container-select{
+    display: flex;
+    justify-content: space-between;
+}
+.form-group input:focus,
+.form-group select:focus {
+    border-bottom: 1px solid #2e7d32;
+}
+.form-group label {
+    font-size: 13px;
+    color: #555;
+}
+label {
+    display: inline-block;
+    margin-bottom: 0 !important;
+}
+.group-table {
+    padding: 20px;
+    padding-top: 30px;
+    border: 1px solid #bebebe;
+    border-radius: 10px;
+    position: relative;
+    background-color: #fff;
+    margin-bottom: 50px;
+}
+.group-title {
+    position: absolute;
+    top: -12px;
+    left: 15px;
+    background: #fff;
+    padding: 0 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2e7d32;
+}
+#btn-submit {
+    margin-top: 30px;
+    padding: 8px 20px;
+    background-color: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    width: 100%;
+
+}
+
+#btn-submit:hover {
+    background-color: #256428;
+}

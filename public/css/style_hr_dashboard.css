@@ -1,0 +1,321 @@
+
+
+
+
+
+
+/* ================================
+  MAIN-CONTENT
+================================ */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    padding: 15px 0px;
+    height: 100vh;
+    overflow: hidden;
+
+}
+
+/* ================================
+   DASHBOARD - FORM - SELECT
+================================ */
+#cb-select-box {
+    margin-bottom: 25px;
+    flex-shrink: 0;
+    /* không bị co */
+}
+
+#cb-select-box form {
+    display: flex;
+    gap: 10px;
+}
+
+#cb-select-box form select {
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 0.5px solid gainsboro;
+    transition: all 0.25s ease;
+
+}
+
+#cb-select-box form select:hover {
+    padding: 5px 10px;
+    border-radius: 8px;
+    border-color: #22c55e;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ================================
+   TABLE - HR
+================================ */
+.hr-table {
+    /* display: block; */
+    /* width: 100%; */
+    /* table-layout: fixed; */
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+    background: #ffffff;
+    /* max-width: 1200px; */
+    border-left: none;
+    /* border-radius: 12px; */
+    /* overflow: hidden; */
+    font-size: 16px;
+    width: max-content;
+    min-width: 100%;
+}
+
+
+.hr-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f5f5f5;
+    z-index: 100;
+    padding: 12px 16px;
+    font-weight: 600;
+
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: nowrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
+/* bo góc */
+.hr-table thead th:first-child::before {
+    display: none;
+}
+
+.hr-table thead th:first-child,
+.hr-table td:first-child {
+    /* border-top-left-radius: 12px; */
+    /* font-weight: 600; */
+    border-left: none !important;
+
+
+    /* border-left: 5px solid red;  */
+
+}
+
+.hr-table thead th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.hr-table thead tr th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.hr-table thead {
+    background: #f8fafc;
+
+}
+
+
+/* Phân chia các trường trong cột; */
+
+.hr-table td {
+    position: relative;
+    white-space: nowrap;
+    /* vertical-align: middle; */
+
+}
+
+.hr-table th {
+    white-space: nowrap;
+}
+
+.hr-table td:first-child {
+    border-left: none;
+
+}
+
+.hr-table thead th:not(.index)::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 70%;
+    width: 0.5px;
+    background-color: rgb(231, 231, 231);
+    z-index: 1;
+    /*👈 line nằm dưới */
+    pointer-events: none;
+}
+
+/* ===== BODY ===== */
+.hr-table tbody td {
+    padding: 12px 20px;
+    border-bottom: 1px solid #f1f1f1;
+    /* border-top: 1px solid #f1f1f1; */
+
+}
+
+
+.operation-inner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+}
+
+/* .hr-table tbody tr{
+    border-bottom: 1px solid gray;
+} */
+
+/* ===== ZEBRA ROW ===== */
+/* .hr-table tbody tr:nth-child(even) {
+    background: #fafafa;
+} */
+
+/* ===== HOVER (xanh lợt) ===== */
+
+.hr-table tbody tr:hover {
+    background: #f5f5f5;
+    /* border-left: 3px solid #22c55e; */
+}
+
+/* ===== INDEX COLUMN ===== */
+.hr-table .index {
+    width: 80px;
+    text-align: center;
+}
+
+.col-full_name {
+    width: 250px;
+}
+
+
+
+.col-employee_id {
+    /* width: 150px; */
+    text-align: center;
+}
+
+/* .col-full_name { width: 25%; }
+.col-email { width: 30%; } */
+.col-phone_number {
+    /* width: 150px; */
+    text-align: center;
+}
+
+.col-gender {
+    /* width: 150px; */
+    text-align: center;
+}
+
+.col-date_of_birth {
+    /* width: 150px; */
+    text-align: center;
+}
+
+
+
+/* ===== BO GÓC CHO DÒNG CUỐI ===== */
+.hr-table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+.hr-table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
+
+.hr-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+#container-table {
+    flex: 1;
+    /*  chiếm toàn bộ phần còn lại */
+    overflow-x: auto;
+    overflow-y: auto;
+    position: relative;
+    max-width: 100%;
+    padding-right: 8px;
+    /* padding-top: 20px;          /*  tạo khoảng hở trên */
+    /* box-sizing: border-box; */
+
+}
+
+#container-table::-webkit-scrollbar-track {
+    margin: 50px 0 10px 0px;
+}
+
+/* Ẩn scrollbar */
+#container-table::-webkit-scrollbar {
+    width: 4px;
+}
+
+#container-table::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.05);
+    /* 👈 luôn thấy nhẹ */
+    border-radius: 10px;
+}
+
+/* Style thao tác sửa xóa in hợp đồng */
+.operation {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 6px;
+    /* khoảng cách giữa icon */
+    white-space: nowrap;
+    /* ❗ không cho xuống dòng */
+}
+
+.operation a {
+    text-decoration: none;
+}
+
+.operation a i {
+    margin: 0 5px;
+    color: #555;
+}
+
+.operation a:hover i {
+    color: rgb(255, 109, 83);
+}
+
+/* tooltip cho hợp đồng lao động */
+.operation .tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.operation .tooltip-text {
+    position: absolute;
+    bottom: 130%;
+    /* nằm trên icon */
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: #333;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.2s ease;
+}
+
+/* mũi tên */
+.operation .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+/* hover */
+.operation .tooltip:hover .tooltip-text {
+    opacity: 1;
+}

@@ -1,0 +1,452 @@
+
+.wp-title-category {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+/* ================================
+   NOTE - NUTRITION FACT
+================================ */
+.container-note-nutrition-fact {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding-right: 10px;
+}
+
+.container-note-nutrition-fact p {
+    margin: 0;
+    padding: 0;
+    color: rgb(40, 141, 71);
+    font-style: italic;
+    font-size: 16px;
+}
+
+
+
+
+
+
+/* ================================
+   CATEGORY - PRODUCT
+================================ */
+.main-content {
+    
+    display: flex;
+    flex-direction: column;
+    /* height: 100vh; */
+    /* height: calc(100vh - 60px); */
+    min-height: 0;
+    /* padding-bottom: 20px; khoảng cách dưới */
+        overflow: auto;
+}
+
+.container-category {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 5px 80px 0px;
+}
+
+.container-category::-webkit-scrollbar {
+    width: 6px;
+}
+
+.container-category::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+}
+
+.container-category::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+#wrapper-product {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 33px;
+    padding-right: 5px;
+    margin-bottom: 50px;
+}
+
+.container-product {
+    display: flex;
+    flex-direction: column;
+    border: 0.1px #dfdfdf solid;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 10px;
+    transition: all 0.25s ease;
+}
+
+.container-product:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.wp-title-button {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+}
+
+
+.container-title-product {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+
+}
+
+.title-product:hover a{
+    color: green;
+}
+.title-product a {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+    color: rgb(43, 43, 43);
+    text-decoration: none;
+    transition: 0.25s;
+}
+
+.nutrition-facts i {
+    font-size: 18px;
+    color: green;
+}
+
+/* STYLE BUTTON THÊM - XÓA */
+.container-button {
+    display: flex;
+    flex-direction: row;
+}
+
+/* PHẦN BỔ SUNG */
+.container-button a {
+    display: inline-block;
+    /* QUAN TRỌNG */
+    border-radius: 8px;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    /* bỏ gạch chân */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    /* thay cho p */
+    font-size: 11px;
+}
+
+
+
+/* ADD FILE */
+.btn-add-file {
+    color: #16a34a;
+}
+
+/* DELETE */
+.btn-delete-product {
+    color: #dc2626;
+}
+
+/* HOVER CHUNG */
+.container-button a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+/* HOVER ADD */
+.btn-add-file:hover {
+    background-color: #16a34a;
+    color: #fff;
+}
+
+/* HOVER DELETE */
+.btn-delete-product:hover {
+    background-color: #dc2626;
+    color: #fff;
+}
+
+/* CLICK (nhấn xuống) */
+.container-button a:active {
+    transform: scale(0.95);
+}
+
+/* --- end phần bổ sung --- */
+
+
+.file-item {
+    display: flex;
+    padding: 0px 0px 0px 4px;
+    border-radius: 6px;
+    transition: background 0.2;
+}
+
+.file-item:hover {
+    background-color: #f5f5f5;
+}
+
+.file-item a {
+    text-decoration: none;
+}
+
+.file-item a:hover p {
+    color: #16a34a;
+
+}
+
+/* PHẦN BỔ SUNG 2 */
+.wp-icon-processing-file a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    transition: all 0.25s ease;
+}
+
+/* ICON */
+.wp-icon-processing-file i {
+    font-size: 13px;
+    transition: all 0.25s ease;
+}
+
+/* DOWNLOAD */
+.wp-icon-processing-file a:nth-child(1):hover {
+    background-color: #dbeafe;
+}
+
+.wp-icon-processing-file a:nth-child(1):hover i {
+    color: #2563eb;
+}
+
+/* UPLOAD */
+.wp-icon-processing-file a:nth-child(2):hover {
+    background-color: #dcfce7;
+}
+
+.wp-icon-processing-file a:nth-child(2):hover i {
+    color: #16a34a;
+}
+
+/* DELETE */
+.wp-icon-processing-file a:nth-child(3):hover {
+    background-color: #fee2e2;
+}
+
+.wp-icon-processing-file a:nth-child(3):hover i {
+    color: #dc2626;
+}
+
+/* HOVER CHUNG */
+.wp-icon-processing-file a:hover {
+    transform: scale(1.1);
+}
+
+
+/* --- end bổ sung 2 --- */
+.wp-icon-processing-file {
+    display: flex;
+    gap: 3px;
+}
+
+.content-product {
+    display: flex;
+    gap: 10px;
+    padding-bottom: 15px;
+}
+
+.wp-title-product {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-direction: row;
+    margin-bottom: 20px;
+    padding: 10px 0px;
+    border-bottom: 0.5px solid rgb(211, 211, 211);
+
+}
+
+.wp-list-file {
+    flex: 1;
+}
+
+.container-button {
+    display: flex;
+    gap: 10px;
+}
+
+.container-button button {
+    border-radius: 8px;
+    border: 0.5px solid rgb(230, 230, 230);
+}
+
+button p {
+    margin: 0px;
+    padding: 2px 4px;
+}
+
+/* ================================
+   LIST FILE
+================================ */
+.main-file {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+    margin: 0;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.file-item a p {
+    margin: 0;
+    color: black;
+    padding: 2px 2px;
+    font-size: 14px;
+}
+
+.wp-icon-processing-file i {
+    font-size: 12px;
+    color: rgb(44, 44, 44);
+}
+
+/* ================================
+   IMG PRODUCT
+================================ */
+.img_product img {
+    width: auto;
+    height: 54px !important;
+    height: auto;
+
+}
+
+.img_product {
+
+
+
+
+
+    display: block;
+
+
+    border-radius: 10px;
+    border: 1px solid #e5e5e5;
+    padding: 4px;
+
+
+
+    /* tạo chiều sâu */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+    /* ảnh không méo */
+    object-fit: cover;
+
+    /* mượt */
+    transition: all 0.25s ease;
+}
+
+/* ================================
+   FORM ADD FILE
+================================ */
+
+
+/* nền mờ */
+#modal {
+    display: none;
+    /* ẩn ban đầu */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0, 0, 0, 0.5);
+
+    justify-content: center;
+    align-items: center;
+}
+
+/* form */
+.modal-content {
+    background: #fff;
+    padding: 20px;
+    width: 300px;
+    border-radius: 8px;
+}
+
+/* nút X */
+#closeModal {
+    float: right;
+    cursor: pointer;
+}
+
+/* ================================
+   FORM SEARCH
+================================ */
+.wp-search {
+    display: flex;
+    justify-content: flex-start;
+    /* canh phải, đổi center nếu muốn */
+    margin-bottom: 20px;
+    margin-top: 10px;
+}
+
+.search-box {
+    position: relative;
+    width: 280px;
+    margin-right: 15px;
+    transition: all 0.25s ease;
+}
+.search-input {
+    width: 100%;
+    padding: 10px 12px 10px 38px;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    outline: none;
+    font-size: 14px;
+    background: #fafafa;
+    transition: all 0.25s ease;
+}
+/* Icon */
+.search-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #999;
+    pointer-events: none;
+    transition: 0.25s;
+}
+/* Hover */
+.search-box:hover .search-input {
+    border-color: #bbb;
+    background: #fff;
+}
+/* Focus */
+.search-input:focus {
+    border-color: #4CAF50;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
+}
+.search-input:focus+.search-icon,
+.search-box:focus-within .search-icon {
+    color: #4CAF50;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .search-box {
+        width: 100%;
+    }
+}

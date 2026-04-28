@@ -1,0 +1,255 @@
+* {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+
+html,
+body {
+
+    /* width: 100%;
+      height: 100%; */
+    margin: 0;
+    padding: 0;
+
+}
+
+body {
+    background: rgb(255, 255, 255);
+    overflow-x: hidden;
+}
+
+
+
+
+#wrapper {
+
+    max-width: 600px;
+    margin: 0px auto;
+
+    min-height: 100vh;
+    /* display: flex; */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+
+}
+
+/* ================================
+   CONTAINER LOGIN
+================================ */
+#container {
+    background: white;
+
+    /* height: 100%; */
+
+    /* border-radius: 16px; */
+
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 20px;
+}
+
+/* ================================
+   INFO - BRAND
+================================ */
+#wrapper #container #info-brand {
+    margin-bottom: 15px;
+}
+
+
+#wrapper #container #info-brand #logo {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    /* justify-content: center; */
+    position: relative;
+    margin-bottom: 15px;
+
+}
+
+#wrapper #container #info-brand #logo h4 {
+    margin-left: 21px;
+    margin-bottom: 0;
+    font-weight: 500;
+    position: absolute;
+    top: 0%;
+    left: 10px;
+    color: black;
+    font-size: 19px;
+
+}
+
+/* Title - form */
+#wrapper #container #info-brand #title_form h3 {
+    margin-bottom: 0px;
+    font-size: 25px;
+}
+
+#wrapper #container #info-brand #title_form p {
+    font-size: 16px;
+    color: rgb(82, 82, 82);
+    text-align: justify;
+}
+
+/* ================================
+   FORM - REGISTER
+================================ */
+#wrapper #container #form-register {
+    width: 100%;
+}
+
+#wrapper #container #form-register label {
+    display: block;
+    font-weight: 600;
+    font-size: 18px;
+
+}
+
+#wrapper #container #form-register input {
+    display: block;
+    width: 100%;
+    border: 1px solid rgb(194, 194, 194);
+    border-radius: 12px;
+    padding: 12px 10px;
+    margin-bottom: 15px;
+
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+/* ================================
+   STYLE - CLICK INPUT
+================================ */
+#wrapper #container #form-register input:focus {
+    border: 1px solid green;
+    box-shadow: 0 0 0 1px rgba(0, 128, 0, 0.2);
+}
+
+/* Day of birth */
+/* khối cha */
+#wrapper #container #form-register #day-of-birth {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* 3 select */
+#wrapper #container #form-register #day-of-birth select {
+    flex: 1;
+    border: 1px solid rgb(194, 194, 194);
+    border-radius: 12px;
+    padding: 12px 5px;
+    color: rgb(82, 82, 82);
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ================================
+   STYLE - CLICK SELECT
+================================ */
+#wrapper #container #form-register #day-of-birth select:focus {
+    border: 1px solid green;
+    box-shadow: 0 0 0 1px rgba(0, 128, 0, 0.2);
+}
+
+/* --------------------------------- */
+#wrapper #container #form-register #gender {
+    border: 1px solid rgb(194, 194, 194);
+    border-radius: 12px;
+    padding: 12px 5px;
+    color: rgb(82, 82, 82);
+    display: block;
+    width: 100%;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#wrapper #container #form-register #gender:focus {
+    border: 1px solid green;
+    box-shadow: 0 0 0 1px rgba(0, 128, 0, 0.2);
+}
+
+#wrapper #container #form-register #gender option {
+    width: 95%;
+}
+
+#wrapper #container #form-register #btn-register {
+    background-color: green;
+    color: rgb(233, 233, 233);
+    font-weight: 600;
+    /* Hiệu ứng mượt */
+    transition:
+        background-color 0.3s ease,
+        box-shadow 0.2s ease,
+        transform 0.1s ease;
+}
+
+#wrapper #container #form-register #btn-register:hover {
+    background-color: rgb(4, 143, 4);
+    /* xanh sáng hơn */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    color: rgb(255, 255, 255);
+}
+
+#wrapper #container #form-register a {
+    color: rgb(235, 101, 101);
+    text-align: center;
+    display: block;
+    margin-top: 15px;
+}
+
+#wrapper #container #form-register a:hover {
+    color: rgb(255, 55, 55);
+}
+
+/* ================================
+   hide/unhide pasword
+================================ */
+#wrapper #container #form-register .password-box {
+    position: relative;
+}
+
+#wrapper #container #form-register .password-box input {
+    width: 100%;
+    padding: 12px 40px 12px 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+#wrapper #container #form-register .password-box .toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: none;
+    /* font-size: 18px;
+    user-select: none;
+    transition: 0.2s; */
+}
+
+#wrapper #container #form-register .password-box .toggle-password #eyeIcon {
+    color: rgb(48, 48, 48);
+}
+
+/* #wrapper #container #form-register .password-box .toggle-password:hover{
+    transform: translateY(-50%) scale(1.1);
+} */
+
+/* ================================
+   p.error
+================================ */
+#wrapper #container #form-register p.error {
+    color: rgb(235, 101, 101);
+    transform: translateY(-35%);
+    margin-bottom: 5px;
+    font-style: italic;
+    padding-left: 10px;
+}

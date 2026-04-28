@@ -1,0 +1,477 @@
+/* ============================================
+   COLOR PALETTE
+   ============================================ */
+:root {
+    --color-green: #16a34a;
+    --color-green-light: #22c55e;
+    --color-green-soft: #dcfce7;
+    --color-blue: #1a85cc;
+    --color-blue-soft: #e0f2fe;
+    --color-orange: #f97316;
+    --color-red: #ef4444;
+    --color-red-dark: #b91c1c;
+    --color-white: #ffffff;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-500: #6b7280;
+    --color-gray-700: #374151;
+    --color-gray-900: #111827;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.25s ease;
+}
+
+/* ============================================
+   WRAPPER & LAYOUT
+   ============================================ */
+#wrapper {
+    padding: 20px 40px !important;
+    overflow-y: auto !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: var(--color-white);
+    min-height: 100vh;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 30px;
+
+}
+
+.wp-top-header {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+}
+
+.title h1 {
+    font-size: 35px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--color-gray-900);
+    letter-spacing: 0.5px;
+}
+
+.date p {
+    margin: 0;
+    color: var(--color-blue);
+    font-size: 16px;
+    font-weight: 500;
+    margin-top: 4px;
+    text-align: center;
+}
+
+a img {
+    width: 60px;
+    height: auto;
+}
+
+/* ============================================
+   CHOOSE DISPLAY
+   ============================================ */
+.choose-display select {
+    padding: 10px 36px 10px 18px;
+    border-radius: 10px;
+    border: 1.5px solid var(--color-gray-200);
+    background-color: var(--color-white);
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%231a85cc%22%20d%3D%22M6%208.5L1.5%204h9z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    box-shadow: var(--shadow-sm);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    transition: var(--transition);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    outline: none;
+}
+
+.choose-display select:hover {
+    border-color: var(--color-blue);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.choose-display select:focus {
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 3px rgba(26, 133, 204, 0.15);
+}
+
+/* ============================================
+   CONTENT
+   ============================================ */
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ============================================
+   PRODUCT LIST
+   ============================================ */
+.list-product {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    padding: 0;
+    margin: 0;
+}
+
+.product-item {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+    list-style: none;
+    border-radius: 14px;
+    border: 1.5px solid var(--color-gray-200);
+    background-color: var(--color-white);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    padding-bottom: 15px;
+}
+
+/* ============================================
+   1. WP-PRODUCT-NUM (Green header + Red num badge)
+   ============================================ */
+.wp-product-num {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgb(4, 78, 4) 0%, rgb(8, 143, 8) 100%);
+}
+
+.name-product p {
+    margin: 0;
+    color: var(--color-white);
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.num input {
+    border: none;
+    border-radius: 8px;
+    width: 80px;
+    text-align: center;
+    padding: 6px 10px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--color-red-dark);
+    background-color: var(--color-green-soft);
+    outline: none;
+    pointer-events: none;
+}
+
+/* ============================================
+   INNER PADDING FOR BODY SECTIONS
+   ============================================ */
+.list-QC,
+.note,
+.wp-info {
+    margin: 0 14px;
+}
+
+.list-QC {
+    margin-top: 12px;
+}
+
+/* ============================================
+   QC CHECKBOX (Round, read-only style)
+   ============================================ */
+.list-QC {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.list-QC>div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.list-QC label {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-500);
+    user-select: none;
+    font-weight: 500;
+}
+
+.list-QC input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-gray-300);
+    border-radius: 50%;
+    background-color: var(--color-white);
+    position: relative;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.list-QC input[type="checkbox"]:checked {
+    border-color: var(--color-green);
+    background-color: var(--color-green-soft);
+}
+
+.list-QC input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 5px;
+    height: 10px;
+    border: solid var(--color-green);
+    border-width: 0 2.5px 2.5px 0;
+}
+
+.list-QC input[type="checkbox"]:checked+label {
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+/* ============================================
+   NOTE (Orange + Italic)
+   ============================================ */
+.note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background-color: #fff7ed;
+    border-left: 3px solid var(--color-orange);
+    border-radius: 6px;
+}
+
+.note strong {
+    color: var(--color-orange);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.note input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--color-orange);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 2px 4px;
+    outline: none;
+    pointer-events: none;
+}
+
+/* ============================================
+   2. LIST-INFO (Read-only, no hover)
+   ============================================ */
+.wp-info {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background-color: var(--color-white);
+    /* border: 1px solid var(--color-gray-200); */
+    border-radius: 8px;
+    /* border-left: 3px solid var(--color-blue); */
+}
+
+.wp-info .title {
+    margin-bottom: 6px;
+}
+
+.wp-info .title p {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-blue);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.list-info {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    border-bottom: 1px dashed var(--color-gray-200);
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-item span {
+    color: var(--color-gray-900);
+    font-weight: 600;
+    text-align: right;
+}
+
+/* ============================================
+   OTHER WORK SECTION
+   ============================================ */
+.wp-other-work {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 16px;
+    background-color: var(--color-white);
+    border-radius: 12px;
+    border: 1.5px solid var(--color-gray-200);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 3. ADD-OTHER-WORK (Heading, not button) */
+.add-other-work p {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-red-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--color-red);
+    display: inline-block;
+}
+
+/* 4. LIST-OTHER-WORK (Read-only, no hover) */
+.list-other-work {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.other-work-item {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 6px;
+    background-color: var(--color-white);
+    border-radius: 24px;
+    border: 1px solid var(--color-gray-200);
+}
+
+.serial {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgb(6, 114, 6) 0%, rgb(7, 153, 7) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);
+}
+
+.serial p {
+    margin: 0;
+    color: var(--color-white);
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.content-other-work {
+    flex: 1;
+    min-width: 150px;
+}
+
+.content-other-work input {
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    font-weight: 500;
+    outline: none;
+    width: 100%;
+    padding: 2px 4px;
+    pointer-events: none;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1200px) {
+    .list-product {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .list-product {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    #wrapper {
+        padding: 16px !important;
+    }
+
+    .list-product {
+        grid-template-columns: 1fr;
+    }
+
+    .title h1 {
+        font-size: 26px;
+    }
+}
+
+/* ============================================
+   COLUMN MODE OVERRIDES (chỉ áp dụng cho DESKTOP)
+   Dưới 1200px ưu tiên responsive ở trên.
+   ============================================ */
+@media (min-width: 1200px) {
+    .cols-2 .list-product {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .cols-2 .list-other-work {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .cols-4 .list-product {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .cols-4 .list-other-work {
+        display: flex;
+        flex-wrap: wrap;
+    }
+}

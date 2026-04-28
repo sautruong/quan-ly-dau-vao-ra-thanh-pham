@@ -1,0 +1,704 @@
+/* ============================================
+   COLOR PALETTE
+   ============================================ */
+:root {
+    --color-green: #16a34a;
+    --color-green-light: #22c55e;
+    --color-green-dark: #15803d;
+    --color-green-soft: #dcfce7;
+    --color-blue: #1a85cc;
+    --color-orange: #f97316;
+    --color-red: #ef4444;
+    --color-white: #ffffff;
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-500: #6b7280;
+    --color-gray-700: #374151;
+    --color-gray-900: #111827;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.12);
+    --transition: all 0.25s ease;
+}
+
+/* ============================================
+   WRAPPER & LAYOUT
+   ============================================ */
+#wrapper {
+    display: flex;
+    flex-direction: column;
+    padding: 20px 40px !important;
+    overflow-y: auto !important;
+    min-height: 100vh;
+}
+
+/* ============================================
+   1. LOGO + TITLE
+   ============================================ */
+.wp-logo-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.wp-logo-title .logo img {
+    width: 50px;
+    height: auto;
+}
+
+.wp-logo-title .title h1 {
+    margin: 0;
+    font-size: 38px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* ============================================
+   2. MAIN TABS
+   ============================================ */
+.main-tab {
+    margin: 0 0 30px 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+.main-tab > p{
+    margin-top: auto;
+}
+
+.main-tab .tab-item {
+    list-style: none;
+    position: relative;
+    margin-right: 28px;
+    cursor: pointer;
+}
+
+.tab-item a {
+    display: block;
+    padding: 10px 2px;
+    color: var(--color-gray-500);
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.tab-item:hover a {
+    color: var(--color-gray-700);
+}
+
+/* active tab: black bold text, 2px green underline */
+.main-tab .active {
+    border-bottom: 2px solid var(--color-green);
+}
+
+.main-tab .active a {
+    color: var(--color-gray-900);
+    font-weight: 700;
+}
+
+/* ============================================
+   3. CONTENT
+   ============================================ */
+.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+}
+
+/* ============================================
+   4. SEARCH BAR (matches production_plan, centered)
+   ============================================ */
+.wp-search {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.wp-search i.fa-magnifying-glass {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-gray-500);
+    font-size: 14px;
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+.wp-search input {
+    width: 100%;
+    padding: 11px 16px 11px 42px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-700);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    outline: none;
+}
+
+.wp-search input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.wp-search input:hover {
+    border-color: var(--color-green-light);
+    box-shadow: var(--shadow-md);
+}
+
+.wp-search input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.wp-search:focus-within i.fa-magnifying-glass {
+    color: var(--color-green);
+}
+
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+}
+
+.search-dropdown.active {
+    display: block;
+}
+
+.search-dropdown li {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    transition: var(--transition);
+}
+
+.search-dropdown li:hover {
+    background-color: var(--color-green-soft);
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+/* ============================================
+   4b. DATETIME PICKER (centered, dưới .wp-search)
+   ============================================ */
+.wp-date-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 auto;
+}
+
+.wp-date-picker label {
+    font-size: 14px;
+    color: var(--color-gray-700);
+    font-weight: 600;
+}
+
+.wp-date-picker input[type="datetime-local"] {
+    padding: 10px 14px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-700);
+    box-shadow: var(--shadow-sm);
+    outline: none;
+    transition: var(--transition);
+}
+
+.wp-date-picker input[type="datetime-local"]:hover {
+    border-color: var(--color-green-light);
+    box-shadow: var(--shadow-md);
+}
+
+.wp-date-picker input[type="datetime-local"]:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* ============================================
+   5. PRODUCT LIST (grid 3 columns)
+   ============================================ */
+.list-product {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.product-item {
+    list-style: none;
+    position: relative;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 14px;
+    background-color: var(--color-white);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    padding-top: 12px;
+}
+
+/* X button: canh giữa ở mép trên, nhô ra nửa ra ngoài card */
+.product-item .btn-remove-product {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--color-white);
+    background-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+    z-index: 2;
+    transition: var(--transition);
+    padding: 0;
+}
+
+.product-item .btn-remove-product:hover {
+    background-color: var(--color-red);
+    color: var(--color-white);
+    transform: translateX(-50%) scale(1.1);
+}
+
+.product-item:hover {
+    border-color: var(--color-green);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+/* Top strip: green background, white product name, small input */
+.wp-top-product {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #0f5629 0%, #145f30 100%);
+    border-radius: 10px 10px 0 0;
+    margin: -1px -1px 0 -1px;
+}
+
+.wp-top-product .name-product {
+    flex: 1;
+    min-width: 0;
+}
+
+.wp-top-product .name-product p {
+    margin: 0;
+    color: var(--color-white);
+    font-size: 18px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wp-top-product input {
+    width: 80px;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--color-white);
+    color: var(--color-gray-900);
+       font-size: 20px;
+    color: #003c7c;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: var(--transition);
+}
+
+.wp-top-product input:focus {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.45);
+}
+
+/* ============================================
+   6. INTERPRETATION (italic, gray)
+   ============================================ */
+.interpretation {
+    padding: 10px 14px 12px;
+}
+
+.interpretation p {
+    margin: 0;
+    color: var(--color-gray-500);
+        font-size: 15px;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.interpretation span {
+    color: var(--color-gray-500);
+    font-style: italic;
+}
+.interpretation .title{
+    font-weight: 600;
+}
+
+/* Interpretation thành input — user có thể chỉnh */
+.interpretation .input-interpretation {
+    width: 100%;
+    border: 1px dashed var(--color-gray-300);
+    border-radius: 6px;
+    background-color: transparent;
+    padding: 6px 10px;
+    color: var(--color-gray-500);
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.5;
+    outline: none;
+    transition: border-color 0.25s ease, background-color 0.25s ease,
+                color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Textarea: tự xuống dòng và giãn chiều dọc theo nội dung */
+.interpretation textarea.input-interpretation {
+    resize: none;
+    overflow: hidden;
+    min-height: 38px;
+    font-family: inherit;
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: block;
+}
+
+.interpretation .input-interpretation:hover {
+    border-color: var(--color-green-light);
+    background-color: var(--color-gray-50);
+}
+
+.interpretation .input-interpretation:focus {
+    border-style: solid;
+    border-color: var(--color-green);
+    background-color: var(--color-white);
+    color: var(--color-gray-700);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+}
+
+/* Dropdown empty state */
+.search-dropdown li.empty {
+    color: var(--color-gray-500);
+    font-style: italic;
+    cursor: default;
+    text-align: center;
+}
+.search-dropdown li.empty:hover {
+    background: transparent;
+    color: var(--color-gray-500);
+}
+.search-dropdown li.active {
+    background-color: var(--color-green-soft);
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+/* Empty list-product placeholder */
+.list-product:empty::before {
+    content: "Chưa có sản phẩm được thiết lập. Nhập ô tìm kiếm để thêm";
+    grid-column: 1 / -1;
+    display: block;
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--color-gray-500);
+    font-style: italic;
+    border: 2px dashed var(--color-gray-200);
+    border-radius: 12px;
+    background-color: var(--color-white);
+}
+
+/* ============================================
+   7. ACTION BUTTONS (centered, hover, active highlight)
+   ============================================ */
+.wp-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 10px;
+    padding: 10px 0;
+    margin-bottom: 20px;
+}
+
+.wp-button>div {
+    min-width: 120px;
+    padding: 10px 28px;
+    border-radius: 10px;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-300);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+    text-align: center;
+}
+
+.wp-button>div p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    letter-spacing: 0.3px;
+}
+
+.wp-button>div:hover {
+    border-color: var(--color-green);
+    color: var(--color-green);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.wp-button>div:hover p {
+    color: var(--color-green);
+}
+
+/* Active/clicked button — stands out */
+.wp-button>div.active,
+.wp-button>div:active {
+    background: linear-gradient(135deg, var(--color-green) 0%, var(--color-green-light) 100%);
+    border-color: var(--color-green-dark);
+    box-shadow: var(--shadow-lg), 0 0 0 3px rgba(22, 163, 74, 0.2);
+    transform: translateY(-1px) scale(1.03);
+}
+
+.wp-button>div.active p,
+.wp-button>div:active p {
+    color: var(--color-white);
+    font-weight: 700;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1100px) {
+    .list-product {
+        grid-template-columns: repeat(2, 1fr);
+                display: flex;
+        flex-direction: column;
+    }
+    .wp-logo-title{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 700px) {
+    #wrapper {
+        padding: 16px !important;
+    }
+
+    .wp-logo-title .title h1 {
+        font-size: 22px;
+    }
+
+    .main-tab {
+        flex-wrap: wrap;
+    }
+
+    .list-product {
+        grid-template-columns: 1fr;
+    }
+
+    .wp-button>div {
+        min-width: 100px;
+        padding: 10px 20px;
+    }
+}
+.line{
+    border-bottom: 0.5px solid rgb(219, 219, 219);
+    margin: 10px 0 18px;
+}
+
+/* ============================================
+   8. HISTORY BLOCK
+   ============================================ */
+.history {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.history p {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+    letter-spacing: 0.3px;
+}
+
+/* Banner khi đang sửa batch */
+.edit-batch-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px;
+    background-color: #fff7ed;
+    border: 1px solid var(--color-orange);
+    border-radius: 8px;
+    color: var(--color-orange);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.edit-batch-banner strong {
+    color: #b45309;
+    font-weight: 700;
+}
+
+.edit-batch-banner a {
+    color: var(--color-red);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.edit-batch-banner a:hover {
+    text-decoration: underline;
+}
+
+/* Table */
+.history-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+}
+
+.history-table thead td {
+    padding: 12px 16px;
+    background-color: var(--color-gray-50);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1.5px solid var(--color-gray-200);
+}
+
+.history-table thead td:first-child { width: 180px; }
+.history-table thead td:last-child  { width: 140px; text-align: center; }
+
+.history-table tbody td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    border-bottom: 1px solid var(--color-gray-100);
+    vertical-align: middle;
+}
+
+.history-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.history-table tbody tr:hover td {
+    background-color: #f9fafb;
+}
+
+.history-table tbody td:nth-child(2) {
+    color: var(--color-gray-900);
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* Actions column */
+.history-actions {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.history-actions a {
+    color: var(--color-green);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+
+.history-actions a:hover {
+    background-color: var(--color-green-soft);
+    color: var(--color-green-dark);
+}
+
+.history-actions a.delete-list-import {
+    color: var(--color-red);
+}
+
+.history-actions a.delete-list-import:hover {
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
+
+.history-actions .sep {
+    color: var(--color-gray-300);
+    margin: 0 2px;
+    font-weight: 400;
+}
+
+/* Empty state */
+.history-table tbody tr.history-empty td {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--color-gray-500);
+    font-style: italic;
+    background-color: var(--color-white);
+}
+
+@media (max-width: 700px) {
+    .history-table thead td:first-child { width: auto; }
+    .history-table tbody td,
+    .history-table thead td {
+        padding: 10px 10px;
+        font-size: 12px;
+    }
+}
+/* BỔ SUNG */
+label {
+    /* display: inline-block; */
+    margin-bottom: 0 !important;
+}

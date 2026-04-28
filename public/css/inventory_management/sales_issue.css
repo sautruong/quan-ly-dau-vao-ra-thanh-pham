@@ -1,0 +1,372 @@
+/* ============================================
+   sales_issue — STYLE
+   Kế thừa biến màu / shadow từ dashboard.css
+   ============================================ */
+
+/* ============================================
+   1. .wp-custom-imfo — cụm thông tin khách hàng (canh trái)
+   ============================================ */
+.wp-custom-imfo {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.wp-custom-imfo .wp-customer,
+.wp-custom-imfo .wp-address,
+.wp-custom-imfo .wp-receiver {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    position: relative;
+}
+
+.wp-custom-imfo label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    white-space: nowrap;
+    min-width: 130px;
+}
+
+.wp-custom-imfo input {
+    flex: 1;
+    max-width: 420px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-700);
+    box-shadow: var(--shadow-sm);
+    outline: none;
+    transition: var(--transition);
+}
+
+.wp-custom-imfo input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.wp-custom-imfo input:hover {
+    border-color: var(--color-green-light);
+    box-shadow: var(--shadow-md);
+}
+
+.wp-custom-imfo input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.wp-custom-imfo input[readonly] {
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-700);
+    cursor: default;
+}
+
+/* Dropdown gợi ý khách hàng */
+.customer-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 140px;
+    right: 0;
+    max-width: 420px;
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 12;
+    display: none;
+}
+
+.customer-dropdown.active {
+    display: block;
+}
+
+.customer-dropdown li {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    transition: var(--transition);
+}
+
+.customer-dropdown li:hover,
+.customer-dropdown li.active {
+    background-color: var(--color-green-soft);
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+.customer-dropdown li.empty {
+    color: var(--color-gray-500);
+    font-style: italic;
+    cursor: default;
+}
+
+.customer-dropdown li.empty:hover {
+    background: transparent;
+    color: var(--color-gray-500);
+}
+
+/* ============================================
+   2. .list-sale-product — bảng xuất hàng + tổng
+   ============================================ */
+.list-sale-product {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.list-sale-product table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.list-sale-product thead td {
+    padding: 12px 14px;
+    background-color: var(--color-gray-50);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1.5px solid var(--color-gray-200);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.list-sale-product tbody td {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    border-bottom: 1px solid var(--color-gray-100);
+    vertical-align: middle;
+    text-align: center;
+}
+
+.list-sale-product tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.list-sale-product tbody tr:hover td {
+    background-color: var(--color-gray-50);
+}
+
+/* Cột tiền — canh phải, đậm */
+.list-sale-product tbody td:nth-last-child(1),
+.list-sale-product tbody td:nth-last-child(2) {
+    text-align: right;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    white-space: nowrap;
+}
+
+/* Input trong bảng */
+.list-sale-product input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 8px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-700);
+    outline: none;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.list-sale-product input.name_product {
+    text-align: left;
+    min-width: 160px;
+}
+
+.list-sale-product input.quantity {
+    max-width: 90px;
+    color: #003c7c;
+    font-weight: 700;
+}
+
+.list-sale-product input:hover {
+    border-color: var(--color-green-light);
+}
+
+.list-sale-product input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* Nút xóa dòng */
+.list-sale-product .btn-remove-row {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--color-gray-200);
+    color: var(--color-gray-700);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    padding: 0;
+    line-height: 1;
+}
+
+.list-sale-product .btn-remove-row:hover {
+    background-color: var(--color-red);
+    color: var(--color-white);
+    transform: scale(1.12);
+}
+
+/* ============================================
+   3. .wp-total — khu vực tổng (canh phải)
+   ============================================ */
+.wp-total {
+    align-self: flex-end;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 28px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #0f5629 0%, #145f30 100%);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.wp-total .wp-weight,
+.wp-total .wp-value {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.wp-total .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+.wp-total .result {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-white);
+    background-color: rgba(255, 255, 255, 0.14);
+    padding: 6px 14px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.wp-total .wp-value .result {
+    color: #fef9c3;
+}
+
+/* Cảnh báo dòng thiếu tồn */
+.list-sale-product tbody tr.row-shortage td {
+    background-color: #fef2f2;
+    color: #b91c1c;
+}
+.list-sale-product tbody tr.row-shortage:hover td {
+    background-color: #fee2e2;
+}
+.list-sale-product tbody tr.row-shortage input {
+    border-color: var(--color-red);
+    color: #b91c1c;
+}
+
+/* Dropdown gợi ý sản phẩm — gắn vào body, định vị tuyệt đối */
+.product-suggest-dropdown {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+}
+.product-suggest-dropdown.active { display: block; }
+.product-suggest-dropdown li {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    transition: var(--transition);
+}
+.product-suggest-dropdown li:hover,
+.product-suggest-dropdown li.active {
+    background-color: var(--color-green-soft);
+    color: var(--color-green);
+    font-weight: 600;
+}
+.product-suggest-dropdown li.empty {
+    color: var(--color-gray-500);
+    font-style: italic;
+    cursor: default;
+}
+.product-suggest-dropdown li.empty:hover {
+    background: transparent;
+    color: var(--color-gray-500);
+}
+
+/* ============================================
+   4. Responsive
+   ============================================ */
+@media (max-width: 1000px) {
+    .list-sale-product table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    .wp-total {
+        align-self: stretch;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+}
+
+@media (max-width: 700px) {
+    .wp-custom-imfo label {
+        min-width: 110px;
+    }
+
+    .customer-dropdown {
+        left: 0;
+    }
+
+    .wp-total {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .wp-total .wp-weight,
+    .wp-total .wp-value {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

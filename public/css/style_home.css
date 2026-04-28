@@ -1,0 +1,99 @@
+#content-home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    justify-content: space-between;
+    padding: 50px 0px;
+}
+
+.branch{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+.logo img {
+    width: 40px;
+    height: auto;
+}
+.name_branch{
+    color: gray;
+    font-weight: 500;
+}
+.body-content{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+   align-items: center;
+}
+
+.wp-brand-tab{
+    display: flex;
+    flex-direction: column;
+    gap: 100px;
+}
+
+/* ===== EXPERMORE ===== */
+.expermore {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* bỏ gạch chân link */
+.expermore {
+    text-decoration: none !important;
+}
+
+/* reset p */
+.expermore p {
+    margin: 0;
+    color: gray;
+}
+
+/* icon */
+.expermore i {
+    color: gray;
+    transition: 0.25s;
+}
+
+/* hover */
+.expermore:hover p,
+.expermore:hover i {
+    color: green;
+}
+
+/* hiệu ứng nhẹ */
+.expermore:hover i {
+    transform: translateX(4px);
+}
+
+
+/* ===== LOGOUT ===== */
+.logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none !important; /* ❌ bỏ gạch chân */
+}
+
+.logout p {
+    margin: 0;
+    color: gray;
+}
+
+.logout i {
+    color: gray;
+    transition: 0.25s;
+}
+
+/* hover logout */
+.logout:hover p,
+.logout:hover i {
+    color: red;
+}
+
+.logout:hover i {
+    transform: translateX(4px);
+}

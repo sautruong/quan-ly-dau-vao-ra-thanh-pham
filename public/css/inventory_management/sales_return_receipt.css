@@ -1,0 +1,483 @@
+/* ============================================
+   sales_return_receipt — STYLE
+   Kế thừa biến màu / shadow từ dashboard.css
+   ============================================ */
+
+/* ============================================
+   1. Cụm thông tin khách hàng + ngày giờ
+   ============================================ */
+.wp-customer,
+.wp-custom-acronym,
+.wp-date-picker {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+}
+
+.wp-customer label,
+.wp-custom-acronym label,
+.wp-date-picker label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    white-space: nowrap;
+    min-width: 130px;
+}
+
+.wp-customer input,
+.wp-custom-acronym input,
+.wp-date-picker input {
+    flex: 1;
+    max-width: 420px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-700);
+    box-shadow: var(--shadow-sm);
+    outline: none;
+    transition: var(--transition);
+}
+
+.wp-customer input::placeholder,
+.wp-custom-acronym input::placeholder,
+.wp-date-picker input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.wp-customer input:hover,
+.wp-custom-acronym input:hover,
+.wp-date-picker input:hover {
+    border-color: var(--color-green-light);
+    box-shadow: var(--shadow-md);
+}
+
+.wp-customer input:focus,
+.wp-custom-acronym input:focus,
+.wp-date-picker input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.wp-custom-acronym input[readonly] {
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-700);
+    cursor: default;
+}
+
+/* Customer search dropdown */
+.wp-customer {
+    position: relative;
+}
+
+.customer-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 130px;
+    right: 0;
+    max-width: 420px;
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 12;
+    display: none;
+}
+
+.customer-dropdown.active {
+    display: block;
+}
+
+.customer-dropdown li {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    transition: var(--transition);
+}
+
+.customer-dropdown li:hover,
+.customer-dropdown li.active {
+    background-color: var(--color-green-soft);
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+.customer-dropdown li.empty {
+    color: var(--color-gray-500);
+    font-style: italic;
+    cursor: default;
+}
+
+.customer-dropdown li.empty:hover {
+    background: transparent;
+    color: var(--color-gray-500);
+}
+
+/* ============================================
+   2. .wp-sales-return — danh sách hàng trả
+   ============================================ */
+.wp-sales-return {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* Grid 4 cột giãn đều */
+.wp-sales-return .list-product {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.wp-sales-return .product-item {
+    list-style: none;
+    position: relative;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 14px;
+    background-color: var(--color-white);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    padding: 0 0 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.wp-sales-return .product-item:hover {
+    border-color: var(--color-green);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+/* Nút X */
+.wp-sales-return .product-item .btn-remove-product {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--color-white);
+    background-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+    z-index: 2;
+    padding: 0;
+    transition: var(--transition);
+}
+
+.wp-sales-return .product-item .btn-remove-product:hover {
+    background-color: var(--color-red);
+    color: var(--color-white);
+    transform: translateX(-50%) scale(1.1);
+}
+
+/* Tên + số lượng — phần nổi bật */
+.wp-name-num-product {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0;
+    background: linear-gradient(135deg, #0f5629 0%, #145f30 100%);
+    border-radius: 12px 12px 0 0;
+    padding: 12px 14px;
+    text-align: center;
+}
+
+.wp-name-num-product .name-product {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wp-name-num-product .name-product p {
+    margin: 0;
+    color: var(--color-white);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.wp-name-num-product .num-return {
+    width: 80px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+}
+
+.wp-name-num-product .num-return input {
+    width: 100%;
+    padding: 8px 6px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--color-white);
+    color: #003c7c;
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: var(--transition);
+}
+
+.wp-name-num-product .num-return input::placeholder {
+    color: rgba(0, 60, 124, 0.35);
+    font-weight: 500;
+}
+
+.wp-name-num-product .num-return input:focus {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================
+   3. .wp-reason — grid 2 cột × 3 hàng
+   ============================================ */
+.wp-reason {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 10px;
+    padding: 12px;
+}
+
+.wp-reason > div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    background-color: var(--color-white);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.wp-reason > div:hover {
+    border-color: var(--color-green-light);
+    background-color: var(--color-gray-50);
+}
+
+.wp-reason > div input[type="radio"] {
+    accent-color: var(--color-green);
+    cursor: pointer;
+    margin: 0;
+}
+
+.wp-reason > div label {
+    margin: 0 !important;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    line-height: 1.3;
+    user-select: none;
+}
+
+/* Trạng thái active — radio được chọn */
+.wp-reason > div.active {
+    border-color: var(--color-green);
+    background: linear-gradient(135deg, var(--color-green-soft) 0%, #ecfdf5 100%);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+    transform: translateY(-1px);
+}
+
+.wp-reason > div.active label {
+    color: var(--color-green-dark);
+    font-weight: 700;
+}
+
+/* Trạng thái sau khi xử lý — block "Đã + nhãn" */
+.handled-tag {
+    margin: 0 12px 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background-color: var(--color-green-soft);
+    color: var(--color-green-dark);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    border: 1px solid var(--color-green-light);
+}
+
+/* ============================================
+   4. .wp-handling — radio chọn cách xử lý
+   ============================================ */
+.wp-handling {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 10px;
+    padding: 12px;
+    border-top: 1px dashed var(--color-gray-200);
+    margin-top: 4px;
+}
+
+.wp-handling > div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    background-color: var(--color-white);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.wp-handling > div:hover {
+    border-color: var(--color-blue);
+    background-color: #eff6ff;
+}
+
+.wp-handling > div input[type="radio"] {
+    accent-color: var(--color-blue);
+    cursor: pointer;
+    margin: 0;
+}
+
+.wp-handling > div label {
+    margin: 0 !important;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    line-height: 1.3;
+    user-select: none;
+}
+
+.wp-handling > div.active {
+    border-color: var(--color-blue);
+    background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+    box-shadow: 0 0 0 3px rgba(26, 133, 204, 0.18);
+    transform: translateY(-1px);
+}
+
+.wp-handling > div.active label {
+    color: #1e40af;
+    font-weight: 700;
+}
+
+/* Read-only reason inside handle mode */
+.reason-readonly {
+    margin: 8px 12px 0;
+    padding: 6px 10px;
+    border: 1px dashed var(--color-gray-200);
+    border-radius: 8px;
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-500);
+    font-size: 12px;
+    font-style: italic;
+}
+
+.reason-readonly strong {
+    color: var(--color-gray-700);
+    font-weight: 600;
+    font-style: normal;
+}
+
+/* ============================================
+   5. Empty placeholder
+   ============================================ */
+.wp-sales-return .list-product:empty::before {
+    content: "Chưa có sản phẩm. Tìm kiếm phía trên để thêm hàng trả lại.";
+    grid-column: 1 / -1;
+    display: block;
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--color-gray-500);
+    font-style: italic;
+    border: 2px dashed var(--color-gray-200);
+    border-radius: 12px;
+    background-color: var(--color-white);
+}
+
+/* ============================================
+   6. Search bar nằm trong .wp-sales-return — center, max width
+   ============================================ */
+.wp-sales-return .wp-search {
+    margin: 0 auto;
+}
+
+/* ============================================
+   7. History — cột trạng thái + icon
+   ============================================ */
+.history-table thead .col-status,
+.history-table tbody .col-status {
+    width: 110px;
+    text-align: center;
+}
+
+.status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    cursor: help;
+    transition: transform 0.2s ease;
+}
+
+.status-icon:hover {
+    transform: scale(1.12);
+}
+
+.status-icon.status-done    { color: var(--color-green); }
+.status-icon.status-partial { color: #d97706; }      /* vàng đậm */
+.status-icon.status-pending { color: var(--color-red); }
+
+/* ============================================
+   8. Responsive
+   ============================================ */
+@media (max-width: 1280px) {
+    .wp-sales-return .list-product {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1000px) {
+    .wp-sales-return .list-product {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .wp-sales-return .list-product {
+        grid-template-columns: 1fr;
+    }
+
+    .wp-customer label,
+    .wp-custom-acronym label,
+    .wp-date-picker label {
+        min-width: 100px;
+    }
+
+    .customer-dropdown {
+        left: 0;
+    }
+}
