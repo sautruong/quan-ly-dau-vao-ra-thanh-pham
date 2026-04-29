@@ -23,8 +23,8 @@ function get_data_from_excel($name_file_excel, $table)
 
     foreach ($rows as $rIndex => &$row) {
         foreach ($row as $cIndex => $value) {
-        $row[$cIndex] = $value ?? ''; // nếu null → ''
-    }
+            $row[$cIndex] = $value ?? ''; // nếu null → ''
+        }
     }
     // echo "<pre>";
     // print_r($rows);
@@ -67,16 +67,16 @@ function get_data_from_excel($name_file_excel, $table)
         // $id = $row[1];
 
 
-//         $check = mysqli_query(
-//             $conn,
-//             "
-//     SELECT id FROM employees WHERE id = $id
-// "
-//         );
-//         if (mysqli_num_rows($check) == 0) {
-//             echo "❌ Không tồn tại id = $id<br>";
-//             continue;
-//         }
+        //         $check = mysqli_query(
+        //             $conn,
+        //             "
+        //     SELECT id FROM employees WHERE id = $id
+        // "
+        //         );
+        //         if (mysqli_num_rows($check) == 0) {
+        //             echo "❌ Không tồn tại id = $id<br>";
+        //             continue;
+        //         }
         //-----------------------------------------
         $sql = "INSERT INTO `$table` $str_header
                 VALUES $row_index";
@@ -98,4 +98,4 @@ function get_data_from_excel($name_file_excel, $table)
     $conn->close();
 }
 // gọi hàm
-get_data_from_excel("customers.xlsx", "customers");
+get_data_from_excel("product_prices.xlsx", "product_prices");

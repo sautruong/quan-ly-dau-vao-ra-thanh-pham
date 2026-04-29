@@ -112,7 +112,7 @@ function im_sanitize_date($date)
 /** Các giá trị hợp lệ cho stock_imports.type_import. */
 function im_valid_type_imports()
 {
-    return ['fg_receipt_production', 'fg_receipt_purchase', 'other_receipt', 'sales_return_receipt'];
+    return ['fg_receipt_production', 'fg_receipt_purchase', 'other_receipt', 'sales_return_receipt', 'investment_production'];
 }
 
 function im_normalize_type_import($type)
@@ -253,7 +253,16 @@ function im_get_recent_batches($limit = 5, $type_import = null)
         $names = array_map(function ($it) {
             return $it['product_name'] ?: ('#' . $it['product_id']);
         }, $items);
-        $summary = 'Nhập kho ' . implode(', ', $names);
+        // investment_production lưu sẵn diễn giải đầy đủ trong stock_imports.interpretation
+        // (built bởi im_build_investment_interpretation), nên ưu tiên dùng trực tiếp.
+        if ($type_import === 'investment_production' && !empty($items[0]['interpretation'])) {
+            $summary = $items[0]['interpretation'];
+        } else {
+            $prefix  = ($type_import === 'investment_production')
+                ? 'Nhập giá vốn sản xuất các sản phẩm '
+                : 'Nhập kho ';
+            $summary = $prefix . implode(', ', $names);
+        }
         $max_len = 160;
         if (mb_strlen($summary, 'UTF-8') > $max_len) {
             $summary = mb_substr($summary, 0, $max_len, 'UTF-8') . '...';
@@ -851,4 +860,502 @@ function im_handle_sales_return_item($sales_return_id, $method)
 
     db_update('sales_returns', ['handling_method' => $method], "id = $sid");
     return true;
+}
+
+/* ============================================================
+ *  INVESTMENT PRODUCTION — page investment_products
+ *  Nhập giá vốn sản xuất: cập nhật product_materials.quantity_required
+ *  + ghi 1 batch lịch sử (stock_imports type='investment_production').
+ *  KHÔNG ảnh hưởng finished_goods_inventory.
+ * ============================================================ */
+
+/**
+ * Lấy danh sách item đầu tư (investment_products) theo NGÀY (Y-m-d).
+ * Source là stock_imports với type_import = 'fg_receipt_production' để đồng bộ với
+ * sản lượng thực đã được nhập kho — gom theo product_id và SUM(quantity).
+ * Mỗi item kèm materials (product_materials + giá nhập gần nhất) và system_price.
+ */
+function im_get_investment_items_for_date($date)
+{
+    $d = im_sanitize_date($date);
+    if ($d === null) return [];
+    $d_safe = escape_string($d);
+
+    $sql = "SELECT si.product_id, SUM(si.quantity) AS quantity
+            FROM stock_imports si
+            WHERE si.type_import = 'fg_receipt_production'
+              AND DATE(si.created_at) = '$d_safe'
+            GROUP BY si.product_id
+            ORDER BY si.product_id ASC";
+    $rows = db_fetch_array($sql) ?: [];
+
+    $items = [];
+    foreach ($rows as $r) {
+        $pid = (int) $r['product_id'];
+        $qty = (float) $r['quantity'];
+
+        $p = db_fetch_row("SELECT product_name FROM products WHERE id = $pid LIMIT 1");
+        if (!$p) continue;
+
+        $price_row    = db_fetch_row("SELECT system_price FROM product_prices WHERE product_id = $pid LIMIT 1");
+        $system_price = $price_row ? (float) $price_row['system_price'] : 0;
+
+        $sql_m = "SELECT pm.material_id,
+                         pm.quantity_required,
+                         mi.material_name,
+                         (SELECT mpp.purchase_price
+                          FROM material_purchase_prices mpp
+                          WHERE mpp.material_id = pm.material_id
+                          ORDER BY mpp.last_updated_at DESC, mpp.id DESC
+                          LIMIT 1) AS purchase_price
+                  FROM product_materials pm
+                  LEFT JOIN material_information mi ON mi.id = pm.material_id
+                  WHERE pm.product_id = $pid
+                  ORDER BY pm.id ASC";
+        $mats = db_fetch_array($sql_m) ?: [];
+        $materials = array_map(function ($m) {
+            return [
+                'material_id'       => (int) $m['material_id'],
+                'material_name'     => $m['material_name'] ?: ('#' . (int) $m['material_id']),
+                'quantity_required' => (float) $m['quantity_required'],
+                'purchase_price'    => $m['purchase_price'] !== null ? (float) $m['purchase_price'] : 0,
+            ];
+        }, $mats);
+
+        $items[] = [
+            'product_id'   => $pid,
+            'product_name' => $p['product_name'],
+            'quantity'     => $qty,
+            'system_price' => $system_price,
+            'materials'    => $materials,
+        ];
+    }
+    return $items;
+}
+
+/** Cập nhật product_materials.quantity_required theo (product_id, material_id). */
+function im_update_product_material_qty($product_id, $material_id, $new_qty_required)
+{
+    $pid = (int) $product_id;
+    $mid = (int) $material_id;
+    if ($pid <= 0 || $mid <= 0) return false;
+    $row = db_fetch_row("SELECT id FROM product_materials
+                         WHERE product_id = $pid AND material_id = $mid
+                         LIMIT 1");
+    if (!$row) return false;
+    $iid = (int) $row['id'];
+    db_update('product_materials', ['quantity_required' => (float) $new_qty_required], "id = $iid");
+    return true;
+}
+
+/**
+ * Build interpretation cho 1 batch investment theo product_ids: 'Nhập giá vốn sản
+ * xuất các sản phẩm A, B, C' — tự cắt 160 ký tự (kèm dấu ...).
+ */
+function im_build_investment_interpretation($product_ids)
+{
+    $pids = [];
+    foreach ((array) $product_ids as $id) {
+        $i = (int) $id;
+        if ($i > 0) $pids[$i] = $i;
+    }
+    if (empty($pids)) return '';
+    $ids_csv = implode(',', $pids);
+    $rows = db_fetch_array("SELECT id, product_name FROM products WHERE id IN ($ids_csv)") ?: [];
+    // Giữ thứ tự theo $pids
+    $name_by_id = [];
+    foreach ($rows as $r) {
+        $name_by_id[(int) $r['id']] = $r['product_name'] ?: ('#' . (int) $r['id']);
+    }
+    $names = [];
+    foreach ($pids as $pid) {
+        if (isset($name_by_id[$pid])) $names[] = $name_by_id[$pid];
+    }
+    $summary = 'Nhập giá vốn sản xuất các sản phẩm ' . implode(', ', $names);
+    $max_len = 160;
+    if (mb_strlen($summary, 'UTF-8') > $max_len) {
+        $summary = mb_substr($summary, 0, $max_len, 'UTF-8') . '...';
+    }
+    return $summary;
+}
+
+/** Cộng `delta` (có thể âm) vào tồn material; tự tạo dòng nếu chưa có. */
+function im_adjust_material_inventory($material_id, $delta)
+{
+    $mid = (int) $material_id;
+    $d   = (float) $delta;
+    if ($mid <= 0 || $d == 0) return false;
+    $row = db_fetch_row("SELECT id, quantity FROM material_inventory
+                         WHERE material_id = $mid LIMIT 1");
+    if ($row) {
+        $new_qty = (float) $row['quantity'] + $d;
+        db_update('material_inventory', ['quantity' => $new_qty], 'id = ' . (int) $row['id']);
+    } else {
+        db_insert('material_inventory', [
+            'material_id' => $mid,
+            'quantity'    => $d,
+        ]);
+    }
+    return true;
+}
+
+/**
+ * Trùng phiếu giá vốn sản xuất theo (product_id, ngày). Dùng cho cảnh báo trước khi Ghi.
+ * Trả [{product_id, product_name, date_vn}, ...].
+ */
+function im_find_duplicate_investments($product_ids, $date)
+{
+    if (!is_array($product_ids) || empty($product_ids)) return [];
+    $d = im_sanitize_date($date);
+    if ($d === null) return [];
+    $ids = [];
+    foreach ($product_ids as $id) {
+        $i = (int) $id;
+        if ($i > 0) $ids[$i] = $i;
+    }
+    if (empty($ids)) return [];
+    $ids_sql = implode(',', array_values($ids));
+    $d_safe  = escape_string($d);
+
+    $sql = "SELECT si.product_id,
+                   p.product_name,
+                   MIN(si.created_at) AS created_at
+            FROM stock_imports si
+            LEFT JOIN products p ON p.id = si.product_id
+            WHERE si.product_id IN ($ids_sql)
+              AND DATE(si.created_at) = '$d_safe'
+              AND si.type_import = 'investment_production'
+            GROUP BY si.product_id, p.product_name";
+    $rows = db_fetch_array($sql) ?: [];
+    return array_map(function ($r) {
+        $ts = strtotime($r['created_at']);
+        return [
+            'product_id'   => (int) $r['product_id'],
+            'product_name' => $r['product_name'] ?: ('#' . (int) $r['product_id']),
+            'date_vn'      => $ts ? date('d/m/Y', $ts) : '',
+        ];
+    }, $rows);
+}
+
+/**
+ * Ghi 1 phiếu "Nhập giá vốn sản xuất". Đồng bộ 4 bảng:
+ *   - stock_imports : N rows (1 row / product), type='investment_production',
+ *                     interpretation = diễn giải full đã auto-build.
+ *   - production_costs_daily : 1 row, stock_imports_id = id của row stock_imports
+ *                              đầu tiên (làm khoá tham chiếu).
+ *   - stock_exports : M rows (1 row / material / product), type='export_production'.
+ *                     quantity = total_qty (input-total-qty), unit_price = purchase_price.
+ *   - material_inventory : trừ tồn từng material theo total_qty (tạo mới nếu chưa có).
+ *
+ * Input shape:
+ *   $items = [
+ *     [
+ *       'product_id' => int,
+ *       'materials'  => [
+ *         ['material_id'=>int, 'total_qty'=>float, 'unit_price'=>float, 'total_cost'=>float],
+ *         ...
+ *       ]
+ *     ], ...
+ *   ]
+ *
+ * Trả về stock_imports_id của row đầu tiên (khoá batch), hoặc 0 nếu fail.
+ */
+function im_record_investment($items, $cost_price, $goods_value, $created_at = null)
+{
+    if (!is_array($items) || empty($items)) return 0;
+
+    // Build product list theo thứ tự được truyền
+    $product_ids = [];
+    foreach ($items as $it) {
+        $pid = (int) ($it['product_id'] ?? 0);
+        if ($pid > 0) $product_ids[] = $pid;
+    }
+    if (empty($product_ids)) return 0;
+
+    $ca      = im_sanitize_datetime($created_at);
+    $summary = im_build_investment_interpretation($product_ids);
+
+    // 1) Insert N stock_imports rows
+    $first_si_id = 0;
+    foreach ($product_ids as $pid) {
+        $si_data = [
+            'product_id'     => $pid,
+            'quantity'       => 0,
+            'interpretation' => $summary,
+            'type_import'    => 'investment_production',
+        ];
+        if ($ca !== null) $si_data['created_at'] = $ca;
+        $iid = (int) db_insert('stock_imports', $si_data);
+        if ($first_si_id === 0 && $iid > 0) $first_si_id = $iid;
+    }
+    if ($first_si_id <= 0) return 0;
+
+    // 2) Insert 1 production_costs_daily row
+    $pcd_data = [
+        'stock_imports_id' => $first_si_id,
+        'cost_price'       => (float) $cost_price,
+        'goods_value'      => (float) $goods_value,
+    ];
+    if ($ca !== null) $pcd_data['created_at'] = $ca;
+    db_insert('production_costs_daily', $pcd_data);
+
+    // 3) Insert M stock_exports rows + 4) trừ material_inventory
+    foreach ($items as $it) {
+        $pid = (int) ($it['product_id'] ?? 0);
+        if ($pid <= 0) continue;
+        $mats = isset($it['materials']) && is_array($it['materials']) ? $it['materials'] : [];
+        foreach ($mats as $m) {
+            $mid       = (int) ($m['material_id'] ?? 0);
+            $total_qty = (float) ($m['total_qty']  ?? 0);
+            if ($mid <= 0 || $total_qty <= 0) continue;
+            $unit_price  = (float) ($m['unit_price']  ?? 0);
+            $total_cost  = (float) ($m['total_cost']  ?? ($total_qty * $unit_price));
+
+            $se_data = [
+                'product_id'     => $pid,
+                'material_id'    => $mid,
+                'customer_id'    => null,
+                'quantity'       => $total_qty,
+                'unit_price'     => $unit_price,
+                'total_amount'   => $total_cost,
+                'interpretation' => $summary,
+                'type_export'    => 'export_production',
+            ];
+            if ($ca !== null) $se_data['created_at'] = $ca;
+            db_insert('stock_exports', $se_data);
+
+            im_adjust_material_inventory($mid, -$total_qty);
+        }
+    }
+
+    return $first_si_id;
+}
+
+/** Lấy danh sách stock_exports rows (type=export_production) cho 1 group_key. */
+function im_get_export_production_rows($group_key)
+{
+    $key = escape_string($group_key);
+    if ($key === '') return [];
+    $sql = "SELECT id, product_id, material_id, quantity, unit_price, total_amount
+            FROM stock_exports
+            WHERE DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') = '$key'
+              AND type_export = 'export_production'
+            ORDER BY id ASC";
+    return db_fetch_array($sql) ?: [];
+}
+
+/**
+ * Lấy chi tiết 1 batch investment để render lại trang ở chế độ Sửa.
+ * Lấy material values từ stock_exports (giá trị HISTORY tại thời điểm Ghi),
+ * KHÔNG dùng product_materials hiện tại (đã có thể thay đổi sau đó).
+ *
+ * Trả mảng items shape giống im_get_investment_items_for_date:
+ *   [{ product_id, product_name, quantity, system_price,
+ *      materials: [{material_id, material_name, quantity_required, purchase_price}] }, ...]
+ *
+ * Ở đây quantity_required = stock_exports.quantity / product_quantity (để công thức
+ * "qr × qty = total_qty" khớp lại đúng giá trị history).
+ */
+function im_get_investment_batch_detail($group_key)
+{
+    $key = escape_string($group_key);
+    if ($key === '') return [];
+
+    // 1) Lấy product_ids của batch từ stock_imports (cùng created_at + type)
+    $sql_si = "SELECT DISTINCT product_id, created_at
+               FROM stock_imports
+               WHERE DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') = '$key'
+                 AND type_import = 'investment_production'";
+    $si_rows = db_fetch_array($sql_si) ?: [];
+    if (empty($si_rows)) return [];
+
+    $created_at_full = $si_rows[0]['created_at'];
+    $date_ymd        = date('Y-m-d', strtotime($created_at_full));
+
+    // 2) Tính SUM(quantity) fg_receipt_production cho mỗi product trong NGÀY đó
+    //    để khớp với "input-quantity" hiện trên giao diện.
+    $items_by_date = [];
+    foreach (im_get_investment_items_for_date($date_ymd) as $it) {
+        $items_by_date[(int) $it['product_id']] = $it;
+    }
+
+    // 3) Override materials theo stock_exports cho batch
+    $rows_ex = im_get_export_production_rows($group_key);
+    $by_product = [];
+    foreach ($rows_ex as $r) {
+        $pid = (int) $r['product_id'];
+        $by_product[$pid][] = $r;
+    }
+
+    $items = [];
+    foreach ($si_rows as $sr) {
+        $pid = (int) $sr['product_id'];
+        $base = $items_by_date[$pid] ?? null;
+        if (!$base) {
+            // Fallback: vẫn dựng item cơ bản kể cả ngày đó không còn fg_receipt_production
+            $p  = db_fetch_row("SELECT product_name FROM products WHERE id = $pid LIMIT 1");
+            if (!$p) continue;
+            $pp = db_fetch_row("SELECT system_price FROM product_prices WHERE product_id = $pid LIMIT 1");
+            $base = [
+                'product_id'   => $pid,
+                'product_name' => $p['product_name'],
+                'quantity'     => 0,
+                'system_price' => $pp ? (float) $pp['system_price'] : 0,
+                'materials'    => [],
+            ];
+        }
+        $product_qty = (float) $base['quantity'];
+
+        $materials = [];
+        foreach (($by_product[$pid] ?? []) as $m) {
+            $mid       = (int) $m['material_id'];
+            $total_qty = (float) $m['quantity'];
+            $price     = (float) $m['unit_price'];
+            $qr        = $product_qty > 0 ? ($total_qty / $product_qty) : 0;
+            $minfo     = db_fetch_row("SELECT material_name FROM material_information WHERE id = $mid LIMIT 1");
+            $materials[] = [
+                'material_id'       => $mid,
+                'material_name'     => ($minfo && $minfo['material_name']) ? $minfo['material_name'] : ('#' . $mid),
+                'quantity_required' => $qr,
+                'purchase_price'    => $price,
+            ];
+        }
+
+        $items[] = [
+            'product_id'   => $pid,
+            'product_name' => $base['product_name'],
+            'quantity'     => $product_qty,
+            'system_price' => (float) $base['system_price'],
+            'materials'    => $materials,
+        ];
+    }
+    return $items;
+}
+
+/**
+ * Cập nhật 1 batch investment đang ở chế độ Sửa:
+ *   - Đối chiếu old (stock_exports trong batch) vs new (items hiện tại):
+ *       delta = new_total_qty - old_total_qty cho mỗi material.
+ *       Trừ delta vào material_inventory (delta>0 nghĩa dùng thêm → tồn giảm).
+ *   - Update stock_exports rows tương ứng với new values; chèn rows mới nếu material chưa có.
+ *     (Không xoá row cũ — quantity new=0 vẫn được cập nhật để giữ history.)
+ *   - Update production_costs_daily totals.
+ */
+function im_update_investment_batch($group_key, $items, $cost_price, $goods_value)
+{
+    $key = escape_string($group_key);
+    if ($key === '') return false;
+
+    // Locate batch
+    $first_si = db_fetch_row("SELECT id FROM stock_imports
+                              WHERE DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') = '$key'
+                                AND type_import = 'investment_production'
+                              ORDER BY id ASC LIMIT 1");
+    if (!$first_si) return false;
+    $first_si_id = (int) $first_si['id'];
+
+    // Snapshot old by (product_id, material_id) → row
+    $old_by_key = [];
+    foreach (im_get_export_production_rows($key) as $r) {
+        $k = (int) $r['product_id'] . ':' . (int) $r['material_id'];
+        $old_by_key[$k] = $r;
+    }
+
+    // Walk new items
+    foreach ((array) $items as $it) {
+        $pid = (int) ($it['product_id'] ?? 0);
+        if ($pid <= 0) continue;
+        $mats = isset($it['materials']) && is_array($it['materials']) ? $it['materials'] : [];
+        foreach ($mats as $m) {
+            $mid       = (int) ($m['material_id'] ?? 0);
+            $new_qty   = (float) ($m['total_qty']  ?? 0);
+            if ($mid <= 0 || $new_qty < 0) continue;
+            $unit_price = (float) ($m['unit_price'] ?? 0);
+            $total_cost = (float) ($m['total_cost'] ?? ($new_qty * $unit_price));
+
+            $k = $pid . ':' . $mid;
+            $old = $old_by_key[$k] ?? null;
+            $old_qty = $old ? (float) $old['quantity'] : 0;
+            $delta   = $new_qty - $old_qty; // > 0 → dùng thêm → tồn giảm
+            if ($delta != 0) im_adjust_material_inventory($mid, -$delta);
+
+            if ($old) {
+                db_update('stock_exports', [
+                    'quantity'     => $new_qty,
+                    'unit_price'   => $unit_price,
+                    'total_amount' => $total_cost,
+                ], 'id = ' . (int) $old['id']);
+            } else if ($new_qty > 0) {
+                db_insert('stock_exports', [
+                    'product_id'   => $pid,
+                    'material_id'  => $mid,
+                    'customer_id'  => null,
+                    'quantity'     => $new_qty,
+                    'unit_price'   => $unit_price,
+                    'total_amount' => $total_cost,
+                    'type_export'  => 'export_production',
+                    // created_at lấy từ group_key gốc để gom cùng batch
+                    'created_at'   => $key,
+                ]);
+            }
+        }
+    }
+
+    // Cập nhật production_costs_daily
+    $existing = db_fetch_row("SELECT id FROM production_costs_daily
+                              WHERE stock_imports_id = $first_si_id LIMIT 1");
+    if ($existing) {
+        db_update('production_costs_daily', [
+            'cost_price'  => (float) $cost_price,
+            'goods_value' => (float) $goods_value,
+        ], 'id = ' . (int) $existing['id']);
+    } else {
+        db_insert('production_costs_daily', [
+            'stock_imports_id' => $first_si_id,
+            'cost_price'       => (float) $cost_price,
+            'goods_value'      => (float) $goods_value,
+        ]);
+    }
+
+    return true;
+}
+
+/**
+ * Xóa 1 batch investment theo group_key — đồng bộ 4 bảng:
+ *   - Cộng lại quantity vào material_inventory (rollback).
+ *   - Xóa stock_exports type=export_production của batch.
+ *   - Xóa production_costs_daily theo stock_imports_id.
+ *   - Xóa stock_imports rows.
+ * KHÔNG đụng finished_goods_inventory.
+ */
+function im_delete_investment_batch($group_key)
+{
+    $key = escape_string($group_key);
+    if ($key === '') return 0;
+
+    // 1) Rollback material_inventory bằng tổng quantity của stock_exports
+    $exp_rows = im_get_export_production_rows($key);
+    foreach ($exp_rows as $r) {
+        $mid = (int) $r['material_id'];
+        $qty = (float) $r['quantity'];
+        if ($mid > 0 && $qty != 0) im_adjust_material_inventory($mid, $qty);
+    }
+
+    // 2) Xóa stock_exports
+    db_query("DELETE FROM stock_exports
+              WHERE DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') = '$key'
+                AND type_export = 'export_production'");
+
+    // 3) Xóa stock_imports + production_costs_daily
+    $si_rows = db_fetch_array("SELECT id FROM stock_imports
+                               WHERE DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') = '$key'
+                                 AND type_import = 'investment_production'") ?: [];
+    if (!empty($si_rows)) {
+        $ids = array_map(function ($r) { return (int) $r['id']; }, $si_rows);
+        $ids_csv = implode(',', $ids);
+        db_query("DELETE FROM production_costs_daily WHERE stock_imports_id IN ($ids_csv)");
+        db_query("DELETE FROM stock_imports WHERE id IN ($ids_csv)");
+        return count($ids);
+    }
+    return 0;
 }

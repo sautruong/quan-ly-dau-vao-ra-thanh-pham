@@ -702,3 +702,51 @@ label {
     /* display: inline-block; */
     margin-bottom: 0 !important;
 }
+
+/* ============================================
+   9. HISTORY PAGINATION (canh phải)
+   ============================================ */
+.history-pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 24px;
+    flex-wrap: wrap;
+}
+
+.history-pagination .page-btn {
+    min-width: 34px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background-color: var(--color-white);
+    color: var(--color-gray-700);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.history-pagination .page-btn:hover:not([disabled]):not(.active) {
+    border-color: var(--color-green);
+    color: var(--color-green);
+}
+
+.history-pagination .page-btn.active {
+    background: linear-gradient(135deg, var(--color-green) 0%, var(--color-green-light) 100%);
+    border-color: var(--color-green-dark);
+    color: var(--color-white);
+    cursor: default;
+}
+
+.history-pagination .page-btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.history-pagination .page-ellipsis {
+    color: var(--color-gray-500);
+    padding: 0 4px;
+    font-size: 13px;
+}

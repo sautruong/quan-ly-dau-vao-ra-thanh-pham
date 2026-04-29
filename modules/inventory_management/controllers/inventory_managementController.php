@@ -14,6 +14,15 @@ function construct()
     load_model('inventory_management');
 }
 
+/**
+ * Limit lịch sử mặc định cho từng page. Tất cả các tab đều phân trang 10/dòng,
+ * nên nạp tối đa 100 batch để chia trang client-side.
+ */
+function im_history_limit($scope)
+{
+    return 100;
+}
+
 
 function dashboardAction()
 {
@@ -33,7 +42,7 @@ function dashboardAction()
         ];
     }
 
-    $history = im_get_recent_batches(5, $type_import);
+    $history = im_get_recent_batches(100, $type_import);
 
     load_view('dashboard', [
         'items'       => $items,
@@ -103,7 +112,7 @@ function record_stockAction()
     echo json_encode([
         'success' => true,
         'count'   => $count,
-        'history' => im_get_recent_batches(5, $type_import),
+        'history' => im_get_recent_batches(im_history_limit($type_import), $type_import),
     ]);
     exit;
 }
@@ -124,12 +133,13 @@ function check_duplicatesAction()
     exit;
 }
 
-/** Trả về 5 batch gần nhất (JSON), tuỳ chọn scope theo type_import. */
+/** Trả lịch sử (JSON), tuỳ chọn scope theo type_import. Limit theo từng page (5 hoặc 100). */
 function get_historyAction()
 {
     header('Content-Type: application/json');
     $type_import = trim((string) ($_POST['type_import'] ?? ''));
-    echo json_encode(['data' => im_get_recent_batches(5, $type_import !== '' ? $type_import : null)]);
+    $scope       = $type_import !== '' ? $type_import : null;
+    echo json_encode(['data' => im_get_recent_batches(im_history_limit($scope), $scope)]);
     exit;
 }
 
@@ -165,7 +175,7 @@ function edit_batch_stockAction()
     echo json_encode([
         'success' => true,
         'count'   => $count,
-        'history' => im_get_recent_batches(5, $scope),
+        'history' => im_get_recent_batches(im_history_limit($scope), $scope),
     ]);
     exit;
 }
@@ -188,7 +198,7 @@ function delete_batch_stockAction()
     echo json_encode([
         'success' => true,
         'removed' => $removed,
-        'history' => im_get_recent_batches(5, $scope),
+        'history' => im_get_recent_batches(im_history_limit($scope), $scope),
     ]);
     exit;
 }
@@ -197,7 +207,7 @@ function product_buyAction()
 {
     $plan_date   = date('d/m/Y');
     $type_import = 'fg_receipt_purchase';
-    $history     = im_get_recent_batches(5, $type_import);
+    $history     = im_get_recent_batches(im_history_limit($type_import), $type_import);
 
     load_view('product_buy', [
         'items'       => [],
@@ -211,7 +221,7 @@ function other_receiptAction()
 {
     $plan_date   = date('d/m/Y');
     $type_import = 'other_receipt';
-    $history     = im_get_recent_batches(5, $type_import);
+    $history     = im_get_recent_batches(im_history_limit($type_import), $type_import);
 
     load_view('other_receipt', [
         'items'       => [],
@@ -261,7 +271,7 @@ function sales_issueAction()
 {
     $plan_date   = date('d/m/Y');
     $type_export = 'sales_issue';
-    $history     = im_get_recent_sales_issue_batches(5);
+    $history     = im_get_recent_sales_issue_batches(100);
 
     load_view('sales_issue', [
         'plan_date'   => $plan_date,
@@ -345,7 +355,7 @@ function record_sales_issueAction()
         'success'   => true,
         'recorded'  => $recorded,
         'shortages' => $shortages,
-        'history'   => im_get_recent_sales_issue_batches(5),
+        'history'   => im_get_recent_sales_issue_batches(100),
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -370,7 +380,7 @@ function sales_return_receiptAction()
 {
     $plan_date   = date('d/m/Y');
     $type_import = 'sales_return_receipt';
-    $history     = im_get_recent_sales_return_batches(5);
+    $history     = im_get_recent_sales_return_batches(100);
 
     load_view('sales_return_receipt', [
         'plan_date'   => $plan_date,
@@ -447,7 +457,7 @@ function record_sales_returnAction()
     echo json_encode([
         'success' => true,
         'count'   => $count,
-        'history' => im_get_recent_sales_return_batches(5),
+        'history' => im_get_recent_sales_return_batches(100),
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -511,7 +521,7 @@ function edit_sales_returnAction()
     echo json_encode([
         'success' => true,
         'count'   => $count,
-        'history' => im_get_recent_sales_return_batches(5),
+        'history' => im_get_recent_sales_return_batches(100),
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -533,7 +543,7 @@ function delete_sales_return_itemAction()
     $ok = im_delete_sales_return_item($sid, $iid);
     echo json_encode([
         'success' => (bool) $ok,
-        'history' => im_get_recent_sales_return_batches(5),
+        'history' => im_get_recent_sales_return_batches(100),
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -561,7 +571,181 @@ function handle_sales_returnAction()
     echo json_encode([
         'success' => true,
         'count'   => $count,
-        'history' => im_get_recent_sales_return_batches(5),
+        'history' => im_get_recent_sales_return_batches(100),
     ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+/* ============================================================
+ *   INVESTMENT PRODUCTION — page investment_products
+ * ============================================================ */
+
+function investment_productsAction()
+{
+    $plan_date   = date('d/m/Y');
+    $type_import = 'investment_production';
+
+    // Khởi tạo theo ngày hiện tại — JS sẽ refetch khi user đổi #record-datetime.
+    $items = im_get_investment_items_for_date(date('Y-m-d'));
+    foreach ($items as &$it) {
+        $it['plan_date'] = $plan_date;
+    }
+    unset($it);
+
+    $history = im_get_recent_batches(im_history_limit($type_import), $type_import);
+
+    load_view('investment_products', [
+        'items'       => $items,
+        'plan_date'   => $plan_date,
+        'history'     => $history,
+        'type_import' => $type_import,
+    ]);
+}
+
+/**
+ * Refetch list sản phẩm + materials theo NGÀY (Y-m-d) khi user đổi datetime picker.
+ * Input: date ('Y-m-d' hoặc bất kỳ chuỗi parse được).
+ */
+function get_investment_items_for_dateAction()
+{
+    header('Content-Type: application/json');
+    $date  = trim((string) ($_POST['date'] ?? ''));
+    $items = im_get_investment_items_for_date($date);
+    echo json_encode([
+        'success' => true,
+        'data'    => $items,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * Cập nhật product_materials.quantity_required cho 1 cặp (product_id, material_id).
+ * Input: product_id, material_id, quantity_required
+ */
+function update_material_qtyAction()
+{
+    header('Content-Type: application/json');
+    $pid = (int) ($_POST['product_id'] ?? 0);
+    $mid = (int) ($_POST['material_id'] ?? 0);
+    $qr  = isset($_POST['quantity_required']) ? (float) $_POST['quantity_required'] : -1.0;
+
+    if ($pid <= 0 || $mid <= 0 || $qr < 0) {
+        echo json_encode(['success' => false, 'message' => 'Tham số không hợp lệ.']);
+        exit;
+    }
+    $ok = im_update_product_material_qty($pid, $mid, $qr);
+    echo json_encode([
+        'success' => (bool) $ok,
+        'data'    => [
+            'product_id'        => $pid,
+            'material_id'       => $mid,
+            'quantity_required' => $qr,
+        ],
+    ]);
+    exit;
+}
+
+/**
+ * Ghi 1 phiếu "Nhập giá vốn sản xuất".
+ * Input (JSON shape items):
+ *   items = [
+ *     { product_id, materials: [{material_id, total_qty, unit_price, total_cost}, ...] },
+ *     ...
+ *   ]
+ *   cost_price, goods_value, created_at ('Y-m-d H:i:s')
+ */
+function record_investmentAction()
+{
+    header('Content-Type: application/json');
+    $items_raw   = $_POST['items'] ?? '[]';
+    $items       = json_decode($items_raw, true) ?: [];
+    $cost_price  = (float) ($_POST['cost_price']  ?? 0);
+    $goods_value = (float) ($_POST['goods_value'] ?? 0);
+    $created_at  = trim((string) ($_POST['created_at'] ?? ''));
+    $ca          = $created_at !== '' ? $created_at : null;
+
+    if (empty($items)) {
+        echo json_encode(['success' => false, 'message' => 'Chưa có sản phẩm nào để ghi.']);
+        exit;
+    }
+
+    $si_id = im_record_investment($items, $cost_price, $goods_value, $ca);
+
+    echo json_encode([
+        'success'          => $si_id > 0,
+        'stock_imports_id' => $si_id,
+        'history'          => im_get_recent_batches(im_history_limit('investment_production'), 'investment_production'),
+    ]);
+    exit;
+}
+
+/**
+ * Kiểm tra trùng phiếu giá vốn theo (product_ids, plan_date).
+ * Input: product_ids JSON, plan_date.
+ * Output: data = [{product_id, product_name, date_vn}, ...]
+ */
+function check_investment_duplicatesAction()
+{
+    header('Content-Type: application/json');
+    $ids_raw     = $_POST['product_ids'] ?? '[]';
+    $product_ids = json_decode($ids_raw, true) ?: [];
+    $plan_date   = trim((string) ($_POST['plan_date'] ?? ''));
+    echo json_encode(['data' => im_find_duplicate_investments($product_ids, $plan_date)]);
+    exit;
+}
+
+/**
+ * Lấy chi tiết 1 batch investment để render lại trong chế độ Sửa.
+ * Input: group_key.
+ * Output: data = items[] (có materials lấy từ stock_exports).
+ */
+function get_investment_batch_detailAction()
+{
+    header('Content-Type: application/json');
+    $group_key = trim((string) ($_POST['group_key'] ?? ''));
+    $items     = im_get_investment_batch_detail($group_key);
+    echo json_encode(['success' => true, 'data' => $items], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * Cập nhật 1 batch investment đang ở chế độ Sửa: items, cost_price, goods_value.
+ * Server tự tính delta vs stock_exports cũ để điều chỉnh material_inventory.
+ */
+function edit_investment_batchAction()
+{
+    header('Content-Type: application/json');
+    $group_key   = trim((string) ($_POST['group_key'] ?? ''));
+    $items_raw   = $_POST['items'] ?? '[]';
+    $items       = json_decode($items_raw, true) ?: [];
+    $cost_price  = (float) ($_POST['cost_price']  ?? 0);
+    $goods_value = (float) ($_POST['goods_value'] ?? 0);
+
+    if ($group_key === '') {
+        echo json_encode(['success' => false, 'message' => 'Thiếu group_key.']);
+        exit;
+    }
+    $ok = im_update_investment_batch($group_key, $items, $cost_price, $goods_value);
+    echo json_encode([
+        'success' => (bool) $ok,
+        'history' => im_get_recent_batches(im_history_limit('investment_production'), 'investment_production'),
+    ]);
+    exit;
+}
+
+/** Xóa 1 batch investment theo group_key (đồng bộ 4 bảng). */
+function delete_investment_batchAction()
+{
+    header('Content-Type: application/json');
+    $group_key = trim((string) ($_POST['group_key'] ?? ''));
+    if ($group_key === '') {
+        echo json_encode(['success' => false, 'message' => 'Thiếu group_key.']);
+        exit;
+    }
+    $removed = im_delete_investment_batch($group_key);
+    echo json_encode([
+        'success' => true,
+        'removed' => $removed,
+        'history' => im_get_recent_batches(im_history_limit('investment_production'), 'investment_production'),
+    ]);
     exit;
 }

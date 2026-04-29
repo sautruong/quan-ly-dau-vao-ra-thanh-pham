@@ -33,9 +33,12 @@
     const $btnEdit       = document.getElementById('btn-edit');
 
     const $histBody      = document.getElementById('history-tbody');
+    const $histPager     = document.getElementById('history-pagination');
     const $banner        = document.getElementById('edit-batch-banner');
     const $bannerLabel   = document.getElementById('edit-batch-label');
     const $btnCancelEdit = document.getElementById('cancel-edit-batch');
+    const PAGE_SIZE = 10;
+    let historyPage = 1;
 
     // 1 dropdown sản phẩm dùng chung, gắn vào body, định vị tuyệt đối dưới input đang gõ
     const $prodDropdown = document.createElement('ul');
@@ -527,14 +530,26 @@
         alert('Chức năng sửa sẽ được bổ sung sau.');
     });
 
-    // ---------- History ----------
+    // ---------- History (paginated) ----------
     function renderHistory(batches) {
-        INITIAL.history = batches;
-        if (!batches.length) {
+        INITIAL.history = batches || [];
+        historyPage = 1;
+        renderHistoryPage();
+    }
+
+    function renderHistoryPage() {
+        const data = INITIAL.history || [];
+        const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+        if (historyPage > totalPages) historyPage = totalPages;
+        if (historyPage < 1) historyPage = 1;
+        if (!data.length) {
             $histBody.innerHTML = '<tr class="history-empty"><td colspan="3">Chưa có thao tác nào.</td></tr>';
+            if ($histPager) $histPager.innerHTML = '';
             return;
         }
-        $histBody.innerHTML = batches.map(b => `
+        const start = (historyPage - 1) * PAGE_SIZE;
+        const slice = data.slice(start, start + PAGE_SIZE);
+        $histBody.innerHTML = slice.map(b => `
             <tr data-group-key="${escapeHtml(b.group_key)}" data-customer-id="${b.customer_id}">
                 <td>${escapeHtml(b.date_display)}</td>
                 <td title="${escapeHtml(b.summary)}">${escapeHtml(b.summary)}</td>
@@ -545,6 +560,45 @@
                 </td>
             </tr>
         `).join('');
+        renderPager(totalPages);
+    }
+
+    function renderPager(totalPages) {
+        if (!$histPager) return;
+        if (totalPages <= 1) { $histPager.innerHTML = ''; return; }
+        const parts = [];
+        parts.push(`<button type="button" class="page-btn page-prev" ${historyPage === 1 ? 'disabled' : ''}>«</button>`);
+        const range = pageRange(historyPage, totalPages);
+        range.forEach(p => {
+            if (p === '...') parts.push('<span class="page-ellipsis">…</span>');
+            else parts.push(`<button type="button" class="page-btn page-num ${p === historyPage ? 'active' : ''}" data-page="${p}">${p}</button>`);
+        });
+        parts.push(`<button type="button" class="page-btn page-next" ${historyPage === totalPages ? 'disabled' : ''}>»</button>`);
+        $histPager.innerHTML = parts.join('');
+    }
+
+    function pageRange(current, total) {
+        const out = [];
+        if (total <= 7) { for (let i = 1; i <= total; i++) out.push(i); return out; }
+        out.push(1);
+        if (current > 3) out.push('...');
+        const from = Math.max(2, current - 1);
+        const to   = Math.min(total - 1, current + 1);
+        for (let i = from; i <= to; i++) out.push(i);
+        if (current < total - 2) out.push('...');
+        out.push(total);
+        return out;
+    }
+
+    if ($histPager) {
+        $histPager.addEventListener('click', (e) => {
+            const $btn = e.target.closest('.page-btn');
+            if (!$btn || $btn.disabled) return;
+            if ($btn.classList.contains('page-prev')) historyPage = Math.max(1, historyPage - 1);
+            else if ($btn.classList.contains('page-next')) historyPage = historyPage + 1;
+            else if ($btn.classList.contains('page-num')) historyPage = parseInt($btn.getAttribute('data-page'), 10) || 1;
+            renderHistoryPage();
+        });
     }
 
     $histBody.addEventListener('click', (e) => {

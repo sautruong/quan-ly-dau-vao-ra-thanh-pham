@@ -1,0 +1,346 @@
+/* ============================================
+   INVESTMENT PRODUCTS PAGE
+   Bổ sung trên dashboard.css cho tab "Nhập giá vốn sản xuất".
+   ============================================ */
+
+/* ---- list-product: 2 cột rộng để chứa material list ---- */
+.list-product {
+    grid-template-columns: repeat(2, 1fr) !important;
+}
+
+/* input-quantity readonly: hiển thị mềm, không cho focus rõ rệt */
+.wp-top-product input.input-quantity[readonly] {
+    cursor: not-allowed;
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-700);
+}
+
+/* Diễn giải dạng text tĩnh (không phải textarea sửa được) */
+.interpretation .interp-text {
+    margin: 0;
+    color: var(--color-gray-500);
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.5;
+    padding: 6px 10px;
+    border: 1px dashed var(--color-gray-200);
+    border-radius: 6px;
+    background-color: var(--color-gray-50);
+}
+
+/* ============================================
+   MATERIAL FAQ (collapsible dropdown)
+   ============================================ */
+.material-faq {
+    margin: 0 14px 10px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 10px;
+    background-color: var(--color-white);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.material-faq-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: none;
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-700);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: left;
+}
+
+.material-faq-header:hover {
+    background-color: var(--color-green-soft);
+    color: var(--color-green-dark);
+}
+
+.material-faq-header .faq-label {
+    flex: 1;
+}
+
+.material-faq-header .faq-icon {
+    font-size: 14px;
+    transition: transform 0.25s ease;
+    color: var(--color-gray-500);
+}
+
+.material-faq.open .material-faq-header {
+    background-color: var(--color-green-soft);
+    color: var(--color-green-dark);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.material-faq.open .material-faq-header .faq-icon {
+    transform: rotate(180deg);
+    color: var(--color-green-dark);
+}
+
+.material-faq-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.material-faq.open .material-faq-body {
+    max-height: 1500px;
+}
+
+/* ============================================
+   LIST MATERIAL
+   ============================================ */
+.list-material {
+    list-style: none;
+    margin: 0;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.list-material .material-item {
+    list-style: none;
+    background-color: var(--color-gray-50);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    padding: 8px 10px;
+    transition: var(--transition);
+}
+
+.list-material .material-item:hover {
+    border-color: var(--color-green-light);
+    background-color: #f0fdf4;
+}
+
+.list-material .name-material {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 90px 90px 130px;
+    align-items: center;
+    gap: 8px;
+}
+
+.list-material .name-material p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-gray-900);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.list-material .name-material input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background-color: var(--color-white);
+    font-size: 13px;
+    color: var(--color-gray-700);
+    text-align: center;
+    outline: none;
+    transition: var(--transition);
+}
+
+.list-material .name-material input[readonly] {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-500);
+    cursor: not-allowed;
+}
+
+.list-material .name-material .input-cost {
+    text-align: right;
+    color: var(--color-gray-900);
+    font-weight: 600;
+    background-color: #fff7ed;
+    border-color: #fed7aa;
+    color: #b45309;
+}
+
+.list-material .name-material .input-total-qty {
+    background-color: var(--color-white);
+    color: #003c7c;
+    font-weight: 600;
+    cursor: text;
+}
+
+.list-material .name-material .input-total-qty:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* ============================================
+   SUB-TOTAL (per product) — luôn hiển thị, ngoài material-faq
+   ============================================ */
+.product-item .sub-total {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    margin: 0 14px 14px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid var(--color-green-light);
+    border-radius: 8px;
+}
+
+.sub-total .title-total p,
+.sub-total .value-total p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    font-weight: 600;
+}
+
+.sub-total .total p {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-green-dark);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.sub-total > .total:nth-of-type(2) p {
+    color: #003c7c;
+}
+
+/* ============================================
+   GRAND TOTALS (toàn list)
+   ============================================ */
+.total-list,
+.total-list-value {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 0;
+}
+
+.total-list {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 1.5px solid var(--color-green);
+    margin-top: 4px;
+}
+
+.total-list-value {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1.5px solid #1a85cc;
+}
+
+.total-list p,
+.total-list-value p {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.total-list p:first-child {
+    color: var(--color-green-dark);
+}
+
+.total-list .total-list-value-cost {
+    color: var(--color-green-dark);
+    font-size: 22px;
+}
+
+.total-list-value p:first-child {
+    color: #1a4d80;
+}
+
+.total-list-value .total-list-value-amount {
+    color: #003c7c;
+    font-size: 22px;
+}
+
+/* ============================================
+   HISTORY PAGINATION (canh phải)
+   ============================================ */
+.history-pagination {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 24px;
+    flex-wrap: wrap;
+}
+
+.history-pagination .page-btn {
+    min-width: 34px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background-color: var(--color-white);
+    color: var(--color-gray-700);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.history-pagination .page-btn:hover:not([disabled]):not(.active) {
+    border-color: var(--color-green);
+    color: var(--color-green);
+}
+
+.history-pagination .page-btn.active {
+    background: linear-gradient(135deg, var(--color-green) 0%, var(--color-green-light) 100%);
+    border-color: var(--color-green-dark);
+    color: var(--color-white);
+    cursor: default;
+}
+
+.history-pagination .page-btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.history-pagination .page-ellipsis {
+    color: var(--color-gray-500);
+    padding: 0 4px;
+    font-size: 13px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1100px) {
+    .list-product {
+        grid-template-columns: 1fr !important;
+    }
+    .list-material .name-material {
+        grid-template-columns: minmax(0, 1.2fr) 80px 80px 110px;
+    }
+}
+
+@media (max-width: 700px) {
+    .list-material .name-material {
+        grid-template-columns: 1fr 1fr;
+    }
+    .list-material .name-material p {
+        grid-column: 1 / -1;
+    }
+    .sub-total {
+        grid-template-columns: 1fr 1fr;
+    }
+    .total-list,
+    .total-list-value {
+        padding: 12px 16px;
+    }
+    .total-list p,
+    .total-list-value p,
+    .total-list .total-list-value-cost,
+    .total-list-value .total-list-value-amount {
+        font-size: 15px;
+    }
+}

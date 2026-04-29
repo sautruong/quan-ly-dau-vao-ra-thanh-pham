@@ -33,6 +33,9 @@
                         <a href="?mod=inventory_management&controllers=inventory_management&action=dashboard">Nhập thành phẩm sản xuất</a>
                     </li>
                     <li class="tab-item">
+                        <a href="?mod=inventory_management&controllers=inventory_management&action=investment_products">Nhập giá vốn sản xuất</a>
+                    </li>
+                    <li class="tab-item">
                         <a href="?mod=inventory_management&controllers=inventory_management&action=product_buy">Nhập thành phẩm mua hàng</a>
                     </li>
                     <li class="tab-item">
@@ -116,6 +119,7 @@
             <tbody id="history-tbody">
             </tbody>
         </table>
+        <div class="history-pagination" id="history-pagination"></div>
 
 
     </div>

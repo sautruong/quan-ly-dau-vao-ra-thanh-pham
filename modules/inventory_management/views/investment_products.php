@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
     <link rel="stylesheet" href="public/css/inventory_management/dashboard.css">
+    <link rel="stylesheet" href="public/css/inventory_management/investment_products.css">
 
 </head>
 
@@ -17,7 +18,7 @@
         <div class="header">
             <div class="wp-logo-title">
                 <div class="logo">
-                    <a href="">
+                    <a href="?mod=home">
                         <img src="public/images/logo/logo_vat_png.png" alt="" style="width:40px">
                     </a>
                 </div>
@@ -31,10 +32,10 @@
                     <li class="tab-item">
                         <a href="?mod=inventory_management&controllers=inventory_management&action=dashboard">Nhập thành phẩm sản xuất</a>
                     </li>
-                    <li class="tab-item">
+                    <li class="tab-item active">
                         <a href="?mod=inventory_management&controllers=inventory_management&action=investment_products">Nhập giá vốn sản xuất</a>
                     </li>
-                    <li class="tab-item active">
+                    <li class="tab-item">
                         <a href="?mod=inventory_management&controllers=inventory_management&action=product_buy">Nhập thành phẩm mua hàng</a>
                     </li>
                     <li class="tab-item">
@@ -60,18 +61,21 @@
             </nav>
         </div>
         <div class="content">
-            <div class="wp-search">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="search-product" name="search-product" placeholder="Tìm kiếm sản phẩm..." autocomplete="off">
-                <ul class="search-dropdown" id="search-dropdown"></ul>
-            </div>
-
             <div class="wp-date-picker">
                 <label for="record-datetime">Ngày giờ ghi</label>
                 <input type="datetime-local" id="record-datetime" step="1">
             </div>
 
             <ul class="list-product" id="list-product"></ul>
+
+            <div class="total-list" id="total-list">
+                <p>Tổng vốn sản xuất:</p>
+                <p class="total-list-value-cost">0 đ</p>
+            </div>
+            <div class="total-list-value" id="total-list-value">
+                <p>Giá trị hàng hóa:</p>
+                <p class="total-list-value-amount">0 đ</p>
+            </div>
 
             <div class="wp-button">
                 <div class="btn-record" id="btn-record">
@@ -113,10 +117,10 @@
             items: <?php echo json_encode($items ?? [], JSON_UNESCAPED_UNICODE); ?>,
             planDate: <?php echo json_encode($plan_date ?? date('d/m/Y')); ?>,
             history: <?php echo json_encode($history ?? [], JSON_UNESCAPED_UNICODE); ?>,
-            typeImport: <?php echo json_encode($type_import ?? 'fg_receipt_purchase'); ?>
+            typeImport: <?php echo json_encode($type_import ?? 'investment_production'); ?>
         };
     </script>
-    <script src="public/js/inventory_management/product_buy.js"></script>
+    <script src="public/js/inventory_management/investment_products.js"></script>
 </body>
 
 </html>
