@@ -1,37 +1,138 @@
+/* =====================================================
+   COLOR PALETTE
+   - rgb(0, 92, 0)      Xanh lá đậm  → tiêu đề cấp 2, khối
+   - rgb(127, 127, 127) Xám          → text chìm
+   - rgb(34, 42, 53)    Đen-navy     → viền / khối
+   - rgb(238, 45, 0)    Đỏ-cam       → tiêu đề nổi bật
+===================================================== */
+
+/* ===== LAYOUT ===== */
 #content-home {
     display: flex;
     flex-direction: column;
     align-items: center;
     flex: 1;
     justify-content: space-between;
-    padding: 50px 0px;
+    padding: 40px 40px;
+    width: 100%;
+    overflow-y: auto;
 }
 
-.branch{
+.wp-brand-tab {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 50px;
+    width: 100%;
+}
+
+/* ===== BRAND ===== */
+.branch {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     align-items: center;
 }
+
 .logo img {
-    width: 40px;
+    width: 44px;
     height: auto;
 }
-.name_branch{
-    color: gray;
-    font-weight: 500;
-}
-.body-content{
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-   align-items: center;
+
+.name_branch p {
+    color: rgb(34, 42, 53) ;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-size: 12px;
 }
 
-.wp-brand-tab{
-    display: flex;
-    flex-direction: column;
-    gap: 100px;
+/* ===== BODY CONTENT — GRID 4 COLS ===== */
+.body-content {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    width: 100%;
+    align-items: start;
+    
+}
+
+/* Mỗi card */
+.body-content > div {
+    background-color: #fff;
+    border: 1px solid rgba(34, 42, 53, 0.12);
+    border-top: 3px solid rgb(34, 42, 53);
+    border-radius: 8px;
+    padding: 18px 22px 20px;
+    box-shadow: 0 2px 6px rgba(34, 42, 53, 0.06);
+}
+
+/* Tiêu đề khối — nổi bật */
+.body-content h4 {
+    margin: 0 0 14px 0;
+    color: rgb(238, 45, 0);
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(34, 42, 53, 0.08);
+}
+
+/* ===== LIST TAB — CÂY XƯƠNG CÁ / FOLDER TREE ===== */
+.list-tab {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0 0 6px;
+    position: relative;
+}
+
+.list-tab .tab-item {
+    position: relative;
+    margin: 0;
+    padding: 6px 0 6px 22px;
+    line-height: 1.4;
+}
+
+/* Đường dọc của cây */
+.list-tab .tab-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: rgb(127, 127, 127);
+}
+
+/* Nhánh ngang nối tới text */
+.list-tab .tab-item::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 14px;
+    height: 1px;
+    background-color: rgb(127, 127, 127);
+}
+
+/* Phần tử cuối: đường dọc cắt giữa */
+.list-tab .tab-item:last-child::before {
+    height: 50%;
+}
+
+/* Link trong cây */
+.list-tab .tab-item a {
+    display: inline-block;
+    padding: 0;
+    color: rgb(127, 127, 127);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+/* Hover — chỉ đổi màu text */
+.list-tab .tab-item a:hover {
+    color: rgb(0, 92, 0);
+    text-decoration: none;
 }
 
 /* ===== EXPERMORE ===== */
@@ -39,61 +140,64 @@
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-/* bỏ gạch chân link */
-.expermore {
     text-decoration: none !important;
 }
 
-/* reset p */
 .expermore p {
     margin: 0;
-    color: gray;
+    color: rgb(127, 127, 127);
 }
 
-/* icon */
 .expermore i {
-    color: gray;
+    color: rgb(127, 127, 127);
     transition: 0.25s;
 }
 
-/* hover */
 .expermore:hover p,
 .expermore:hover i {
-    color: green;
+    color: rgb(0, 92, 0);
 }
 
-/* hiệu ứng nhẹ */
 .expermore:hover i {
     transform: translateX(4px);
 }
-
 
 /* ===== LOGOUT ===== */
 .logout {
     display: flex;
     align-items: center;
     gap: 10px;
-    text-decoration: none !important; /* ❌ bỏ gạch chân */
+    text-decoration: none !important;
 }
 
 .logout p {
     margin: 0;
-    color: gray;
+    color: rgb(127, 127, 127);
 }
 
 .logout i {
-    color: gray;
+    color: rgb(127, 127, 127);
     transition: 0.25s;
 }
 
-/* hover logout */
 .logout:hover p,
 .logout:hover i {
-    color: red;
+    color: rgb(238, 45, 0);
 }
 
 .logout:hover i {
     transform: translateX(4px);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1100px) {
+    .body-content {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .body-content {
+        grid-template-columns: 1fr;
+    }
 }

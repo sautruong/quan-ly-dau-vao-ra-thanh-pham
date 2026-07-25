@@ -1,0 +1,332 @@
+/* =====================================================================
+ *  GREEN DATETIME PICKER — component dùng chung cho form "Ngày giờ ghi"
+ *  Tái sử dụng: thêm class .js-green-datetime cho <input type="datetime-local">,
+ *  nạp file css/js này. JS sẽ ẩn input gốc và dựng UI lịch + giờ màu xanh lá.
+ *  Bảng màu: xanh lá #16a34a (primary), #15803d (dark), #dcfce7 (nhạt).
+ * ===================================================================== */
+
+:root {
+    --gdtp-green: #16a34a;
+    --gdtp-green-dark: #15803d;
+    --gdtp-green-light: #dcfce7;
+    --gdtp-green-soft: #f0fdf4;
+    --gdtp-border: #d1d9e0;
+    --gdtp-text: #1f2937;
+    --gdtp-muted: #9aa3af;
+}
+
+/* Input gốc bị ẩn nhưng vẫn giữ trong DOM để code cũ đọc .value */
+input.js-green-datetime.gdtp-bound {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* ---- Ô hiển thị (trigger) ---- */
+
+
+.gdtp-trigger {
+   display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 230px;
+    padding: 5px 14px;
+    border: 1.5px solid var(--gdtp-border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--gdtp-text);
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+
+}
+
+
+.gdtp-trigger:hover { border-color: var(--gdtp-green); }
+.gdtp-trigger.is-open {
+    border-color: var(--gdtp-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+.gdtp-trigger .gdtp-trigger-icon {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--gdtp-green-light);
+    color: var(--gdtp-green-dark);
+    flex-shrink: 0;
+}
+.gdtp-trigger .gdtp-trigger-text { font-weight: 600; letter-spacing: .2px; }
+.gdtp-trigger .gdtp-trigger-text.is-empty { color: var(--gdtp-muted); font-weight: 500; }
+
+/* ---- Highlight khi vừa vào page: phóng to một xíu rồi trả lại kích thước cũ, tự tắt sau vài giây ---- */
+.gdtp-trigger.gdtp-highlight {
+    animation: gdtp-pulse .8s ease-in-out 2;
+}
+@keyframes gdtp-pulse {
+    0%, 100% { transform: scale(1); box-shadow: none; }
+    50% { transform: scale(1.02); box-shadow: 0 0 0 1px rgba(255, 72, 0, 0.85); }
+}
+
+/* ---- Popover ---- */
+.gdtp-popover {
+    position: absolute;
+    z-index: 4000;
+    display: none;
+    background: #fff;
+    border: 1px solid var(--gdtp-border);
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(16, 40, 24, 0.22);
+    padding: 14px;
+    width: 460px;
+    max-width: calc(100vw - 24px);
+    box-sizing: border-box;
+}
+.gdtp-popover.is-open { display: flex; gap: 14px; }
+.gdtp-popover .gdtp-calendar { flex: 1 1 auto; min-width: 0; }
+.gdtp-popover .gdtp-time { flex: 0 0 150px; }
+
+/* ---- Calendar header ---- */
+.gdtp-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 6px;
+}
+.gdtp-cal-selects { display: flex; gap: 6px; flex: 1 1 auto; }
+.gdtp-cal-selects select {
+    flex: 1 1 auto;
+    padding: 6px 26px 6px 10px;
+    border: 1.5px solid var(--gdtp-green);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gdtp-green-dark);
+    background-color: var(--gdtp-green-soft);
+    /* mũi tên xổ xuống màu xanh lá */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2315803d' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: box-shadow .15s ease, background-color .15s ease;
+}
+.gdtp-cal-selects select:hover { background-color: var(--gdtp-green-light); }
+.gdtp-cal-selects select:focus { box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18); }
+.gdtp-cal-selects select option { color: var(--gdtp-text); font-weight: 500; }
+
+/* ---- Nhập tay thủ công ---- */
+.gdtp-manual-row {
+    flex-basis: 100%;
+    order: -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.gdtp-manual-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gdtp-green-dark);
+    white-space: nowrap;
+}
+/* Hộp chứa 6 ô segment, trông như 1 ô liền mạch */
+.gdtp-seg-box {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 6px 10px;
+    border: 1.5px solid var(--gdtp-border);
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.gdtp-seg-box:focus-within { border-color: var(--gdtp-green); box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15); }
+.gdtp-seg-box.is-invalid { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); }
+.gdtp-seg {
+    border: 0;
+    outline: none;
+    padding: 2px 1px;
+    margin: 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gdtp-text);
+    background: transparent;
+    border-radius: 4px;
+    -moz-appearance: textfield;
+}
+.gdtp-seg::-webkit-inner-spin-button,
+.gdtp-seg::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.gdtp-seg::placeholder { color: var(--gdtp-muted); font-weight: 500; }
+.gdtp-seg:focus { background: var(--gdtp-green-light); color: var(--gdtp-green-dark); }
+.gdtp-seg-d, .gdtp-seg-mo, .gdtp-seg-h, .gdtp-seg-mi, .gdtp-seg-s { width: 2.1em; }
+.gdtp-seg-y { width: 3.4em; }
+.gdtp-seg-sep {
+    color: var(--gdtp-muted);
+    font-weight: 700;
+    padding: 0 1px;
+    user-select: none;
+}
+.gdtp-nav {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border: 1.5px solid var(--gdtp-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--gdtp-green-dark);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+}
+.gdtp-nav:hover { background: var(--gdtp-green-light); border-color: var(--gdtp-green); }
+
+/* ---- Weekdays + days grid ---- */
+.gdtp-weekdays,
+.gdtp-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.gdtp-weekdays span {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gdtp-muted);
+    padding: 4px 0;
+    text-transform: uppercase;
+}
+.gdtp-weekdays span.is-sun { color: #dc2626; }
+.gdtp-day {
+    aspect-ratio: 1 / 1;
+    border: 0;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--gdtp-text);
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+}
+.gdtp-day:hover { background: var(--gdtp-green-light); }
+.gdtp-day.is-other { color: #cbd2da; }
+.gdtp-day.is-today { box-shadow: inset 0 0 0 1.5px var(--gdtp-green); font-weight: 700; }
+.gdtp-day.is-selected {
+    background: var(--gdtp-green);
+    color: #fff;
+    font-weight: 700;
+}
+.gdtp-day.is-selected:hover { background: var(--gdtp-green-dark); }
+
+/* ---- Time wheels ---- */
+.gdtp-time { display: flex; flex-direction: column; }
+.gdtp-time-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gdtp-green-dark);
+    text-align: center;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+.gdtp-time-cols { display: flex; gap: 6px; flex: 1 1 auto; }
+.gdtp-time-col {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.gdtp-time-col-label {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--gdtp-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+.gdtp-time-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    height: 188px;
+    overflow-y: auto;
+    border: 1.5px solid var(--gdtp-border);
+    border-radius: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gdtp-green) transparent;
+}
+.gdtp-time-list::-webkit-scrollbar { width: 6px; }
+.gdtp-time-list::-webkit-scrollbar-thumb { background: var(--gdtp-green); border-radius: 6px; }
+.gdtp-time-list li {
+    text-align: center;
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--gdtp-text);
+    cursor: pointer;
+    border-radius: 6px;
+    margin: 1px 3px;
+    transition: background .1s ease;
+}
+.gdtp-time-list li:hover { background: var(--gdtp-green-light); }
+.gdtp-time-list li.is-selected {
+    background: var(--gdtp-green);
+    color: #fff;
+    font-weight: 700;
+}
+
+/* ---- Footer ---- */
+.gdtp-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eef1f4;
+}
+.gdtp-popover .gdtp-footer { width: 100%; }
+.gdtp-btn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: background .15s ease, border-color .15s ease;
+}
+.gdtp-btn-now {
+    background: #fff;
+    border-color: var(--gdtp-border);
+    color: var(--gdtp-green-dark);
+}
+.gdtp-btn-now:hover { background: var(--gdtp-green-soft); border-color: var(--gdtp-green); }
+.gdtp-btn-done { background: var(--gdtp-green); color: #fff; }
+.gdtp-btn-done:hover { background: var(--gdtp-green-dark); }
+
+/* Footer nằm full-width dưới cùng popover */
+.gdtp-popover { flex-wrap: wrap; }
+.gdtp-popover .gdtp-footer { order: 3; flex-basis: 100%; }
+
+@media (max-width: 520px) {
+    .gdtp-popover { width: calc(100vw - 24px); }
+    .gdtp-popover.is-open { flex-direction: column; }
+    .gdtp-popover .gdtp-time { flex-basis: auto; }
+    .gdtp-time-list { height: 132px; }
+}

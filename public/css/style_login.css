@@ -136,6 +136,87 @@
       box-shadow: 0 0 0 1px rgba(0, 128, 0, 0.2);
   }
 
+  #container #wp-login #wp-form-login #form-login input:hover {
+      border: 1px solid green;
+  }
+
+  /* ================================
+   GHI NHỚ ĐĂNG NHẬP: checkbox tròn xanh lá
+================================ */
+  #container #wp-login #wp-form-login #form-login #wp-check-remember-me {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+  }
+
+  #container #wp-login #wp-form-login #form-login #wp-check-remember-me label {
+      cursor: pointer;
+      user-select: none;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check {
+      position: relative;
+      display: inline-flex;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check input[type="checkbox"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      width: 20px;
+      height: 20px;
+      margin: 0;
+      padding: 0;
+      cursor: pointer;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check-mark {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid #c2c8d0;
+      background: #f2f2f2;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, .06);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      transition: border-color .15s, background .15s;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check-mark i {
+      display: none;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check:hover .remember-check-mark {
+      border-color: green;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check input[type="checkbox"]:checked ~ .remember-check-mark {
+      background: green;
+      border-color: green;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check input[type="checkbox"]:checked ~ .remember-check-mark i {
+      display: block;
+  }
+
+  #container #wp-login #wp-form-login #form-login .remember-check.shake {
+      animation: remember-check-shake .4s;
+  }
+
+  @keyframes remember-check-shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px); }
+      40% { transform: translateX(4px); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
+  }
+
   /* ================================
    LINK
 ================================ */
@@ -225,4 +306,179 @@
   }
   #container #wp-login #wp-form-login #form-login .password-box #eyeIcon{
     color: rgb(48, 48, 48);
+  }
+
+  /* ================================
+   LINK: ĐĂNG KÝ / QUÊN MẬT KHẨU
+================================ */
+  #container #wp-login #wp-form-login #wp-login-links {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+  }
+
+  /* ================================
+   MODAL: QUÊN MẬT KHẨU
+================================ */
+  .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+  }
+
+  .modal-backdrop.show {
+      display: flex;
+  }
+
+  .modal-backdrop .modal {
+      background: #fff;
+      border-radius: 10px;
+      width: 440px;
+      max-width: 92vw;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+  }
+
+  .modal-backdrop .modal-header {
+      padding: 14px 18px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      background: green;
+  }
+
+  .modal-backdrop .modal-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+  }
+
+  .modal-backdrop .modal-body label {
+      font-size: 14px;
+      margin-top: 6px;
+  }
+
+  .modal-backdrop .modal-body input {
+      padding: 9px 10px;
+      border: 1px solid #c2c8d0;
+      border-radius: 6px;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .modal-backdrop .modal-body input:focus {
+      border: 1px solid green;
+      box-shadow: 0 0 0 1px rgba(0, 128, 0, 0.2);
+  }
+
+  .modal-backdrop .fp-message {
+      margin: 0;
+      padding: 0 18px;
+      font-size: 14px;
+      font-style: italic;
+      min-height: 18px;
+  }
+
+  .modal-backdrop .fp-message.err {
+      color: rgb(235, 101, 101);
+  }
+
+  .modal-backdrop .fp-message.ok {
+      color: green;
+  }
+
+  .modal-backdrop .modal-footer {
+      padding: 14px 18px 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+  }
+
+  .modal-backdrop .btn-cancel,
+  .modal-backdrop .btn-confirm {
+      padding: 8px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      border: 1px solid transparent;
+  }
+
+  .modal-backdrop .btn-cancel {
+      background: #eee;
+      border-color: #c2c8d0;
+      color: #333;
+  }
+
+  .modal-backdrop .btn-cancel:hover {
+      background: #e2e2e2;
+  }
+
+  .modal-backdrop .btn-confirm {
+      background: green;
+      color: #fff;
+      font-weight: 500;
+  }
+
+  .modal-backdrop .btn-confirm:hover {
+      background: rgb(4, 143, 4);
+  }
+
+  .modal-backdrop .btn-confirm:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+  }
+
+  /* Hàng nhập tên đăng nhập/email + nút lấy mã */
+  .modal-backdrop .fp-identifier-row {
+      display: flex;
+      gap: 8px;
+  }
+
+  .modal-backdrop .fp-identifier-row input {
+      flex: 1;
+  }
+
+  .modal-backdrop #btn-get-code {
+      white-space: nowrap;
+      flex: 0 0 auto;
+  }
+
+  /* Khu vực 6 ô nhập mã */
+  .modal-backdrop .fp-otp-hint {
+      margin: 14px 0 8px;
+      font-size: 14px;
+      color: #333;
+  }
+
+  .modal-backdrop .otp-boxes {
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+  }
+
+  .modal-backdrop .otp-box {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      text-align: center;
+      font-size: 22px;
+      font-weight: 600;
+      text-transform: uppercase;
+      border: 1px solid #c2c8d0;
+      border-radius: 8px;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .modal-backdrop .otp-box:focus {
+      border: 1px solid green;
+      box-shadow: 0 0 0 2px rgba(0, 128, 0, 0.2);
   }

@@ -1,0 +1,49 @@
+/* =====================================================================
+ *  SharedTabs — bộ tab ngang dùng chung (tách ra từ .de-tabs cũ của
+ *  module daily_events). Markup:
+ *
+ *   <div class="shared-tabs">
+ *     <button type="button" class="shared-tab is-active" data-tab="a">A</button>
+ *     <button type="button" class="shared-tab" data-tab="b">B</button>
+ *   </div>
+ *   <section class="shared-panel is-active" data-panel="a">...</section>
+ *   <section class="shared-panel" data-panel="b" style="display:none;">...</section>
+ *
+ *  Xem public/js/shared/tabs.js cho phần khởi tạo (SharedTabs.init()).
+ * ===================================================================== */
+
+.shared-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e6e8ec;
+}
+
+.shared-tab {
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: #6b7280;
+    padding: 10px 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .15s ease, border-color .15s ease;
+}
+
+.shared-tab:hover {
+    color: #1f6f3d;
+}
+
+.shared-tab.is-active {
+    color: #1f6f3d;
+    border-bottom-color: #2e9e57;
+}
+
+.shared-panel {
+    max-width: 900px;
+    margin: 0 auto;
+}

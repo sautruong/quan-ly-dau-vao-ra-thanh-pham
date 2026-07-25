@@ -1,3 +1,20 @@
+<?php
+// Cấu hình BÊN A + Giám đốc (sửa-tại-chỗ, lưu dùng dài lâu).
+$cs = $data['contract_settings'] ?? [
+    'company_name'    => 'CÔNG TY TNHH VUA AN TOÀN',
+    'company_address' => '1/13Z Ấp Tiền Lân, Xã Bà Điểm, Thành Phố Hồ Chí Minh, Việt Nam.',
+    'director_name'   => 'LÊ HỮU TRÍ',
+];
+/** Span sửa-tại-chỗ: hover hiện cây bút, sửa 1 lần lưu dài lâu (data-ckey). */
+$c_edit = function ($key, $val, $bold = false) {
+    $v = htmlspecialchars((string) $val);
+    $b = $bold ? ' c-bold' : '';
+    return '<span class="c-editable' . $b . '" data-ckey="' . $key . '">'
+         . '<span class="c-ed-text">' . $v . '</span>'
+         . '<i class="fa fa-pen c-pen" title="Sửa (lưu dùng dài lâu)"></i>'
+         . '</span>';
+};
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,9 +22,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hợp đồng lao động nhân viên</title>
+    <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/contract.css">
+    <style>
+        .c-editable { position: relative; display: inline-block; border-radius: 3px; padding: 0 2px; }
+        .c-editable.c-bold { font-weight: bold; }
+        .c-editable:hover { background: #fff7d6; }
+        .c-editable.editing { background: #fff; outline: 1px dashed #2563eb; cursor: text; }
+        .c-pen { display: none; margin-left: 5px; color: #2563eb; cursor: pointer; font-size: 12px; }
+        .c-editable:hover .c-pen { display: inline; }
+        .c-editable.editing .c-pen { display: none; }
+        .toolbar .save-word { display: flex; justify-content: center; flex-direction: column; cursor: pointer; }
+        @media print { .c-pen { display: none !important; } .c-editable:hover { background: transparent; } }
+    </style>
 </head>
 
 <body>
@@ -17,9 +46,9 @@
             <p>Print</p>
         </div>
 
-        <div class="save-pdf">
-            <i class="fa fa-file-pdf"></i>
-            <p>Save</p>
+        <div class="save-word">
+            <i class="fa fa-file-word"></i>
+            <p>Save word</p>
         </div>
     </div>
 
@@ -30,7 +59,7 @@
 
             <div style="display:flex; justify-content:space-between;">
                 <div>
-                    <b>CÔNG TY TNHH VUA AN TOÀN</b><br>
+                    <?php echo $c_edit('company_name', $cs['company_name'], true); ?><br>
                     Số: <?php echo $data['contract_number']; ?>
                 </div>
 
@@ -49,9 +78,9 @@
 
             <p class="italic">Hôm nay, ngày <?php echo $data['sign_date']; ?> tại Công ty TNHH Vua An Toàn</p>
             <p>Chúng tôi gồm:</p>
-            <p><b>BÊN A (NGƯỜI SỬ DỤNG LAO ĐỘNG): CÔNG TY TNHH VUA AN TOÀN</b> </p>
-            <p>Địa chỉ: 1/13Z Ấp Tiền Lân, Xã Bà Điểm, Thành Phố Hồ Chí Minh, Việt Nam.</p>
-            <p>Đại diện: Ông <b>LÊ HỮU TRÍ</b> - Giám Đốc</p>
+            <p><b>BÊN A (NGƯỜI SỬ DỤNG LAO ĐỘNG): </b><?php echo $c_edit('company_name', $cs['company_name'], true); ?></p>
+            <p>Địa chỉ: <?php echo $c_edit('company_address', $cs['company_address']); ?></p>
+            <p>Đại diện: Ông <?php echo $c_edit('director_name', $cs['director_name'], true); ?> - Giám Đốc</p>
 
             <p><b>BÊN B (NGƯỜI LAO ĐỘNG):</b> <?php echo $data['employee_name']; ?></p>
             <p>Ngày tháng năm sinh: <?php echo format_value('date_of_birth', $data['date_of_birth']); ?></p>
@@ -161,7 +190,7 @@
                     <b>GIÁM ĐỐC</b>
                     <p style="font-style: italic;">(Ký, ghi rõ họ tên)</p>
                     <div style="margin-bottom: 80px;"></div>
-                    <b>LÊ HỮU TRÍ</b>
+                    <?php echo $c_edit('director_name', $cs['director_name'], true); ?>
                 </div>
             </div>
         </div>

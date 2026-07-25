@@ -1,0 +1,598 @@
+/* ============================================================
+   Module Lương — dùng chung cho Bảng chấm công + Bảng lương
+   ============================================================ */
+
+.py-content {
+    padding: 16px 20px 40px;
+    overflow-x: auto;
+}
+
+/* ---------- Toolbar / nav ---------- */
+.py-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.py-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.py-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    min-width: 260px;
+    text-align: center;
+}
+
+.py-nav-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #c2c8d0;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.py-nav-btn:hover { background: #eef2f7; }
+
+.py-nav-jump {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.py-nav-jump select {
+    padding: 5px 8px;
+    border: 1px solid #c2c8d0;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.py-links { display: flex; align-items: center; gap: 8px; }
+
+.py-btn {
+    background: #096926;
+    color: #fff;
+    border: 0;
+    padding: 7px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+}
+
+.py-btn:hover { background: #128140; }
+
+.py-btn-outline {
+    background: #fff;
+    color: #096926;
+    border: 1px solid #096926;
+}
+
+.py-btn-outline:hover { background: #e8f3ec; }
+
+.py-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ---------- Stats panel ---------- */
+.py-stats {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.py-stat {
+    background: #fff;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 10px 16px;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.py-stat-label { font-size: 12px; color: #666; }
+.py-stat-value { font-size: 18px; font-weight: 700; color: #096926; }
+
+/* ---------- Legend ---------- */
+.py-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #555;
+}
+
+.py-legend-item b { color: #096926; margin-right: 3px; }
+.py-legend-hint { font-style: italic; color: #888; }
+
+/* ---------- Grid chấm công ---------- */
+.py-grid-wrap {
+    overflow-x: auto;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    max-width: 100%;
+}
+
+.py-grid-table {
+    border-collapse: collapse;
+    font-size: 12.5px;
+    width: max-content;
+    min-width: 100%;
+}
+
+.py-grid-table th,
+.py-grid-table td {
+    border: 1px solid #e6e8eb;
+    padding: 6px 4px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.py-grid-table thead th {
+    background: #096926;
+    color: #fff;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    border-color: #096926;
+    border-right: 1px solid #fff;
+    border-bottom: 1px solid #fff;
+}
+.py-grid-table thead th:last-child { border-right-color: #096926; }
+
+.py-grid-table .py-col-name,
+.py-grid-table .py-col-title {
+    text-align: left;
+    padding-left: 10px;
+    position: sticky;
+    background: #fff;
+    z-index: 2;
+}
+
+.py-grid-table .py-col-name { left: 0; min-width: 170px; z-index: 4; }
+.py-grid-table .py-col-title { left: 170px; min-width: 130px; }
+
+.py-grid-table thead .py-col-name,
+.py-grid-table thead .py-col-title { background: #096926; color: #fff; z-index: 5; }
+
+.py-grid-table .py-day-col { min-width: 34px; }
+
+.py-grid-table th.py-day-head { cursor: pointer; }
+.py-grid-table th.py-day-head:hover { background: #128140; }
+.py-grid-table th.py-day-head .py-wd { display: block; font-size: 10px; color: rgba(255,255,255,.8); font-weight: 500; }
+
+.py-grid-table th.is-sunday { background: #b03a3a; }
+.py-grid-table th.is-sunday:hover { background: #c24545; }
+.py-grid-table th.is-sunday .py-wd { color: rgba(255,255,255,.85); }
+.py-grid-table td.is-sunday { background: #fbecec; }
+.py-grid-table td.is-sunday.py-cell:hover { background: #f6dede; }
+
+.py-grid-table th.is-today { background: #f1c40f; color: #4a3b00; }
+.py-grid-table th.is-today:hover { background: #f6d43c; }
+.py-grid-table th.is-today .py-wd { color: #6b5700; }
+.py-grid-table td.is-today { box-shadow: inset 0 0 0 2px #096926; }
+
+.py-cell { cursor: pointer; font-weight: 600; position: relative; }
+.py-cell:hover { background: #eef2f7; }
+.py-cell.py-cell-future { cursor: default; color: #bbb; }
+.py-cell.py-mark-x       { color: #096926; }
+.py-cell.py-mark-half    { color: #b8860b; }
+.py-cell.py-mark-off     { color: #b22; }
+.py-cell.py-mark-holiday { color: #7a2fbf; background: #f4ecfb; }
+.py-cell.py-mark-dash    { color: #999; }
+.py-cell.py-mark-sunday-ot { color: #7a4a00; background: #fff2d9; font-size: 11px; }
+.py-cell.py-readonly { cursor: default; }
+.py-cell.py-readonly:hover { background: none; }
+.py-grid-table td.is-sunday.py-cell.py-readonly:hover { background: #fbecec; }
+.py-grid-table th.py-day-head.py-readonly { cursor: default; }
+.py-grid-table th.py-day-head.py-readonly:hover { background: #096926; }
+
+.py-readonly-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #fff3cd; color: #8a6100; border: 1px solid #f0dca0;
+    border-radius: 14px; padding: 3px 12px; font-size: 12px; font-weight: 600;
+    margin-left: 10px; vertical-align: middle;
+}
+
+/* Tooltip dùng chung (lý do off trên lưới chấm công, công thức BHXH trên bảng lương...) */
+.py-has-tooltip { position: relative; }
+.py-has-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 6px;
+    background: #1a1a1a;
+    color: #fff;
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 60;
+    box-shadow: 0 3px 8px rgba(0,0,0,.28);
+    pointer-events: none;
+}
+.py-has-tooltip:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(2px);
+    margin-bottom: 0;
+    border: 5px solid transparent;
+    border-top-color: #1a1a1a;
+    z-index: 60;
+    pointer-events: none;
+}
+
+.py-badge-warning {
+    display: inline-block;
+    background: #fde2e2;
+    color: #b22;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+}
+
+.py-grid-loading { padding: 20px; text-align: center; color: #888; }
+
+/* ---------- Popover chọn công (chọn 1 lựa chọn -> bấm OK để xác nhận) ---------- */
+.py-popover {
+    position: fixed;
+    z-index: 2000;
+    background: #fff;
+    border: 1px solid #c2c8d0;
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.2);
+    padding: 14px 12px 12px;
+    width: 260px;
+    max-width: calc(100vw - 20px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.py-popover * { box-sizing: border-box; }
+
+.py-popover-x {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: #888;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.py-popover-x:hover { background: #f0f2f4; color: #333; }
+
+.py-popover-title { font-size: 12.5px; font-weight: 600; margin: 0 22px 2px 0; }
+
+.py-popover-options { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+
+.py-popover-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: #f5f7fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 5px;
+    padding: 7px 9px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.py-popover-radio input[type="radio"] { flex-shrink: 0; margin: 0; cursor: pointer; accent-color: #096926; }
+.py-popover-radio span { flex: 1; }
+.py-popover-radio:hover { background: #e8f3ec; border-color: #096926; }
+.py-popover-radio:has(input:checked) { background: #e8f3ec; border-color: #096926; }
+
+.py-popover-reason-wrap { display: none; width: 100%; padding-left: 26px; }
+.py-popover-reason-wrap.show { display: block; }
+.py-popover-reason {
+    width: 100%;
+    font-size: 12px;
+    padding: 6px;
+    border: 1px solid #c2c8d0;
+    border-radius: 4px;
+    background: #fff;
+    accent-color: #096926;
+}
+.py-popover-reason:focus {
+    outline: none;
+    border-color: #096926;
+    box-shadow: 0 0 0 2px rgba(9,105,38,.2);
+}
+
+.py-popover-ok {
+    margin-top: 4px;
+    width: 100%;
+    background: #096926;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.py-popover-ok:hover { background: #128140; }
+
+/* ---------- Modal (dùng chung nhỏ gọn) ---------- */
+.py-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 3000;
+    padding: 60px 0;
+    overflow-y: auto;
+}
+
+.py-modal-backdrop.show { display: flex; }
+
+.py-modal {
+    background: #fff;
+    border-radius: 6px;
+    width: 420px;
+    max-width: 92vw;
+    box-shadow: 0 10px 30px rgba(0,0,0,.2);
+}
+
+.py-modal-header { padding: 12px 16px; border-bottom: 1px solid #e1e4e8; font-weight: 600; font-size: 14px; }
+.py-modal-body { padding: 14px 16px; }
+.py-modal-footer { padding: 10px 16px; border-top: 1px solid #e1e4e8; text-align: right; }
+
+.py-reason-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.py-reason-list li {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid #e1e4e8; border-radius: 4px; padding: 6px 8px;
+}
+.py-reason-list input[type="text"] { flex: 1; border: 1px solid #c2c8d0; border-radius: 4px; padding: 4px 6px; font-size: 13px; }
+.py-reason-list .py-reason-del { background: none; border: none; color: #b22; cursor: pointer; }
+
+.py-reason-add { display: flex; gap: 6px; }
+.py-reason-add input[type="text"] { flex: 1; border: 1px solid #c2c8d0; border-radius: 4px; padding: 6px 8px; }
+
+/* ============================================================
+   Bảng lương — bảng transposed (nhãn dòng bên trái, cột = nhân viên)
+   ============================================================ */
+.py-history-banner {
+    background: #fff7e6;
+    border: 1px solid #f0c36d;
+    color: #8a6100;
+    border-radius: 6px;
+    padding: 8px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.py-link-btn {
+    background: none;
+    border: none;
+    color: #096926;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 8px;
+}
+
+.py-payslip-table {
+    border-collapse: collapse;
+    font-size: 12.5px;
+    width: max-content;
+}
+
+.py-payslip-table th,
+.py-payslip-table td {
+    border: 1px solid #e6e8eb;
+    padding: 4px 8px;
+    text-align: center;
+    white-space: nowrap;
+    width: 1%;
+}
+
+.py-payslip-table .py-row-label {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background: #f5f7fa;
+    font-weight: 600;
+    z-index: 2;
+}
+
+.py-payslip-table tr.py-row-sep td { border-top: 3px solid #cfd6de; }
+.py-payslip-table tr.py-row-bold td { font-weight: 700; background: #f8faf8; }
+.py-payslip-table tr.py-row-bold .py-row-label { background: #eef2ee; }
+.py-payslip-table tr.py-row-bold-text td { font-weight: 700; }
+.py-payslip-table tr.py-row-highlight td { background: #e8f3ec; }
+
+.py-payslip-table .py-total-col {
+    background: #f5f7fa;
+    font-weight: 700;
+    border-left: 2px solid #cfd6de;
+    color: #096926;
+}
+.py-payslip-table tr.py-row-header .py-total-col { background: #075420; color: #fff; }
+.py-payslip-table tr.py-row-bold .py-total-col { background: #eef2ee; }
+.py-payslip-table tr.py-row-highlight .py-total-col { background: #d9ecdf; }
+.py-payslip-table tr.py-row-highlight .py-row-label { background: #d9ecdf; }
+
+.py-payslip-table tr.py-row-header td {
+    background: #096926;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13.5px;
+}
+.py-payslip-table tr.py-row-header .py-row-label { background: #075420; color: #fff; }
+
+.py-payslip-table .py-warning-col { background: #fde2e2; color: #b22; font-weight: 600; }
+
+.py-fixed-cell { color: #333; }
+
+.py-input-cell input {
+    width: 82px;
+    padding: 3px 5px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 12px;
+    transition: border-color .15s;
+}
+.py-input-cell input:hover { border-color: #c2c8d0; }
+.py-input-cell input:focus {
+    border-color: #096926;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(9,105,38,.15);
+}
+
+.py-input-cell input.py-input-int { width: 46px; }
+.py-input-cell input.py-input-note { width: 128px; }
+
+.py-email-btn {
+    background: #096926;
+    color: #fff;
+    border: 0;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.py-email-btn:hover { background: #128140; }
+.py-email-btn:disabled { opacity: .5; cursor: not-allowed; }
+.py-email-bulk-btn { margin-top: 5px; font-weight: 600; }
+
+/* Thưởng khác: icon ghi chú chỉ hiện khi hover ô (hoặc luôn hiện nếu đã có ghi chú) */
+.py-bonus-cell { position: relative; }
+.py-bonus-row1 { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.py-bonus-note-btn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: 1px solid #c2c8d0;
+    background: #fff;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #999;
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity .15s;
+}
+.py-bonus-cell:hover .py-bonus-note-btn { opacity: 1; }
+.py-bonus-note-btn.has-note { opacity: 1; color: #096926; border-color: #096926; background: #e8f3ec; }
+.py-bonus-note-input { margin: 4px auto 0; display: block; }
+
+/* Modal Thông tin sản lượng & danh sách theo sản phẩm */
+.py-info-table { width: 100%; border-collapse: collapse; }
+.py-info-table td, .py-info-table th { border: 1px solid #e6e8eb; padding: 7px 10px; text-align: left; font-size: 13px; }
+.py-info-table tr td:first-child { color: #555; width: 55%; }
+.py-info-table tr td:last-child { font-weight: 600; }
+.py-product-list-table th { background: #f5f7fa; font-weight: 600; }
+.py-product-list-table td:last-child, .py-product-list-table th:last-child { text-align: right; }
+#pyProductListModal .py-modal-body { max-height: 400px; overflow-y: auto; }
+
+/* Modal cài đặt rộng hơn modal thường */
+.py-modal-wide { width: 620px; }
+.py-settings-table { width: 100%; border-collapse: collapse; }
+.py-settings-table td { border: 1px solid #e6e8eb; padding: 6px 8px; text-align: left; white-space: normal; }
+.py-settings-label { font-size: 12.5px; color: #333; width: 55%; }
+.py-settings-value-cell { display: flex; align-items: center; gap: 6px; }
+.py-settings-input { flex: 1; padding: 4px 6px; border: 1px solid #c2c8d0; border-radius: 4px; text-align: right; }
+.py-settings-unit { font-size: 12px; color: #888; flex-shrink: 0; min-width: 24px; }
+
+.py-settings-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e1e4e8; }
+.py-settings-section h4 { margin: 0 0 8px; font-size: 13.5px; color: #1a1a1a; }
+.py-posallow-form { display: flex; gap: 6px; margin-bottom: 10px; }
+.py-posallow-form select { flex: 1.4; padding: 6px 8px; border: 1px solid #c2c8d0; border-radius: 4px; font-size: 13px; }
+.py-posallow-form input { flex: 1; padding: 6px 8px; border: 1px solid #c2c8d0; border-radius: 4px; text-align: right; }
+.py-posallow-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+.py-posallow-list li { border: 1px solid #e6e8eb; border-radius: 4px; padding: 5px 8px; font-size: 12.5px; }
+.py-posallow-list .py-posallow-empty { color: #888; font-style: italic; border: none; padding: 0; }
+
+/* Điều chỉnh sản lượng (cộng/trừ tạm) */
+.py-adjust-btn {
+    width: 24px; height: 24px;
+    border: 1px solid #c2c8d0; background: #fff; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #666; font-size: 11px; margin-left: 4px;
+}
+.py-adjust-btn:hover { background: #eef2f7; border-color: #096926; color: #096926; }
+
+.py-adjust-list { list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+.py-adjust-list li {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid #e6e8eb; border-radius: 4px; padding: 5px 8px; font-size: 12.5px;
+}
+.py-adjust-list .py-adjust-empty { color: #888; font-style: italic; border: none; padding: 0; }
+.py-adjust-amt { font-weight: 700; min-width: 60px; color: #096926; }
+.py-adjust-amt.neg { color: #b22; }
+.py-adjust-note { flex: 1; color: #555; }
+.py-adjust-edit, .py-adjust-del {
+    width: 22px; height: 22px; border: 1px solid #c2c8d0; background: #fff; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #888; font-size: 11px;
+}
+.py-adjust-edit:hover { border-color: #096926; color: #096926; }
+.py-adjust-del:hover { border-color: #b22; color: #b22; }
+
+.py-adjust-add { display: flex; gap: 6px; }
+.py-adjust-add input:first-child { flex: 0 0 130px; padding: 6px 8px; border: 1px solid #c2c8d0; border-radius: 4px; text-align: right; }
+.py-adjust-add input:nth-child(2) { flex: 1; padding: 6px 8px; border: 1px solid #c2c8d0; border-radius: 4px; }
+.py-adjust-hint { font-size: 11px; color: #888; font-style: italic; margin: 8px 0 0; }
+
+/* Thưởng KPI sản lượng: icon giải thích hiện khi hover */
+.py-kpi-cell { position: relative; }
+.py-kpi-wrap { display: inline-flex; align-items: center; gap: 5px; }
+.py-kpi-explain-btn {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border: 1px solid #c2c8d0; background: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #888; font-size: 11px;
+    opacity: 0; transition: opacity .15s;
+}
+.py-kpi-cell:hover .py-kpi-explain-btn { opacity: 1; }
+.py-kpi-explain-btn:hover { border-color: #096926; color: #096926; background: #e8f3ec; }
+
+.py-kpi-explain-row {
+    display: flex; justify-content: space-between; gap: 12px;
+    padding: 7px 0; border-bottom: 1px solid #eef0f2; font-size: 13px;
+}
+.py-kpi-explain-row:last-child { border-bottom: none; }
+.py-kpi-explain-row.highlight { background: #e8f3ec; margin: 4px -16px -14px; padding: 10px 16px; border-radius: 0 0 6px 6px; }
+.py-kpi-explain-label { color: #555; }
+.py-kpi-explain-value { font-weight: 600; text-align: right; }
+.py-kpi-explain-note { font-size: 12px; color: #888; font-style: italic; margin: 0 0 10px; }

@@ -1,0 +1,340 @@
+/* =====================================================================
+   HEADER TRANG CHỦ — logo trái, menu cha ngang giữa, cụm icon phải.
+   Header nền trong suốt, nằm sát mép trên; nội dung chữ/icon đổi màu
+   theo toggle sáng/tối riêng (không phụ thuộc theme toàn hệ thống).
+   Dùng chung biến màu/spacing với app_shell.css (đã link trước file này).
+   ===================================================================== */
+
+/* global.css đặt html,body { display:flex; align-items:center; overflow:hidden; }
+   để căn giữa khung #wrapper của các trang có sidebar — trang chủ không dùng
+   khung đó nên phải bỏ để header không bị đẩy ra giữa màn hình. */
+html.home-html, body.home-body {
+    display: block;
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: transparent;
+}
+body.home-body { min-height: 100vh; }
+
+/* ===== LỚP HÌNH NỀN (slideshow, phía sau mọi nội dung) ===== */
+#home-bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: var(--app-gray-100, #f3f4f6);
+    overflow: hidden;
+}
+.home-bg-img {
+    position: absolute;
+    inset: 0;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+}
+.home-bg-img.is-active { opacity: 1; }
+
+#content-home, .home-header, #home-welcome-flash { position: relative; z-index: 1; }
+
+/* ===== "Welcome {tên}" — mờ->sáng giữa màn hình, giữ 3s rồi tự ẩn ===== */
+#home-welcome-flash {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    text-align: center;
+    color: #fff;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, .55), 0 0 4px rgba(0, 0, 0, .35);
+    opacity: 0;
+    filter: blur(8px);
+    transition: opacity .9s ease, filter .9s ease;
+}
+#home-welcome-flash.is-visible { opacity: 1; filter: blur(0); }
+#home-welcome-flash .hwf-line1 {
+    font-size: 22px; font-weight: 300; letter-spacing: 6px;
+    text-transform: uppercase; opacity: .88;
+}
+#home-welcome-flash .hwf-line2 {
+    font-size: 42px; font-weight: 700; margin-top: 8px; letter-spacing: .5px;
+}
+
+/* ===== HEADER — nền trong suốt, sát mép trên ===== */
+.home-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin: 0;
+    padding: 14px 24px;
+    background: transparent;
+    /* Màu chữ/icon mặc định (chế độ "tối" — dùng cho nền sáng). Đổi bằng nút
+       sáng/tối chữ menu (.is-light-text) khi nền do người dùng chọn tối màu. */
+    --home-text: var(--app-gray-700, #374151);
+    --home-text-strong: var(--app-navy, #222a35);
+    --home-text-soft: var(--app-gray-500, #6b7280);
+    --home-accent: var(--app-green-dark, #15803d);
+}
+.home-header.is-light-text {
+    --home-text: #f1f5f9;
+    --home-text-strong: #ffffff;
+    --home-text-soft: #e2e8f0;
+    --home-accent: #4ade80;
+}
+
+/* ---- Trái: logo 2 vòng tròn + tên hãng ---- */
+.home-header-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.home-logo-ring {
+    display: flex; align-items: center; justify-content: center;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 2px solid var(--app-green, #16a34a);
+    padding: 3px;
+    flex-shrink: 0;
+}
+.home-logo-ring-inner {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 1px solid var(--app-gray-300, #d1d5db);
+    overflow: hidden;
+    background: #fff;
+}
+.home-logo-ring-inner img { width: 78%; height: 78%; object-fit: contain; }
+.home-brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+.home-brand-line1 { font-size: 14px; font-weight: 800; color: var(--home-text-strong); letter-spacing: 0.4px; }
+.home-brand-line2 { font-size: 11px; font-weight: 600; color: var(--home-text-soft); letter-spacing: 0.6px; }
+
+/* ---- Giữa: menu cha ngang ---- */
+.home-nav-wrap { display: flex; align-items: center;justify-content: center; gap: 6px; flex: 1; min-width: 0; }
+.home-nav {
+    display: flex; align-items: center; gap: 2px;
+    
+    scrollbar-width: thin;
+    min-width: 0;
+}
+.home-nav::-webkit-scrollbar { height: 4px; }
+.home-nav-item { position: relative; flex-shrink: 0; }
+.home-nav-item.is-dragging { opacity: 0.4; }
+/* Cầu nối vô hình lấp khoảng cách 8px giữa nút và dropdown (top: calc(100% + 8px) bên dưới) —
+   thiếu cầu này, rê chuột thẳng xuống sẽ ra khỏi vùng hover của item đúng lúc băng qua khoảng
+   trống đó, khiến dropdown tự đóng trước khi chạm tới (gặp rõ nhất ở tab có dropdown dài như
+   "Sản xuất", vì đường di chuột thường chéo hơn). Chỉ áp cho hàng chính, không cần ở "..." vì
+   danh sách trong đó luôn hiện phẳng, không dựa vào hover. */
+#home-nav > .home-nav-item::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 100%;
+    height: 8px;
+}
+.home-nav-btn {
+    display: flex; align-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--home-text);
+    font-size: 13.5px; font-weight: 600;
+    padding: 9px 12px;
+    border-radius: 999px;
+    cursor: grab;
+    white-space: nowrap;
+    transition: color .18s ease;
+}
+.home-nav-btn:active { cursor: grabbing; }
+.home-nav-btn:hover, .home-nav-item.is-open .home-nav-btn { color: var(--home-accent); }
+
+/* Nút ghim "Thêm vào thanh dấu trang" — chỉ hiện với các thẻ đang ẩn trong ">>". */
+.home-nav-pin {
+    display: none;
+    width: 26px; height: 26px; flex: 0 0 auto;
+    align-items: center; justify-content: center;
+    border: 0; border-radius: 50%;
+    background: transparent; color: var(--app-gray-500, #6b7280);
+    cursor: pointer; font-size: 12px;
+}
+.home-nav-pin:hover { background: var(--app-gray-200, #e5e7eb); color: var(--app-green-dark, #15803d); }
+
+.home-nav-drop {
+    position: absolute; top: calc(100% + 8px); left: 0;
+    min-width: 220px; max-width: 320px;
+    max-height: 70vh; overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--app-gray-200, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: var(--app-shadow, 0 4px 14px rgba(0,0,0,.08));
+    padding: 8px;
+    z-index: 1300;
+    opacity: 0; visibility: hidden; transform: translateY(-6px);
+    transition: opacity .16s ease, transform .16s ease, visibility .16s;
+}
+.home-nav-item.is-open .home-nav-drop { opacity: 1; visibility: visible; transform: translateY(0); }
+/* Hover mở dropdown menu con (chỉ hàng chính — ">>" dùng click, danh sách bên trong ">>" luôn hiện phẳng). */
+#home-nav > .home-nav-item:hover > .home-nav-drop { opacity: 1; visibility: visible; transform: translateY(0); }
+.home-nav-drop a {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--app-gray-700, #374151);
+    text-decoration: none;
+    font-size: 13.5px;
+}
+.home-nav-drop a:hover { background: var(--app-gray-100, #f3f4f6); color: var(--app-green-dark, #15803d); }
+.home-nav-drop a.sb-search-hidden { display: none; }
+
+/* ---- ">>" menu cha dư (>8), kiểu nút xổ thanh dấu trang Chrome ---- */
+.home-nav-more-btn { padding: 9px 10px; }
+.home-nav-more-list {
+    right: 0; left: auto;
+    min-width: 260px;
+}
+/* Bên trong ">>", hiện phẳng cả nhóm lẫn menu con (không hover-flyout lồng nhau);
+   nút ghim nằm cạnh phải tên nhóm, danh sách menu con xuống dòng bên dưới. */
+.home-nav-more-list .home-nav-item {
+    display: flex; flex-wrap: wrap; align-items: center;
+    width: 100%; margin-bottom: 4px;
+}
+.home-nav-more-list .home-nav-btn {
+    flex: 1 1 auto; min-width: 0; border-radius: 8px; cursor: grab;
+    background: var(--app-gray-50, #f9fafb);
+    color: var(--app-gray-700, #374151);
+}
+.home-nav-more-list .home-nav-btn:hover { color: var(--app-green-dark, #15803d); }
+.home-nav-more-list .home-nav-pin { display: flex; }
+.home-nav-more-list .home-nav-drop {
+    position: static; opacity: 1; visibility: visible; transform: none;
+    flex-basis: 100%;
+    box-shadow: none; border: none; padding: 0 0 8px 10px; margin-bottom: 6px;
+    border-radius: 0; max-height: none; overflow: visible;
+    border-bottom: 1px dashed var(--app-gray-200, #e5e7eb);
+}
+.home-nav-more-list .home-nav-item:last-child .home-nav-drop { border-bottom: none; }
+
+/* ---- Phải: cụm icon ---- */
+.home-header-right { flex-shrink: 0; }
+.home-icon-btn {
+    position: relative;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid transparent; border-radius: 50%;
+    background: transparent; cursor: pointer; color: var(--home-text);
+    font-size: 17px; transition: color .18s ease;
+}
+.home-icon-btn:hover { color: var(--home-accent); }
+
+/* Cụm icon tái dùng (lịch/todo/chuông) cũng theo màu chữ trong suốt của header trang chủ. */
+#home-header .app-cal-btn, #home-header .app-todo-btn, #home-header .app-bell-btn,
+#home-header .app-remind-btn {
+    color: var(--home-text);
+    background: transparent; border-color: transparent;
+}
+#home-header .app-cal-btn:hover, #home-header .app-todo-btn:hover, #home-header .app-bell-btn:hover,
+#home-header .app-remind-btn:hover {
+    color: var(--home-accent); background: transparent; border-color: transparent;
+}
+#home-header .app-user-btn { background: transparent; }
+#home-header .app-user-name { color: var(--home-text-strong); }
+#home-header .app-user-sub { color: var(--home-text-soft); }
+#home-header .app-user-caret { color: var(--home-text-soft); }
+
+/* Ô tìm menu */
+.home-search { position: relative; }
+.home-search-pop {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    width: 320px; max-width: 92vw;
+    background: #fff;
+    border: 1px solid var(--app-gray-200, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: var(--app-shadow, 0 4px 14px rgba(0,0,0,.08));
+    padding: 10px;
+    z-index: 1300;
+    opacity: 0; visibility: hidden; transform: translateY(-6px);
+    transition: opacity .16s ease, transform .16s ease, visibility .16s;
+}
+.home-search.is-open .home-search-pop { opacity: 1; visibility: visible; transform: translateY(0); }
+.home-search-pop input {
+    width: 100%; box-sizing: border-box;
+    border: 1px solid var(--app-gray-200, #e5e7eb);
+    border-radius: 8px; padding: 9px 12px; font-size: 13.5px;
+}
+.home-search-results { max-height: 320px; overflow-y: auto; margin-top: 6px; }
+.home-search-results a {
+    display: flex; flex-direction: column;
+    padding: 8px 10px; border-radius: 8px;
+    color: var(--app-gray-700, #374151); text-decoration: none;
+}
+.home-search-results a:hover,
+.home-search-results a.is-kbd-active { background: var(--app-gray-100, #f3f4f6); }
+.home-search-results .hs-label { font-size: 13.5px; font-weight: 600; }
+.home-search-results .hs-group { font-size: 11.5px; color: var(--app-gray-500, #6b7280); }
+.home-search-empty { padding: 10px; text-align: center; color: var(--app-gray-500, #6b7280); font-size: 13px; }
+
+/* ===== Modal "Cài đặt hình nền" ===== */
+.home-bgset-box { max-width: 560px; width: 92vw; }
+.home-bgset-block { margin-top: 16px; }
+.home-bgset-block-title {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: 700; color: var(--app-gray-700, #374151);
+    margin-bottom: 8px;
+}
+.home-bgset-slides, .home-bgset-library {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+}
+.home-bgset-slide, .home-bgset-lib-item {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--app-gray-200, #e5e7eb);
+    background-size: cover; background-position: center;
+    cursor: grab;
+}
+.home-bgset-slide-add {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--app-gray-50, #f9fafb);
+    color: var(--app-gray-500, #6b7280);
+    font-size: 22px; cursor: default;
+    border-style: dashed;
+}
+.home-bgset-remove {
+    position: absolute; top: 4px; right: 4px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(17, 24, 39, 0.65); color: #fff;
+    border: none; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; cursor: pointer;
+}
+.home-bgset-lib-add {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 600; color: var(--app-green-dark, #15803d);
+    cursor: pointer;
+}
+.home-bgset-upload {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: 1px dashed var(--app-gray-300, #d1d5db);
+    border-radius: 10px; padding: 12px; cursor: pointer;
+    color: var(--app-gray-700, #374151); font-size: 13.5px; font-weight: 600;
+}
+.home-bgset-upload:hover { background: var(--app-gray-50, #f9fafb); }
+.home-bgset-empty { grid-column: 1 / -1; text-align: center; color: var(--app-gray-500, #6b7280); font-size: 13px; padding: 14px 0; }
+
+/* ===== Trạng thái không có quyền view nào ===== */
+.home-welcome-empty {
+    max-width: 520px;
+    margin: 60px auto 0;
+    padding: 16px 20px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 12px;
+    color: var(--app-gray-700, #374151);
+    font-size: 14px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+    .home-header { flex-wrap: wrap; gap: 10px; }
+    .home-nav-wrap { order: 3; flex-basis: 100%; }
+    .home-brand-text { display: none; }
+}

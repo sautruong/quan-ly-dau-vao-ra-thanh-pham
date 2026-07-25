@@ -1,0 +1,433 @@
+/* ============================================================
+   DỮ LIỆU HOẠT ĐỘNG NHÀ MÁY — bố cục sidebar trái cho 7 tab dữ liệu.
+   Chỉ áp dụng khi #wrapper có class .has-sider (7 view dữ liệu admin_factory),
+   nên không ảnh hưởng các trang khác dùng chung dashboard.css.
+   ============================================================ */
+
+#wrapper.has-sider {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    align-items: start;
+    gap: 28px;
+}
+
+/* ---- Sidebar (tái sử dụng .header) ---- */
+#wrapper.has-sider .header {
+    position: sticky;
+    top: 20px;
+    align-self: start;
+    margin: 0;
+    padding: 18px 14px;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+}
+
+#wrapper.has-sider .wp-logo-title {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+#wrapper.has-sider .wp-logo-title .title h1 {
+    font-size: 17px;
+    line-height: 1.35;
+    text-align: center;
+}
+
+/* Trên desktop không cần nút hamburger */
+#wrapper.has-sider .menu-toggle-btn {
+    display: none;
+}
+
+#wrapper.has-sider nav {
+    width: 100%;
+}
+
+#wrapper.has-sider .main-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    margin: 0;
+    border-bottom: none;
+}
+
+#wrapper.has-sider .main-tab .tab-item {
+    margin: 0;
+    border-radius: 8px;
+}
+
+#wrapper.has-sider .main-tab .tab-item a {
+    display: block;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+#wrapper.has-sider .main-tab .tab-item:hover a {
+    background: var(--color-gray-50);
+    color: var(--color-gray-900);
+}
+
+#wrapper.has-sider .main-tab .active {
+    border-bottom: none;
+    background: var(--color-green-soft);
+}
+
+#wrapper.has-sider .main-tab .active a {
+    color: var(--color-green-dark);
+    font-weight: 700;
+    /* border-left-color: var(--color-green); */
+}
+
+/* ---- Vùng nội dung (bên phải) ---- */
+#wrapper.has-sider .content {
+    align-items: stretch;
+    align-self: stretch;
+    gap: 16px;
+    min-width: 0;
+    /* Chỉ vùng .content cuộn dọc; sidebar bên trái luôn cố định. */
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* TASK3 — Layout sidebar (has-sider): wrapper cố định bằng đúng 1 màn hình,
+   KHÔNG cuộn cả trang; chỉ .content cuộn dọc còn sidebar luôn hiển thị.
+   Giữ height:100vh + overflow:hidden từ base #wrapper ở dashboard.css. */
+#wrapper.has-sider {
+    height: 100vh;
+    overflow: hidden !important;
+}
+
+/* ============================================================
+   THANH LỌC THEO NGÀY + XUẤT EXCEL (TASK1)
+   ============================================================ */
+.data-actions {
+    margin-bottom: 4px;
+}
+
+.data-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.data-filter .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.data-filter .filter-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+.data-filter .filter-field input[type="date"] {
+    padding: 7px 10px;
+    border: 1px solid var(--color-gray-200, #c2c8d0);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-gray-900, #1f2937);
+    background: #fff;
+    outline: none;
+}
+
+.data-filter .filter-field input[type="date"]:focus {
+    border-color: var(--color-green, #16a34a);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.data-filter .btn-filter,
+.data-filter .btn-export-excel {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.data-filter .btn-filter {
+    background: #096926;
+    border-color: #096926;
+    color: #fff;
+}
+
+.data-filter .btn-filter:hover {
+    background: #0b7d2e;
+}
+
+.data-filter .btn-export-excel {
+    background: #fff;
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.data-filter .btn-export-excel:hover {
+    background: #ecfdf5;
+}
+
+#wrapper.has-sider .datatable-wrap {
+    width: 100%;
+}
+
+/* ============================================================
+   BỘ LỌC THEO CỘT (.btn-filter trong header) + MODAL LỌC (TASK1)
+   ============================================================ */
+.product-table thead th .wp-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0;
+}
+
+.product-table thead th .wp-title .btn-filter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #6b7280;
+    background: transparent;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.product-table thead th .wp-title .btn-filter:hover {
+    background: #096926;
+    color: #fff;
+}
+
+/* Cột đang có bộ lọc áp dụng → tô màu icon cho dễ nhận biết. */
+.product-table thead th .wp-title .btn-filter.is-active {
+    background: #096926;
+    color: #fff;
+}
+
+/* ---- Modal lọc cột ---- */
+.col-filter-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: 60px 0;
+    overflow-y: auto;
+}
+
+.col-filter-backdrop.show {
+    display: flex;
+}
+
+.col-filter-modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 460px;
+    max-width: 92vw;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+}
+
+.col-filter-modal .cf-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e1e4e8;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.col-filter-modal .cf-close {
+    cursor: pointer;
+    color: #888;
+    font-size: 18px;
+    line-height: 1;
+    border: 0;
+    background: none;
+}
+
+.col-filter-modal .cf-body {
+    padding: 14px 16px;
+}
+
+.col-filter-modal .cf-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #c2c8d0;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.col-filter-modal .cf-search:focus {
+    outline: none;
+    border-color: #096926;
+    box-shadow: 0 0 0 3px rgba(9, 105, 38, 0.15);
+}
+
+.col-filter-modal .cf-list {
+    margin-top: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid #eef0f3;
+    border-radius: 6px;
+}
+
+.col-filter-modal .cf-item {
+    padding: 8px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.col-filter-modal .cf-item:last-child {
+    border-bottom: none;
+}
+
+.col-filter-modal .cf-item:hover,
+.col-filter-modal .cf-item.active {
+    background: #eef7f0;
+}
+
+.col-filter-modal .cf-item.selected {
+    background: #096926;
+    color: #fff;
+}
+
+.col-filter-modal .cf-empty {
+    padding: 12px 10px;
+    font-size: 13px;
+    color: #999;
+    font-style: italic;
+    text-align: center;
+}
+
+.col-filter-modal .cf-footer {
+    padding: 12px 16px;
+    border-top: 1px solid #e1e4e8;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.col-filter-modal .cf-btn-clear {
+    background: #fff;
+    border: 1px solid #c2c8d0;
+    color: #b22;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.col-filter-modal .cf-btn-clear:hover {
+    background: #fde2e2;
+}
+
+.col-filter-modal .cf-btn-apply {
+    background: #096926;
+    border: 1px solid #096926;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.col-filter-modal .cf-btn-apply:hover {
+    background: #0b7d2e;
+}
+
+/* ============================================================
+   CỤM TÍNH TỔNG dưới bảng, trên phân trang (TASK1)
+   ============================================================ */
+.datatable-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: #f0f3f7;
+    border: 1px solid #d8dee6;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.datatable-totals .total-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.datatable-totals .total-item .label {
+    color: #555;
+    font-weight: 600;
+}
+
+.datatable-totals .total-item .value {
+    color: #096926;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+/* ---- Responsive: thu hẹp → xếp dọc, tab về hàng ngang ---- */
+@media (max-width: 900px) {
+    #wrapper.has-sider {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    /* Mobile: sidebar nằm trên, .content cuộn theo phần cao còn lại (dùng flex
+       của base .content) thay vì height:100% của layout grid. */
+    #wrapper.has-sider .content {
+        height: auto;
+        flex: 1 1 auto;
+    }
+    #wrapper.has-sider .header {
+        position: static;
+    }
+    #wrapper.has-sider nav {
+        position: static;
+    }
+    #wrapper.has-sider .wp-logo-title {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    #wrapper.has-sider .wp-logo-title .title h1 {
+        font-size: 20px;
+        text-align: left;
+    }
+    #wrapper.has-sider .main-tab {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    #wrapper.has-sider .main-tab .tab-item a {
+        border-left: none;
+    }
+}

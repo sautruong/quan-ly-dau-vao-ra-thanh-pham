@@ -8,6 +8,130 @@
     flex-direction: column;
 }
 
+/* (4) Header trang chi tiết: tên SP + các nút thao tác */
+.detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.detail-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.btn-back-list {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #90a4ae;
+    background: #fff;
+    color: #546e7a;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.25s;
+}
+
+.btn-back-list:hover {
+    background: #546e7a;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(84, 110, 122, 0.25);
+}
+
+/* Ô tìm & đổi sản phẩm khác để xem */
+.pp-switch-search {
+    position: relative;
+    min-width: 260px;
+}
+
+.pp-switch-search input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px 9px 34px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: 0.25s;
+}
+
+.pp-switch-search input[type="text"]:focus { border-color: #78d675; }
+
+.pp-switch-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 13px;
+    pointer-events: none;
+}
+
+.pp-switch-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin: 2px 0 0;
+    padding: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pp-switch-dropdown.is-open { display: block; }
+
+.pp-switch-dropdown li {
+    padding: 9px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.pp-switch-dropdown li:last-child { border-bottom: none; }
+.pp-switch-dropdown li:hover,
+.pp-switch-dropdown li.is-active { background: #e8f5e9; }
+.pp-switch-dropdown li.no-result { color: #999; cursor: default; }
+.pp-switch-dropdown li.no-result:hover { background: none; }
+
+@media (max-width: 768px) {
+    .detail-header {
+        align-items: stretch;
+    }
+
+    .detail-actions {
+        width: 100%;
+    }
+
+    .detail-actions .btn-view-info,
+    .detail-actions .btn-check-db {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
 .wp-content {
     display: flex;
     gap: 20px;
@@ -208,6 +332,59 @@
     font-size: 26px;
 }
 
+/* Cụm tiêu đề + dải file hồ sơ SP ngay dưới (xem detail-header, giữa header-left và detail-actions) */
+.detail-header-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.detail-header-title h1 { margin: 0; }
+
+.pp-product-files-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pp-product-files-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.pp-product-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 170px;
+    padding: 3px 10px;
+    border-radius: 14px;
+    border: 1px solid #e5e7eb;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 12px;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.pp-product-file-chip:hover {
+    background: #e6f7e9;
+    border-color: #2e7d32;
+    color: #15803d;
+}
+
+.pp-product-file-chip i { flex: 0 0 auto; font-size: 11px; }
+
+.pp-product-file-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Flash animation khi input thay đổi */
 @keyframes inputFlash {
     0% {
@@ -264,6 +441,82 @@
     padding: 8px 16px;
     background: #e9e9e9;
     border-bottom: 1px solid #e8ecf1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* (1) Nút '+' thêm thành phần (thay cây bút) */
+.btn-add-composition {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: #2e7d32;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btn-add-composition:hover {
+    background: #1b6e1f;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+}
+
+/* Nút 'x' xóa thành phần (canh phải hàng .name-ingredient) */
+.btn-delete-composition {
+    margin-left: auto;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-composition:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    transform: scale(1.1);
+}
+
+/* (2) Kéo sắp xếp thành phần */
+.drag-handle {
+    color: #9ca3af;
+    cursor: grab;
+    font-size: 14px;
+    flex-shrink: 0;
+    padding: 2px;
+}
+
+.drag-handle:hover {
+    color: #4b5563;
+}
+
+.ingredient-item[draggable="true"] .drag-handle {
+    cursor: grabbing;
+}
+
+.ingredient-item.dragging {
+    opacity: 0.5;
+    outline: 2px dashed #2e7d32;
+    outline-offset: -2px;
+}
+
+.list-ingredient.reorder-ok {
+    transition: background 0.3s;
 }
 
 .name-ingredient p {
@@ -365,9 +618,10 @@ a {
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
 }
 
-/* Shared styles for wp-supplier-profile & wp-row-materials */
+/* Shared styles for wp-supplier-profile & wp-row-materials & wp-invoice */
 .wp-supplier-profile,
-.wp-row-materials {
+.wp-row-materials,
+.wp-invoice {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -376,7 +630,8 @@ a {
 }
 
 .wp-supplier-profile>.wp-title,
-.wp-row-materials>.wp-title {
+.wp-row-materials>.wp-title,
+.wp-invoice>.wp-title {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -386,11 +641,392 @@ a {
 
 .wp-supplier-profile>.wp-title .title p,
 .wp-row-materials>.wp-title .title p,
-.wp-row-materials .wp-title .title p {
+.wp-row-materials .wp-title .title p,
+.wp-invoice .wp-title .title p {
     font-size: 14px;
     font-weight: 600;
     color: #15803d;
     margin: 0;
+}
+
+/* Hóa đơn: ghi chú ngày tải lên + ngày nhắc hẹn cảnh báo hết hạn */
+.invoice-item .name-file {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.invoice-item .name-file .file-name-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Bút sửa tên hóa đơn: chỉ hiện khi hover dòng hóa đơn */
+.invoice-item .btn-edit-filename {
+    opacity: 0;
+    transition: opacity .12s, color .2s ease, background .2s ease;
+}
+
+.invoice-item:hover .btn-edit-filename { opacity: 1; }
+
+.invoice-uploaded {
+    font-size: 11px;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.invoice-remind {
+    font-size: 11px;
+    font-weight: 600;
+    color: #4338ca;
+    background: #eef2ff;
+    padding: 1px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.invoice-remind:hover { background: #e0e7ff; }
+
+.invoice-remind.is-overdue {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.invoice-remind input[type="date"] {
+    border: 1px solid #c2c8d0;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 1px 4px;
+}
+
+/* Gom checkbox "Bộ hồ sơ chuẩn" + nút "Hóa đơn còn thiếu" + nút "+" thành 1 cụm gần nhau, lệch phải */
+.wp-title-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Checkbox tròn "Bộ hồ sơ chuẩn" ở trang Chi tiết */
+.wp-standard-set {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #15803d;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+/* Nút "Hóa đơn còn thiếu" */
+.btn-missing-docs {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #d97706;
+    background: #fffbeb;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-missing-docs:hover {
+    background: #d97706;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+}
+
+/* Nút "Thiết lập NCC" */
+.btn-supplier-setting {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #7c3aed;
+    background: #f5f3ff;
+    color: #6d28d9;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-supplier-setting:hover {
+    background: #7c3aed;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+/* Modal "Thiết lập NCC" */
+.scp-search { margin-bottom: 10px; }
+.scp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.scp-table th, .scp-table td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+.scp-table th { background: #f9fafb; font-weight: 700; color: #374151; }
+.scp-table th:last-child, .scp-table td:last-child { text-align: center; }
+.scp-loading, .scp-empty { text-align: center; color: #6b7280; padding: 16px !important; }
+
+/* Toggle "gạt qua lại" — bật (xanh) = xét hồ sơ, tắt (xám) = không xét.
+ * Selector .scp-table .scp-toggle (2 class) để thắng .pp-modal label { min-width:160px }
+ * (modal.css, dùng chung cho mọi label trong .pp-modal) — nếu không label này bị kéo dài hết ô. */
+.scp-table .scp-toggle {
+    position: relative; display: inline-block; width: 40px; min-width: 40px; height: 22px;
+    margin: 0; cursor: pointer;
+}
+.scp-toggle-input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.scp-toggle-track {
+    position: absolute; inset: 0; background: #d1d5db; border-radius: 999px; transition: background .2s;
+}
+.scp-toggle-track::before {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+    background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s;
+}
+.scp-toggle-input:checked + .scp-toggle-track { background: #16a34a; }
+.scp-toggle-input:checked + .scp-toggle-track::before { transform: translateX(18px); }
+.scp-toggle-input:focus-visible + .scp-toggle-track { box-shadow: 0 0 0 3px rgba(124, 58, 237, .3); }
+
+/* Nút "Tần suất" */
+.btn-frequency {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #0e7490;
+    background: #ecfeff;
+    color: #0e7490;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-frequency:hover {
+    background: #0e7490;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(14, 116, 144, 0.25);
+}
+
+/* Modal "Tần suất" (+ "Hóa đơn, chứng từ còn thiếu" ở standard-dossier.php, dùng chung style select) */
+.pp-modal-header-actions select#freq-filter-select,
+.pp-modal-header-actions select#freq-group-filter,
+.pp-modal-header-actions select#sd-missing-filter,
+.pp-modal-header-actions select#sd-existing-filter {
+    padding: 5px 10px;
+    border: 1px solid #c2c8d0;
+    border-radius: 6px;
+    font-size: 12.5px;
+    background: #fff;
+}
+
+.btn-download-freq {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #0e7490;
+    background: #fff;
+    color: #0e7490;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-download-freq:hover { background: #0e7490; color: #fff; }
+.btn-download-freq:disabled { opacity: 0.6; cursor: default; }
+
+.freq-loading { color: #6b7280; text-align: center; padding: 20px 0; }
+
+.freq-summary { margin-bottom: 10px; font-size: 13px; color: #374151; }
+.freq-summary b { color: #0e7490; }
+
+.freq-group { margin-bottom: 18px; }
+.freq-group:last-child { margin-bottom: 0; }
+
+.freq-group-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0e7490;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.freq-list { list-style: none; margin: 0; padding: 0; }
+
+.freq-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 4px;
+    font-size: 13.5px;
+    color: #374151;
+    border-bottom: 1px dashed #f0f0f0;
+}
+
+.freq-item:last-child { border-bottom: none; }
+
+.freq-item .file-name-edit { flex: 1; min-width: 0; }
+.freq-item .file-name-edit a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.freq-count { flex: 0 0 auto; color: #6b7280; font-size: 12px; }
+
+.freq-item-del {
+    border: none;
+    background: none;
+    color: #9ca3af;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    flex: 0 0 auto;
+    opacity: 0;
+    transition: opacity .12s, color .12s;
+}
+
+.freq-item:hover .freq-item-del { opacity: 1; }
+.freq-item-del:hover { color: #ef4444; }
+
+/* Modal "Hóa đơn còn thiếu" */
+.missing-docs-empty { color: #16a34a; font-weight: 600; text-align: center; padding: 20px 0; }
+
+.missing-docs-product-name {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.missing-docs-product-name strong { color: #15803d; }
+
+.missing-docs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.missing-docs-table th, .missing-docs-table td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.missing-docs-table th { background: #f9fafb; font-weight: 700; color: #374151; }
+
+.missing-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.missing-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #b91c1c;
+}
+
+/* Tô màu khác nhau cho tên NCC vs tên NVL trong nháy đơn — dễ quét mắt hơn */
+.missing-entity { font-weight: 700; }
+.missing-entity-supplier { color: #1d4ed8; }
+.missing-entity-material { color: #b45309; }
+
+.missing-item-del {
+    border: none;
+    background: none;
+    color: #9ca3af;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    flex: 0 0 auto;
+    opacity: 0;
+    transition: opacity .12s, color .12s;
+}
+
+.missing-list li:hover .missing-item-del { opacity: 1; }
+.missing-item-del:hover { color: #ef4444; }
+
+/* Nút "Chụp" ảnh modal "Hóa đơn còn thiếu" (cạnh nút đóng) */
+.pp-modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-capture-missing {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #2e7d32;
+    background: #fff;
+    color: #2e7d32;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-capture-missing:hover {
+    background: #2e7d32;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+}
+
+.btn-capture-missing:disabled { opacity: 0.6; cursor: default; }
+
+/* Nút "In" modal "Hóa đơn còn thiếu" — cùng họ với .btn-capture-missing, màu xanh dương để phân biệt */
+.btn-print-missing {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #1d4ed8;
+    background: #fff;
+    color: #1d4ed8;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-print-missing:hover {
+    background: #1d4ed8;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
+}
+
+/* In khổ A4: chỉ hiện nội dung modal (bảng thiếu hồ sơ), ẩn mọi thứ khác kể cả header/nút bấm. */
+@media print {
+    body * { visibility: hidden; }
+    #missing-docs-capture-area, #missing-docs-capture-area * { visibility: visible; }
+    #missing-docs-modal {
+        position: absolute; inset: 0; background: none; padding: 0; display: block;
+    }
+    #missing-docs-modal .pp-modal {
+        position: static; width: auto; max-width: none; margin: 0; box-shadow: none; animation: none;
+    }
+    #missing-docs-modal .pp-modal-header { display: none !important; }
+    #missing-docs-capture-area {
+        position: absolute; top: 0; left: 0; right: 0; padding: 0; overflow: visible;
+    }
+    @page { size: A4; margin: 14mm; }
 }
 
 /* .btn-add-file — green button */
@@ -479,6 +1115,7 @@ a {
 
 .operation {
     display: flex;
+    align-items: center;
     gap: 10px;
 }
 
@@ -504,4 +1141,11 @@ a {
 .wp-title p {
     margin: 0;
     font-size: 16px;
+}
+/* Mobile: 1 cột */
+@media (max-width: 600px) {
+
+    #sidebar-right{
+        padding: 0px;
+    }
 }

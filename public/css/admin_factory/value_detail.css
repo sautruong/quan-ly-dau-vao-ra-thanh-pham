@@ -1,0 +1,62 @@
+/* =====================================================================
+ *  value_detail.css — "con mắt" giải thích giá trị 1 dòng (purchase/sales).
+ *  - Eye icon ẩn, hiện khi hover vào ô .td-value-detail; nằm bên trái ô.
+ *  - Modal bảng dữ liệu nguồn cấu thành giá trị.
+ * ===================================================================== */
+
+.td-value-detail { position: relative; }
+.td-value-detail .vd-eye {
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: #096926;
+    background: #e8f3ec;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s ease, background .12s ease;
+    font-size: 12px;
+}
+.td-value-detail:hover .vd-eye { opacity: 1; }
+.td-value-detail .vd-eye:hover { background: #d2e9da; }
+
+/* Overlay + box */
+.vd-mask {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.45);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow: auto;
+}
+.vd-mask.open { display: flex; }
+.vd-box {
+    background: #fff; border-radius: 8px; width: 100%; max-width: 760px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden;
+}
+.vd-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; background: #096926; color: #fff;
+}
+.vd-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.vd-head .vd-close { cursor: pointer; font-size: 22px; line-height: 1; opacity: .9; }
+.vd-head .vd-close:hover { opacity: 1; }
+.vd-meta {
+    padding: 10px 18px; font-size: 13px; color: #444;
+    border-bottom: 1px solid #eee; display: flex; gap: 18px; flex-wrap: wrap;
+}
+.vd-meta b { color: #111; }
+.vd-body { padding: 12px 18px 18px; }
+.vd-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vd-table th, .vd-table td { border: 1px solid #d8dde3; padding: 7px 8px; }
+.vd-table thead th { background: #f0f3f7; font-weight: 600; text-align: center; }
+.vd-table td.num { text-align: right; white-space: nowrap; }
+.vd-table td.center { text-align: center; }
+.vd-table tfoot td { font-weight: 700; background: #fafbfc; }
+.vd-cost { color: #777; font-size: 12px; display: block; }
+.vd-empty { text-align: center; color: #888; padding: 26px 6px; font-size: 13px; }
+.vd-loading { text-align: center; color: #888; padding: 26px 6px; font-size: 13px; }

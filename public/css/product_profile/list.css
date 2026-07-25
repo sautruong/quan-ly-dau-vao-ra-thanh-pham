@@ -84,6 +84,13 @@
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
+/* Xóa sản phẩm: card mờ dần + thu nhỏ trước khi biến mất khỏi DOM */
+.container-product.is-removing {
+    opacity: 0;
+    transform: scale(0.92);
+    pointer-events: none;
+}
+
 .wp-title-button {
     display: flex;
     flex: 1;
@@ -110,10 +117,29 @@
     text-decoration: none;
     transition: 0.25s;
 }
-
+.nutrition-facts {
+    display: inline-flex;
+    align-items: center;
+}
 .nutrition-facts i {
-    font-size: 18px;
+    font-size: 20px;
     color: green;
+}
+
+.nutrition-status-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.nutrition-confirm-check,
+.standard-set-check {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 0px;
 }
 
 /* STYLE BUTTON THÊM - XÓA */
@@ -124,8 +150,12 @@
 
 /* PHẦN BỔ SUNG */
 .container-button a {
-    display: inline-block;
-    /* QUAN TRỌNG */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     border-radius: 8px;
     border: 1px solid #e5e5e5;
     background: #fff;
@@ -133,12 +163,7 @@
     transition: all 0.25s ease;
     text-decoration: none;
     /* bỏ gạch chân */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 10px;
-    /* thay cho p */
-    font-size: 11px;
+    font-size: 14px;
 }
 
 
@@ -148,9 +173,114 @@
     color: #16a34a;
 }
 
+/* Nút "Thêm file" dạng <button> trong card -> đồng bộ giao diện với các nút khác */
+.container-button .btn-add-file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.container-button .btn-add-file:hover {
+    background-color: #16a34a;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.container-button .btn-add-file:active {
+    transform: scale(0.95);
+}
+
+/* TẠO BỘ HỒ SƠ */
+.container-button .btn-create-dossier {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid #c7d2fe;
+    background: #eef2ff;
+    color: #4338ca;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.container-button .btn-create-dossier:hover {
+    background: #4338ca;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.container-button .btn-create-dossier:active {
+    transform: scale(0.95);
+}
+
+.container-button .btn-create-dossier:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 /* DELETE */
 .btn-delete-product {
     color: #dc2626;
+}
+
+/* SỬA TÊN FILE: tên file + nút bút */
+.file-name-edit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-edit-filename {
+    color: #9ca3af;
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-edit-filename:hover {
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.08);
+}
+
+/* Mặc định ẩn cây bút sửa tên, chỉ hiện khi hover cả dòng file */
+.file-item .btn-edit-filename {
+    opacity: 0;
+    transition: opacity .12s, color .12s, background .12s;
+}
+
+.file-item:hover .btn-edit-filename {
+    opacity: 1;
+}
+
+.inline-rename {
+    flex: 1;
+    width: 100%;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 14px;
+    color: #1f2937;
+    outline: none;
+    background: #fff;
 }
 
 /* HOVER CHUNG */
@@ -324,35 +454,96 @@ button p {
    IMG PRODUCT
 ================================ */
 .img_product img {
-    width: auto;
-    height: 54px !important;
-    height: auto;
-
+    width: 100%;
+    height: 100%;
+    /* ảnh không méo */
+    object-fit: cover;
+    border-radius: 6px;
 }
 
 .img_product {
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
 
-
-
-
+    /* width/height cố định (chiều dọc) để khung ảnh không bị bóp nhỏ khi hàng
+       chật chỗ (checkbox, icon...) hoặc khi ảnh chưa có (src lỗi). */
+    width: 64px;
+    height: 88px;
 
     display: block;
-
 
     border-radius: 10px;
     border: 1px solid #e5e5e5;
     padding: 4px;
 
-
+    box-sizing: border-box;
 
     /* tạo chiều sâu */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 
-    /* ảnh không méo */
-    object-fit: cover;
-
     /* mượt */
     transition: all 0.25s ease;
+}
+
+/* Lớp phủ hiện khi hover: nút "Xem" (phóng to) + nút "Máy ảnh" (đổi ảnh) */
+.img-product-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 9px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.img_product:hover .img-product-overlay,
+.img_product.img-product-active .img-product-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.img_product.is-dragover .img-product-overlay {
+    opacity: 1;
+    pointer-events: auto;
+    background: rgba(22, 163, 74, 0.6);
+}
+
+.img-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: #1f2937;
+    font-size: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom:0px;
+}
+
+.img-action-btn:hover {
+    background: #fff;
+    color: #16a34a;
+    transform: scale(1.12);
+}
+
+.img_product.img-product-active {
+    box-shadow: 0 0 0 2px #16a34a;
+}
+
+.img_product.is-uploading img {
+    opacity: 0.5;
 }
 
 /* ================================
@@ -396,6 +587,9 @@ button p {
 .wp-search {
     display: flex;
     justify-content: flex-start;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
     /* canh phải, đổi center nếu muốn */
     margin-bottom: 20px;
     margin-top: 10px;
@@ -409,7 +603,7 @@ button p {
 }
 .search-input {
     width: 100%;
-    padding: 10px 12px 10px 38px;
+    padding: 7px 12px 7px 38px;
     border-radius: 12px;
     border: 1px solid #e0e0e0;
     outline: none;
@@ -417,6 +611,119 @@ button p {
     background: #fafafa;
     transition: all 0.25s ease;
 }
+/* ================================
+   NÚT "TẦN SUẤT" + MODAL (cạnh phải Check database)
+================================ */
+.wp-nutrition-filter {
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    font-size: 13px;
+    color: #374151;
+}
+
+.wp-nutrition-filter:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
+}
+
+.btn-frequency {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 10px;
+    border: 1.5px solid #0e7490;
+    background: #ecfeff;
+    color: #0e7490;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-frequency:hover {
+    background: #0e7490;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(14, 116, 144, 0.25);
+}
+
+.pp-modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pp-modal-header-actions select#freq-filter-select {
+    padding: 5px 10px;
+    border: 1px solid #c2c8d0;
+    border-radius: 6px;
+    font-size: 12.5px;
+    background: #fff;
+}
+
+.btn-download-freq {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #0e7490;
+    background: #fff;
+    color: #0e7490;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-download-freq:hover { background: #0e7490; color: #fff; }
+.btn-download-freq:disabled { opacity: 0.6; cursor: default; }
+
+.freq-loading { color: #6b7280; text-align: center; padding: 16px 0; }
+
+.freq-summary { margin-bottom: 10px; font-size: 13px; color: #374151; }
+.freq-summary b { color: #0e7490; }
+
+.freq-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+
+.freq-table th, .freq-table td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.freq-table th { background: #f9fafb; font-weight: 700; color: #374151; }
+.freq-table th:last-child, .freq-table td:last-child { width: 90px; white-space: nowrap; }
+.freq-table th.freq-count-col, .freq-table td.freq-count-col { text-align: right; }
+
+.freq-table td .file-name-edit { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Nút x xóa dòng tạm thời (trong ô "Tần suất", cạnh số) — chỉ hiện khi hover cả dòng */
+tr.freq-item .freq-item-del {
+    border: none;
+    background: none;
+    color: #9ca3af;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity .12s, color .12s;
+}
+
+tr.freq-item:hover .freq-item-del { opacity: 1; }
+tr.freq-item .freq-item-del:hover { color: #ef4444; }
+
+/* Bút sửa tên (trong ô "Tần suất") — chỉ hiện khi hover cả dòng, giống nút x cạnh bên */
+tr.freq-item .btn-edit-filename { opacity: 0; transition: opacity .12s, color .12s, background .12s; }
+tr.freq-item:hover .btn-edit-filename { opacity: 1; }
+
 /* Icon */
 .search-icon {
     position: absolute;
@@ -444,7 +751,67 @@ button p {
     color: #4CAF50;
 }
 
-/* Responsive */
+/* ================================
+   RESPONSIVE
+================================ */
+/* Màn hình vừa: 2 cột */
+@media (max-width: 1100px) {
+    #wrapper-product {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+    .wp-title-category {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .wp-search {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-box {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    .btn-check-db {
+        justify-content: center;
+    }
+
+    .wp-title-product {
+        flex-wrap: wrap;
+    }
+}
+
+/* Mobile: 1 cột */
+@media (max-width: 600px) {
+    #wrapper-product {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .container-category {
+        padding-right: 0;
+    }
+
+    .container-title-product {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .container-button {
+        flex-wrap: wrap;
+    }
+    /* #sidebar-right{
+        padding: 0px;
+    } */
+}
+
 @media (max-width: 576px) {
     .search-box {
         width: 100%;

@@ -1,0 +1,301 @@
+/* =====================================================================
+ *  Tạo tem bao bì ngoài (production_label)
+ * ===================================================================== */
+
+:root {
+    --pl-green: #1f8a4c;
+    --pl-green-dark: #166e3c;
+    --pl-green-light: #e8f5ee;
+    --pl-border: #e2e6ea;
+    --pl-text: #243240;
+    --pl-muted: #7a8794;
+}
+
+.pl-content {
+    padding: 18px 22px 60px;
+    color: var(--pl-text);
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.pl-block-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 17px; font-weight: 700; margin: 0 0 14px;
+}
+
+/* ---------- Khối Thiết lập ---------- */
+.pl-setup {
+    background: #fff; border: 1px solid var(--pl-border); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 20px;
+}
+.pl-setup-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 16px; }
+.pl-field-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--pl-muted); margin-bottom: 6px; }
+.pl-field { display: flex; flex-direction: column; }
+.pl-field-batch { width: 120px; }
+.pl-field-qty { width: 140px; }
+.pl-qty-expected-input {
+    padding: 10px 12px; border: 1px solid var(--pl-border); border-radius: 10px;
+    font-size: 14px; outline: none; text-align: center; width: 100%; box-sizing: border-box;
+    -moz-appearance: textfield;
+}
+.pl-qty-expected-input::-webkit-outer-spin-button,
+.pl-qty-expected-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+}
+.pl-qty-expected-input:focus { border-color: var(--pl-green); }
+
+.pl-btn-add-list {
+    background: var(--pl-green-light); border-color: var(--pl-green); color: var(--pl-green-dark);
+}
+.pl-btn.pl-btn-add-list:hover { background: var(--pl-green); color: #fff; }
+
+.pl-search-wrap { position: relative; flex: 1 1 340px; max-width: 480px; }
+.pl-search-icon { position: absolute; left: 14px; bottom: 12px; color: var(--pl-muted); font-size: 14px; }
+.pl-search-input {
+    width: 100%; padding: 11px 14px 11px 38px;
+    border: 1px solid var(--pl-border); border-radius: 10px;
+    font-size: 12px; outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.pl-search-input:focus { border-color: var(--pl-green); box-shadow: 0 0 0 3px rgba(31, 138, 76, .12); }
+.pl-search-dropdown {
+    position: absolute; z-index: 40; top: 100%; left: 0; right: 0; margin-top: 4px;
+    list-style: none; padding: 4px;
+    background: #fff; border: 1px solid var(--pl-border);
+    border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.10);
+    max-height: 320px; overflow-y: auto; display: none;
+}
+.pl-search-dropdown.open { display: block; }
+.pl-search-dropdown li { padding: 9px 12px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.pl-search-dropdown li:hover, .pl-search-dropdown li.active { background: var(--pl-green-light); }
+.pl-search-dropdown li.empty { color: var(--pl-muted); cursor: default; font-weight: 400; }
+
+.pl-batch-input {
+    padding: 10px 12px; border: 1px solid var(--pl-border); border-radius: 10px;
+    font-size: 14px; outline: none; text-align: center; width: 100%; box-sizing: border-box;
+}
+.pl-batch-input:focus { border-color: var(--pl-green); }
+
+.pl-setup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.pl-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--pl-border); background: #fff; color: var(--pl-text);
+    padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer;
+    transition: all .12s;
+}
+.pl-btn:hover { border-color: var(--pl-green); color: var(--pl-green); }
+.pl-btn-sample, .pl-btn-outer, .pl-btn-print {
+    background: var(--pl-green); border-color: var(--pl-green); color: #fff;
+}
+.pl-btn-sample:hover, .pl-btn-outer:hover, .pl-btn-print:hover {
+    background: var(--pl-green-dark); border-color: var(--pl-green-dark); color: #fff;
+}
+.pl-btn-reset { background: #fff; }
+
+/* ---------- Danh sách sản xuất (mặc định nạp từ KHSX, thêm/sửa/xóa được) ---------- */
+.pl-list-wrap { margin-bottom: 16px; }
+.pl-list-title {
+    display: flex; align-items: center; gap: 8px; margin: 0 0 10px;
+    font-size: 14px; font-weight: 700; color: var(--pl-text);
+}
+.pl-list {
+    list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;
+    max-height: 260px; overflow-y: auto;
+}
+.pl-list-item {
+    display: flex; align-items: flex-end; gap: 14px;
+    border: 1px solid var(--pl-border); border-radius: 10px; padding: 8px 12px; background: #fafcfb;
+}
+.pl-list-name { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 14px; align-self: center; }
+.pl-list-field {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 11.5px; font-weight: 600; color: var(--pl-muted);
+}
+.pl-list-sample-field {
+    flex-direction: row; align-items: center; gap: 6px; align-self: center;
+    white-space: nowrap; cursor: pointer;
+}
+.pl-list-batch { width: 56px; padding: 7px; border: 1px solid var(--pl-border); border-radius: 8px; text-align: center; font-size: 13px; outline: none; }
+.pl-list-qty { width: 96px; padding: 7px; border: 1px solid var(--pl-border); border-radius: 8px; text-align: center; font-size: 13px; outline: none; }
+.pl-list-batch:focus, .pl-list-qty:focus { border-color: var(--pl-green); }
+.pl-list-del {
+    align-self: center; width: 26px; height: 26px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,.06); color: #6b7280; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; padding: 0;
+}
+.pl-list-del:hover { background: rgba(200,40,40,.15); color: #c82828; }
+.pl-list-empty { color: var(--pl-muted); font-size: 13.5px; padding: 10px 2px; font-style: italic; }
+
+/* ---------- Lịch chọn ngày (custom, xanh lá) ---------- */
+.pl-date-picker { position: relative; }
+.pl-date-display {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--pl-border); border-radius: 10px;
+    font-size: 14px; text-align: center; background: #fff; cursor: pointer; font-weight: 600;
+    color: var(--pl-text); box-sizing: border-box;
+}
+.pl-date-display:hover, .pl-date-display:focus { border-color: var(--pl-green); outline: none; }
+.pl-date-cal {
+    position: absolute; z-index: 50; top: calc(100% + 6px); left: 0;
+    width: 260px; background: #fff; border: 1px solid var(--pl-border); border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.14); padding: 12px; display: none;
+}
+.pl-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.pl-cal-title { font-weight: 700; font-size: 14px; color: var(--pl-green-dark); }
+.pl-cal-nav {
+    width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--pl-green-light);
+    color: var(--pl-green-dark); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.pl-cal-nav:hover { background: var(--pl-green); color: #fff; }
+.pl-cal-week { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: var(--pl-muted); margin-bottom: 4px; }
+.pl-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.pl-cal-day { display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 50%; font-size: 13px; cursor: pointer; }
+.pl-cal-day.empty { cursor: default; }
+.pl-cal-day:not(.empty):hover { background: var(--pl-green-light); }
+.pl-cal-day.today { border: 1px solid var(--pl-green); font-weight: 700; }
+.pl-cal-day.selected { background: var(--pl-green); color: #fff; font-weight: 700; }
+
+/* ---------- Khối Tem được tạo ---------- */
+.pl-generated { background: #fff; border: 1px solid var(--pl-border); border-radius: 14px; padding: 18px 20px; }
+.pl-generated-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.pl-generated-head .pl-block-title { margin: 0; }
+.pl-sample-warning {
+    display: flex; align-items: center; gap: 8px; margin: 0 0 14px;
+    padding: 9px 14px; border: 1px solid #f5c451; border-radius: 10px;
+    background: #fff8e6; color: #8a6100; font-size: 13px; font-weight: 600;
+}
+.pl-sample-warning i { color: #c98a00; }
+
+.pl-grid { display: flex;justify-content: left; flex-wrap: wrap; gap: 4mm; }
+.pl-grid-empty { color: var(--pl-muted); font-size: 14px; padding: 30px 0; text-align: center; width: 100%; }
+
+/* ---------- Khung bọc ngoài mỗi tem: viền nét đứt để cắt (in lẫn xem trên màn hình) ---------- */
+.pl-card-wrap {
+    flex: 0 0 auto; display: flex;
+    border: 1px dashed #9aa4ad; border-radius: 4px; padding: 2mm; background: #fff;
+}
+
+/* ---------- Card tem 70x40mm — giữ nguyên style của view (viền solid, bo góc) kể cả khi in ---------- */
+.pl-card {
+    width: 70mm; height: 40mm; position: relative; flex: 0 0 auto;
+    border: 1px solid #9aa4ad; border-radius: 8px; background: #fff;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.pl-card-bar { height: 5mm; flex: 0 0 auto; }
+.pl-card-outer .pl-card-bar { background: #2e7d32; }
+
+.pl-card-sample.pl-cat-black .pl-card-bar { background: #1a1a1a; }
+.pl-card-sample.pl-cat-brown .pl-card-bar { background: #6f4e2e; }
+.pl-card-sample.pl-cat-gradient .pl-card-bar { background: linear-gradient(90deg, #e53935, #fb8c00, #fdd835); }
+.pl-card-sample.pl-cat-pale-yellow .pl-card-bar { background: #d8cfa8; }
+.pl-card-sample.pl-cat-gray .pl-card-bar { background: #999; }
+
+.pl-card-del {
+    position: absolute; top: 1mm; right: 1mm; z-index: 6;
+    width: 16px; height: 16px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,.45); color: #fff; font-size: 10px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.pl-card-del:hover { background: rgba(200,40,40,.85); }
+
+.pl-card-body {
+    flex: 1 1 auto; padding: 1.5mm 3mm 2mm; display: flex; flex-direction: column;
+    min-height: 0;
+}
+.pl-card-head {
+    display: flex; flex-direction: column; align-items: center; gap: 3mm; margin-bottom: 2mm;
+    margin-top: -18px; position: relative; z-index: 4;
+}
+.pl-card-logo {
+    width: 7mm; height: 7mm; object-fit: contain; flex: 0 0 auto;
+    background: #fff; border: 1.2px solid var(--pl-green); border-radius: 50%;
+    padding: 0.4mm; position: relative; z-index: 4;
+    box-shadow: 0 1px 2px rgba(0,0,0,.15); box-sizing: border-box;
+}
+.pl-card-name {
+    font-size: 12px; font-weight: 750; color: red; line-height: 1.15; text-transform: uppercase;
+    outline: none; flex: 1 1 auto; min-width: 0; text-align: center;
+}
+.pl-card-name:focus { background: #fffbe0; }
+
+/* tem lưu mẫu — bảng nguyên liệu (chỉ 2 dòng đầu, cột số nhóm lại canh phải) */
+.pl-card-ing { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.25; flex: 1 1 auto; }
+.pl-card-ing td { padding: 0.3mm 0.6mm; border-bottom: 0.2mm solid #eee; }
+.pl-card-ing td:not(:first-child) { text-align: right; white-space: nowrap; }
+
+/* Ngày SX của tem lưu mẫu: đè lên khối .pl-card-bar-bottom, canh giữa theo chiều dọc, lệch phải, chữ trắng */
+.pl-card-sample .pl-card-date {
+    position: absolute; right: 3mm; bottom: 0; height: 4mm; left: auto;
+    display: flex; align-items: center; justify-content: flex-end;
+    color: #fff; font-weight: 700; font-size: 10px; z-index: 5; margin: 0; padding: 0; text-align: right;
+}
+
+/* tem bao bì ngoài — lot/spec/date cùng chung 1 style (màu chữ, cỡ chữ, độ đậm, bullet xanh lá) */
+.pl-card-outer .pl-card-lot,
+.pl-card-outer .pl-card-spec,
+.pl-card-outer .pl-card-date {
+    font-size: 12px; font-weight: 500; margin-top: 0.5mm;
+    display: flex; align-items: center; gap: 1mm; text-align: left;
+}
+.pl-card-outer .pl-card-lot::before,
+.pl-card-outer .pl-card-spec::before,
+.pl-card-outer .pl-card-date::before {
+    content: ''; display: inline-block; width: 1.4mm; height: 1.4mm; border-radius: 50%;
+    background: var(--pl-green); flex: 0 0 auto;
+}
+.pl-card-outer .pl-card-date { color: #1c5caf; }
+
+/* Hotline của tem bao bì ngoài: đè lên khối .pl-card-bar-bottom, canh giữa theo chiều dọc, lệch phải, chữ trắng.
+   Sửa tại chỗ: hover hiện cây bút, click vào số để sửa, lưu 1 lần (app_settings) dùng cho mọi tem. */
+.pl-card-outer .pl-card-hotline {
+    position: absolute; right: 3mm; bottom: 0; height: 5mm;
+    display: flex; align-items: center; justify-content: flex-end;
+    color: #fff; font-weight: 700; font-size: 11px; z-index: 5; margin: 0; padding: 0; cursor: pointer;
+}
+.pl-hotline-text[contenteditable="true"] {
+    outline: 1px dashed rgba(255,255,255,.7); outline-offset: 1px; padding: 0 1px; cursor: text;
+}
+.pl-hotline-edit {
+    opacity: 0; transition: opacity .15s; border: none; background: transparent; color: #fff;
+    font-size: 8px; cursor: pointer; padding: 0; margin-left: 0.8mm; flex: 0 0 auto;
+}
+.pl-card-hotline:hover .pl-hotline-edit,
+.pl-card-hotline.editing .pl-hotline-edit { opacity: 1; }
+
+/* ---------- In A4 ---------- */
+@media print {
+    body * { visibility: hidden; }
+    .pl-generated, .pl-generated * { visibility: visible; }
+    .pl-generated {
+        /* Không cộng thêm padding riêng — @page margin (8mm) đã lo phần lề giấy,
+           cộng thêm ở đây sẽ mất diện tích, không đủ chỗ cho đúng 12 tem/trang. */
+        position: absolute; inset: 0; border: none; padding: 0; margin: 0;
+    }
+    .pl-generated-head, .pl-card-del, .pl-hotline-edit, .pl-sample-warning { display: none !important; }
+
+    /* Canh nhóm tem từ mép trái giấy (giống .pl-grid lúc xem trên màn hình), viền nét đứt của
+       tem sát nhau (mép phải card trái = mép trái card phải, mép dưới card trên = mép trên card
+       dưới) — bỏ khoảng cách 4mm dùng khi xem trên màn hình. Với .pl-card-wrap ~74x44mm
+       (70x40mm + 2mm mỗi bên), khổ A4 trừ lề 8mm mỗi bên vừa đúng 2 cột x 6 hàng = 12 tem/trang. */
+    .pl-grid { justify-content: left; gap: 0; }
+    .pl-card-wrap { break-inside: avoid; page-break-inside: avoid; }
+
+    /* .pl-card giữ nguyên style của view (viền solid + bo góc) — khung cắt nét đứt nằm ở .pl-card-wrap bọc ngoài */
+
+    /* Đường ngăn nổi bật tại vị trí chuyển sản phẩm (JS gắn class theo cột/hàng cố định 2 cột
+       ở trên — box-shadow inset để không cộng thêm kích thước, tránh lệch lưới 2 cột x 6 hàng).
+       Chuyển ngay trong cùng hàng (SP 2 rơi vào ô thứ 2) → line dọc ở giữa hàng.
+       Chuyển xuống hàng mới (SP 2 mở đầu 1 hàng) → line ngang phía trên hàng đó. */
+    .pl-card-wrap.pl-boundary-col { box-shadow: inset 3px 0 0 0 #d32f2f; }
+    .pl-card-wrap.pl-boundary-row { box-shadow: inset 0 3px 0 0 #d32f2f; }
+
+    /* Giữ lại line xanh lá trên/dưới + chữ trắng trên hotline/ngày (mặc định trình duyệt
+       hay bỏ qua background-color khi in nếu không ép print-color-adjust). */
+    .pl-generated, .pl-generated * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    @page { size: A4; margin: 8mm; }
+}

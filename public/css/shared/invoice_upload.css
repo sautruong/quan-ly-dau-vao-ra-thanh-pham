@@ -1,0 +1,364 @@
+/* ============================================================
+   invoice_upload.css — UI kéo-thả hóa đơn dùng chung.
+   Gồm 2 phần:
+     A) .wp-invoice-upload  : vùng staging dropzone (record-time)
+     B) .invoice-cell       : ô hóa đơn theo từng dòng (admin tables)
+   ============================================================ */
+
+/* ---------- A) STAGING DROPZONE ---------- */
+.wp-invoice-upload {
+    margin: 12px 0px 0;
+}
+
+.wp-invoice-upload .iu-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.iu-dropzone {
+    border: 2px dashed #c2c8d0;
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    color: #6b7280;
+    background: #fafbfc;
+    transition: all .2s ease;
+    cursor: pointer;
+}
+
+.iu-dropzone i {
+    font-size: 26px;
+    color: #9aa3ad;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.iu-dropzone p {
+    margin: 0 0 8px;
+    font-size: 13px;
+}
+
+.iu-dropzone.dragover {
+    border-color: #16a34a;
+    background: #ecfdf3;
+    color: #15803d;
+}
+
+/* Vùng đang được chọn để dán ảnh bằng Ctrl+V (click vào vùng để chọn) */
+.wp-invoice-upload.iu-active .iu-dropzone {
+    border-color: #16a34a;
+    border-style: solid;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.wp-invoice-upload.iu-active .iu-dropzone p::after {
+    content: " — bấm Ctrl+V để dán";
+    font-weight: 600;
+}
+
+.iu-btn-choose {
+    display: inline-block;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease;
+}
+
+.iu-btn-choose:hover {
+    background: #15803d;
+}
+
+.iu-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+/* ---------- thumbnail (dùng chung A & B) ---------- */
+.iu-thumb {
+    position: relative;
+    width: 84px;
+    height: 84px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.iu-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: pointer;
+}
+
+.iu-thumb .iu-file-ico {
+    font-size: 30px;
+    color: #b91c1c;
+    cursor: pointer;
+}
+
+.iu-thumb .iu-file-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: 9px;
+    line-height: 1.2;
+    padding: 2px 3px;
+    background: rgba(0, 0, 0, .55);
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.iu-thumb .iu-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(239, 68, 68, .92);
+    color: #fff;
+    font-size: 12px;
+    line-height: 18px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 2;
+}
+
+.iu-thumb .iu-remove:hover {
+    background: #b91c1c;
+}
+
+/* ---------- B) ROW INVOICE CELL (admin tables) ---------- */
+.invoice-cell {
+    min-width: 150px;
+}
+
+.invoice-cell .ic-list {
+    display: none;          /* ẩn mặc định cho gọn dòng */
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.invoice-cell.ic-open .ic-list {
+    display: flex;
+}
+
+/* Nút '^' bật/tắt danh sách hóa đơn */
+.invoice-cell .ic-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding: 2px 7px;
+    border: 1px solid #c2c8d0;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.invoice-cell .ic-toggle:hover {
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+/* Nút icon "Tải lên" -> mở hộp chọn tệp */
+.invoice-cell .ic-upload {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border: 1px solid #c2c8d0;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    font-size: 12px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.invoice-cell .ic-upload:hover {
+    border-color: #16a34a;
+    color: #15803d;
+    background: #ecfdf3;
+}
+
+.invoice-cell .ic-toggle i {
+    transition: transform .2s ease;
+}
+
+.invoice-cell.ic-open .ic-toggle i {
+    transform: rotate(180deg);
+}
+
+.invoice-cell .ic-toggle .ic-count {
+    min-width: 12px;
+    text-align: center;
+    color: #9ca3af;          /* 0 hóa đơn -> số màu chìm */
+}
+
+.invoice-cell .ic-toggle .ic-count.has {
+    color: #ea580c;          /* có hóa đơn -> số đỏ cam */
+    font-weight: 700;
+}
+
+.invoice-cell .iu-thumb {
+    width: 46px;
+    height: 46px;
+}
+
+.invoice-cell .iu-thumb .iu-file-ico {
+    font-size: 20px;
+}
+
+.invoice-cell .iu-thumb .iu-file-name {
+    display: none;
+}
+
+.invoice-cell .ic-drop {
+    border: 1px dashed #c2c8d0;
+    border-radius: 6px;
+    padding: 6px 8px;
+    text-align: center;
+    font-size: 11px;
+    color: #6b7280;
+    background: #fafbfc;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.invoice-cell .ic-drop:hover,
+.invoice-cell .ic-drop.dragover {
+    border-color: #16a34a;
+    background: #ecfdf3;
+    color: #15803d;
+}
+
+.invoice-cell .ic-drop i {
+    margin-right: 4px;
+}
+
+.invoice-cell .ic-uploading {
+    font-size: 11px;
+    color: #2563eb;
+    margin-top: 4px;
+}
+
+/* Ô đang được chọn để dán ảnh bằng Ctrl+V */
+.invoice-cell.ic-active {
+    outline: 2px solid #16a34a;
+    outline-offset: -2px;
+    background: #f0fdf4;
+}
+
+.invoice-cell.ic-active .ic-drop {
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.invoice-cell.ic-active .ic-drop::after {
+    content: "Đã chọn ô — bấm Ctrl+V để dán ảnh";
+    display: block;
+    margin-top: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #15803d;
+}
+
+/* ---------- lightbox xem ảnh ---------- */
+.iu-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+}
+
+.iu-lightbox.show {
+    display: flex;
+}
+
+.iu-lightbox img {
+    max-width: 92vw;
+    max-height: 92vh;
+    border-radius: 6px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .5);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.iu-lightbox img.is-dragging {
+    cursor: grabbing;
+}
+
+.iu-lightbox .iu-lb-close,
+.iu-lightbox .iu-lb-rotate {
+    position: absolute;
+    top: 16px;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+
+.iu-lightbox:hover .iu-lb-close,
+.iu-lightbox:hover .iu-lb-rotate {
+    opacity: 1;
+}
+
+.iu-lightbox .iu-lb-close {
+    right: 24px;
+    font-size: 38px;
+    color: #fff;
+    cursor: pointer;
+    line-height: 1;
+    background: none;
+    border: 0;
+}
+
+.iu-lightbox .iu-lb-rotate {
+    right: 78px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.iu-lightbox .iu-lb-rotate:hover {
+    background: rgba(255, 255, 255, .3);
+}

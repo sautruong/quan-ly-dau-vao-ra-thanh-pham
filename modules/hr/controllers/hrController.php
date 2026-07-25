@@ -60,10 +60,24 @@ function create_contractAction()
     // Lấy id nhân viên chuyển qua hàm ở module xử lý
     $id = $_GET['id'];
     $info_hr_for_contract = get_data_contract_hr_by_id($id);
-    // Nhận kết quả thông tin Đầy đủ của  nhân viên 
+    // Nhận kết quả thông tin Đầy đủ của  nhân viên
     //Chở qua giao diện ghép dữ liệu vào
     $data = $info_hr_for_contract;
     load_view("contact_hr", $data);
+}
+
+/** AJAX: lưu 1 trường cấu hình hợp đồng (BÊN A / Giám đốc). */
+function save_contract_settingAction()
+{
+    header('Content-Type: application/json');
+    $key = trim((string) ($_POST['key'] ?? ''));
+    $val = (string) ($_POST['value'] ?? '');
+    $ok  = contract_settings_save($key, $val);
+    echo json_encode([
+        'success' => $ok,
+        'message' => $ok ? '' : 'Trường không hợp lệ.',
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 function process_list_hrAction()
 {

@@ -171,12 +171,10 @@ function check_validation_register($data)
     if (empty($gender)) {
         $error['gender'] = "Vui lòng chọn giới tính";
     }
-    ### phone
+    ### phone — có thể bỏ trống; nếu có nhập thì phải đúng định dạng
     $phone = trim($data['phone']);
 
-    if (empty($phone)) {
-        $error['phone'] = "Số điện thoại không được để trống";
-    } elseif (!preg_match('/^(03|05|07|08|09)[0-9]{8}$/', $phone)) {
+    if ($phone !== '' && !preg_match('/^(03|05|07|08|09)[0-9]{8}$/', $phone)) {
         $error['phone'] = "Số điện thoại không hợp lệ";
     }
     ### email
@@ -188,6 +186,12 @@ function check_validation_register($data)
         $error['email'] = "Email không đúng định dạng";
     } elseif (strlen($email) > 100) {
         $error['email'] = "Email quá dài";
+    } else {
+        // Email đã đăng ký rồi thì không cho đăng ký nữa.
+        $esc_email = escape_string($email);
+        if (db_num_rows("SELECT id FROM tbl_users WHERE LOWER(email) = LOWER('{$esc_email}')") > 0) {
+            $error['email'] = "Email đã tồn tại trong hệ thống";
+        }
     }
     //-----------------------------------------------------------------------------
     ### username
@@ -247,6 +251,150 @@ function check_validation_register($data)
 
     //-----------------------------------------------------------------------------
 }
+/* ==========================================================================================
+   MÃ KÍCH HOẠT (giống OTP) — 6 ký tự chữ & số, gửi qua email lúc đăng ký, hiệu lực 24h
+========================================================================================== */
+function generate_activation_code($length = 6)
+{
+    // Bỏ các ký tự dễ nhầm (0/O, 1/I) cho dễ đọc khi nhập tay.
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    $max   = strlen($chars) - 1;
+    $code  = '';
+    for ($i = 0; $i < $length; $i++) {
+        $code .= $chars[random_int(0, $max)];
+    }
+    return $code;
+}
+
+/* ==========================================================================================
+   DỌN TÀI KHOẢN RÁC
+   - Tài khoản 'pending' quá 24h (đăng ký nhưng chưa kích hoạt) sẽ bị xóa.
+   - Tài khoản 'inactive' (admin "Ngưng hoạt động") quá 24h kể từ lúc bị ngưng cũng bị xóa.
+   - Gọi tự động (lazy) mỗi khi truy cập module auth / có người đăng ký mới.
+   - Trả về tổng số dòng bị xóa.
+========================================================================================== */
+function delete_expired_pending_users()
+{
+    // Mốc: quá 24h.
+    $limit = escape_string(date('Y-m-d H:i:s', time() - 24 * 60 * 60));
+
+    // 1) pending quá 24h kể từ lúc đăng ký (created_at).
+    $deleted = db_delete(
+        'tbl_users',
+        "status = 'pending' AND created_at IS NOT NULL AND created_at < '{$limit}'"
+    );
+
+    // 2) inactive quá 24h kể từ lúc admin ngưng (status_changed_at).
+    $deleted += db_delete(
+        'tbl_users',
+        "status = 'inactive' AND status_changed_at IS NOT NULL AND status_changed_at < '{$limit}'"
+    );
+
+    return $deleted;
+}
+
+/* ==========================================================================================
+   QUÊN MẬT KHẨU — luồng 3 bước
+   B1: tìm user theo TÊN ĐĂNG NHẬP hoặc EMAIL → phát mã, gửi email
+   B2: nhập 6 ký tự mã → đối chiếu
+   B3: nhập mật khẩu mới → đổi mật khẩu (khi mã đúng & còn hạn 24h)
+========================================================================================== */
+
+/** Tìm 1 user theo username HOẶC email (email so sánh không phân biệt hoa/thường). */
+function find_user_by_identifier($identifier)
+{
+    $identifier = trim((string) $identifier);
+    if ($identifier === '') {
+        return null;
+    }
+    $esc = escape_string($identifier);
+    $sql = "SELECT * FROM tbl_users
+            WHERE username = '{$esc}' OR LOWER(email) = LOWER('{$esc}')
+            LIMIT 1";
+    $row = db_fetch_row($sql);
+    return $row ?: null;
+}
+
+/** Sinh mã kích hoạt mới (hiệu lực 24h) cho 1 user và lưu vào DB. Trả về mã. */
+function issue_activation_code($user_id)
+{
+    $code    = generate_activation_code();
+    $expired = date('Y-m-d H:i:s', time() + 24 * 60 * 60);
+    $uid     = (int) $user_id;
+    db_update('tbl_users', [
+        'activation_code' => $code,
+        'code_expired_at' => $expired,
+    ], "id = {$uid}");
+    return $code;
+}
+
+/**
+ * Đối chiếu mã kích hoạt của 1 user (theo identifier).
+ * Trả về ['stt'=>true,'user'=>...] hoặc ['stt'=>false,'error'=>...].
+ */
+function verify_reset_code($identifier, $code)
+{
+    $code = strtoupper(trim((string) $code));
+    $user = find_user_by_identifier($identifier);
+    if (!$user) {
+        return ['stt' => false, 'error' => 'Tài khoản không tồn tại'];
+    }
+    if (strlen($code) !== 6) {
+        return ['stt' => false, 'error' => 'Vui lòng nhập đủ 6 ký tự mã'];
+    }
+    if (empty($user['activation_code']) || strtoupper($user['activation_code']) !== $code) {
+        return ['stt' => false, 'error' => 'Mã kích hoạt không đúng'];
+    }
+    if (empty($user['code_expired_at']) || strtotime($user['code_expired_at']) < time()) {
+        return ['stt' => false, 'error' => 'Mã kích hoạt đã hết hiệu lực'];
+    }
+    return ['stt' => true, 'user' => $user];
+}
+
+/**
+ * Đổi mật khẩu cuối luồng: xác thực lại mã rồi cập nhật mật khẩu mới.
+ * Trả về ['stt' => true] hoặc ['stt' => false, 'error' => '...'].
+ */
+function reset_password_process($identifier, $code, $password, $password_confirm)
+{
+    // --- Kiểm tra rỗng ---
+    if ($password === '' || $password_confirm === '') {
+        return ['stt' => false, 'error' => 'Vui lòng nhập đầy đủ mật khẩu'];
+    }
+
+    // --- Kiểm tra định dạng mật khẩu mới (đồng bộ với lúc đăng ký) ---
+    if (strlen($password) < 6) {
+        return ['stt' => false, 'error' => 'Mật khẩu phải từ 6 ký tự trở lên'];
+    } elseif (preg_match('/\s/', $password)) {
+        return ['stt' => false, 'error' => 'Mật khẩu không được chứa khoảng trắng'];
+    } elseif (preg_match('/[^\x00-\x7F]/', $password)) {
+        return ['stt' => false, 'error' => 'Mật khẩu không được chứa tiếng Việt có dấu'];
+    } elseif (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+        return ['stt' => false, 'error' => 'Mật khẩu phải có chữ và số'];
+    }
+
+    // --- Mật khẩu nhập lại phải khớp ---
+    if ($password !== $password_confirm) {
+        return ['stt' => false, 'error' => 'Mật khẩu nhập lại không khớp'];
+    }
+
+    // --- Xác thực lại mã kích hoạt (chống bỏ qua bước 2) ---
+    $check = verify_reset_code($identifier, $code);
+    if ($check['stt'] !== true) {
+        return $check;
+    }
+
+    // --- Hợp lệ: đổi mật khẩu & vô hiệu mã (dùng một lần) ---
+    $uid = (int) $check['user']['id'];
+    db_update('tbl_users', [
+        'password'        => md5($password),
+        'activation_code' => null,
+        'code_expired_at' => null,
+    ], "id = {$uid}");
+
+    return ['stt' => true];
+}
+
 /* ==========================================================================================
    XỬ LÝ PHẦN LOGOUT
    ========================================================================================== */

@@ -1,0 +1,552 @@
+/* =====================================================================
+ *  QL bao bì khách hàng (customer_packaging)
+ *  KHỐI 1: Thiết lập khách hàng + bao bì + sản phẩm
+ *  KHỐI 2: Sổ bao bì theo khách hàng (nhận / xuất dùng / hao hụt)
+ * ===================================================================== */
+
+.cp-content {
+    padding: 18px 20px;
+    height: calc(100vh - var(--app-header-h, 64px));
+    overflow-y: auto;
+}
+
+.cp-grid {
+    display: flex;
+    align-items: stretch;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.cp-grid .cp-block {
+    flex: 1 1 420px;
+    min-width: 340px;
+}
+
+/* ---------- Khối chung ---------- */
+.cp-block {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.cp-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.cp-block-head h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1f6f3d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.cp-block-head h2 i {
+    color: #2e9e57;
+}
+
+/* ---------- Buttons ---------- */
+.cp-btn,
+.cp-tool-btn {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid #d6dae0;
+    background: #f5f7f9;
+    color: #344054;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s, border-color .15s, opacity .15s;
+}
+
+.cp-tool-btn {
+    font-size: 13px;
+    padding: 7px 10px;
+}
+
+.cp-btn:hover,
+.cp-tool-btn:hover {
+    background: #eaf6ee;
+    border-color: #9fd6b3;
+}
+
+.cp-tool-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.cp-btn-primary {
+    background: #2e9e57;
+    border-color: #2e9e57;
+    color: #fff;
+}
+
+.cp-btn-primary:hover {
+    background: #258048;
+    border-color: #258048;
+}
+
+/* ---------- Search input + dropdown ---------- */
+.cp-customer-search {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.cp-search-wrap {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 200px;
+}
+
+.cp-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    pointer-events: none;
+}
+
+.cp-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px 9px 34px;
+    border: 1px solid #d6dae0;
+    border-radius: 8px;
+    font: inherit;
+    outline: none;
+}
+
+.cp-search-input:focus {
+    border-color: #2e9e57;
+    box-shadow: 0 0 0 3px rgba(46, 158, 87, .12);
+}
+
+.cp-search-dropdown {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+}
+
+.cp-search-dropdown.open {
+    display: block;
+}
+
+.cp-search-dropdown li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cp-search-dropdown li small {
+    color: #98a2b3;
+    font-size: 12px;
+}
+
+.cp-search-dropdown li:hover,
+.cp-search-dropdown li.active {
+    background: #eaf6ee;
+}
+
+.cp-search-dropdown li.active {
+    outline: 1px solid #9fd6b3;
+}
+
+.cp-search-dropdown .cp-sd-empty {
+    color: #98a2b3;
+    cursor: default;
+}
+
+/* ---------- Card / collapsible ---------- */
+.cp-card {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 12px;
+    background: #fcfdfe;
+}
+
+.cp-card:first-child {
+    margin-top: 0;
+}
+
+.cp-card-head {
+    font-weight: 700;
+    color: #1f6f3d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.cp-card-head i {
+    color: #2e9e57;
+}
+
+.cp-collapsible-head {
+    cursor: pointer;
+    justify-content: space-between;
+}
+
+.cp-collapsible-toggle-ico {
+    transition: transform .15s;
+    color: #98a2b3 !important;
+}
+
+.cp-collapsible.is-collapsed .cp-collapsible-toggle-ico {
+    transform: rotate(-90deg);
+}
+
+.cp-collapsible.is-collapsed .cp-collapsible-body {
+    display: none;
+}
+
+/* ---------- Field / input ---------- */
+.cp-field {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cp-field > label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #667085;
+}
+
+/* .cp-field là flex-direction:column -> flex-basis:220px của .cp-search-wrap (vốn tính cho
+   ngữ cảnh flex ROW như .cp-customer-search) sẽ bị hiểu thành chiều CAO nếu không reset,
+   kéo icon căn giữa (top:50%) lệch xuống rất xa khỏi input. */
+.cp-field .cp-search-wrap {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.cp-field-row {
+    display: flex;
+    gap: 10px;
+}
+
+.cp-field-row .cp-field {
+    flex: 1;
+}
+
+.cp-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #d6dae0;
+    border-radius: 8px;
+    font: inherit;
+    outline: none;
+}
+
+.cp-input:focus {
+    border-color: #2e9e57;
+    box-shadow: 0 0 0 3px rgba(46, 158, 87, .12);
+}
+
+.cp-setup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+/* ---------- Bảng "Danh sách đã thiết lập" ---------- */
+.cp-setup-wrap {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    overflow-x: auto;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.cp-setup-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.cp-setup-table thead th {
+    background: #f0f4f2;
+    color: #475467;
+    text-align: left;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e3e8e5;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+}
+
+.cp-setup-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f2f4;
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.cp-st-act {
+    width: 40px;
+    text-align: center;
+}
+
+.cp-st-del {
+    border: none;
+    background: transparent;
+    color: #d92d20;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.cp-st-empty td {
+    text-align: center;
+    color: #98a2b3;
+    padding: 18px;
+}
+
+/* ---------- Sổ bao bì (ledger) ---------- */
+.cp-pkg-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.cp-ledger-wrap {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    overflow-x: auto;
+}
+
+.cp-ledger-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.cp-ledger-table thead th {
+    background: #f0f4f2;
+    color: #475467;
+    text-align: left;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e3e8e5;
+    white-space: nowrap;
+}
+
+.cp-ledger-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f2f4;
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.cp-lg-date { width: 92px; }
+.cp-lg-name { width: 26%; }
+.cp-lg-content { width: 34%; }
+.cp-lg-qty { width: 84px; text-align: right; font-variant-numeric: tabular-nums; }
+.cp-lg-act { width: 64px; text-align: right; }
+
+.cp-lg-empty td {
+    text-align: center;
+    color: #98a2b3;
+    padding: 18px;
+}
+
+.cp-lg-in { color: #1f6f3d; font-weight: 600; }
+.cp-lg-out { color: #d92d20; font-weight: 600; }
+
+.cp-lg-pkg-head td {
+    background: #eef4fb;
+    font-weight: 700;
+    color: #1d2939;
+}
+
+.cp-lg-confirm-btn {
+    border: none;
+    background: transparent;
+    color: #1d6fd1;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cp-lg-confirm-btn:hover {
+    text-decoration: underline;
+}
+
+.cp-ledger-total {
+    margin-top: 10px;
+    text-align: right;
+    font-weight: 700;
+    color: #1f6f3d;
+    font-size: 14px;
+}
+
+.cp-ledger-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+/* ---------- Pager ---------- */
+.cp-mat-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #475467;
+    flex-wrap: wrap;
+}
+
+.cp-pager-size {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cp-pager-size select {
+    border: 1px solid #d6dae0;
+    border-radius: 7px;
+    padding: 5px 8px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.cp-pager-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cp-pager-info {
+    min-width: 60px;
+    text-align: center;
+    color: #344054;
+}
+
+.cp-pager-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    border: 1px solid #d6dae0;
+    background: #fff;
+    color: #344054;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cp-pager-btn:hover:not(:disabled) {
+    background: #eaf6ee;
+    border-color: #9fd6b3;
+}
+
+.cp-pager-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+/* ---------- Modal ---------- */
+.cp-modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 24, 40, .45);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: 40px 16px;
+    overflow-y: auto;
+}
+
+.cp-modal-box {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 520px;
+    padding: 20px 22px;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(16, 24, 40, .25);
+}
+
+.cp-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 24px;
+    color: #98a2b3;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.cp-modal-close:hover {
+    color: #475467;
+}
+
+.cp-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f6f3d;
+    margin: 0 0 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.cp-modal-hint {
+    font-size: 13px;
+    color: #667085;
+    margin: 0 0 14px;
+}
+
+.cp-modal-foot {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+@media (max-width: 900px) {
+    .cp-grid {
+        flex-direction: column;
+    }
+}

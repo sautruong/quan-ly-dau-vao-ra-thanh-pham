@@ -1,0 +1,569 @@
+/* =====================================================================
+ *  QL nhóm trà ủ hương (tea_scent_group)
+ *  KHỐI 1: Danh sách nhóm (mỗi nhóm = 1 NVL kiểm soát)
+ *  KHỐI 2: Chi tiết nhóm (sản phẩm dùng + mốc tồn đầu + nhập thêm + sổ)
+ * ===================================================================== */
+
+.tsg-content {
+    padding: 18px 20px;
+    height: calc(100vh - var(--app-header-h, 64px));
+    overflow-y: auto;
+}
+
+.tsg-grid {
+    display: flex;
+    align-items: stretch;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.tsg-block-list {
+    flex: 1 1 340px;
+    max-width: 640px;
+    min-width: 300px;
+}
+
+.tsg-block-detail {
+    flex: 2 1 520px;
+    min-width: 360px;
+}
+
+/* ---------- Khối chung ---------- */
+.tsg-block {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.tsg-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 10px;
+}
+
+.tsg-block-head h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #6b3f1d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.tsg-block-head h2 i {
+    color: #b5772f;
+}
+
+/* ---------- Tooltip (hover) ---------- */
+.tsg-tip {
+    position: relative;
+    display: block;
+}
+
+.tsg-tip::after {
+    content: attr(data-tsg-tip);
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 8px);
+    width: 240px;
+    background: #1f2937;
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s;
+    z-index: 60;
+    pointer-events: none;
+}
+
+.tsg-tip::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    bottom: 100%;
+    border: 6px solid transparent;
+    border-top-color: #1f2937;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s;
+    z-index: 60;
+}
+
+.tsg-tip:hover::after,
+.tsg-tip:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ---------- Buttons ---------- */
+.tsg-btn {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid #d6dae0;
+    background: #f5f7f9;
+    color: #344054;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s, border-color .15s, opacity .15s;
+}
+
+.tsg-btn:hover {
+    background: #faf1e6;
+    border-color: #e2bd8e;
+}
+
+.tsg-btn-primary {
+    background: #b5772f;
+    border-color: #b5772f;
+    color: #fff;
+}
+
+.tsg-btn-primary:hover {
+    background: #96611f;
+    border-color: #96611f;
+}
+
+.tsg-btn-danger {
+    background: #fff;
+    border-color: #f0b4ac;
+    color: #d92d20;
+    font-size: 13px;
+    padding: 7px 10px;
+}
+
+.tsg-btn-danger:hover {
+    background: #fef2f1;
+    border-color: #d92d20;
+}
+
+/* ---------- Search input + dropdown ---------- */
+.tsg-search-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tsg-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    pointer-events: none;
+}
+
+.tsg-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px 9px 34px;
+    border: 1px solid #d6dae0;
+    border-radius: 8px;
+    font: inherit;
+    outline: none;
+}
+
+.tsg-search-input:focus {
+    border-color: #b5772f;
+    box-shadow: 0 0 0 3px rgba(181, 119, 47, .12);
+}
+
+.tsg-search-dropdown {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+}
+
+.tsg-search-dropdown.open {
+    display: block;
+}
+
+.tsg-search-dropdown li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tsg-search-dropdown li small {
+    color: #98a2b3;
+    font-size: 12px;
+}
+
+.tsg-search-dropdown li:hover,
+.tsg-search-dropdown li.active {
+    background: #faf1e6;
+}
+
+.tsg-search-dropdown li.active {
+    outline: 1px solid #e2bd8e;
+}
+
+.tsg-search-dropdown .tsg-sd-empty {
+    color: #98a2b3;
+    cursor: default;
+}
+
+/* ---------- Card / collapsible ---------- */
+.tsg-card {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 12px;
+    background: #fcfdfe;
+}
+
+.tsg-card:first-child {
+    margin-top: 0;
+}
+
+.tsg-card-head {
+    font-weight: 700;
+    color: #6b3f1d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.tsg-card-head i {
+    color: #b5772f;
+}
+
+.tsg-collapsible-head {
+    cursor: pointer;
+    justify-content: space-between;
+}
+
+.tsg-collapsible-toggle-ico {
+    transition: transform .15s;
+    color: #98a2b3 !important;
+}
+
+.tsg-collapsible.is-collapsed .tsg-collapsible-toggle-ico {
+    transform: rotate(-90deg);
+}
+
+.tsg-collapsible.is-collapsed .tsg-collapsible-body {
+    display: none;
+}
+
+/* ---------- Field / input ---------- */
+.tsg-field {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.tsg-field > label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #667085;
+}
+
+.tsg-field-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tsg-field-grow {
+    flex: 2 1 220px;
+}
+
+.tsg-field-btn {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+}
+
+.tsg-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #d6dae0;
+    border-radius: 8px;
+    font: inherit;
+    outline: none;
+}
+
+.tsg-input:focus {
+    border-color: #b5772f;
+    box-shadow: 0 0 0 3px rgba(181, 119, 47, .12);
+}
+
+.tsg-setup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+/* ---------- Danh sách nhóm (card) ---------- */
+.tsg-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    overflow-y: auto;
+}
+
+.tsg-group-card {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    background: #fcfdfe;
+    transition: border-color .15s, background .15s;
+}
+
+.tsg-group-card:hover {
+    border-color: #e2bd8e;
+}
+
+.tsg-group-card.active {
+    border-color: #b5772f;
+    background: #faf1e6;
+}
+
+.tsg-gc-name {
+    font-weight: 700;
+    color: #1d2939;
+    margin-bottom: 4px;
+}
+
+.tsg-gc-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #667085;
+}
+
+.tsg-gc-balance {
+    font-weight: 600;
+}
+
+.tsg-gc-low {
+    color: #d92d20;
+}
+
+.tsg-group-empty {
+    color: #98a2b3;
+    text-align: center;
+    padding: 20px 0;
+}
+
+/* ---------- Chi tiết nhóm ---------- */
+.tsg-detail-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #98a2b3;
+    gap: 10px;
+    padding: 40px 0;
+}
+
+.tsg-detail-empty i {
+    font-size: 28px;
+}
+
+.tsg-detail-summary {
+    font-size: 14px;
+    color: #344054;
+    margin-bottom: 10px;
+}
+
+.tsg-detail-summary b {
+    color: #b5772f;
+}
+
+.tsg-opening-hint {
+    font-size: 12px;
+    color: #667085;
+    margin-top: 6px;
+}
+
+/* ---------- Bảng thiết lập / nhập thêm ---------- */
+.tsg-setup-wrap {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    overflow-x: auto;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.tsg-receipt-wrap {
+    max-height: 200px;
+}
+
+.tsg-setup-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.tsg-setup-table thead th {
+    background: #f6f0e8;
+    color: #6b3f1d;
+    text-align: left;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee1d1;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+}
+
+.tsg-setup-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f2f4;
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+.tsg-st-ratio {
+    width: 120px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.tsg-inline-ratio {
+    width: 70px;
+    box-sizing: border-box;
+    padding: 4px 6px;
+    border: 1px solid #d6dae0;
+    border-radius: 6px;
+    font: inherit;
+    text-align: right;
+}
+
+.tsg-st-act {
+    width: 40px;
+    text-align: center;
+}
+
+.tsg-st-del {
+    border: none;
+    background: transparent;
+    color: #d92d20;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.tsg-st-empty td {
+    text-align: center;
+    color: #98a2b3;
+    padding: 18px;
+}
+
+/* ---------- Sổ / lịch sử (ledger) ---------- */
+.tsg-ledger-wrap {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    overflow-x: auto;
+}
+
+.tsg-ledger-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.tsg-ledger-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.tsg-ledger-table thead th {
+    background: #f6f0e8;
+    color: #6b3f1d;
+    text-align: left;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee1d1;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+}
+
+.tsg-ledger-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f2f4;
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.tsg-lg-date {
+    width: 92px;
+}
+
+.tsg-lg-qty {
+    width: 110px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.tsg-lg-empty td {
+    text-align: center;
+    color: #98a2b3;
+    padding: 18px;
+}
+
+#tsg-ledger-tbody .tsg-lg-qty {
+    text-align: center;
+}
+
+.tsg-lg-in {
+    color: #1f6f3d;
+    font-weight: 600;
+}
+
+.tsg-lg-out {
+    color: #d92d20;
+    font-weight: 600;
+}
+
+@media (max-width: 900px) {
+    .tsg-grid {
+        flex-direction: column;
+    }
+
+    .tsg-block-list {
+        max-width: none;
+    }
+}

@@ -1,0 +1,194 @@
+/* =====================================================================
+ *  Tạo tem gửi mẫu (sample_label)
+ * ===================================================================== */
+
+:root {
+    --sl-green: #1f8a4c;
+    --sl-green-dark: #166e3c;
+    --sl-green-light: #e8f5ee;
+    --sl-border: #e2e6ea;
+    --sl-text: #243240;
+    --sl-muted: #7a8794;
+    --sl-bar: #1f8a4c;
+}
+
+/* global.css: #wrapper{display:flex} không có flex-direction -> mặc định row,
+   khiến .app-header và .content nằm NGANG hàng thay vì header trên/content dưới. */
+#wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.sl-content {
+    padding: 18px 22px 60px;
+    color: var(--sl-text);
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* ---------- Toolbar: search + In A4 + Xóa tất cả ---------- */
+.sl-toolbar {
+    display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+    background: #fff; border: 1px solid var(--sl-border); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 20px;
+}
+.sl-field-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--sl-muted); margin-bottom: 6px; }
+
+.sl-search-wrap { position: relative; flex: 1 1 360px; max-width: 480px; }
+.sl-search-icon { position: absolute; left: 14px; top: 39px; color: var(--sl-muted); font-size: 14px; }
+.sl-search-input {
+    width: 100%; padding: 11px 14px 11px 38px; box-sizing: border-box;
+    border: 1px solid var(--sl-border); border-radius: 10px;
+    font-size: 15px; outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.sl-search-input:focus { border-color: var(--sl-green); box-shadow: 0 0 0 3px rgba(31, 138, 76, .12); }
+.sl-search-dropdown {
+    position: absolute; z-index: 1300; top: 100%; left: 0; right: 0; margin-top: 4px;
+    list-style: none; padding: 4px;
+    background: #fff; border: 1px solid var(--sl-border);
+    border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.10);
+    max-height: 320px; overflow-y: auto; display: none;
+}
+.sl-search-dropdown.active { display: block; }
+.sl-search-dropdown li { padding: 9px 12px; border-radius: 7px; cursor: pointer; font-size: 14px; }
+.sl-search-dropdown li:hover, .sl-search-dropdown li.active { background: var(--sl-green-light); }
+.sl-search-dropdown li.empty { color: var(--sl-muted); cursor: default; font-style: italic; }
+.sl-search-dropdown li.empty:hover { background: transparent; }
+
+.sl-toolbar-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.sl-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--sl-border); background: #fff; color: var(--sl-text);
+    padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer;
+    transition: all .12s;
+}
+.sl-btn:hover { border-color: var(--sl-green); color: var(--sl-green); }
+.sl-btn-print { background: var(--sl-green); border-color: var(--sl-green); color: #fff; }
+.sl-btn-print:hover { background: var(--sl-green-dark); border-color: var(--sl-green-dark); color: #fff; }
+.sl-btn-reset { background: #fff; }
+.sl-btn-reset:hover { border-color: #d92d20; color: #d92d20; }
+
+/* ---------- Lưới tem ---------- */
+.sl-grid { display: flex; flex-wrap: wrap; gap: 6mm; }
+.sl-grid-empty { color: var(--sl-muted); font-size: 14px; padding: 40px 0; text-align: center; width: 100%; }
+
+.sl-card-wrap {
+    flex: 0 0 auto; display: flex; position: relative;
+    border: 1px dashed #9aa4ad; border-radius: 4px; padding: 2mm; background: #fff;
+}
+
+/* ---------- Card tem gửi mẫu ---------- */
+.sl-card {
+    width: 95mm; height: auto; position: relative; flex: 0 0 auto;
+    border: 1px solid #9aa4ad; border-radius: 8px; background: #fff;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.sl-card-bar { height: 3mm; flex: 0 0 auto; background: var(--sl-bar); }
+
+.sl-card-del {
+    position: absolute; top: 1mm; right: 1mm; z-index: 6;
+    width: 18px; height: 18px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,.45); color: #fff; font-size: 10px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.sl-card-del:hover { background: rgba(200,40,40,.85); }
+
+.sl-card-body {
+    /* flex:1 (không phải 0 0 auto) để hấp thụ phần cao dư khi .sl-card bị flexbox
+       kéo giãn bằng card cao nhất CÙNG HÀNG (1 tên SP xuống dòng -> mọi card cùng
+       hàng cao bằng nhau, mặc định của .sl-grid flex-wrap + align-items:stretch) —
+       nếu không, .sl-card-bar-bottom sẽ trôi lên giữa card thay vì nằm sát đáy. */
+    flex: 1 1 auto; padding: 4mm 5mm 5mm; display: flex; flex-direction: column; gap: 1.4mm;
+}
+
+.sl-card-head { display: flex; flex-direction: column; align-items: center; gap: 1mm; margin-top: 2mm; margin-bottom: 3.5mm; text-align: center; }
+/* Khung tròn 2 vòng viền (1px + 2px, chồng bằng box-shadow) + nền gradient xám sáng,
+   to theo logo bên trong (kích thước wrapper ăn theo padding cố định quanh logo). */
+.sl-card-logo-wrap {
+    width: 9mm; height: 9mm; border-radius: 50%; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #f5f6f7 0%, #dde2e6 100%);
+    box-shadow: 0 0 0 1px #ffffff, 0 0 0 3px #b7bec4;
+}
+.sl-card-logo { width: 8mm; height: 8mm; object-fit: contain; }
+.sl-card-brand { font-size: 20px; font-weight: 800; letter-spacing: .4px; color: var(--sl-green-dark); }
+
+.sl-card-title {
+    font-size: 12.5px; font-weight: 700; text-align: center; color: var(--sl-text);
+    border-top: 0.3mm solid #ddd; border-bottom: 0.3mm solid #ddd; padding: 1mm 0; margin: 0.5mm 0 1mm;
+}
+
+.sl-card-row { font-size: 12.5px; line-height: 1.5; display: flex; gap: 1.2mm; align-items: baseline; flex-wrap: wrap; }
+.sl-card-row-block { align-items: flex-start; }
+.sl-card-label { font-weight: 700; color: #000; flex: 0 0 auto; }
+
+.sl-card-name { font-weight: 600; text-transform: uppercase; color: var(--sl-green); font-size: 14.5px; }
+
+/* Tên sản phẩm + Ngày sản xuất: sửa tại chỗ RIÊNG THEO TỪNG TEM (không lưu server, không
+   đồng bộ chéo card như .sl-fixed-editable — tên có thể gõ tự do, không cần khớp DB). */
+.sl-inline-editable { display: inline-flex; align-items: baseline; gap: 1mm; cursor: pointer; }
+.sl-inline-text[contenteditable="true"] { outline: 1px dashed var(--sl-green); outline-offset: 1px; padding: 0 1px; cursor: text; }
+.sl-inline-edit {
+    opacity: 0; transition: opacity .15s; border: none; background: transparent; color: var(--sl-green);
+    font-size: 9px; cursor: pointer; padding: 0; flex: 0 0 auto;
+}
+.sl-inline-editable:hover .sl-inline-edit,
+.sl-inline-editable.editing .sl-inline-edit { opacity: 1; }
+
+.sl-shelf-toggle { display: inline-flex; gap: 1.2mm; }
+.sl-shelf-opt {
+    border: 1px solid var(--sl-border); background: #fff; color: var(--sl-muted);
+    padding: 1mm 2.4mm; border-radius: 999px; font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.sl-shelf-opt.active { background: var(--sl-green); border-color: var(--sl-green); color: #fff; }
+
+.sl-fixed-editable { display: inline-flex; align-items: baseline; gap: 1mm; cursor: pointer; }
+.sl-fixed-text[contenteditable="true"] { outline: 1px dashed var(--sl-green); outline-offset: 1px; padding: 0 1px; cursor: text; }
+.sl-fixed-edit {
+    opacity: 0; transition: opacity .15s; border: none; background: transparent; color: var(--sl-green);
+    font-size: 9px; cursor: pointer; padding: 0; flex: 0 0 auto;
+}
+.sl-fixed-editable:hover .sl-fixed-edit,
+.sl-fixed-editable.editing .sl-fixed-edit { opacity: 1; }
+
+.sl-card-maker { margin-top: 1mm; padding-top: 1.4mm; border-top: 0.3mm solid #eee; }
+.sl-card-maker-name { font-weight: 600; }
+
+/* ---------- In A4 (in thẳng lưới tem, giống production_label) ----------
+   Cố định 2 cột (grid, không phụ thuộc bề rộng thật lúc xem màn hình) + ép
+   page-break sau mỗi 4 card (2 dòng x 2 cột) để mỗi trang A4 chứa đúng 4 card. */
+@media print {
+    body * { visibility: hidden; }
+    .sl-grid, .sl-grid * { visibility: visible; }
+    .sl-grid {
+        position: absolute; inset: 0; border: none; padding: 0; margin: 0;
+        display: grid; grid-template-columns: repeat(2, auto);
+        justify-content: center; align-content: start; gap: 0;
+    }
+    /* Mép các card SÁT NHAU: gap:0 cho 2 card chạm biên, rồi lùi -1px (đúng bề dày viền
+       nét đứt) trên mép trên/trái CHỈ Ở CARD CÓ HÀNG XÓM cùng phía để viền nét đứt của
+       2 card chồng khít làm 1 đường — không áp cho card đầu cột/đầu trang (không có hàng
+       xóm bên trái/bên trên để chồng vào, áp nhầm sẽ làm viền trượt lệch ra khỏi mép, đúng
+       lỗi "card 1 bị trượt khỏi border" user gặp). Cột 2 = nth-child chẵn (luôn có hàng
+       xóm trái, không đổi qua trang). Hàng 2 của MỖI trang 4 card = nth-child ≡ 3 hoặc 0
+       (mod 4) — reset về hàng 1 (không lùi) ngay khi sang trang mới. */
+    .sl-card-wrap { break-inside: avoid; page-break-inside: avoid; margin: 0; }
+    .sl-card-wrap:nth-child(2n) { margin-left: -1px; }
+    .sl-card-wrap:nth-child(4n+3), .sl-card-wrap:nth-child(4n) { margin-top: -1px; }
+    .sl-card-wrap:nth-child(4n) { break-after: page; page-break-after: always; }
+    .sl-card-del, .sl-fixed-edit, .sl-inline-edit { display: none !important; }
+    .sl-shelf-opt:not(.active) { display: none !important; }
+    .sl-shelf-opt.active {
+        border: none; background: none; color: var(--sl-text); padding: 0; font-weight: 700;
+    }
+
+    .sl-grid, .sl-grid * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    @page { size: A4; margin: 8mm; }
+}

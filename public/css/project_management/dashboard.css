@@ -1,0 +1,90 @@
+/* ===== Quản lý dự án — Dashboard ===== */
+.content { background: #f4f6fb; min-height: 100vh; }
+
+.pm-toolbar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 24px; background: #fff; border-bottom: 1px solid #e6e9f0;
+    position: sticky; top: 0; z-index: 5;
+}
+.pm-toolbar-spacer { flex: 1; }
+.pm-btn-new {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #16a34a; color: #fff; border: 0; border-radius: 8px;
+    padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+}
+.pm-btn-new:hover { background: #15803d; }
+.pm-search { position: relative; }
+.pm-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9aa3b2; }
+.pm-search input {
+    border: 1px solid #d8dde8; border-radius: 8px; padding: 9px 12px 9px 34px;
+    width: 260px; font-size: 14px; outline: none;
+}
+.pm-search input:focus { border-color: #16a34a; }
+
+.pm-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px; padding: 24px;
+}
+.pm-card {
+    position: relative;
+    background: #fff; border: 1px solid #e6e9f0; border-radius: 14px;
+    padding: 18px; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 1px 2px rgba(16,24,40,.04); transition: box-shadow .15s, transform .15s;
+    cursor: pointer;
+}
+.pm-card-actions {
+    position: absolute; top: 10px; right: 10px; display: flex; gap: 6px;
+    opacity: 0; transition: opacity .15s;
+}
+.pm-card:hover .pm-card-actions { opacity: 1; }
+.pm-card-actions button {
+    width: 28px; height: 28px; border: 0; border-radius: 8px;
+    background: #f3f4f6; color: #9aa3b2; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s;
+}
+.pm-card-edit:hover { background: #ecfdf5; color: #16a34a; }
+.pm-card-del:hover { background: #fee2e2; color: #ef4444; }
+.pm-card:hover { box-shadow: 0 8px 24px rgba(16,24,40,.10); transform: translateY(-2px); }
+.pm-card-top { display: flex; align-items: center; gap: 8px; }
+.pm-card-name { font-size: 16px; font-weight: 700; color: #111827; margin: 0; line-height: 1.3; }
+.pm-role-badge {
+    flex: 0 0 auto; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    background: #fef3c7; color: #92400e;
+}
+.pm-role-badge.member { background: #e0e7ff; color: #3730a3; }
+.pm-role-badge::before { content: "Trưởng"; }
+.pm-role-badge.member::before { content: "Thành viên"; }
+.pm-card-desc {
+    font-size: 13px; color: #6b7280; margin: 0; min-height: 34px; text-align: left;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.pm-card-foot { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: auto; padding-top: 4px; }
+.pm-card-members, .pm-card-sessions { font-size: 13px; color: #4b5563; display: inline-flex; align-items: center; gap: 6px; }
+.pm-card-members i, .pm-card-sessions i { color: #9aa3b2; }
+
+.pm-empty { text-align: center; color: #9aa3b2; padding: 80px 20px; }
+.pm-empty i { font-size: 52px; }
+.pm-empty p { margin-top: 14px; font-size: 15px; }
+
+/* ===== Modal ===== */
+.pm-modal {
+    position: fixed; inset: 0; background: rgba(17,24,39,.45);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.pm-modal-box {
+    background: #fff; border-radius: 14px; width: 460px; max-width: calc(100vw - 32px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.25); overflow: hidden;
+}
+.pm-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #eef1f6; }
+.pm-modal-head h3 { margin: 0; font-size: 17px; }
+.pm-modal-close { background: none; border: 0; font-size: 18px; color: #6b7280; cursor: pointer; }
+.pm-modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+.pm-modal-body label { font-size: 13px; font-weight: 600; color: #374151; margin-top: 8px; }
+.pm-modal-body input, .pm-modal-body textarea {
+    border: 1px solid #d8dde8; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; font-family: inherit;
+}
+.pm-modal-body input:focus, .pm-modal-body textarea:focus { border-color: #16a34a; }
+.pm-modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #eef1f6; }
+.pm-btn-primary { background: #16a34a; color: #fff; border: 0; border-radius: 8px; padding: 9px 18px; font-weight: 600; cursor: pointer; }
+.pm-btn-ghost { background: #f3f4f6; color: #374151; border: 0; border-radius: 8px; padding: 9px 18px; font-weight: 600; cursor: pointer; }

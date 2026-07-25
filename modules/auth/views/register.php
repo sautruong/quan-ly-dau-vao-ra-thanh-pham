@@ -5,9 +5,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký tài khoản hệ thống safeking</title>
+    <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/style_register.css">
+    <style>
+        /* Lớp phủ loading khi submit đăng ký (đang gửi mã OTP qua email). */
+        #app-loading {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
+        }
+        #app-loading.is-on { display: flex; }
+        #app-loading .spinner {
+            width: 56px;
+            height: 56px;
+            border: 5px solid rgba(255, 255, 255, 0.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: app-spin 0.8s linear infinite;
+        }
+        #app-loading .loading-text {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        @keyframes app-spin { to { transform: rotate(360deg); } }
+    </style>
 
 </head>
 
@@ -16,8 +48,8 @@
         <div id="container">
             <div id="info-brand">
                 <div id="logo">
-                    <img src="public/images/logo/lolo_vat_png.png" alt="" width="25px" height="auto" alt="">
-                    <h4>SAFEKING ERP</h4>
+                    <img src="public/images/logo/logo_vat_png.png" alt="" width="23px" height="auto">
+                    <h4 style="font-weight: bold;">Safe King</h4>
 
                 </div>
                 <div id="title_form">
@@ -130,6 +162,12 @@
                 <a href="?mod=auth&controllers=index&action=login" class="link_login">Tôi đã có một tài khoản</a>
             </form>
         </div>
+    </div>
+
+    <!-- Loading xoay tròn giữa màn hình lúc submit (đang xử lý + gửi mã OTP). -->
+    <div id="app-loading" aria-hidden="true">
+        <div class="spinner"></div>
+        <div class="loading-text">Đang gửi mã xác thực tới email…</div>
     </div>
 </body>
 <script src="public/js/app_register.js"></script>

@@ -1,0 +1,213 @@
+/* =====================================================================
+   Trang Lịch phóng to (full page) — ?mod=home&controllers=index&action=calendar_full
+   Nạp SAU app_shell.css (dùng chung biến --app-*, .app-cal-nav, .app-modal...).
+   ===================================================================== */
+.calfull-page {
+    padding: 18px 24px 28px;
+    height: calc(100vh - var(--app-header-h, 64px));
+    overflow-y: auto;
+}
+.calfull-head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+}
+.calfull-nav-group { display: flex; align-items: center; gap: 10px; }
+.calfull-nav-group .app-cal-nav { width: 34px; height: 34px; font-size: 14px; }
+.calfull-title {
+    margin: 0; min-width: 190px; text-align: center;
+    font-size: 20px; font-weight: 700; color: var(--app-gray-900); text-transform: capitalize;
+}
+.calfull-today-btn {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--app-gray-200); background: #fff; color: var(--app-gray-700);
+    padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: var(--app-trans);
+}
+.calfull-today-btn:hover { background: var(--app-gray-100); border-color: var(--app-green, #096926); color: var(--app-green, #096926); }
+
+.calfull-view-toggle {
+    display: flex; align-items: center; gap: 2px; background: var(--app-gray-100);
+    border-radius: 10px; padding: 3px;
+}
+.calfull-view-btn {
+    border: 0; background: transparent; color: var(--app-gray-600); cursor: pointer;
+    padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600; transition: var(--app-trans);
+}
+.calfull-view-btn:hover { color: var(--app-green, #096926); }
+.calfull-view-btn.is-active { background: #fff; color: var(--app-green, #096926); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+.calfull-weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    padding: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--app-gray-500); text-align: center;
+}
+.calfull-weekdays .sun { color: #dc2626; }
+
+.calfull-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.calfull-day {
+    min-height: 150px; display: flex; flex-direction: column; gap: 6px;
+    background: #fff; border: 1px solid var(--app-gray-100); border-radius: 12px;
+    padding: 8px; transition: var(--app-trans);
+}
+.calfull-day.is-other { background: var(--app-gray-50); }
+.calfull-day.is-today { border-color: var(--app-green, #096926); box-shadow: inset 0 0 0 1.5px var(--app-green, #096926); }
+.calfull-day.drag-over { background: #eef1fd; border-color: #456be3; }
+
+.calfull-day-head { display: flex; align-items: center; justify-content: space-between; }
+.calfull-daynum { font-size: 13px; font-weight: 700; color: var(--app-gray-700); }
+.calfull-day.is-other .calfull-daynum { color: var(--app-gray-300); }
+.calfull-day.is-today .calfull-daynum {
+    color: #fff; background: var(--app-green, #096926);
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+.calfull-add-btn {
+    width: 22px; height: 22px; border-radius: 6px; border: 1px dashed var(--app-gray-300);
+    background: transparent; color: var(--app-gray-400); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+    opacity: 0; transition: opacity 0.15s ease, var(--app-trans);
+}
+.calfull-day:hover .calfull-add-btn { opacity: 1; }
+.calfull-add-btn:hover { border-color: var(--app-green, #096926); color: var(--app-green, #096926); background: var(--app-green-soft); }
+.calfull-add-btn.is-active { opacity: 1; border-style: solid; border-color: var(--app-green, #096926); color: var(--app-green, #096926); }
+
+.calfull-events { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; max-height: 190px; }
+.calfull-chip {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11.5px; padding: 4px 7px; border-radius: 7px;
+    background: #eef1fd; color: #2c3e8f; cursor: grab; position: relative;
+}
+.calfull-chip:hover { background: #dde3fb; }
+.calfull-chip:active { cursor: grabbing; }
+.calfull-chip.is-dragging { opacity: 0.4; }
+.calfull-chip .tm {
+    font-weight: 700; flex-shrink: 0; cursor: pointer; padding: 1px 5px; border-radius: 999px;
+    background: rgba(255,255,255,0.6);
+}
+.calfull-chip.is-allday .tm { color: var(--app-gray-500); }
+.calfull-chip.is-done .tx { text-decoration: line-through; color: var(--app-gray-500); }
+.calfull-chip.is-done { opacity: 0.7; }
+.calfull-chip .tx {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text;
+}
+.calfull-chip .tx-edit {
+    flex: 1; min-width: 0; font: inherit; font-size: 11.5px; border: 1px solid var(--app-green, #096926);
+    border-radius: 5px; padding: 1px 4px; outline: none;
+}
+.calfull-chip-repeat {
+    border: 0; background: transparent; color: #6b7280; cursor: pointer;
+    font-size: 10.5px; padding: 2px; opacity: 0; transition: opacity 0.15s ease, color 0.15s ease; flex-shrink: 0;
+}
+.calfull-chip:hover .calfull-chip-repeat { opacity: 1; }
+.calfull-chip-repeat:hover { color: var(--app-green, #096926); }
+.calfull-chip-repeat.is-recur { opacity: 1; color: var(--app-green, #096926); }
+.calfull-chip-del {
+    border: 0; background: transparent; color: #6b7280; cursor: pointer;
+    font-size: 11px; padding: 2px; opacity: 0; transition: opacity 0.15s ease; flex-shrink: 0;
+}
+.calfull-chip:hover .calfull-chip-del { opacity: 1; }
+.calfull-chip-del:hover { color: #dc2626; }
+.calfull-chip.calfull-more {
+    justify-content: center; background: var(--app-gray-100); color: var(--app-gray-500);
+    font-weight: 700; letter-spacing: 2px; cursor: pointer;
+}
+.calfull-chip.calfull-more:hover { background: var(--app-gray-200); color: var(--app-green, #096926); }
+
+.calfull-add-form { display: none; flex-direction: column; gap: 5px; padding-top: 2px; border-top: 1px dashed var(--app-gray-200); }
+.calfull-day.is-adding .calfull-add-form { display: flex; }
+.calfull-add-input {
+    width: 100%; border: 1px solid var(--app-gray-200); border-radius: 6px;
+    padding: 5px 7px; font-size: 11.5px; outline: none;
+}
+.calfull-add-input:focus { border-color: var(--app-green, #096926); }
+.calfull-add-row { display: flex; align-items: center; gap: 5px; }
+.calfull-add-time {
+    border: 1px solid var(--app-gray-200); border-radius: 6px; padding: 4px 5px; font-size: 11px;
+    outline: none; flex: 1; min-width: 0; color: var(--app-green-dark, #075a1f); accent-color: var(--app-green, #096926);
+}
+.calfull-add-time:focus { border-color: var(--app-green, #096926); }
+.calfull-add-time::-webkit-calendar-picker-indicator { filter: invert(36%) sepia(85%) saturate(500%) hue-rotate(78deg) brightness(93%); }
+.calfull-add-save {
+    border: 0; background: var(--app-green, #096926); color: #fff; border-radius: 6px;
+    padding: 4px 10px; font-size: 11.5px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+.calfull-add-save:hover { background: var(--app-green-dark); }
+.calfull-add-cancel {
+    border: 0; background: transparent; color: var(--app-gray-500); cursor: pointer; font-size: 12px; padding: 4px 6px; flex-shrink: 0;
+}
+.calfull-add-cancel:hover { color: #dc2626; }
+
+@media (max-width: 900px) {
+    .calfull-grid { grid-template-columns: repeat(7, minmax(90px, 1fr)); overflow-x: auto; }
+}
+
+/* ----- Modal thiết lập lặp lại ----- */
+.calfull-recur-box { width: 380px; max-width: 94vw; }
+.calfull-recur-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.calfull-recur-tab {
+    flex: 1 1 auto; border: 1px solid var(--app-gray-200); background: #fff; color: var(--app-gray-600);
+    padding: 7px 8px; border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: var(--app-trans);
+}
+.calfull-recur-tab:hover { border-color: var(--app-green, #096926); color: var(--app-green, #096926); }
+.calfull-recur-tab.is-active { background: var(--app-green, #096926); border-color: var(--app-green, #096926); color: #fff; }
+
+.calfull-recur-panel { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.calfull-recur-radio, .calfull-recur-row {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--app-gray-700);
+}
+.calfull-recur-radio input[type="radio"] { accent-color: var(--app-green, #096926); cursor: pointer; }
+.calfull-recur-num {
+    width: 52px; border: 1px solid var(--app-gray-200); border-radius: 6px;
+    padding: 4px 6px; font-size: 13px; text-align: center;
+}
+.calfull-recur-num:disabled { background: var(--app-gray-50); color: var(--app-gray-300); }
+.calfull-recur-num:focus { outline: none; border-color: var(--app-green, #096926); }
+
+.calfull-recur-weekdays { display: flex; justify-content: space-between; gap: 3px; }
+.calfull-recur-weekdays label {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-size: 10.5px; color: var(--app-gray-600); cursor: pointer;
+}
+.calfull-recur-weekdays input[type="checkbox"] { accent-color: var(--app-green, #096926); cursor: pointer; }
+
+.calfull-recur-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.calfull-recur-actions .app-btn { flex: 1; }
+#calfull-recur-clear { color: #b22; font-size: 12.5px; }
+#calfull-recur-clear:hover { text-decoration: underline; }
+
+/* ----- Xem "Theo năm": 12 card tháng, 6 card/dòng ----- */
+.calfull-year-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.calfull-year-card {
+    background: #fff; border: 1px solid var(--app-gray-100); border-radius: 12px;
+    padding: 10px; cursor: pointer; transition: var(--app-trans);
+}
+.calfull-year-card:hover { border-color: var(--app-green, #096926); box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+.calfull-year-card-title {
+    font-size: 13px; font-weight: 700; color: var(--app-gray-800); text-align: center; margin-bottom: 6px;
+}
+.calfull-ymini-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.calfull-ymini-day {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    height: 18px; font-size: 9.5px; color: var(--app-gray-600);
+}
+.calfull-ymini-day.is-other { color: var(--app-gray-300); }
+.calfull-ymini-day .num {
+    display: flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+}
+.calfull-ymini-day.is-today .num { background: var(--app-green, #096926); color: #fff; font-weight: 700; }
+.calfull-ymini-day .dot {
+    position: absolute; bottom: 1px; width: 3px; height: 3px; border-radius: 50%;
+    background: var(--app-green, #096926); font-style: normal;
+}
+.calfull-ymini-day.is-today .dot { background: #fff; }
+
+@media (max-width: 1100px) {
+    .calfull-year-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+    .calfull-year-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ----- Modal xem đầy đủ sự kiện trong 1 ngày ----- */
+.calfull-day-box { width: 380px; max-width: 94vw; }
+.calfull-day-modal-events { max-height: 60vh; overflow-y: auto; }

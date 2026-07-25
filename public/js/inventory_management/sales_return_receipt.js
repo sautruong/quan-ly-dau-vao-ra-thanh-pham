@@ -44,12 +44,57 @@
     const $btnHandle     = document.getElementById('btn-handle-confirm');
     const $histBody      = document.getElementById('history-tbody');
     const $histPager     = document.getElementById('history-pagination');
-    const PAGE_SIZE = 10;
+    let pageSize = 10; // số dòng/trang — đổi qua select #hf-page-size
     let historyPage = 1;
+    // Bộ lọc lịch sử (client-side trên INITIAL.history đã nạp sẵn).
+    const histFilter = { keyword: '', dateFrom: '', dateTo: '' };
+    const $hfDateFrom   = document.getElementById('hf-date-from');
+    const $hfDateTo     = document.getElementById('hf-date-to');
+    const $hfPageSize   = document.getElementById('hf-page-size');
+    const $hfReset      = document.getElementById('hf-reset');
+    const $hfCount      = document.getElementById('hf-count');
+    const $hfKeyword    = document.getElementById('hf-keyword');
+    const $hfKeywordBtn = document.getElementById('hf-keyword-btn');
+    const $hfKeywordPop = document.getElementById('hf-keyword-pop');
     const $banner        = document.getElementById('edit-batch-banner');
     const $bannerLabel   = document.getElementById('edit-batch-label');
     const $modeLabel     = document.getElementById('edit-mode-label');
     const $btnCancelEdit = document.getElementById('cancel-edit-batch');
+
+    // ---------- Journal Entry (form GHI BÚT TOÁN KẾ TOÁN) ----------
+    const JE_DEFAULTS = { debit: '5212', credit: '131' };
+    const $jeDebit  = document.getElementById('je-debit');
+    const $jeCredit = document.getElementById('je-credit');
+    const $jeAmount = document.getElementById('je-amount');
+
+    function jeFormatAmount(n) {
+        const v = Math.round(Number(n) || 0);
+        return v > 0 ? v.toLocaleString('en-US') : '';
+    }
+    function jeParseAmount(s) {
+        return Number(String(s == null ? '' : s).replace(/[^\d.-]/g, '')) || 0;
+    }
+    function jePayload() {
+        const p = {
+            je_debit:  ($jeDebit  && $jeDebit.value.trim())  || '',
+            je_credit: ($jeCredit && $jeCredit.value.trim()) || '',
+            je_amount: jeParseAmount($jeAmount && $jeAmount.value)
+        };
+        if (window.JE && window.JE.collectEntries) p.je_entries = JSON.stringify(window.JE.collectEntries());
+        return p;
+    }
+    function setupJe() {
+        if (!$jeDebit || !$jeCredit || !$jeAmount) return;
+        if (!$jeDebit.value)  $jeDebit.value  = JE_DEFAULTS.debit;
+        if (!$jeCredit.value) $jeCredit.value = JE_DEFAULTS.credit;
+        $jeAmount.addEventListener('blur', () => {
+            $jeAmount.value = jeFormatAmount(jeParseAmount($jeAmount.value));
+        });
+        $jeAmount.addEventListener('focus', () => {
+            const n = jeParseAmount($jeAmount.value);
+            $jeAmount.value = n > 0 ? String(n) : '';
+        });
+    }
 
     // ---------- Helpers ----------
     function postForm(action, payload) {
@@ -187,9 +232,10 @@
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             custActiveIdx = (custActiveIdx - 1 + items.length) % items.length;
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (custActiveIdx >= 0) selectCustomerItem(items[custActiveIdx]);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            // Enter hoặc Tab đều chọn item đang active (hoặc item đầu nếu chưa di chuyển).
+            const idx = custActiveIdx >= 0 ? custActiveIdx : 0;
+            if (items[idx]) { e.preventDefault(); selectCustomerItem(items[idx]); }
             return;
         } else if (e.key === 'Escape') {
             hideCustomerDropdown();
@@ -283,9 +329,10 @@
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             activeIdx = (activeIdx - 1 + items.length) % items.length;
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (activeIdx >= 0) selectProductDropdownItem(items[activeIdx]);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            // Enter hoặc Tab đều chọn item đang active (hoặc item đầu nếu chưa di chuyển).
+            const idx = activeIdx >= 0 ? activeIdx : 0;
+            if (items[idx]) { e.preventDefault(); selectProductDropdownItem(items[idx]); }
             return;
         } else if (e.key === 'Escape') {
             hideDropdown();
@@ -416,6 +463,13 @@
             `;
         }
 
+        // Handle mode: dòng CHƯA xử lý cho sửa SL xử lý đợt này (tối đa = SL gốc) — phần
+        // còn lại tự tách dòng "Chờ xử lý" để đợt sản xuất sau xử lý tiếp. Dòng đã xử lý
+        // rồi thì SL vẫn readonly (chỉ đổi được cách thức cho toàn bộ dòng).
+        const isPendingHandle = mode === 'handle' && (!handlingMethod || handlingMethod === PENDING);
+        const qtyReadonly = mode === 'handle' && !isPendingHandle;
+        const maxAttr = isPendingHandle ? ` data-max-qty="${escapeHtml(qty)}" title="SL xử lý đợt này — tối đa ${escapeHtml(qty)}, phần còn lại chờ đợt sau"` : '';
+
         li.innerHTML = `
             <button type="button" class="btn-remove-product" title="Xóa">×</button>
             <div class="wp-name-num-product">
@@ -423,11 +477,23 @@
                     <p>${escapeHtml(name)}</p>
                 </div>
                 <div class="num-return">
-                    <input type="text" class="input-quantity" value="${escapeHtml(qty)}" placeholder="SL" ${mode === 'handle' ? 'readonly' : ''}>
+                    <input type="text" class="input-quantity" value="${escapeHtml(qty)}" placeholder="SL"${maxAttr} ${qtyReadonly ? 'readonly' : ''}>
+                    ${isPendingHandle ? `<span class="qty-max-hint">/ ${escapeHtml(qty)}</span>` : ''}
                 </div>
             </div>
             ${bodyHtml}
         `;
+
+        // Chặn vượt SL gốc ngay khi rời ô (blur/change): > max -> kéo về max; <= 0 -> trả về max.
+        if (isPendingHandle) {
+            const $qtyInp = li.querySelector('.input-quantity');
+            $qtyInp.addEventListener('change', () => {
+                const max = parseFloat($qtyInp.getAttribute('data-max-qty')) || 0;
+                let v = parseFloat($qtyInp.value) || 0;
+                if (v > max || v <= 0) v = max;
+                $qtyInp.value = v;
+            });
+        }
 
         const $btnRm = li.querySelector('.btn-remove-product');
         $btnRm.addEventListener('click', () => removeItem(li));
@@ -522,7 +588,17 @@
             const methodEl = li.querySelector('.wp-handling input[type="radio"]:checked');
             const method = methodEl ? methodEl.value : '';
             if (!method) return; // bỏ qua sản phẩm chưa chọn cách thức
-            items.push({ sales_return_id: sid, method: method });
+            const item = { sales_return_id: sid, method: method };
+            // SL xử lý đợt này (chỉ dòng đang "Chờ xử lý" có data-max-qty) — nhỏ hơn SL gốc
+            // thì server tách dòng, phần còn lại giữ "Chờ xử lý" cho đợt sản xuất sau.
+            const $qtyInp = li.querySelector('.input-quantity[data-max-qty]');
+            if ($qtyInp) {
+                const max = parseFloat($qtyInp.getAttribute('data-max-qty')) || 0;
+                let q = parseFloat($qtyInp.value) || 0;
+                if (q > max || q <= 0) q = max;
+                item.qty = q;
+            }
+            items.push(item);
         });
         return items;
     }
@@ -542,6 +618,7 @@
     function enterEditMode(batch) {
         editingBatch = batch;
         setMode('edit');
+        if (window.JE && window.JE.loadTemplatesAsBlocks) window.JE.loadTemplatesAsBlocks();
         // Set customer
         selectedCustomer = {
             id:         batch.customer_id,
@@ -610,6 +687,7 @@
         $custShort.value = '';
         selectedCustomer = null;
         $dateTime.value = nowLocalValue();
+        if (window.JE && window.JE.reset) window.JE.reset();
     }
 
     $btnCancelEdit.addEventListener('click', (e) => {
@@ -643,15 +721,14 @@
         if (!confirm('Ghi nhập hàng bán trả lại của KH "' + selectedCustomer.name + '"?')) return;
 
         flashActive($btnRec);
-        postForm('record_sales_return', {
+        postForm('record_sales_return', Object.assign({
             customer_id: selectedCustomer.id,
             items:       JSON.stringify(items),
             created_at:  pickerToMysql(),
-        }).then(res => {
+        }, jePayload())).then(res => {
             if (res && res.success) {
-                alert('Đã ghi ' + res.count + ' sản phẩm vào kho tạm.');
-                renderHistory(res.history || []);
-                clearList();
+                if (window.appFlyToHistory) window.appFlyToHistory($btnRec);
+                setTimeout(() => window.location.reload(), 950);
             } else {
                 alert(res && res.message ? res.message : 'Có lỗi xảy ra.');
             }
@@ -666,13 +743,13 @@
             return;
         }
         flashActive($btnEdit);
-        postForm('edit_sales_return', {
+        postForm('edit_sales_return', Object.assign({
             items:       JSON.stringify(items),
             customer_id: editingBatch ? editingBatch.customer_id : '',
             created_at:  pickerToMysql(),
-        }).then(res => {
+        }, jePayload())).then(res => {
             if (res && res.success) {
-                alert('Đã cập nhật ' + res.count + ' dòng.');
+                if (window.appFlyToHistory) window.appFlyToHistory($btnEdit);
                 renderHistory(res.history || []);
                 exitEditMode();
             } else {
@@ -693,7 +770,7 @@
             items: JSON.stringify(items),
         }).then(res => {
             if (res && res.success) {
-                alert('Đã xử lý ' + res.count + ' sản phẩm.');
+                if (window.appFlyToHistory) window.appFlyToHistory($btnHandle);
                 renderHistory(res.history || []);
                 exitEditMode();
             } else {
@@ -737,30 +814,82 @@
         renderHistoryPage();
     }
 
+    // Ngày của batch dạng 'YYYY-MM-DD'. Ưu tiên created_at ('YYYY-MM-DD HH:MM:SS');
+    // fallback parse từ date_display ('HH:ii:ss dd/mm/yyyy' hoặc 'dd/mm/yyyy').
+    function batchDateYMD(b) {
+        const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(b && b.created_at ? b.created_at : ''));
+        if (iso) return iso[1] + '-' + iso[2] + '-' + iso[3];
+        const vn = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(b && b.date_display ? b.date_display : ''));
+        if (vn) return vn[3] + '-' + pad2(vn[2]) + '-' + pad2(vn[1]);
+        return '';
+    }
+
+    // Áp dụng bộ lọc (từ khóa + khoảng ngày) lên INITIAL.history.
+    function getFilteredHistory() {
+        const all = INITIAL.history || [];
+        const kw = histFilter.keyword.trim().toLowerCase();
+        const from = histFilter.dateFrom;
+        const to   = histFilter.dateTo;
+        if (!kw && !from && !to) return all;
+        return all.filter(b => {
+            if (kw) {
+                const inSummary = String(b.summary || '').toLowerCase().indexOf(kw) !== -1;
+                const inItems = Array.isArray(b.items) && b.items.some(it =>
+                    String(it.product_name || '').toLowerCase().indexOf(kw) !== -1);
+                if (!inSummary && !inItems) return false;
+            }
+            if (from || to) {
+                const d = batchDateYMD(b);
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+            }
+            return true;
+        });
+    }
+
+    function updateFilterUI() {
+        const active = histFilter.keyword.trim() !== '';
+        if ($hfKeywordBtn) $hfKeywordBtn.classList.toggle('active', active);
+    }
+
     function renderHistoryPage() {
-        const data = INITIAL.history || [];
-        const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+        const total = (INITIAL.history || []).length;
+        const data = getFilteredHistory();
+        const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
         if (historyPage > totalPages) historyPage = totalPages;
         if (historyPage < 1) historyPage = 1;
+
+        if ($hfCount) {
+            $hfCount.textContent = data.length === total
+                ? (total + ' nhóm')
+                : (data.length + '/' + total + ' nhóm');
+        }
+        updateFilterUI();
+
         if (!data.length) {
-            $histBody.innerHTML = '<tr class="history-empty"><td colspan="4">Chưa có thao tác nào.</td></tr>';
+            const msg = total ? 'Không có nhóm nào khớp bộ lọc.' : 'Chưa có thao tác nào.';
+            $histBody.innerHTML = '<tr class="history-empty"><td colspan="4">' + msg + '</td></tr>';
             if ($histPager) $histPager.innerHTML = '';
             return;
         }
-        const start = (historyPage - 1) * PAGE_SIZE;
-        const slice = data.slice(start, start + PAGE_SIZE);
-        $histBody.innerHTML = slice.map((b, i) => {
-            const idx = start + i;
+        const start = (historyPage - 1) * pageSize;
+        const slice = data.slice(start, start + pageSize);
+        // data-group-key + data-customer-id là khóa tra cứu batch (handler Sửa/Xóa/Xử lý
+        // dùng .find() theo chúng) → an toàn khi đang lọc/phân trang, không phụ thuộc index.
+        $histBody.innerHTML = slice.map(b => {
             const status = batchStatus(b.items || []);
+            const secondAction = (status === 'done')
+                ? '<a href="#" class="delete-list-return">Xóa</a>'
+                : '<a href="#" class="handle-list-return">Xử lý</a>';
             return `
-                <tr data-group-key="${escapeHtml(b.group_key)}" data-customer-id="${b.customer_id}" data-idx="${idx}">
-                    <td>${escapeHtml(b.date_display)}</td>
+                <tr data-group-key="${escapeHtml(b.group_key)}" data-customer-id="${b.customer_id}">
+                    <td class="${b.date_color ? 'hist-date-' + b.date_color : ''}">${escapeHtml(b.date_display)}</td>
                     <td class="col-status">${statusIconHtml(status)}</td>
                     <td title="${escapeHtml(b.summary)}">${escapeHtml(b.summary)}</td>
                     <td class="history-actions">
                         <a href="#" class="edit-list-return">Sửa</a>
                         <span class="sep">|</span>
-                        <a href="#" class="handle-list-return">Xử lý</a>
+                        ${secondAction}
                     </td>
                 </tr>`;
         }).join('');
@@ -808,12 +937,33 @@
     $histBody.addEventListener('click', (e) => {
         const editLink   = e.target.closest('.edit-list-return');
         const handleLink = e.target.closest('.handle-list-return');
-        if (!editLink && !handleLink) return;
+        const deleteLink = e.target.closest('.delete-list-return');
+        if (!editLink && !handleLink && !deleteLink) return;
         e.preventDefault();
         const tr = e.target.closest('tr');
         if (!tr) return;
         const groupKey = tr.getAttribute('data-group-key');
         const cid      = parseInt(tr.getAttribute('data-customer-id'), 10);
+
+        if (deleteLink) {
+            const cached = (INITIAL.history || []).find(h =>
+                h.group_key === groupKey && Number(h.customer_id) === cid);
+            const label = cached ? (cached.date_display + ' · ' + (cached.customer_short || '')) : groupKey;
+            if (!confirm('Xóa nhóm "' + label + '"? Tồn kho và bút toán liên quan sẽ được hoàn lại.')) return;
+            postForm('delete_sales_return_batch', { group_key: groupKey, customer_id: cid }).then(res => {
+                if (!res || !res.success) {
+                    alert((res && res.message) ? res.message : 'Có lỗi xảy ra.');
+                    return;
+                }
+                alert('Đã xóa ' + (res.removed || 0) + ' dòng.');
+                renderHistory(res.history || []);
+                if (editingBatch && editingBatch.group_key === groupKey
+                    && Number(editingBatch.customer_id) === cid) {
+                    exitEditMode();
+                }
+            });
+            return;
+        }
 
         postForm('get_sales_return_batch', { group_key: groupKey, customer_id: cid }).then(res => {
             if (!res || !res.success) {
@@ -831,10 +981,71 @@
         });
     });
 
+    // ---------- History filter wiring ----------
+    function setupHistoryFilter() {
+        if ($hfPageSize) {
+            pageSize = parseInt($hfPageSize.value, 10) || 10;
+            $hfPageSize.addEventListener('change', () => {
+                pageSize = parseInt($hfPageSize.value, 10) || 10;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        if ($hfDateFrom) {
+            $hfDateFrom.addEventListener('change', () => {
+                histFilter.dateFrom = $hfDateFrom.value;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        if ($hfDateTo) {
+            $hfDateTo.addEventListener('change', () => {
+                histFilter.dateTo = $hfDateTo.value;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        if ($hfKeyword) {
+            $hfKeyword.addEventListener('input', () => {
+                histFilter.keyword = $hfKeyword.value;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        // Mở/đóng popover phễu
+        if ($hfKeywordBtn && $hfKeywordPop) {
+            $hfKeywordBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const open = $hfKeywordPop.classList.toggle('open');
+                if (open && $hfKeyword) $hfKeyword.focus();
+            });
+            $hfKeywordPop.addEventListener('click', (e) => e.stopPropagation());
+            document.addEventListener('click', () => $hfKeywordPop.classList.remove('open'));
+            $hfKeyword && $hfKeyword.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') $hfKeywordPop.classList.remove('open');
+            });
+        }
+        if ($hfReset) {
+            $hfReset.addEventListener('click', () => {
+                histFilter.keyword = '';
+                histFilter.dateFrom = '';
+                histFilter.dateTo = '';
+                if ($hfKeyword)  $hfKeyword.value = '';
+                if ($hfDateFrom) $hfDateFrom.value = '';
+                if ($hfDateTo)   $hfDateTo.value = '';
+                if ($hfKeywordPop) $hfKeywordPop.classList.remove('open');
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+    }
+
     // ---------- Init ----------
     function init() {
         $dateTime.value = nowLocalValue();
         INITIAL.planDate = pickerToDateVN();
+        setupJe();
+        setupHistoryFilter();
         renderHistory(INITIAL.history || []);
         setMode('create');
     }

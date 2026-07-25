@@ -98,4 +98,4 @@ function get_data_from_excel($name_file_excel, $table)
     $conn->close();
 }
 // gọi hàm
-get_data_from_excel("product_prices.xlsx", "product_prices");
+get_data_from_excel("purchase_price_changes.xlsx", "purchase_price_changes");

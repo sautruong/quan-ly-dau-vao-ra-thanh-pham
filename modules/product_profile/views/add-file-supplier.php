@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>index hr</title>
+    <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
@@ -16,6 +17,7 @@
     <script src="public/js/menu_sidebar_left.js" defer></script>
    
     <script src="public/js/product_profile_list.js" defer></script>
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
 <style>
     /* KHUNG */
@@ -168,6 +170,7 @@
                 </div>
 
             </div>
+    <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 
 </html>

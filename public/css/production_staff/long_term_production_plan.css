@@ -1,0 +1,414 @@
+/* =====================================================================
+ *  long_term_production_plan.css — bảng kế hoạch SX dài ngày (trello-like).
+ * ===================================================================== */
+
+/* Cho phép cuộn dọc cả trang (html/body/#wrapper bị khóa overflow:hidden) */
+.content { overflow-y: auto; overflow-x: hidden; padding-bottom: 24px; }
+
+.ltp-page-head { margin: 4px 0 14px; }
+.ltp-page-head h1 { font-size: 20px; margin: 0 0 4px; color: #096926; }
+.ltp-page-head .ltp-hint { font-size: 13px; color: #777; margin: 0; }
+
+/* Toolbar trên board */
+.ltp-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 0 0 12px; }
+
+/* Xem nhanh tồn kho (NVL / thành phẩm) */
+.ltp-stock-btn { color: #096926; border-color: #9fcfb0; font-weight: 600; }
+.ltp-stock-btn:hover { background: #e8f3ec; }
+
+.ltp-stock-lookup { position: relative; width: 0; overflow: visible; opacity: 0;
+    pointer-events: none; transition: width .18s ease, opacity .18s ease; }
+.ltp-stock-lookup.is-open { width: 500px; opacity: 1; pointer-events: auto; }
+.ltp-stock-input {
+    width: 100%; box-sizing: border-box; border: 1px solid #c2c8d0; border-radius: 4px;
+    padding: 6px 10px; font-size: 13px; color: #333;
+}
+.ltp-stock-input:focus { outline: none; border-color: #096926; box-shadow: 0 0 0 2px rgba(9,105,38,.15); }
+
+.ltp-stock-suggest {
+    list-style: none; margin: 2px 0 0; padding: 0; position: absolute; left: 0; right: 0; z-index: 1200;
+    background: #fff; border: 1px solid #d8dde3; border-radius: 5px; max-height: 260px; overflow: auto;
+    box-shadow: 0 6px 18px rgba(0,0,0,.14); font-size: 13px; display: none; text-align: left;
+}
+.ltp-stock-suggest li { padding: 7px 10px; cursor: pointer; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+.ltp-stock-suggest li:hover { background: #eef5f0; }
+.ltp-stock-suggest li.ltp-stock-empty { color: #999; cursor: default; }
+.ltp-stock-suggest li.ltp-stock-empty:hover { background: #fff; }
+.ltp-btn-add-day {
+    background: #096926; color: #fff; border-color: #096926;
+    padding: 8px 16px; font-size: 13px; font-weight: 600;
+}
+.ltp-btn-add-day:hover { background: #0a7d2e; }
+
+/* Board: lịch tuần 7 cột (Thứ 2 -> Chủ nhật), card xếp đúng cột theo thứ. */
+.ltp-board {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+}
+@media (max-width: 1100px) { .ltp-board { gap: 6px; } }
+@media (max-width: 820px)  { .ltp-board { gap: 4px; } }
+
+/* Tiêu đề tuần (FAQ): chiếm trọn 1 hàng, bấm để thu gọn các card của tuần. */
+.ltp-week-head {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; margin-top: 4px;
+    background: #e8f0fb; border: 1px solid #cfe0f5; border-radius: 8px;
+    cursor: pointer; user-select: none; font-weight: 700; color: #1f2b3a;
+}
+.ltp-week-head:hover { background: #ddeafa; }
+.ltp-week-caret { color: #4b6a90; transition: transform .15s; }
+.ltp-week-head.is-collapsed .ltp-week-caret { transform: rotate(-90deg); }
+.ltp-week-title { font-size: 14px; }
+/* Card bị thu gọn (ẩn nội dung của tuần đang đóng) */
+.ltp-card.ltp-week-hidden { display: none !important; }
+
+/* Card 1 ngày */
+.ltp-card {
+    background: #fff;
+    border: 1px solid #dfe3e8;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.ltp-card.is-sunday { border-color: #e3b7b7; }
+.ltp-card.ltp-dragging { opacity: .5; }
+.ltp-card.ltp-over { outline: 2px dashed #096926; outline-offset: -2px; }
+
+/* Biến mất nhẹ nhàng khi bấm 'x' */
+.ltp-card { transition: opacity .25s ease, transform .25s ease; }
+.ltp-card.ltp-removing { opacity: 0; transform: scale(.92); pointer-events: none; }
+
+/* Ngày đã qua (hôm qua): làm mờ, nền xám để nhận diện đã trôi qua */
+.ltp-card.is-past { background: #f3f4f6; opacity: .82; }
+.ltp-card.is-past .ltp-card-head { background: #e8eaed; }
+.ltp-card.is-past .ltp-day .wd { color: #6b7280; }
+/* Hôm nay: viền xanh nổi bật */
+.ltp-card.is-today { border-color: #096926; box-shadow: 0 0 0 2px rgba(9,105,38,.28); }
+.ltp-card.is-today .ltp-card-head { background: #e8f3ec; }
+
+/* Nhãn nhận diện */
+.ltp-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; vertical-align: middle; }
+.ltp-tag-today { background: #096926; color: #fff; }
+.ltp-tag-past  { background: #d1d5db; color: #4b5563; }
+
+.ltp-card-head {
+    position: relative;
+    padding: 10px 30px 10px 12px;
+    background: #f0f3f7;
+    border-bottom: 1px solid #e4e8ee;
+}
+.ltp-card-del {
+    position: absolute; top: 6px; right: 8px;
+    width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 4px; cursor: pointer; color: #b94a48; font-size: 18px; line-height: 1;
+    opacity: .55; transition: opacity .12s, background .12s;
+}
+.ltp-card-del:hover { opacity: 1; background: #f7dada; }
+.ltp-card.is-sunday .ltp-card-head { background: #fbecec; }
+.ltp-day { font-weight: 600; font-size: 14px; color: #1f2b3a; margin-bottom: 8px; }
+.ltp-card.is-sunday .ltp-day .wd { color: #c0392b; }
+.ltp-day .dt { color: #7a8694; font-weight: 500; font-size: 13px; }
+
+.ltp-card-actions { display: flex; gap: 6px; }
+.ltp-btn {
+    cursor: pointer; border: 1px solid #c2c8d0; background: #fff;
+    border-radius: 4px; padding: 4px 9px; font-size: 12px; color: #333;
+}
+.ltp-btn:hover { background: #eef2f7; }
+.ltp-btn-add-product { color: #096926; border-color: #9fcfb0; }
+.ltp-btn-add-product:hover { background: #e8f3ec; }
+.ltp-btn-primary { background: #096926; color: #fff; border-color: #096926; padding: 7px 18px; font-size: 13px; }
+.ltp-btn-primary:hover { background: #0a7d2e; }
+
+.ltp-card-body { padding: 8px 4px 12px; min-height: 60px; }
+
+/* Chân card (chỉ ngày đã qua): nút XUẤT KH đặt dưới cùng */
+.ltp-card-foot { margin-top: auto; padding: 8px; border-top: 1px solid #e4e8ee; }
+.ltp-export-plan {
+    width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 6px;
+    background: #096926; color: #fff; border-color: #096926; font-weight: 700; font-size: 12px;
+}
+.ltp-export-plan:hover { background: #0a7d2e; }
+.ltp-export-plan:disabled { opacity: .55; cursor: default; }
+.ltp-cluster { margin-bottom: 8px; }
+.ltp-cluster-title { font-size: 12px; color: #8a94a0; margin: 6px 0 3px; font-weight: 600; }
+.ltp-list { list-style: none; margin: 0; padding: 0; }
+
+/* item sản phẩm + việc khác: layout chung */
+.ltp-item, .ltp-task {
+    position: relative;
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 26px 5px 8px;
+    font-size: 13px;
+    flex-wrap: wrap;
+    transition: opacity .2s ease, transform .2s ease;
+}
+/* Xóa nhẹ nhàng: trượt sang phải + mờ dần rồi gỡ DOM */
+.ltp-item.ltp-removing, .ltp-task.ltp-removing {
+    opacity: 0; transform: translateX(14px); pointer-events: none;
+}
+/* Sản phẩm: full width, KHÔNG nền, ngăn cách nhau bằng line dưới */
+.ltp-item {
+    width: 100%;
+    padding: 4px 16px 4px 2px;
+    background: transparent;
+    border-bottom: 1px solid #edf0f3;
+}
+.ltp-item:last-child { border-bottom: 0; }
+
+/* Tên sản phẩm: input không viền, trông như chữ; bấm vào để đổi sản phẩm */
+.ltp-item .ltp-item-name {
+    flex: 1; min-width: 0; color: #1f2b3a;
+    font-family: inherit; font-size: 11px;
+    border: 1px solid transparent; background: transparent;
+    border-radius: 4px; padding: 2px 1px; margin: 0;
+    cursor: text;
+}
+.ltp-item .ltp-item-name:hover { background: #eef2f7; }
+.ltp-item .ltp-item-name:focus { background: #fff; border-color: #9fcfb0; outline: none; }
+
+/* Số lượng: input không viền, bấm vào để đổi số lượng */
+.ltp-item .ltp-item-qty {
+    width: 30px; flex: none; text-align: right;
+    font-weight: 700; color: #096926;
+    font-family: inherit; font-size: 11px;
+    border: 1px solid transparent; background: transparent;
+    border-radius: 4px; padding: 2px 3px; margin: 0;
+    cursor: text;
+}
+.ltp-item .ltp-item-qty:hover { background: #eef2f7; }
+.ltp-item .ltp-item-qty:focus { background: #fff; border-color: #9fcfb0; outline: none; }
+
+/* "Việc khác": nội dung là input không viền, bấm sửa tại chỗ */
+.ltp-task { background: #fff7e9; border-radius: 5px; margin-bottom: 4px; }
+.ltp-task .ltp-task-content {
+    flex: 1; min-width: 0; color: #4a4030;
+    font-family: inherit; font-size: 13px;
+    border: 1px solid transparent; background: transparent;
+    border-radius: 4px; padding: 2px 5px; margin: 0; cursor: text;
+}
+.ltp-task .ltp-task-content:hover { background: #fdeccb; }
+.ltp-task .ltp-task-content:focus { background: #fff; border-color: #e0c389; outline: none; }
+
+/* Tay nắm kéo từng dòng: ẩn lúc đầu, chỉ hiện khi hover vào dòng */
+.ltp-item-grip, .ltp-task-grip {
+    flex: none; cursor: grab; color: #c2c8d0; font-size: 11px;
+    display: inline-flex; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity .12s;
+}
+.ltp-item:hover .ltp-item-grip, .ltp-task:hover .ltp-task-grip { opacity: .7; pointer-events: auto; }
+.ltp-item-grip:hover, .ltp-task-grip:hover { color: #096926; opacity: 1; }
+.ltp-item-grip:active, .ltp-task-grip:active { cursor: grabbing; }
+
+/* Dòng đang được kéo + list đích được tô sáng */
+.ltp-item.ltp-item-dragging, .ltp-task.ltp-item-dragging { opacity: .45; }
+.ltp-list.ltp-list-over { outline: 2px dashed #096926; outline-offset: 2px; border-radius: 6px; min-height: 22px; }
+
+/* "Việc khác": vạch chèn trước/sau khi kéo sắp xếp lại trong CÙNG 1 ngày */
+.ltp-task.ltp-drop-before { box-shadow: inset 0 2px 0 #096926; }
+.ltp-task.ltp-drop-after  { box-shadow: inset 0 -2px 0 #096926; }
+
+/* Nút xóa nhanh 1 sản phẩm: ẩn lúc đầu, chỉ hiện khi hover vào dòng */
+.ltp-item-del {
+    position: absolute; right: 0px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+    color: #c0392b; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .12s, background .12s;
+    font-size: 16px; line-height: 1; border-radius: 4px;
+}
+.ltp-item:hover .ltp-item-del { opacity: .7; pointer-events: auto; }
+.ltp-item-del:hover { opacity: 1; background: #f7dada; }
+
+/* Nút xóa nhanh 1 "Việc khác" (thay cho cây bút) */
+.ltp-task-del {
+    position: absolute; right: 6px; top: 5px;
+    width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+    color: #c0392b; cursor: pointer; opacity: 0; transition: opacity .12s, background .12s;
+    font-size: 16px; line-height: 1; border-radius: 4px;
+}
+.ltp-task:hover .ltp-task-del { opacity: .7; }
+.ltp-task-del:hover { opacity: 1; background: #f7dada; }
+
+/* Dropdown gợi ý sản phẩm khi đổi tên inline */
+.ltp-inline-suggest {
+    position: absolute; z-index: 1200; list-style: none; margin: 0; padding: 0;
+    background: #fff; border: 1px solid #d8dde3; border-radius: 5px;
+    max-height: 220px; overflow: auto; box-shadow: 0 6px 18px rgba(0,0,0,.14);
+    font-size: 13px; min-width: 180px;
+}
+.ltp-inline-suggest li { padding: 7px 10px; cursor: pointer; }
+.ltp-inline-suggest li:hover { background: #eef5f0; }
+.ltp-inline-suggest li.ltp-active { background: #dbeede; }
+
+/* inline edit box */
+.ltp-edit-box { flex-basis: 100%; display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+.ltp-edit-box input, .ltp-edit-box textarea {
+    flex: 1; min-width: 70px; border: 1px solid #c2c8d0; border-radius: 4px; padding: 4px 6px; font-size: 12px;
+}
+.ltp-mini { cursor: pointer; border: 1px solid #c2c8d0; background: #fff; border-radius: 4px; padding: 3px 8px; font-size: 12px; }
+.ltp-mini.ltp-save { color: #096926; border-color: #9fcfb0; }
+.ltp-mini.ltp-del  { color: #c0392b; border-color: #e3b7b7; }
+.ltp-mini:hover { background: #f1f4f8; }
+
+/* Khối dưới: Đã hoàn thành (trái) + Dự phòng (phải) */
+.ltp-completed {
+    margin-top: 22px; border-top: 1px solid #e4e8ee; padding-top: 12px;
+    display: flex; gap: 20px; align-items: flex-start;
+}
+/* Dự phòng nằm BÊN TRÁI, "Đã hoàn thành" bên phải (đảo vị trí bằng order). */
+.ltp-completed-main { flex: 1 1 0; min-width: 0; order: 1; border-left: 1px solid #e4e8ee; padding-left: 18px; }
+.ltp-completed-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ltp-completed-clear {
+    cursor: pointer; border: 1px solid #f0c2c2; background: #fff5f5; color: #d34141;
+    font-size: 13px; font-weight: 600; border-radius: 6px; padding: 4px 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.ltp-completed-clear:hover { background: #d34141; color: #fff; border-color: #d34141; }
+.ltp-completed-clear:disabled { opacity: .5; cursor: default; }
+.ltp-completed-toggle {
+    cursor: pointer; background: none; border: none; font-size: 14px; font-weight: 600; color: #5a6573;
+    display: inline-flex; align-items: center; gap: 8px; padding: 4px 0;
+}
+.ltp-completed-toggle i { transition: transform .15s; }
+.ltp-completed-body { margin-top: 10px; }
+.ltp-completed-day { margin-bottom: 12px; }
+.ltp-completed-date { font-size: 13px; font-weight: 600; color: #7a8694; margin-bottom: 4px; }
+.ltp-completed-list { list-style: none; margin: 0; padding: 0; }
+.ltp-completed-list li { font-size: 13px; color: #8a94a0; padding: 2px 0; text-decoration: line-through; }
+.ltp-completed-list li i { color: #9bb8a6; margin-right: 4px; }
+.ltp-completed-list li.is-task { color: #b0a890; }
+.ltp-empty { color: #999; font-size: 13px; }
+
+/* Modal */
+.ltp-modal-mask {
+    position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.45);
+    display: none; align-items: flex-start; justify-content: center; padding: 60px 16px; overflow: auto;
+}
+.ltp-modal-mask.open { display: flex; }
+.ltp-modal-box { background: #fff; border-radius: 8px; width: 100%; max-width: 520px; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; }
+.ltp-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: #096926; color: #fff; border-radius: 8px 8px 0 0; flex: none; }
+.ltp-modal-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.ltp-modal-close { cursor: pointer; font-size: 22px; line-height: 1; }
+.ltp-modal-body { padding: 14px 16px; min-height: 340px; max-height: 65vh; overflow-y: auto; }
+.ltp-modal-foot { padding: 12px 16px; border-top: 1px solid #eee; text-align: right; flex: none; border-radius: 0 0 8px 8px; background: #fff; }
+
+.ltp-search-wrap { position: relative; }
+#ltp-product-search, #ltp-task-content {
+    width: 100%; border: 1px solid #c2c8d0; border-radius: 5px; padding: 8px 10px; font-size: 13px; box-sizing: border-box;
+}
+.ltp-suggest {
+    list-style: none; margin: 2px 0 0; padding: 0; position: absolute; left: 0; right: 0; z-index: 5;
+    background: #fff; border: 1px solid #d8dde3; border-radius: 5px; max-height: 220px; overflow: auto;
+    box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+.ltp-suggest:empty { display: none; }
+.ltp-suggest li { padding: 7px 10px; font-size: 13px; cursor: pointer; }
+.ltp-suggest li:hover { background: #eef5f0; }
+.ltp-suggest li.ltp-active { background: #dbeede; }
+
+.ltp-staged { margin-top: 12px; }
+.ltp-staged-empty { color: #999; font-size: 13px; padding: 6px 0; }
+.ltp-staged-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #e4e8ee; }
+.ltp-staged-name { flex: 1; font-size: 13px; }
+.ltp-staged-qty { width: 80px; border: 1px solid #c2c8d0; border-radius: 4px; padding: 5px 7px; font-size: 13px; }
+.ltp-staged-remove { cursor: pointer; color: #c0392b; font-size: 18px; line-height: 1; padding: 0 4px; }
+
+/* =====================================================================
+ *  KẾ HOẠCH SẢN XUẤT DỰ PHÒNG
+ * ===================================================================== */
+.ltp-backup { flex: 1 1 0; min-width: 0; order: 0; padding-right: 18px; }
+.ltp-backup-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ltp-backup-title { font-size: 14px; font-weight: 700; color: #5a6573; display: inline-flex; align-items: center; gap: 7px; }
+.ltp-backup-title i { color: #096926; }
+.ltp-backup-actions { display: flex; align-items: center; gap: 6px; }
+.ltp-backup-add { color: #096926; border-color: #9fcfb0; }
+.ltp-backup-add:hover { background: #e8f3ec; }
+
+.ltp-backup-setting-wrap { position: relative; }
+.ltp-backup-setting-btn { padding: 5px 9px; }
+.ltp-backup-setting-menu {
+    position: absolute; top: calc(100% + 6px); right: 0; width: 230px;
+    background: #fff; border: 1px solid #d8dde3; border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.14); padding: 8px; z-index: 30; display: none;
+}
+.ltp-backup-setting-wrap.is-open .ltp-backup-setting-menu { display: block; }
+.ltp-backup-setting-label { font-size: 11px; font-weight: 700; color: #8a94a0; padding: 2px 6px 6px; }
+.ltp-backup-setting-opt { display: flex; align-items: center; gap: 8px; padding: 7px 6px; border-radius: 7px; cursor: pointer; font-size: 13px; color: #333; }
+.ltp-backup-setting-opt:hover { background: #eef5f0; }
+.ltp-backup-setting-opt input { accent-color: #096926; }
+
+.ltp-backup-list { display: flex; flex-direction: column; gap: 6px; }
+.ltp-backup-empty { color: #999; font-size: 13px; margin: 4px 0 0; }
+
+.ltp-backup-item {
+    position: relative; display: flex; align-items: center; gap: 8px;
+    padding: 6px 26px 6px 6px; border-radius: 6px; background: #f6f8fa; border: 1px solid #eceff3;
+    transition: opacity .22s ease, transform .22s ease;
+}
+/* Xóa nhẹ nhàng: trượt sang phải + mờ dần rồi gỡ DOM */
+.ltp-backup-item.ltp-removing { opacity: 0; transform: translateX(14px); pointer-events: none; }
+.ltp-backup-item.ltp-item-dragging { opacity: .45; }
+.ltp-backup-item.ltp-bk-drop-before { box-shadow: inset 0 2px 0 #096926; }
+.ltp-backup-item.ltp-bk-drop-after  { box-shadow: inset 0 -2px 0 #096926; }
+
+.ltp-bk-grip {
+    flex: none; cursor: grab; color: #c2c8d0; font-size: 11px;
+    display: inline-flex; align-items: center;
+    opacity: .5; transition: opacity .12s;
+}
+.ltp-backup-item:hover .ltp-bk-grip { opacity: .85; }
+.ltp-bk-grip:hover { color: #096926; opacity: 1; }
+.ltp-bk-grip:active { cursor: grabbing; }
+
+.ltp-bk-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ltp-bk-name {
+    color: #1f2b3a; font-family: inherit; font-size: 13px; font-weight: 500;
+    border: 1px solid transparent; background: transparent; border-radius: 4px;
+    padding: 2px 5px; margin: 0; cursor: text;
+}
+.ltp-bk-name:hover { background: #eef2f7; }
+.ltp-bk-name:focus { background: #fff; border-color: #9fcfb0; outline: none; }
+/* Hàng meta dưới tên: ngày tạo (trái) + ô ghi chú (phải, viền hiện khi hover) */
+.ltp-bk-meta { display: flex; align-items: center; gap: 6px; padding: 0 6px; }
+.ltp-bk-date { font-size: 11px; color: #9aa3ad; white-space: nowrap; flex: none; }
+.ltp-bk-note-input {
+    flex: 1; min-width: 0; font-size: 11px; font-family: inherit; color: #7a8694;
+    border: 1px solid transparent; background: transparent; border-radius: 4px;
+    padding: 1px 5px; outline: none;
+}
+.ltp-bk-note-input::placeholder { color: #c2c8d0; }
+.ltp-bk-note-input:hover { border-color: #cfd6de; }
+.ltp-bk-note-input:focus { border-color: #9fcfb0; background: #fff; color: #4a4030; }
+
+.ltp-bk-qty {
+    width: 56px; flex: none; text-align: right; font-weight: 700; color: #096926;
+    font-family: inherit; font-size: 13px;
+    border: 1px solid transparent; background: transparent; border-radius: 4px;
+    padding: 2px 5px; margin: 0; cursor: text;
+}
+.ltp-bk-qty:hover { background: #eef2f7; }
+.ltp-bk-qty:focus { background: #fff; border-color: #9fcfb0; outline: none; }
+
+.ltp-bk-del {
+    position: absolute; right: 6px; top: 7px; width: 18px; height: 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #c0392b; cursor: pointer; opacity: 0; transition: opacity .12s, background .12s;
+    font-size: 16px; line-height: 1; border-radius: 4px;
+}
+.ltp-backup-item:hover .ltp-bk-del { opacity: .7; }
+.ltp-bk-del:hover { opacity: 1; background: #f7dada; }
+
+/* Cụm sản phẩm của 1 ngày sáng lên khi kéo 1 dòng dự phòng lên */
+.ltp-cluster.ltp-products.ltp-bk-target { outline: 2px dashed #096926; outline-offset: 2px; border-radius: 6px; }
+
+@media (max-width: 900px) {
+    .ltp-completed { flex-direction: column; }
+    .ltp-backup { flex-basis: auto; max-width: none; width: 100%; padding-right: 0; }
+    .ltp-completed-main { flex-basis: auto; max-width: none; width: 100%; border-left: 0; border-top: 1px solid #e4e8ee; padding-left: 0; padding-top: 14px; }
+}

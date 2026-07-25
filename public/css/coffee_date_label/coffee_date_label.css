@@ -1,0 +1,171 @@
+/* =====================================================================
+ *  Tem date cà phê (coffee_date_label)
+ * ===================================================================== */
+
+:root {
+    --cdl-green: #1f8a4c;
+    --cdl-green-dark: #166e3c;
+    --cdl-green-light: #e8f5ee;
+    --cdl-border: #e2e6ea;
+    --cdl-text: #243240;
+    --cdl-muted: #7a8794;
+}
+
+.cdl-content {
+    padding: 18px 22px 60px;
+    color: var(--cdl-text);
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.cdl-block-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 17px; font-weight: 700; margin: 0 0 14px;
+}
+
+/* ---------- Khối Thiết lập ---------- */
+.cdl-setup {
+    background: #fff; border: 1px solid var(--cdl-border); border-radius: 14px;
+    padding: 18px 20px; margin-bottom: 20px;
+}
+.cdl-setup-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 16px; }
+.cdl-field-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--cdl-muted); margin-bottom: 6px; }
+.cdl-field { display: flex; flex-direction: column; }
+.cdl-field-name { flex: 1 1 260px; max-width: 360px; }
+
+.cdl-text-input {
+    padding: 10px 14px; border: 1px solid var(--cdl-border); border-radius: 10px;
+    font-size: 14px; outline: none; width: 100%; box-sizing: border-box;
+}
+.cdl-text-input:focus { border-color: var(--cdl-green); box-shadow: 0 0 0 3px rgba(31, 138, 76, .12); }
+
+.cdl-num-input {
+    padding: 10px 12px; border: 1px solid var(--cdl-border); border-radius: 10px;
+    font-size: 14px; outline: none; width: 110px; box-sizing: border-box; text-align: center;
+}
+.cdl-num-input:focus { border-color: var(--cdl-green); }
+
+.cdl-setup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.cdl-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--cdl-border); background: #fff; color: var(--cdl-text);
+    padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer;
+    transition: all .12s;
+}
+.cdl-btn:hover { border-color: var(--cdl-green); color: var(--cdl-green); }
+.cdl-btn-make, .cdl-btn-print { background: var(--cdl-green); border-color: var(--cdl-green); color: #fff; }
+.cdl-btn-make:hover, .cdl-btn-print:hover { background: var(--cdl-green-dark); border-color: var(--cdl-green-dark); color: #fff; }
+.cdl-btn-reset { background: #fff; }
+
+/* ---------- Lịch chọn ngày (custom, xanh lá) ---------- */
+.cdl-date-picker { position: relative; }
+.cdl-date-display {
+    padding: 10px 14px; border: 1px solid var(--cdl-border); border-radius: 10px;
+    font-size: 14px; text-align: center; background: #fff; cursor: pointer; font-weight: 600;
+    color: var(--cdl-text); box-sizing: border-box; min-width: 130px;
+}
+.cdl-date-display:hover, .cdl-date-display:focus { border-color: var(--cdl-green); outline: none; }
+.cdl-date-cal {
+    position: absolute; z-index: 50; top: calc(100% + 6px); left: 0;
+    width: 260px; background: #fff; border: 1px solid var(--cdl-border); border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.14); padding: 12px; display: none;
+}
+.cdl-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cdl-cal-title { font-weight: 700; font-size: 14px; color: var(--cdl-green-dark); }
+.cdl-cal-nav {
+    width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--cdl-green-light);
+    color: var(--cdl-green-dark); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.cdl-cal-nav:hover { background: var(--cdl-green); color: #fff; }
+.cdl-cal-week { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: var(--cdl-muted); margin-bottom: 4px; }
+.cdl-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cdl-cal-day { display: flex; align-items: center; justify-content: center; height: 30px; border-radius: 50%; font-size: 13px; cursor: pointer; }
+.cdl-cal-day.empty { cursor: default; }
+.cdl-cal-day:not(.empty):hover { background: var(--cdl-green-light); }
+.cdl-cal-day.today { border: 1px solid var(--cdl-green); font-weight: 700; }
+.cdl-cal-day.selected { background: var(--cdl-green); color: #fff; font-weight: 700; }
+
+/* ---------- Khối Tem hiển thị ---------- */
+.cdl-generated { background: #fff; border: 1px solid var(--cdl-border); border-radius: 14px; padding: 18px 20px; }
+.cdl-generated-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cdl-generated-head .cdl-block-title { margin: 0; }
+
+.cdl-grid { display: flex; flex-wrap: wrap; gap: 4mm; }
+.cdl-grid-empty { color: var(--cdl-muted); font-size: 14px; padding: 30px 0; text-align: center; width: 100%; }
+
+/* ---------- Khung bọc ngoài mỗi tem: viền nét đứt để cắt ---------- */
+.cdl-card-wrap {
+    flex: 0 0 auto; display: flex;
+    border: 1px dashed #9aa4ad; border-radius: 4px; padding: 2mm; background: #fff;
+}
+
+/* ---------- Vách ngăn nhận diện khi chuyển sang sản phẩm khác ---------- */
+.cdl-divider {
+    flex: 1 0 100%; display: flex; align-items: center; gap: 10px;
+    margin: 3mm 0; color: var(--cdl-green); font-size: 12.5px; font-weight: 700;
+}
+.cdl-divider::before, .cdl-divider::after {
+    content: ''; flex: 1 1 auto; height: 0;
+    border-top: 1.5px dashed var(--cdl-green);
+}
+.cdl-divider-text { white-space: nowrap; text-transform: uppercase; letter-spacing: .3px; }
+
+/* ---------- Card tem 60x20mm — khung đen solid 2px ---------- */
+.cdl-card {
+    width: 60mm; height: 20mm; position: relative; flex: 0 0 auto; box-sizing: border-box;
+    border: 2px solid #000; border-radius: 2px; background: #fff;
+    display: flex; flex-direction: row; align-items: center; gap: 2mm;
+    padding: 2mm 2mm; overflow: hidden;
+}
+
+.cdl-card-del {
+    position: absolute; top: 1mm; right: 1mm; z-index: 6;
+    width: 16px; height: 16px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,.45); color: #fff; font-size: 10px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.cdl-card-del:hover { background: rgba(200,40,40,.85); }
+
+/* Logo: viền xanh lá 2px */
+.cdl-card-logo {
+    width: 17mm; height: 17mm; object-fit: contain; flex: 0 0 auto;
+    background: #fff; border: 2px solid var(--cdl-green); border-radius: 50%;
+    padding: 0.5mm; box-sizing: border-box;
+}
+
+/* Nhóm {tên + NSX + HSD}: flex column, cùng logo tạo thành flex row của .cdl-card */
+.cdl-card-info { display: flex; flex-direction: column; gap: 0.6mm; flex: 1 1 auto; min-width: 0; }
+
+.cdl-card-name {
+    font-size: 16px; font-weight: 750; color: red; line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; margin:2px 0px;
+}
+.cdl-card-name:focus { background: #fffbe0; }
+.cdl-card-name:empty::before { content: attr(data-placeholder); color: #d99; }
+
+.cdl-card-row { font-size: 14px; line-height: 1.1; display: flex; gap: 1mm; white-space: nowrap;padding-left:3px; letter-spacing: 1px; }
+.cdl-label { font-weight: 600; color: #333; }
+.cdl-value { font-weight: 500; color: var(--cdl-text); }
+
+/* ---------- In A4 ---------- */
+@media print {
+    body * { visibility: hidden; }
+    .cdl-generated, .cdl-generated * { visibility: visible; }
+    .cdl-generated {
+        position: absolute; inset: 0; border: none; padding: 0; margin: 0;
+    }
+    .cdl-generated-head, .cdl-card-del { display: none !important; }
+
+    .cdl-grid { justify-content: center; gap: 0; }
+    .cdl-card-wrap { break-inside: avoid; page-break-inside: avoid; }
+    .cdl-divider { break-inside: avoid; page-break-inside: avoid; break-after: avoid; }
+
+    .cdl-generated, .cdl-generated * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+
+    @page { size: A4; margin: 8mm; }
+}

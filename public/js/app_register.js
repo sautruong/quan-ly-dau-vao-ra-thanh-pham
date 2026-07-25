@@ -1,3 +1,16 @@
+// Hiện loading xoay tròn khi submit form đăng ký (server xác thực + gửi OTP ~vài giây).
+(function () {
+    var form = document.getElementById("form-register");
+    var overlay = document.getElementById("app-loading");
+    if (!form || !overlay) return;
+    form.addEventListener("submit", function () {
+        // Để trình duyệt vẫn submit bình thường; chỉ bật lớp phủ loading.
+        overlay.classList.add("is-on");
+        var btn = document.getElementById("btn-register");
+        if (btn) { btn.disabled = true; btn.style.opacity = "0.7"; }
+    });
+})();
+
 document.querySelectorAll(".password-box").forEach(box => {
     let input = box.querySelector("input");
     let icon = box.querySelector("i");

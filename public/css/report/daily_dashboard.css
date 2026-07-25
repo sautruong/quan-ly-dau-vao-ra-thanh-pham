@@ -1,0 +1,2144 @@
+/* ===== WRAPPER: header trên + content dưới (global.css để #wrapper display:flex
+   không có flex-direction -> mặc định row, khiến .app-header và .content nằm
+   NGANG hàng thay vì header trên/content dưới). Cùng convention với các module
+   khác (vd production_staff/plan_for_staff.css) tự ép cột ở đây, đồng thời cố
+   định chiều cao để chỉ .dd2-content cuộn cục bộ, không cuộn toàn trang. */
+#wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ===== KHUNG TỔNG (6 khối, không cuộn toàn trang) ===== */
+.dd2-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    background: #eff1f3f0;
+    border-radius: 12px;
+    box-shadow: 0px 0px 6px gainsboro;
+    padding: 16px;
+}
+
+/* ===== HEADER lồng trong .dd2-content (chỉ riêng trang này — xem layout/header-app.php nhánh điều kiện) ===== */
+.dd2-app-header {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding: 8px 20px;
+    background: #fff;
+    border-radius: 40px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    flex: 0 0 auto;
+}
+
+.dd2-hdr-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.dd2-hdr-logo {
+    width: 25px;
+    height: 25px;
+    padding:3px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 auto;
+    background: linear-gradient(135deg, #f3f4f6, #d8dbe1);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px #e5e7eb;
+}
+
+.dd2-hdr-brand-text {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0a741c;
+    outline: none;
+    white-space: nowrap;
+    letter-spacing: -0.6px;
+}
+
+.dd2-hdr-brand-text[contenteditable="true"] {
+    border-bottom: 1px dashed #0a741c;
+}
+
+.dd2-hdr-brand-edit {
+    font-size: 12px;
+    color: #9ca3af;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+
+.dd2-hdr-brand:hover .dd2-hdr-brand-edit {
+    opacity: 1;
+}
+
+.dd2-hdr-brand-edit:hover {
+    color: #0a741c;
+}
+
+/* justify-content:flex-start ghi đè .app-header (space-between) — cần cho mẹo margin:0 auto
+   bên dưới tự canh giữa .dd2-hdr-middle trong khoảng trống còn lại, bất kể brand/actions/avatar
+   có cùng bề rộng hay không. */
+.dd2-app-header {
+    justify-content: flex-start;
+}
+
+.dd2-hdr-middle {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    justify-content: center;
+    background: #eff1f3f0;
+    border-radius: 999px;
+    padding: 3px 8px;
+    margin: 0 auto;
+    min-width: 0;
+    /* KHÔNG overflow:hidden — cal/remind/todo mở dropdown position:absolute bên trong cụm này,
+       overflow:hidden sẽ cắt/nhốt dropdown lại trong viên pill thay vì nổi lên bình thường
+       (chuông không bị vì nó nằm ở .dd2-hdr-actions riêng, không có overflow:hidden). */
+}
+
+/* Chuông + chat: TÁCH riêng background tròn cho từng icon (không còn dùng chung 1 pill) —
+   .app-bell-btn/.app-chat-dock-btn vốn đã là nút tròn 42x42 (app_shell.css/chat.css),
+   chỉ cần tô nền cố định thay vì chỉ hiện khi hover. */
+.dd2-hdr-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.dd2-hdr-actions .app-bell-btn,
+.dd2-hdr-actions .app-chat-dock-btn {
+    background: #eff1f3f0;
+}
+
+.dd2-hdr-avatar {
+    flex: 0 0 auto;
+    margin-left: 10px;
+}
+
+.dd2-hdr-avatar .app-user-meta,
+.dd2-hdr-avatar .app-user-caret {
+    display: none;
+}
+
+/* ===== TIÊU ĐỀ TRANG (chỉ còn cụm ngày, tiêu đề + nút chụp đã chuyển vào header/sidebar) ===== */
+.dd2-page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+/* Khối "Chấm công": nhân sự vắng hôm nay — sát mép trái (cạnh sidebar), ngang hàng .dd2-page-date-wrap.
+   .dd2-main (chứa khối này) nằm SAU .dd2-sidebar (width 52px) + gap 16px của .dd2-body -> kéo lùi trái
+   đúng 68px (52+16) để mép trái khối này thẳng hàng với mép trái .dd2-sidebar thay vì mép trái .dd2-main. */
+.dd2-attendance-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    max-width: 60%;
+    margin-left: -68px;
+}
+
+.dd2-attendance-wrap i {
+    color: #d97706;
+    font-size: 15px;
+    flex: 0 0 auto;
+}
+
+.dd2-attendance-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #b45309;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dd2-attendance-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dd2-attendance-list li {
+    font-size: 14px;
+    color: #374151;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.dd2-attendance-list li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.dd2-page-date-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border-radius: 999px;
+    padding: 8px 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    /* Luôn canh phải, kể cả khi KHÔNG có khối "Chấm công" bên trái. Với space-between của
+       .dd2-page-head, nếu chỉ còn 1 con (không có nhân sự vắng) thì nó bị dồn về trái —
+       margin-left:auto ép nó luôn sát mép phải bất kể có sibling hay không. */
+    margin-left: auto;
+}
+
+.dd2-page-date-wrap i {
+    color: #0a741c;
+    font-size: 15px;
+}
+
+.dd2-page-date {
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.dd2-pd-brand {
+    color: #000;
+    font-weight: 600;
+}
+
+/* ===== BODY: sidebar icon riêng (mục 2) + nội dung chính ===== */
+.dd2-body {
+    display: flex;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.dd2-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* ===== SIDEBAR ICON (riêng trang này) — nhóm 1-3 sát mép trên khối Sản lượng, nhóm 4 sát mép dưới khối Sản xuất. ===== */
+.dd2-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    flex: 0 0 auto;
+    width: 52px;
+    margin-top: 60px;
+}
+
+.dd2-sb-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border-radius: 36px;
+    padding: 8px 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    flex: 0 0 auto;
+}
+
+.dd2-sb-group-bottom {
+    margin-top: auto;
+}
+
+.dd2-sb-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #4b5563;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+}
+
+.dd2-sb-icon:hover {
+    background: #eaf6ee;
+    color: #0a741c;
+}
+
+.dd2-sb-icon:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.dd2-row {
+    display: flex;
+    gap: 24px;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* Tỉ lệ đã đổi: Xuất kho / (Chi nhánh+Quỹ) giảm 20% tương đối (30%->24%), phần dư chia đều
+   cho 2 khối còn lại CÙNG HÀNG tăng 10% tương đối (30%->33%) — tổng mỗi hàng giữ nguyên 90%.
+   2026-07-15: Nhập kho đổi chỗ sang cột 1 (trái), bóp thêm 25% tương đối (33%->24.75%), phần dư
+   dồn hết cho Sản lượng (33%->41.25%) — Sản lượng giờ dài hơn 2 khối còn lại trong hàng.
+   2026-07-15 (2): bóp thêm 15% tương đối nữa (24.75%->21.04%), dồn tiếp cho Sản lượng (41.25%->44.96%).
+   2026-07-17: Sản lượng bóp thêm 20% tương đối (44.96%->35.97%), toàn bộ phần dư (8.99 điểm %)
+   dồn cho Xuất kho CÙNG HÀNG (24%->32.99%) — Nhập kho giữ nguyên 21.04%. Hàng dưới: Đặt hàng NVL
+   bóp 20% tương đối (33%->26.4%), toàn bộ phần dư (6.6 điểm %) dồn cho .dd2-col-group (Chi nhánh
+   đặt hàng + Quỹ, 2 card CHUNG 1 cột nên "bù" = bù cho cả cột) (24%->30.6%) — Sản xuất giữ nguyên 33%.
+   2026-07-17 (2): Xuất kho ép BẰNG .dd2-col-group (30.6%, khớp bề rộng "Chi nhánh đặt hàng") —
+   giảm từ 32.99%->30.6%, phần giảm (2.39 điểm %) dồn hết cho Sản lượng CÙNG HÀNG (35.97%->38.36%). */
+.dd2-col-output {
+    flex: 0 0 38.36%;
+    min-width: 0;
+}
+
+.dd2-col-import {
+    flex: 1 1 21.04%;
+    min-width: 0;
+    position: relative;
+}
+
+.dd2-col-export {
+    flex: 1 1 30.6%;
+    min-width: 0;
+    position: relative;
+}
+
+/* 2026-07-17: .dd2-chart-box (bên trong) bây giờ cố tình bleed NHIỀU HƠN cả padding thật của
+   .dd2-card (theo yêu cầu "phóng to sát mép hơn nữa") — tràn ra ngoài luôn rìa card thật (không chỉ
+   bù đúng padding như trước), lộ góc vuông sắc đè lên nền xám phía sau card. .dd2-card dùng chung
+   KHÔNG có overflow:hidden (các card khác cần nó để popover/dropdown tự do tràn ra ngoài, vd
+   #dd2-supplier-picker/#dd2-customer-picker của card Nhập/Xuất kho) — nên clip riêng ở ĐÚNG card
+   Xuất kho bằng selector kết hợp .dd2-card.dd2-col-export (không đụng .dd2-card chung). Đã verify
+   thực tế: #dd2-customer-picker của card này vẫn hiện đầy đủ vì định vị top:46px, chiều cao dropdown
+   không vượt quá phần còn lại của card (không bị cắt bởi overflow:hidden mới này). */
+.dd2-card.dd2-col-export {
+    overflow: hidden;
+}
+
+.dd2-col-production {
+    flex: 0 0 33%;
+    min-width: 0;
+    position: relative;
+}
+
+.dd2-col-material-order {
+    flex: 1 1 26.4%;
+    min-width: 0;
+}
+
+.dd2-col-group {
+    flex: 1 1 30.6%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+}
+
+.dd2-col-group .dd2-sub-card {
+    flex: 1 1 50%;
+    min-height: 0;
+    position: relative;
+}
+
+/* ===== CARD DÙNG CHUNG ===== */
+.dd2-card {
+    background: #fff;
+    border-radius: 22px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    min-height: 0;
+    height: 100%;
+}
+
+.dd2-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.dd2-title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dd2-title i {
+    color: #0a741c;
+}
+
+/* Sát mép phải trong phần còn lại của .dd2-card-head (title đã flex:1 chiếm hết chỗ trống). */
+.dd2-month-label {
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+/* Số lượng cạnh tiêu đề (vd "Sản xuất hôm nay/7 sản phẩm") — nằm NGAY SAU chữ tiêu đề (không đẩy
+   sang phải như .dd2-month-label), chữ mờ + nhỏ hơn tiêu đề. Chỉ hiện khi count > 5 (JS/PHP toggle
+   [hidden]). */
+.dd2-title-count {
+    font-size: 13px;
+    font-weight: 500;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.dd2-icon-btn {
+    border: 1px solid #e5e7eb;
+    background: #eff1f3f0;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4b5563;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.dd2-icon-btn:hover {
+    background: #f3f4f6;
+    color: #0a741c;
+    border-color: #c7e9d4;
+}
+
+.dd2-sub-title {
+    margin: 4px 0 2px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #9ca3af;
+    flex: 0 0 auto;
+}
+
+.dd2-empty {
+    color: #9ca3af;
+    font-size: 15px;
+    padding: 10px 0;
+    margin: 0;
+    text-align: center;
+}
+
+/* ===== 1. SẢN LƯỢNG ===== */
+.dd2-output-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.dd2-output-num {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0a741c;
+}
+
+.dd2-output-label {
+    font-size: 15px;
+    color: #9ca3af;
+}
+
+.dd2-col-output .dd2-chart-box {
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.dd2-output-stats-line {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 16px;
+    flex: 0 0 auto;
+    font-size: 15px;
+    color: #6b7280;
+}
+
+.dd2-stat-inline b {
+    margin-left: 5px;
+    font-size: 14px;
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.dd2-state-cung_yeu {
+    color: #b91c1c !important;
+}
+
+.dd2-state-vuot_cau {
+    color: #0a741c !important;
+}
+
+.dd2-state-on_dinh {
+    color: #1f2937 !important;
+}
+
+/* Click để xem giải thích công thức (2026-07-17) — chỉ gạch chân khi hover, mặc định để trơn. */
+#dd2-efficiency-value,
+#dd2-regulation-value {
+    cursor: pointer;
+}
+
+#dd2-efficiency-value:hover,
+#dd2-regulation-value:hover {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+
+.dd2-explain-list {
+    margin: 0 0 14px;
+    padding-left: 18px;
+    font-size: 14.5px;
+    color: #374151;
+    line-height: 1.6;
+}
+
+/* ===== 2. NHẬP KHO ===== */
+.dd2-import-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0 0px;
+    flex: 0 0 auto;
+}
+
+.dd2-import-stats-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* Xuất kho: chỉ có 1 phần tử (chuỗi "X đơn hàng · Y SP") trong .dd2-import-stats-top, không có
+   nút "..." như Nhập kho — space-between với 1 con sẽ dạt về mép trái, cần canh giữa riêng. */
+.dd2-col-export .dd2-import-stats-top {
+    justify-content: center;
+}
+
+/* Thẻ dạng ATM: nền xanh lá đậm + ánh sáng chéo, chữ canh trái, nút "..." xem đầy đủ. */
+.dd2-col-import .dd2-import-stats {
+    align-items: flex-start;
+    background: linear-gradient(135deg, #0d481b 0%, #0a741c 100%);
+    border-radius: 16px;
+    padding: 18px 8px;
+    position: relative;
+    overflow: hidden;
+    margin: 8px 0px;
+}
+
+.dd2-col-import .dd2-import-stats::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 42%, rgba(255, 255, 255, .18) 52%, transparent 62%);
+    pointer-events: none;
+}
+
+.dd2-col-import .dd2-stat-link {
+    color: rgba(255, 255, 255, .75);
+}
+
+.dd2-col-import .dd2-stat-link:hover {
+    color: #fff;
+}
+
+.dd2-col-import .dd2-import-main {
+    color: #fff;
+}
+
+.dd2-import-more-btn {
+    border: none;
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex: 0 0 auto;
+}
+
+.dd2-import-more-btn:hover {
+    background: rgba(255, 255, 255, .3);
+}
+
+.dd2-import-main {
+    font-size: 30px;
+    font-weight: 700;
+    color: #197d26;
+    letter-spacing: 1px;
+}
+
+.dd2-stat-link {
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 14.5px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.dd2-stat-link:hover {
+    color: #0a741c;
+}
+
+.dd2-stat-link#dd2-import-cpmh-btn,
+.dd2-stat-link#dd2-import-cpmh-btn span {
+    color: #f96f6f;
+}
+
+.dd2-stat-link#dd2-import-cpmh-btn:hover {
+    color: #b91c1c;
+}
+
+/* Cột GTNK/CPMH cố định px (không phải auto) để tiêu đề và giá trị bên dưới luôn khớp cột. */
+.dd2-list-head {
+    display: grid;
+    grid-template-columns: 1fr 118px 100px;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #b5bcc6;
+    text-transform: uppercase;
+    padding: 0 4px;
+    flex: 0 0 auto;
+}
+
+.dd2-import-list-head span:not(:first-child) {
+    text-align: right;
+    padding-right: 30px;
+}
+
+.dd2-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* overflow-y: auto; */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 2px;
+}
+
+/* Khối hẹp lại (2026-07-15): ngày chuyển xuống dòng dưới, CPMH ghép chung dòng ngày (dạng
+   "13 jul, 26 - CPMH: ..."), ẩn hẳn nếu CPMH=0 — tên NCC/GTNK vẫn ngang hàng ở dòng trên.
+   Text thu nhỏ để đỡ chật khi khối hẹp. */
+.dd2-import-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 5px 4px;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+/* Đủ 3 hàng (per_page=3) thì hàng cuối bỏ border-bottom (2026-07-17) — chỉ 2 hàng vẫn giữ border-bottom
+   ở hàng cuối (bình thường như mọi hàng khác) vì cách chọn :last-child:nth-child(3) đòi hỏi ĐÚNG 3 con. */
+.dd2-import-row:last-child:nth-child(3) {
+    border-bottom: none;
+}
+
+.dd2-import-row-top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: baseline;
+}
+
+.dd2-import-row .dd2-entity-link {
+    font-size: 13.5px;
+}
+
+.dd2-import-row .dd2-date-chip {
+    font-size: 11.5px;
+}
+
+.dd2-import-row .dd2-value {
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.dd2-import-row .dd2-value:hover {
+    text-decoration: underline dotted;
+}
+
+/* Hóa đơn nhập kho hôm nay — tô xanh cả date-chip (bullet đã xanh sẵn) (2026-07-17). */
+.dd2-date-chip.is-today {
+    color: #16a34a;
+}
+
+.dd2-import-row .dd2-cost {
+    font-size: 12px;
+}
+
+.dd2-name-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+}
+
+.dd2-name-cell .dd2-entity-link {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dd2-entity-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    font-size: 15.5px;
+    font-weight: 500;
+    color: var(--dd2-accent, #1f2937);
+}
+
+.dd2-entity-link:hover {
+    color: #0a741c;
+}
+
+.dd2-value {
+    font-size: 15px;
+    color: #1f2937;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dd2-cost {
+    font-size: 14.5px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dd2-cost.is-zero {
+    color: #b5bcc6;
+}
+
+.dd2-cost.is-warn {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.dd2-date-chip {
+    font-size: 13.5px;
+    color: #b5bcc6;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+/* ===== 3. XUẤT KHO ===== */
+
+.dd2-export-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 70px 120px;
+    gap: 10px;
+    padding: 8px 4px;
+    border-bottom: 1px solid #f0f1f3;
+    align-items: baseline;
+}
+
+.dd2-qty,
+.dd2-weight {
+    font-size: 14.5px;
+    color: #9ca3af;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dd2-export-row .dd2-value {
+    color: var(--dd2-accent, #1f2937);
+}
+
+/* Click để xem chi tiết từng SP × đơn giá của phiếu xuất kho (2026-07-17, xem wireExportValueClick()). */
+.dd2-export-value {
+    cursor: pointer;
+}
+
+.dd2-export-value:hover {
+    text-decoration: underline dotted;
+}
+
+/* .dd2-card hiện padding 8px 12px (đã đổi, KHÔNG còn 16px 18px như trước) — chart bù margin âm
+   ĐÚNG BẰNG padding này để bơi ra sát mép, full-width theo khối cha (không đụng .dd2-col-export
+   nữa — tránh kiểu "padding chồng padding" khi vừa gỡ padding card vừa bù lại từng phần con).
+   2026-07-17: phát hiện qua đo thực tế (Playwright, nhiều độ rộng màn hình) rằng margin âm cũ
+   (-18/-18/-16, tính theo padding 16px 18px CŨ) khiến khối chart TRÀN RA NGOÀI rìa card thật
+   (lệch theo padding mới 8px 12px) — lộ góc vuông sắc đè lên phần bo tròn của card. */
+.dd2-col-export .dd2-chart-box {
+    flex: 1 1 0;
+    min-height: 0;
+    width: calc(100% + 42px);
+    /* Trái đã chốt -21px (ổn). Kéo thêm phải 1px (-20->-21) + dưới 1px (-17->-18) (2026-07-17). */
+    margin: 0 -21px -18px -21px;
+    position: relative;
+    /* Tràn cả xuống đáy card (bù margin-bottom âm bằng đúng padding-bottom của .dd2-card) —
+       bo lại đúng bán kính góc dưới của card (22px, khớp .dd2-card) + overflow:hidden riêng cho
+       box này (không phải cả card) để không lộ góc vuông đè lên góc bo tròn của card. */
+    border-radius: 0 0 22px 22px;
+    overflow: hidden;
+}
+
+.dd2-chart-cta {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: none;
+    background: linear-gradient(325deg, #0d481b 0%, #0a741c 50%, #4c7b54 100%);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(10, 116, 28, 0.25);
+}
+
+.dd2-chart-cta:hover {
+    opacity: .92;
+}
+
+/* Khối nổi "Today" (đơn xuất bán hôm nay, gộp theo khách hàng) — trôi trên biểu đồ Xuất kho, góc
+   dưới-trái, không được che nút "Sales Order" (canh giữa-dưới, xem .dd2-chart-cta). Nền xám 80%
+   trong suốt = alpha .2; width tự co theo nội dung (không full-width). rgba() thay vì color-mix()
+   vì html2canvas (chụp báo cáo) không parse được các hàm màu mới — xem dd2_hex_to_rgba() phía PHP. */
+.dd2-export-today {
+    position: absolute;
+    left: 45px;
+    bottom: 65px;
+    z-index: 5;
+    width: fit-content;
+    max-width: 60%;
+    background: rgba(107, 114, 128, .2);
+    border-radius: 10px;
+    padding: 6px 10px;
+    pointer-events: none;
+}
+
+.dd2-export-today-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 2px;
+}
+
+.dd2-export-today-row {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #374151;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.dd2-export-today-cust {
+    font-weight: 700;
+}
+
+.dd2-picker-pop {
+    position: absolute;
+    right: 18px;
+    top: 46px;
+    z-index: 30;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 10px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ===== 4. SẢN XUẤT (điều hướng ngày) ===== */
+.dd2-day-nav {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s ease;
+}
+
+.dd2-col-production:hover .dd2-day-nav {
+    opacity: 1;
+    visibility: visible;
+}
+
+.dd2-day-nav-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #4b5563;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.dd2-day-nav-btn:hover:not(:disabled) {
+    background: #eaf6ee;
+    color: #0a741c;
+    border-color: #c7e9d4;
+}
+
+.dd2-day-nav-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.dd2-prod-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* overflow-y: auto; */
+}
+
+.dd2-prod-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    /* fixed: cột ảnh (.dd2-img-col) không được co lại khi TOÀN BỘ hàng đều rỗng (không có nội
+       dung để auto-layout tính width theo) — vd chưa có sản phẩm nào trong ngày đang xem. */
+    table-layout: fixed;
+}
+
+.dd2-prod-table thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    text-align: left;
+    color: #9ca3af;
+    font-size: 13.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    border-bottom: 1px solid #eef0f2;
+    white-space: nowrap;
+    z-index: 2;
+}
+
+/* SL + Giá vốn sản xuất (2026-07-15): canh PHẢI, đặt SÁT NHAU (width hẹp cố định + giảm
+   khoảng đệm giữa 2 cột) để nhường tối đa không gian còn lại cho "Tên sản phẩm" hiển thị
+   đủ chữ — chỉ tên nào thật sự quá dài mới bị "..." (xem .dd2-prod-name-text). */
+.dd2-prod-table thead th:nth-child(2),
+.dd2-prod-table thead th:nth-child(3) {
+    text-align: right;
+}
+
+.dd2-prod-table thead th:nth-child(2) {
+    width: 52px;
+    padding-right: 16px;
+}
+
+.dd2-prod-table thead th:nth-child(3) {
+    width: 96px;
+    padding-left: 4px;
+}
+
+.dd2-prod-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+    /* Chiều cao hàng cố định do .dd2-prod-row quy định (height:42px) — mọi <td> ở đây PHẢI giữ
+       display mặc định (table-cell) để trình duyệt tự giãn khớp chiều cao hàng; vertical-align:middle
+       canh giữa nội dung bên trong. KHÔNG đặt display:flex trực tiếp lên <td> (từng gây lỗi
+       .dd2-prod-name không giãn theo hàng như 2 cột còn lại — xem .dd2-prod-name-inner). */
+    vertical-align: middle;
+}
+
+.dd2-prod-table td:nth-child(2),
+.dd2-prod-table td:nth-child(3) {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dd2-prod-table td:nth-child(2) {
+    padding-right: 16px;
+}
+
+.dd2-prod-table td:nth-child(3) {
+    padding-left: 4px;
+}
+
+.dd2-prod-row {
+    cursor: pointer;
+    height: 42px;
+}
+
+.dd2-prod-row:hover td {
+    background: #f9fafb;
+}
+
+.dd2-prod-row.is-empty {
+    cursor: default;
+}
+
+.dd2-prod-row.is-empty:hover td {
+    background: transparent;
+}
+
+.dd2-prod-name {
+    font-weight: 550;
+    text-align: left;
+}
+
+.dd2-prod-name-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dd2-prod-name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    padding-left:6px;
+}
+
+.dd2-prod-cost {
+    cursor: pointer;
+}
+
+.dd2-prod-cost:hover {
+    text-decoration: underline;
+}
+
+.dd2-prod-table tfoot td {
+    font-weight: 700;
+    color: #1f2937;
+    padding: 8px;
+    border-top: 2px solid #e5e7eb;
+    text-align: center;
+}
+
+.dd2-prod-table tfoot td:nth-child(1) {
+    text-align: left;
+}
+
+.dd2-prod-img {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 24px;
+    height: 30px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    object-fit: cover;
+}
+
+.dd2-prod-img-empty {
+    color: #c0c7cf;
+    font-size: 12px;
+}
+
+.dd2-warn-dot {
+    display: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.dd2-warn-dot.dot-red {
+    display: inline-block;
+    background: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .15);
+}
+
+.dd2-warn-dot.dot-yellow {
+    display: inline-block;
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .15);
+}
+
+.dd2-warn-dot.dot-green {
+    display: inline-block;
+    background: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .15);
+}
+
+/* ===== 5. ĐẶT HÀNG NGUYÊN LIỆU ===== */
+.dd2-mo-row {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 4px;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+/* Đủ 5 hàng thì hàng cuối bỏ border-bottom, dưới 5 hàng vẫn giữ — mirror .dd2-import-row/.dd2-fund-row (2026-07-17). */
+.dd2-mo-row:last-child:nth-child(5) {
+    border-bottom: none;
+}
+
+.dd2-mo-bullet {
+    width: 10px;
+    height: 10px;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex: 0 0 auto;
+}
+
+.dd2-mo-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dd2-mo-top {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.dd2-mo-supplier {
+    font-size: 15.5px;
+    font-weight: 550;
+    color: #1f2937;
+}
+
+.dd2-mo-age {
+    font-size: 14.5px;
+    font-weight: 500;
+}
+
+.dd2-mo-value-wrap {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dd2-mo-item-count {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #1f2937;
+    white-space: nowrap;
+    text-align: right;
+    cursor: pointer;
+}
+
+.dd2-mo-item-count:hover {
+    text-decoration: underline dotted;
+}
+
+.dd2-mo-supplier.is-match,
+.dd2-mo-item-count.is-match {
+    color: #16a34a;
+}
+
+/* Đơn "Đã nhận" nhưng giá trị nhập kho LỆCH dự kiến -> gạch giá cũ (dự kiến), giá mới (thực nhận) bên dưới. */
+.dd2-mo-value-old {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #dc2626;
+    text-decoration: line-through;
+    line-height: 1.15;
+}
+
+.dd2-mo-value-new {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.15;
+}
+
+/* "Con dấu" ĐÃ NHẬN — canh giữa cả hàng, không chặn click vào giá trị bên dưới. */
+/* Con dấu "ĐÃ NHẬN" — 2 vòng viền. Dùng ::after (border riêng) thay vì outline cho vòng ngoài:
+   html2canvas (nút "Chụp báo cáo") KHÔNG render CSS outline, nên vòng ngoài biến mất khi chụp ảnh
+   dù hiển thị bình thường trên trình duyệt — border của ::after thì html2canvas chụp được. */
+.dd2-mo-stamp {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    border: 2px solid #1d4ed8;
+    border-radius: 4px;
+    padding: 3px 10px;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.dd2-mo-stamp::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border: 1px solid #1d4ed8;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+.dd2-mo-sub {
+    font-size: 14.5px;
+    color: #8a909b;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dd2-color-today {
+    color: #16a34a;
+    /* padding-left:15px; */
+}
+
+.dd2-color-gray {
+    color: #9ca3af;
+}
+
+.dd2-color-warn {
+    color: #d97706;
+}
+
+.dd2-color-danger {
+    color: #dc2626;
+}
+
+.dd2-color-blue {
+    color: #2563eb;
+}
+
+.dd2-mo-bullet.dd2-color-today {
+    background: #16a34a;
+}
+
+.dd2-mo-bullet.dd2-color-gray {
+    background: #9ca3af;
+}
+
+.dd2-mo-bullet.dd2-color-warn {
+    background: #d97706;
+}
+
+.dd2-mo-bullet.dd2-color-danger {
+    background: #dc2626;
+}
+
+/* Đơn "Đã nhận", giá trị nhập kho khớp đúng dự kiến -> bullet cạnh trái đổi xám (thay vì màu tuổi đơn),
+   đặt SAU các rule .dd2-mo-bullet.dd2-color-* (cùng độ ưu tiên CSS) để thắng cascade theo thứ tự khai báo. */
+.dd2-mo-bullet.is-match {
+    background: #9ca3af;
+}
+
+/* Bullet tròn cạnh trái tên NCC (Nhập kho) / mục chi (Quỹ) — xanh nếu phát sinh hôm nay, xám nếu không (2026-07-17). */
+.dd2-row-bullet {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #9ca3af;
+}
+
+.dd2-row-bullet.dd2-color-today {
+    background: #16a34a;
+}
+
+.dd2-row-bullet.dd2-color-gray {
+    background: #9ca3af;
+}
+
+/* ===== 6a. CHI NHÁNH ĐẶT HÀNG (lưới 2 cột) ===== */
+.dd2-branch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    align-content: start;
+    overflow-y: auto;
+}
+
+.dd2-branch-grid .dd2-empty {
+    grid-column: 1 / -1;
+}
+
+/* Card "Chi nhánh đặt hàng" (v4, 2026-07-17) — .dd2-branch-grid (2 cột có sẵn) + 4 card (limit=4
+   ở rp_dd_branch_orders_pending()) tự xếp thành lưới 2x2. Click cả card mở modal xem SP thiếu tồn
+   + lý do (xem wireBranchCards() trong daily_dashboard.js, dữ liệu lấy từ data-shortage đã render
+   sẵn — không cần gọi AJAX vì tối đa chỉ 4 đơn). */
+.dd2-branch-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    min-width: 0;
+    /* Nền mờ nhạt thường trực theo màu KH (2026-07-17) — nhạt hơn hẳn mức tô lúc hover trước đây. */
+    background: var(--dd2-accent-soft, #f9fafb);
+    box-shadow: 0 0 0 0 transparent;
+    transition: background .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+/* Hover giờ khác hẳn trạng thái nền mặc định: đậm màu hơn (accent-glow) + nhích lên kèm đổ bóng,
+   thay vì chỉ đổi nền như trước (đã chuyển xuống làm nền mặc định ở trên). */
+.dd2-branch-card:hover {
+    background: var(--dd2-accent-glow, #f3f4f6);
+    box-shadow: 0 4px 12px var(--dd2-accent-glow, rgba(0, 0, 0, .12));
+    transform: translateY(-2px);
+}
+
+.dd2-branch-line1 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+}
+
+.dd2-branch-name-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.dd2-branch-stats-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.dd2-branch-bullet {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dd2-accent, #16a34a);
+}
+
+.dd2-branch-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--dd2-accent, #1f2937);
+    white-space: nowrap;
+}
+
+.dd2-branch-weight {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.dd2-branch-sep {
+    font-size: 14px;
+    color: #9ca3af;
+}
+
+.dd2-branch-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--dd2-accent, #1f2937);
+}
+
+.dd2-branch-line2 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.dd2-branch-age {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dd2-branch-fulfill {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Giải thích SP thiếu tồn do thiếu NVL nào (chỉ hiện khi ≤2 đơn — xem rp_dd_item_shortage_materials()). */
+.dd2-branch-shortage {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed #f0f1f3;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dd2-branch-shortage-line {
+    font-size: 13px;
+    color: #b45309;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.dd2-branch-shortage-line i {
+    color: #d97706;
+    font-size: 12px;
+}
+
+/* Phần "(thiếu N)" của SP không tra được công thức/NVL — xem rp_dd_branch_order_shortage_lines(). */
+.dd2-shortage-qty {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* Danh sách ĐẦY ĐỦ SP của đơn (mọi SP, không chỉ dòng thiếu tồn) — hiển thị dưới list thiếu
+   trong modal chi tiết đơn hàng chi nhánh (click card, xem wireBranchCards() ở JS). */
+.dd2-branch-full-head {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eef0f2;
+    font-size: 13px;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+
+.dd2-branch-full-table tr.is-short td {
+    color: #b45309;
+}
+
+/* Cuộn dọc riêng cho bảng "Danh sách đơn hàng" khi đơn nhiều SP — không kéo dài cả modal. */
+.dd2-branch-full-scroll {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.dd2-branch-full-scroll .dd2-cost-table thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+}
+
+/* ===== 6b. QUỸ ===== */
+/* per_page đã giảm còn 2 dòng/trang (rp_dd_fund_recent) — tắt luôn scroll để không lộ thanh cuộn thừa. */
+#dd2-fund-recent-list {
+    overflow-y: hidden;
+    min-height: 68px;
+    margin-top: 12px;
+}
+
+.dd2-fund-balance-inline {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0a741c;
+    white-space: nowrap;
+}
+
+.dd2-fund-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+/* Đủ 3 hàng (per_page=3) thì hàng cuối bỏ border-bottom, 2 hàng vẫn giữ — mirror .dd2-import-row (2026-07-17). */
+.dd2-fund-row:last-child:nth-child(3) {
+    border-bottom: none;
+}
+
+.dd2-fund-desc {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14.5px;
+    color: #4b5563;
+}
+
+.dd2-fund-amount {
+    flex: 0 0 auto;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: #b91c1c;
+}
+
+.dd2-fund-row.is-income .dd2-fund-amount {
+    color: #16a34a;
+}
+
+.dd2-fund-date {
+    flex: 0 0 auto;
+    font-size: 13px;
+    color: #b5bcc6;
+    min-width: 66px;
+    text-align: right;
+}
+
+/* Giao dịch phát sinh hôm nay -> hiện "Hôm nay" thay vì ngày cụ thể, tô xanh lá cho trực quan (2026-07-22). */
+.dd2-fund-date.is-today {
+    color: #16a34a;
+    font-weight: 700;
+}
+
+/* ===== PHÂN TRANG BATCH (< 1 2 3 4 5 6 >), trang active hình tròn xanh lá ===== */
+.dd2-pagination {
+    margin-top: 6px;
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+    flex: 0 0 auto;
+}
+
+/* Nhập kho + Quỹ: phân trang ẩn mặc định, chỉ hiện khi hover vào card (đỡ rối mắt) — kèm
+   nền pill bo tròn để dễ nhắm bấm hơn. Đặt position:absolute (nổi đè lên đáy card, neo vào
+   .dd2-col-import/.dd2-sub-card đã position:relative) thay vì nằm trong flow: nếu để trong
+   flow, phân trang xuất hiện sẽ cộng thêm chiều cao vào card (vốn không có overflow:hidden
+   để bọc) làm nó tràn/trượt ra khỏi khung card khi hover. Hover -> trượt nhẹ lên trên. */
+.dd2-col-import .dd2-pagination,
+.dd2-col-production .dd2-pagination,
+.dd2-sub-card .dd2-pagination {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    margin: 0;
+    transform: translateX(-50%) translateY(8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s ease, transform .15s ease;
+    background: #f8f9fb;
+    border: 1px solid #eef0f2;
+    border-radius: 999px;
+    padding: 3px 10px;
+    width: fit-content;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+.dd2-col-import:hover .dd2-pagination,
+.dd2-col-production:hover .dd2-pagination,
+.dd2-sub-card:hover .dd2-pagination {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.dd2-page-btn {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 11px;
+    color: #374151;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dd2-page-btn:hover:not([disabled]) {
+    background: #eef2f7;
+}
+
+.dd2-page-btn.active {
+    background: #0a741c;
+    color: #fff;
+    border-color: #0a741c;
+}
+
+.dd2-page-btn[disabled] {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+/* ===== MODAL: cài đặt hiệu quả ===== */
+.dd2-settings-box {
+    width: 420px;
+}
+
+.dd2-form-label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.dd2-form-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+}
+
+.dd2-field-row {
+    display: flex;
+    gap: 12px;
+}
+
+.dd2-field-row .dd2-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.dd2-form-input:focus {
+    outline: none;
+    border-color: #0a741c;
+}
+
+.dd2-key-products-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.dd2-key-products-head span {
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.dd2-btn-ghost {
+    border: 1px solid #c7e9d4;
+    background: #eaf6ee;
+    color: #1f6f3d;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 14.5px;
+    cursor: pointer;
+}
+
+.dd2-btn-ghost:hover {
+    background: #dcefe2;
+}
+
+.dd2-temp-values-btn {
+    width: 100%;
+    margin-bottom: 16px;
+    text-align: center;
+    font-size: 15px;
+    padding: 8px 10px;
+}
+
+.dd2-form-hint {
+    font-size: 14.5px;
+    color: #9ca3af;
+    margin: 0 0 12px;
+}
+
+#dd2-temp-values-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-bottom: 14px;
+}
+
+.dd2-tv-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dd2-tv-label {
+    flex: 0 0 46px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.dd2-tv-input {
+    flex: 1 1 auto;
+    padding: 6px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+.dd2-tv-input:focus {
+    outline: none;
+    border-color: #0a741c;
+}
+
+#dd2-key-products-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.dd2-kp-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dd2-kp-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+    color: #1f2937;
+}
+
+.dd2-kp-min {
+    width: 90px;
+    padding: 5px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 15px;
+}
+
+.dd2-kp-remove {
+    border: none;
+    background: transparent;
+    color: #dc2626;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.dd2-kp-add-row {
+    margin-bottom: 10px;
+}
+
+.dd2-btn-primary {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(325deg, #0d481b 0%, #0a741c 50%, #4c7b54 100%);
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.dd2-btn-primary:hover {
+    opacity: .92;
+}
+
+/* ===== MODAL: chi tiết sản phẩm / chi tiết NVL giá vốn ===== */
+.dd2-product-box {
+    width: 460px;
+}
+
+/* Modal "Vì sao ra giá trị này?" (Đặt hàng nguyên liệu) — bảng 4 cột (Tên NVL/SL/Đơn giá/Thành
+   tiền), tên NVL dài (vd "Phụ Gia Thực Phẩm Sodium Alginate (GAR)") nên rộng hơn .dd2-product-box
+   mặc định để mỗi cell nằm gọn 1 hàng, không bị bóp xuống dòng (2026-07-17). */
+.dd2-mo-price-box {
+    width: 620px;
+}
+
+/* Modal "Chi tiết đơn hàng" (Chi nhánh đặt hàng) — bảng "Danh sách đơn hàng" 4 cột + tên SP có thể
+   dài, rộng hơn mặc định để mỗi cell nằm gọn 1 hàng, không bị bóp xuống dòng (2026-07-22). */
+.dd2-branch-detail-box {
+    width: 640px;
+}
+
+.dd2-kv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.dd2-kv {
+    background: #f8f9fb;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.dd2-kv .k {
+    font-size: 13.5px;
+    color: #9ca3af;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.dd2-kv .v {
+    font-size: 16.5px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+/* SL/giá trị quy đổi bao bì (tồn kho, xuất kho 1-3-6 tháng) — icon "Quy đổi" ẩn mặc định,
+   hover mới hiện, click đổi qua lại giữa giá trị quy đổi (bao/thùng) và giá trị thô. */
+.dd2-kv-convertible .v {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dd2-qd-icon {
+    font-size: 12px;
+    color: #9ca3af;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease, color .15s ease;
+}
+
+.dd2-kv-convertible:hover .dd2-qd-icon {
+    opacity: 1;
+}
+
+.dd2-qd-icon:hover {
+    color: #0a741c;
+}
+
+.dd2-issue-value-wrap {
+    position: relative;
+}
+
+.dd2-issue-value-wrap .dd2-qd-icon {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.dd2-issue-value-wrap:hover .dd2-qd-icon {
+    opacity: 1;
+}
+
+.dd2-toggle-group {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.dd2-toggle-btn {
+    flex: 1;
+    padding: 7px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 8px;
+    font-size: 14.5px;
+    color: #6b7280;
+    cursor: pointer;
+}
+
+.dd2-toggle-btn.active {
+    background: #0a741c;
+    color: #fff;
+    border-color: #0a741c;
+}
+
+.dd2-issue-value {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.dd2-cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    margin-bottom: 10px;
+}
+
+.dd2-cost-table th {
+    text-align: left;
+    color: #9ca3af;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-bottom: 1px solid #eef0f2;
+}
+
+.dd2-cost-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+
+.dd2-cost-table th:not(:first-child),
+.dd2-cost-table td:not(:first-child) {
+    text-align: right;
+}
+
+.dd2-cost-table tfoot td {
+    font-weight: 700;
+    color: #1f2937;
+    border-top: 2px solid #e5e7eb;
+}
+
+/* Modal "Sản lượng": cột "Sản phẩm" (thứ 2, sau "Ngày") là văn bản — canh trái thay vì
+   canh phải mặc định của th/td:not(:first-child). */
+.dd2-output-table th:nth-child(2),
+.dd2-output-table td:nth-child(2) {
+    text-align: left;
+}
+
+/* ===== MODAL: nhóm theo NCC ===== */
+.dd2-group-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 4px;
+    border-bottom: 1px solid #f0f1f3;
+    font-size: 15.5px;
+}
+
+.dd2-group-row span:first-child {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.dd2-group-row span:last-child {
+    color: #374151;
+}
+
+/* ===== MODAL: ảnh hóa đơn ===== */
+.dd2-att-box {
+    width: 520px;
+}
+
+.dd2-att-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+}
+
+.dd2-att-item {
+    border: 1px solid #eef0f2;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    aspect-ratio: 1/1;
+}
+
+.dd2-att-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dd2-att-empty {
+    grid-column: 1 / -1;
+    color: #9ca3af;
+    font-size: 15px;
+    text-align: center;
+    padding: 20px 0;
+}
+
+/* ===== MODAL: danh sách ĐẦY ĐỦ dùng chung (sidebar 7 icon + nút "..."/"Sales Order") ===== */
+/* Tất cả .app-modal dùng chung z-index (app_shell.css) nên khi mở modal con (ảnh hóa đơn /
+   chi tiết SP / chi tiết NVL) từ BÊN TRONG modal "danh sách đầy đủ" này, thứ tự DOM (modal
+   con nằm TRƯỚC modal này trong HTML) khiến nó bị modal này đè lên, ẩn mất — nới z-index modal
+   này XUỐNG thấp hơn 1 bậc để mọi modal con luôn nổi lên trên (2026-07-17). */
+#dd2-full-list-modal {
+    z-index: 1999;
+}
+
+.dd2-full-list-box {
+    width: 640px;
+    max-width: 92vw;
+}
+
+/* Riêng bảng "Sản xuất" (7 cột + tên SP khá dài) — rộng hơn hẳn mặc định để không phải cuộn ngang
+   (2026-07-17, xem openProductionFullModal()/openFullListModal() toggle class này). */
+.dd2-full-list-box.is-wide {
+    width: 920px;
+}
+
+#dd2-full-list-body {
+    max-height: 60vh;
+    overflow: auto;
+}
+
+.dd2-full-list-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.dd2-full-list-search,
+.dd2-full-list-filter {
+    height: 34px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 14px;
+    color: #1f2937;
+    background: #f9fafb;
+}
+
+.dd2-full-list-search {
+    width: 200px;
+}
+
+.dd2-full-list-search:focus,
+.dd2-full-list-filter:focus {
+    outline: none;
+    border-color: #0a741c;
+    background: #fff;
+}
+
+.dd2-full-list-totals {
+    margin-top: 4px;
+    padding: 8px 4px 0;
+    font-size: 14px;
+    color: #6b7280;
+    text-align: right;
+    border-top: 1px solid #f0f1f3;
+}
+
+.dd2-full-list-totals b {
+    color: #1f2937;
+}
+
+.dd2-prod-full-table {
+    font-size: 13.5px;
+}
+
+.dd2-prod-full-table th,
+.dd2-prod-full-table td {
+    white-space: nowrap;
+}
+
+.dd2-prod-full-issue {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.dd2-prod-full-issue span {
+    cursor: default;
+}
+
+.dd2-group-row-block {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.dd2-group-row-head {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+    #wrapper {
+        height: auto;
+        overflow: visible;
+    }
+
+    .dd2-content {
+        overflow-y: auto;
+        flex: none;
+        height: auto;
+        min-height: 100%;
+    }
+
+    .dd2-row {
+        flex-direction: column;
+    }
+
+    .dd2-col-output,
+    .dd2-col-import,
+    .dd2-col-export,
+    .dd2-col-production,
+    .dd2-col-material-order,
+    .dd2-col-group {
+        flex: none;
+    }
+
+    .dd2-card {
+        height: auto;
+    }
+
+    .dd2-list {
+        max-height: 320px;
+    }
+
+    .dd2-prod-table-wrap {
+        max-height: 320px;
+    }
+
+    .dd2-branch-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dd2-body {
+        flex-direction: column;
+    }
+
+    .dd2-sidebar {
+        flex-direction: row;
+        width: auto;
+        margin-top: 0;
+    }
+
+    .dd2-sb-group {
+        flex-direction: row;
+    }
+
+    .dd2-sb-group-bottom {
+        margin-top: 0;
+        margin-left: auto;
+    }
+}

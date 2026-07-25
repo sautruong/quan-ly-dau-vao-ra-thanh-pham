@@ -1,0 +1,1994 @@
+/* =====================================================================
+ *  Đặt hàng NVL (order_material)
+ *  KHỐI 1: Phân tích NVL  |  KHỐI 2: Đơn đặt hàng (2 khối ngang hàng)
+ * ===================================================================== */
+
+.om-content {
+    padding: 18px 20px;
+    height: calc(100vh - var(--app-header-h, 64px));
+    overflow-y: auto;
+}
+
+.om-grid {
+    display: flex;
+    align-items: stretch;
+    gap: 18px;
+    min-height: 100%;
+}
+
+.om-grid .om-block-analyze {
+    flex: 1 1 0;
+    min-width: 280px;
+}
+
+.om-grid .om-block-order {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+/* ---------- Thanh kéo giữa 2 khối ---------- */
+.om-resizer {
+    flex: 0 0 6px;
+    align-self: stretch;
+    cursor: col-resize;
+    position: relative;
+    border-radius: 3px;
+    background: transparent;
+}
+
+.om-resizer::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    transform: translateX(-50%);
+    background: #e6e8ec;
+    transition: background .15s;
+}
+
+.om-resizer:hover::before,
+.om-resizer.is-dragging::before {
+    background: #2e9e57;
+}
+
+@media (max-width: 1180px) {
+    .om-grid {
+        flex-direction: column;
+    }
+
+    .om-resizer {
+        display: none;
+    }
+
+    .om-grid .om-block-order {
+        width: auto !important;
+    }
+}
+
+/* ---------- Khối chung ---------- */
+.om-block {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.om-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.om-block-head h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1f6f3d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.om-block-head h2 i {
+    color: #2e9e57;
+}
+
+/* ---------- Buttons ---------- */
+.om-btn,
+.om-tool-btn {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid #d6dae0;
+    background: #f5f7f9;
+    color: #344054;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s, border-color .15s, opacity .15s;
+}
+
+.om-tool-btn {
+    font-size: 13px;
+    padding: 7px 10px;
+}
+
+.om-btn:hover,
+.om-tool-btn:hover {
+    background: #eaf6ee;
+    border-color: #9fd6b3;
+}
+
+.om-tool-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.om-btn-primary {
+    background: #2e9e57;
+    border-color: #2e9e57;
+    color: #fff;
+}
+
+.om-btn-primary:hover {
+    background: #258048;
+    border-color: #258048;
+}
+
+.om-btn-share {
+    background: #1d6fd1;
+    border-color: #1d6fd1;
+    color: #fff;
+}
+
+.om-btn-share:hover {
+    background: #1659a8;
+}
+
+.om-btn-ghost {
+    background: #fff;
+}
+
+/* =====================================================================
+ *  KHỐI 1: Phân tích NVL
+ * ===================================================================== */
+.om-supplier-search {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.om-search-wrap {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 200px;
+}
+
+.om-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #313466;
+    pointer-events: none;
+    transition: color .15s;
+}
+
+.om-search-wrap:has(.om-search-input:focus) .om-search-icon {
+    color: #414195;
+}
+
+.om-search-input {
+    width: 100%;
+    padding: 9px 12px 9px 34px;
+    border: 1px solid #d6dae0;
+    border-radius: 8px;
+    font: inherit;
+    outline: none;
+    color:#414195;
+    font-weight: 600;
+}
+
+.om-search-input:focus {
+    border-color: #2e9e57;
+    box-shadow: 0 0 0 3px rgba(46, 158, 87, .12);
+}
+
+.om-search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    display: none;
+}
+
+.om-search-wrap:hover .om-search-input:not(:placeholder-shown) + .om-search-clear {
+    display: block;
+}
+
+.om-search-clear:hover {
+    color: #414195;
+}
+
+.om-search-dropdown {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+}
+
+.om-search-dropdown.open {
+    display: block;
+}
+
+.om-search-dropdown li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.om-search-dropdown li small {
+    color: #98a2b3;
+    font-size: 12px;
+}
+
+.om-search-dropdown li:hover,
+.om-search-dropdown li.active {
+    background: #eaf6ee;
+}
+
+.om-search-dropdown li.active {
+    outline: 1px solid #9fd6b3;
+}
+
+.om-search-dropdown .om-sd-empty {
+    color: #98a2b3;
+    cursor: default;
+}
+
+/* Bảng NVL */
+.om-mat-wrap {
+    border: 1px solid #eaecef;
+    border-radius: 10px;
+    flex: 1 1 auto;
+    min-height: 160px;
+    overflow-y: auto;
+}
+
+.om-mat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.om-mat-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f0f4f2;
+    color: #475467;
+    text-align: left;
+    font-weight: 600;
+    padding: 9px 10px;
+    border-bottom: 1px solid #e3e8e5;
+    z-index: 2;
+}
+
+.om-mat-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f2f4;
+    vertical-align: middle;
+}
+
+.om-col-unit {
+    width: 70px;
+    text-align: center;
+}
+
+.om-col-stock {
+    width: 90px;
+    text-align: center;
+}
+
+.om-col-act {
+    width: 96px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.om-mat-table thead .om-col-unit,
+.om-mat-table thead .om-col-stock {
+    text-align: center;
+}
+
+.om-mat-table thead .om-col-act {
+    white-space: nowrap;
+}
+
+/* Phân trang bảng NVL */
+.om-mat-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #475467;
+    flex-wrap: wrap;
+}
+
+.om-pager-size {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.om-pager-size select {
+    border: 1px solid #d6dae0;
+    border-radius: 7px;
+    padding: 5px 8px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.om-pager-size select:focus {
+    outline: none;
+    border-color: #2e9e57;
+}
+
+.om-pager-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.om-pager-info {
+    min-width: 120px;
+    text-align: center;
+    color: #344054;
+}
+
+.om-pager-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    border: 1px solid #d6dae0;
+    background: #fff;
+    color: #344054;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.om-pager-btn:hover:not(:disabled) {
+    background: #eaf6ee;
+    border-color: #9fd6b3;
+}
+
+.om-pager-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.om-mat-link {
+    color: #13172c;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.om-mat-link:hover {
+    color: #13c24d;
+}
+
+.om-mat-stock {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.om-mat-empty td {
+    color: #98a2b3;
+    text-align: center;
+    padding: 22px;
+}
+
+.om-warn {
+    color: #e0a106;
+    margin-left: 4px;
+    display: none;
+}
+
+.om-mat-row.is-warn .om-warn {
+    display: inline;
+}
+
+.om-mat-row.is-warn {
+    /* background: #fffaf0; */
+}
+
+.om-mat-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Nhỏ lại 1/2 so với trước (30px -> 15px) để chừa chỗ cho nút "Tạm ẩn" cạnh bên. */
+.om-add-btn {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 1px solid #2e9e57;
+    background: #2e9e57;
+    color: #fff;
+    font-size: 9px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.om-add-btn:hover {
+    background: #258048;
+}
+
+.om-add-btn.is-added {
+    background: #c7e9d4;
+    border-color: #c7e9d4;
+    color: #1f6f3d;
+}
+
+.om-hide-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid #d6dae0;
+    background: #fff;
+    color: #98a2b3;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.om-hide-btn:hover {
+    background: #fff7ec;
+    border-color: #f3cd8a;
+    color: #b25900;
+}
+
+/* FAQ hệ thống đề xuất */
+.om-faq {
+    margin-top: 14px;
+    border: 1px solid #af300b;
+    /* background: #fffdf6; */
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.om-faq-head {
+    background: #fff5d6;
+    color: #2f336e;
+    font-weight: 700;
+    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #954823;
+}
+
+.om-faq-body {
+    padding: 10px 12px;
+}
+
+.om-faq-empty {
+    color: #b08a2a;
+    font-size: 13px;
+}
+
+.om-faq-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px dashed #f0e3b8;
+}
+
+.om-faq-item:last-child {
+    border-bottom: none;
+}
+
+.om-faq-item .om-faq-q {
+    color: #1b1b2c;
+    font-size: 13px;
+}
+
+.om-faq-item .om-faq-q b {
+    color: #14204e;
+}
+
+.om-faq-stock {
+    font-weight: 600;
+    color: #14204e;
+}
+
+.om-faq-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.om-faq-item .om-faq-add {
+    border: 1px solid #2e9e57;
+    background: #fff;
+    color: #1f6f3d;
+    border-radius: 7px;
+    padding: 5px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.om-faq-item .om-faq-add:hover {
+    background: #eaf6ee;
+}
+
+.om-faq-item .om-faq-cal {
+    border: 1px solid #414195;
+    background: #fff;
+    color: #414195;
+    border-radius: 7px;
+    padding: 5px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.om-faq-item .om-faq-cal:hover {
+    background: #eef0fb;
+}
+
+/* Thành phần tạm ẩn (theo NCC đang chọn) */
+.om-hidden {
+    margin-top: 14px;
+    border: 1px solid #98a2b3;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.om-hidden-head {
+    background: #f2f4f7;
+    color: #344054;
+    font-weight: 700;
+    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #d0d5dd;
+}
+
+.om-hidden-body {
+    padding: 10px 12px;
+}
+
+.om-hidden-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 10px;
+    border-bottom: 1px dashed #e6e8ec;
+    font-size: 13px;
+}
+
+.om-hidden-item:last-child {
+    border-bottom: none;
+}
+
+.om-hidden-item .om-hidden-name {
+    color: #344054;
+}
+
+.om-hidden-restore {
+    border: 1px solid #2e9e57;
+    background: #fff;
+    color: #1f6f3d;
+    border-radius: 7px;
+    padding: 5px 9px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.om-hidden-restore:hover {
+    background: #eaf6ee;
+}
+
+/* Menu chọn thời gian nhắc lịch (popover) */
+.om-cal-menu {
+    position: absolute;
+    z-index: 1200;
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    min-width: 150px;
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+}
+
+.om-cal-menu li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #344054;
+}
+
+.om-cal-menu li:hover {
+    background: #eef0fb;
+    color: #414195;
+}
+
+/* =====================================================================
+ *  KHỐI 2: Đơn đặt hàng (phiếu)
+ * ===================================================================== */
+.om-order-tools {
+    display: flex;
+    gap: 8px;
+}
+
+.om-doc {
+    position: relative;
+    border: 1px solid #e6e8ec;
+    border-top: 10px solid #2e9e57;
+    /* line xanh trên — sát mép trên */
+    /* border-bottom: 10px solid #2e9e57; */
+    /* line xanh dưới hóa đơn */
+    border-radius: 10px;
+    padding: 22px 24px 34px;
+    /* chừa chỗ cho khối A (line bottom) ở mép dưới */
+    background: #fff;
+    color: #1d2939;
+    font-family: "Times New Roman", Times, serif;
+    overflow: hidden;
+    box-shadow: -1px -1px 12px -3px #696f79;
+    /* để footer band bo theo góc dưới */
+}
+
+/* ---- Header: cụm logo (trái) + cụm liên hệ (phải) cùng một hàng ---- */
+.om-doc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+#om-doc-supplier{
+    color: green;
+    font-size: 18px;
+}
+.om-doc-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+/* Logo lồng trong huy hiệu lục giác nền xám nhạt, có viền. */
+.om-doc-logo-badge {
+        width: 65PX;
+    height: 65PX;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #f6f8fa0f 0%, #e9eef2ad 100%);
+    border: 1px solid #cdd6de;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px #fff, 0 2px 2px rgba(31, 41, 55, .12);
+}
+
+/* Khi chụp & chia sẻ: html2canvas vẽ box-shadow inset thành viền dày + không hiểu hex 8 ký tự alpha
+   -> ép về style tương đương để ảnh chụp giống views (không bị dày hơn). */
+.om-doc.is-capturing .om-doc-logo-badge {
+    background: #f1f4f7;          /* tương đương gradient nhạt */
+    box-shadow: none;
+    border: 1px solid #cdd6de;
+}
+
+.om-doc-logo {
+    /* width/height auto + max-* để html2canvas chụp đúng tỉ lệ (object-fit không được hỗ trợ khi chụp) */
+      width: auto;
+    height: auto;
+    max-width: 50px;
+    max-height: 50px;
+}
+
+
+.om-doc-company {
+        line-height: 1.3;
+    text-align: left;
+    padding-top: 4px;
+}
+
+.om-doc-ico {
+    color: #3a3e4b;
+    font-size: 12px;
+}
+
+.om-etext {
+    font-size: 14px;
+}
+
+.om-doc-name .om-etext {
+    font-size: 24px;
+    font-weight: 600;
+    color: #142037;
+    text-transform: uppercase;
+    font-family: arial;
+    letter-spacing: 1.2px;
+    -webkit-text-stroke: 1px #1a2b4a;
+    text-shadow: 0 2px 4px rgba(26, 43, 71, .28), 0 1px 0 rgba(26, 43, 74, .4);
+}
+
+.om-doc-enname .om-etext {
+        font-size: 14px;
+    font-weight: 600;
+    color: #66676b;
+    letter-spacing: 0.5px;
+    font-family: arial;
+}
+
+.om-doc-enname .om-etext:empty::before {
+    content: "(tên tiếng Anh)";
+    color: #c3c9d1;
+}
+
+/* Cụm liên hệ bên phải: địa chỉ (nhiều dòng) + SĐT + email */
+.om-doc-contact {
+    padding-top: 6px;
+    text-align: left;
+    max-width: 320px;}
+
+.om-doc-contact .om-editable {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 0px;
+}
+
+.om-doc-addr .om-etext {
+        font-size: 12px;
+    font-weight: 700;
+    color: #1a2b4a;
+    white-space: pre-line;
+    line-height: 1.4;
+    font-family: arial;
+    letter-spacing: 0.4px;
+}
+
+.om-doc-phone .om-etext,
+.om-doc-email .om-etext {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a2b4a;
+}
+
+.om-doc-addr .om-etext:empty::before,
+.om-doc-phone .om-etext:empty::before,
+.om-doc-email .om-etext:empty::before {
+    content: "(bấm để nhập)";
+    color: #c3c9d1;
+    font-weight: 400;
+}
+.om-doc-contact .om-doc-addr{
+    margin-bottom: 8px;
+}
+.om-doc-contact .om-doc-ico {
+    margin-top: 3.5px;
+}
+
+/* Đường line ngang kiểu dây thừng (~3px) */
+.om-doc-rope {
+    height: 4px;
+    margin: 6px 0 4px;
+    border-radius: 10px;
+    background-color: #2e9e57;
+    /* Dùng linear-gradient (html2canvas hỗ trợ) lát bằng background-size thay cho
+       repeating-linear-gradient (chụp không ra) -> views & ảnh chụp giống nhau. */
+    background-image: repeating-linear-gradient(-45deg, #2e9e57 0, #2e9e57 5px, #ffffff 10px, #c9c7c7 10px, #2e9e57 5px, #2e9e57 11px, #736969 12px, #ffffff 12px);
+    background-size: 18px 18px;
+    background-repeat: repeat;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+
+/* Khi chụp & chia sẻ: html2canvas KHÔNG vẽ được repeating-linear-gradient.
+   -> Chỉ trong lúc chụp, thay bằng linear-gradient (html2canvas hỗ trợ) tái hiện
+   ĐÚNG hoa văn dây thừng ở views (xanh -> trắng cao sáng -> xanh -> rãnh tối).
+   Tile 8.5px ≈ chu kỳ 12px dọc trục -45deg như bản gốc; 0% và 100% cùng màu xanh -> liền mạch. */
+.om-doc.is-capturing .om-doc-rope,
+.om-report-sheet.is-capturing .om-doc-rope {
+    box-shadow: none;
+    background-color: #2e9e57;
+    background-image: linear-gradient(-45deg,
+        #2e9e57 0%, #2e9e57 42%,
+        #ffffff 83%,
+        #2e9e57 84%, #2e9e57 91%,
+        #736969 99%,
+        #2e9e57 100%);
+    background-size: 8.5px 8.5px;
+    background-repeat: repeat;
+}
+
+.om-doc-title {
+    text-align: center;
+    margin: 22px 0 0;
+    text-transform: uppercase;
+}
+
+.om-doc-title span {
+    display: inline-block;
+    font-family: Arial, "Segoe UI", sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #1a2b4a;
+    -webkit-text-stroke: 1px #1a2b4a;
+    /* viền text 1px cùng màu -> dày hơn */
+    text-shadow: 0 2px 4px rgba(26, 43, 74, .28), 0 1px 0 rgba(26, 43, 74, .4);
+    padding: 6px 18px;
+ 
+}
+
+.om-doc-date {
+     z-index: 2;
+    text-align: right;
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+}
+
+.om-doc-to {
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.om-doc-intro {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.om-doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 14px;
+}
+
+.om-doc-table th,
+.om-doc-table td {
+    padding: 7px 8px;
+}
+
+/* thead: nền xanh, chữ trắng, line dọc trắng */
+.om-doc-table thead th {
+    background: #2e9e57;
+    color: #fff;
+    text-align: center;
+    font-weight: 700;
+    border: 1px solid #fff;
+    border-bottom: none;
+}
+
+/* body: chỉ line ngang, KHÔNG line dọc */
+.om-doc-table tbody td {
+    border-bottom: 1px solid #e3e8e5;
+    border-left: none;
+    border-right: none;
+}
+
+/* phân màu xen kẽ */
+.om-doc-table tbody tr:nth-child(even) {
+    background: #f3faf5;
+}
+
+.om-dc-stt {
+    width: 52px;
+    text-align: center;
+}
+
+.om-dc-name {
+    width: 100%;
+}
+
+/* tên hàng hóa ưu tiên full width */
+.om-dc-unit {
+    width: 90px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.om-dc-qty {
+    width: 120px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.om-dc-act {
+    width: 34px;
+    text-align: center;
+}
+
+.om-doc-row .om-dc-stt {
+    text-align: center;
+}
+
+.om-doc-row .om-dc-unit {
+    text-align: center;
+}
+
+.om-doc-empty td {
+    text-align: center;
+    color: #98a2b3;
+    font-style: italic;
+}
+
+/* STT bọc tròn */
+.om-stt-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #eaf6ee;
+    border: 1px solid #c7e9d4;
+    color: #1f6f3d;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.om-qty-cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.om-qty-convert {
+    border: none;
+    background: transparent;
+    color: #1d6fd1;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 4px;
+    opacity: 0;
+    transition: opacity .15s;
+}
+
+.om-qty-cell:hover .om-qty-convert,
+.om-qty-input:focus+.om-qty-convert {
+    opacity: 1;
+}
+
+.om-qty-convert:hover {
+    color: #1659a8;
+}
+
+.om-doc.is-capturing .om-qty-convert {
+    display: none !important;
+}
+
+.om-qty-input {
+    width: 76px;
+    text-align: center;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 6px;
+    padding: 5px 7px;
+    font: inherit;
+    font-weight: 600;
+}
+
+.om-qty-input:hover {
+    border-color: #cdd5df;
+}
+
+.om-qty-input:focus {
+    outline: none;
+    border-color: #2e9e57;
+    background: #fff;
+}
+
+.om-doc-del {
+    border: none;
+    background: transparent;
+    color: #d92d20;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity .15s;
+}
+
+.om-doc-row:hover .om-doc-del {
+    opacity: 1;
+}
+
+/* Khi chụp & chia sẻ: ẩn hẳn cột thao tác */
+.om-doc.is-capturing .om-doc-del,
+.om-doc.is-capturing .om-dc-act {
+    display: none !important;
+}
+
+.om-doc-thanks {
+    font-size: 14px;
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.om-doc-signs {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: center;
+}
+
+.om-sign {
+    flex: 1;
+}
+
+.om-sign-role {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.om-sign-note {
+    font-style: italic;
+    font-size: 12px;
+    color: #667085;
+    margin-bottom: 40px;
+}
+
+.om-sign-name .om-etext {
+    font-weight: 600;
+}
+
+/* Hover-to-edit (sửa 1 lần dùng nhiều lần) */
+.om-editable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.om-doc-name,
+.om-doc-addr,
+.om-doc-phone {
+    display: flex;
+}
+
+.om-edit-btn {
+    border: none;
+    background: transparent;
+    color: #98a2b3;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity .15s;
+    padding: 2px 4px;
+}
+
+.om-editable:hover .om-edit-btn {
+    opacity: 1;
+}
+
+.om-edit-btn:hover {
+    color: #2e9e57;
+}
+
+.om-edit-input {
+    font: inherit;
+    border: 1px solid #2e9e57;
+    border-radius: 6px;
+    padding: 3px 6px;
+    min-width: 120px;
+}
+
+.om-sign-name .om-etext:empty::before {
+    content: "...............";
+    color: #c3c9d1;
+}
+
+.om-order-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Hiệu ứng lưu đơn (icon bay + nút) ---------- */
+.om-fly-icon {
+    position: fixed;
+    z-index: 2000;
+    color: #2e9e57;
+    font-size: 22px;
+    pointer-events: none;
+    margin: -11px 0 0 -11px;
+    /* căn tâm theo left/top */
+    transform: translate(0, 0) scale(1);
+    transition: transform .7s cubic-bezier(.4, 0, .2, 1), opacity .7s ease;
+}
+
+.om-fly-icon-cal {
+    color: #414195;
+}
+
+.om-btn-flash {
+    animation: om-flash .6s ease;
+}
+
+/* Chớp sáng nút Lịch trên header khi thêm lời nhắc "Order ..." từ "Xem xét đặt" */
+.om-cal-flash {
+    animation: om-cal-ring .9s ease;
+}
+
+@keyframes om-cal-ring {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(65, 65, 149, 0);
+    }
+
+    35% {
+        box-shadow: 0 0 0 7px rgba(65, 65, 149, .5);
+    }
+}
+
+@keyframes om-flash {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(46, 158, 87, 0);
+    }
+
+    35% {
+        box-shadow: 0 0 0 5px rgba(46, 158, 87, .45);
+    }
+}
+
+.om-pulse {
+    animation: om-pulse .6s ease;
+}
+
+@keyframes om-pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.14);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.om-btn-shake {
+    animation: om-shake .42s ease;
+}
+
+@keyframes om-shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-5px);
+    }
+
+    40% {
+        transform: translateX(5px);
+    }
+
+    60% {
+        transform: translateX(-4px);
+    }
+
+    80% {
+        transform: translateX(4px);
+    }
+}
+
+.om-btn-dupe {
+    background: #f59e0b !important;
+    border-color: #f59e0b !important;
+    color: #fff !important;
+}
+
+/* =====================================================================
+ *  Modals
+ * ===================================================================== */
+.om-modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 24, 40, .45);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: 40px 16px;
+    overflow-y: auto;
+}
+
+.om-modal-box {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 520px;
+    padding: 20px 22px;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(16, 24, 40, .25);
+}
+
+.om-modal-lg {
+    max-width: 760px;
+}
+
+.om-modal-sm {
+    max-width: 460px;
+}
+
+/* Modal quy đổi đơn vị */
+.om-convert-name {
+    font-weight: 600;
+    color: #1d2939;
+    margin-bottom: 12px;
+}
+
+.om-convert-name small {
+    font-weight: 400;
+    color: #98a2b3;
+}
+
+.om-convert-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.om-cv-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.om-cv-field label {
+    font-size: 12px;
+    color: #667085;
+    font-weight: 600;
+}
+
+.om-cv-field input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cdd5df;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit;
+}
+
+.om-cv-field input:focus {
+    outline: none;
+    border-color: #2e9e57;
+}
+
+.om-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    font-size: 24px;
+    color: #98a2b3;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.om-modal-close:hover {
+    color: #475467;
+}
+
+.om-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f6f3d;
+    margin: 0 0 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.om-modal-hint {
+    font-size: 13px;
+    color: #667085;
+    margin: 0 0 14px;
+}
+
+.om-modal-foot {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Phân tích NVL */
+.om-an-summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.om-an-card {
+    background: #f7faf8;
+    border: 1px solid #e3e8e5;
+    border-radius: 9px;
+    padding: 10px 12px;
+}
+
+.om-an-card .om-an-label {
+    font-size: 12px;
+    color: #667085;
+}
+
+.om-an-card .om-an-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f6f3d;
+}
+
+/* Tồn hiện tại — màu riêng */
+.om-an-card--stock {
+    background: #eaf6ee;
+    border-color: #c7e9d4;
+}
+
+/* Định mức dùng 1/3/6 tháng — chung một màu */
+.om-an-card--use {
+    background: #eef4fb;
+    border-color: #d4e4f7;
+}
+
+.om-an-card--use .om-an-value {
+    color: #1d6fd1;
+}
+
+/* Lần nhập kho — màu trung tính khác */
+.om-an-card--import {
+    background: #fff7ec;
+    border-color: #fde4bf;
+}
+
+.om-an-card--import .om-an-value {
+    color: #b25900;
+    font-size: 14px;
+}
+
+.om-an-sub {
+    font-weight: 700;
+    color: #344054;
+    margin: 6px 0 8px;
+}
+
+.om-an-prod {
+    border: 1px solid #e6e8ec;
+    border-radius: 9px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+
+.om-an-prod-name {
+    font-weight: 700;
+    color: #1d2939;
+    margin-bottom: 6px;
+}
+
+.om-an-prod-max {
+    color: #2e9e57;
+    font-weight: 700;
+}
+
+.om-an-prod-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    font-size: 13px;
+}
+
+.om-an-prod-grid div {
+    background: #f7faf8;
+    border-radius: 6px;
+    padding: 6px 8px;
+}
+
+.om-an-prod-grid span {
+    display: block;
+    color: #667085;
+    font-size: 11px;
+}
+
+.om-an-prod-grid b {
+    color: #344054;
+}
+
+/* Xuất 1/3/6 tháng — chung một màu */
+.om-an-prod-grid .cell--out {
+    background: #fff7ec;
+}
+
+.om-an-prod-grid .cell--out b {
+    color: #b25900;
+}
+
+/* Báo cáo định mức dùng NVL (chụp & chia sẻ) — mượn khung .om-doc-title/.om-doc-rope/.om-doc-footer */
+.om-report-sheet {
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-top: 10px solid #2e9e57;
+    border-radius: 10px;
+    padding: 22px 24px 34px;
+    margin-bottom: 4px;
+}
+
+.om-report-header:empty {
+    display: none;
+}
+
+.om-report-meta {
+    font-size: 14px;
+    color: #1d2939;
+    margin: 14px 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.om-report-matname {
+    color: #2e9e57;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.om-report-meta strong {
+    color: #1a2b4a;
+}
+
+/* Plan + Min tables */
+.om-plan-table,
+.om-min-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.om-plan-table th,
+.om-plan-table td,
+.om-min-table th,
+.om-min-table td {
+    border: 1px solid #e6e8ec;
+    padding: 8px;
+    text-align: left;
+}
+
+.om-plan-table thead th,
+.om-min-table thead th {
+    background: #f0f4f2;
+    font-weight: 600;
+}
+
+.om-pl-norm,
+.om-pl-qty,
+.om-pl-need {
+    text-align: right;
+    width: 110px;
+}
+
+.om-plan-table input,
+.om-min-table input,
+.om-min-table select {
+    width: 100%;
+    border: 1px solid #cdd5df;
+    border-radius: 6px;
+    padding: 5px 7px;
+    font: inherit;
+}
+
+.om-plan-total {
+    margin-top: 12px;
+    text-align: right;
+    font-size: 15px;
+}
+
+.om-plan-total strong {
+    color: #1f6f3d;
+    font-size: 18px;
+}
+
+.om-min-wrap {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid #eaecef;
+    border-radius: 8px;
+}
+
+.om-mn-min,
+.om-mn-lead {
+    width: 130px;
+}
+
+.om-mn-win {
+    width: 150px;
+}
+
+/* Thông tin NCC — dạng input, sửa là lưu DB */
+.om-sup-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.om-sup-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.om-sup-field label {
+    font-size: 12px;
+    color: #667085;
+    font-weight: 600;
+}
+
+.om-sup-field input {
+    border: 1px solid #cdd5df;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit;
+    transition: border-color .15s, background .15s;
+}
+
+.om-sup-field input:focus {
+    outline: none;
+    border-color: #2e9e57;
+}
+
+.om-sup-field input.is-saved {
+    border-color: #2e9e57;
+    background: #f3faf5;
+}
+
+.om-sup-hint {
+    font-size: 12px;
+    color: #98a2b3;
+    margin-top: 4px;
+}
+
+/* Đơn đã lưu */
+.om-orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 480px;
+    overflow-y: auto;
+}
+
+.om-order-card {
+    border: 1px solid #e6e8ec;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.om-order-card.is-received {
+    background: #f3faf5;
+    border-color: #c7e9d4;
+}
+
+.om-order-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.om-order-card-head .om-oc-sup {
+    font-weight: 700;
+    color: #1d2939;
+}
+
+.om-order-card-head .om-oc-date {
+    font-size: 12px;
+    color: #98a2b3;
+}
+
+.om-oc-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fef0c7;
+    color: #b25900;
+}
+
+.om-order-card.is-received .om-oc-badge {
+    background: #d1fadf;
+    color: #1f6f3d;
+}
+
+.om-oc-items {
+    font-size: 13px;
+    color: #475467;
+    margin-bottom: 8px;
+}
+
+.om-oc-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.om-oc-actions button {
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid #d6dae0;
+    background: #f5f7f9;
+    color: #344054;
+    border-radius: 7px;
+    padding: 5px 9px;
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.om-oc-actions .om-oc-recv:hover {
+    background: #eaf6ee;
+    border-color: #9fd6b3;
+}
+
+.om-oc-actions .om-oc-edit:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #2563eb;
+}
+
+.om-oc-actions .om-oc-del:hover {
+    background: #fef3f2;
+    border-color: #fca5a5;
+    color: #d92d20;
+}
+
+/* Nút "Lưu đơn" khi đang ở chế độ "Sửa đơn" (Cập nhật đơn) — đổi màu để phân biệt rõ với lưu đơn mới. */
+.om-btn-primary.is-editing {
+    background: #2563eb;
+    border-color: #2563eb;
+}
+
+.om-btn-primary.is-editing:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+/* =====================================================================
+ *  Print (A4) — chỉ in phiếu đặt hàng
+ * ===================================================================== */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    #wrapper>*:not(.content),
+    .om-block-analyze,
+    .om-resizer,
+    .om-block-head,
+    .om-order-tools,
+    .om-order-actions,
+    .om-edit-btn,
+    .om-doc-del,
+    .om-dc-act {
+        display: none !important;
+    }
+
+    .om-grid {
+        display: block;
+    }
+
+    .om-block-order {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        width: auto !important;
+    }
+
+    .om-doc {
+        border: none;
+    }
+}
+
+/* =====================================================================
+ *  TASK 5 — Nâng cấp phiếu: STT mờ, footer band, chữ ký động, modal
+ * ===================================================================== */
+
+/* STT của dòng trống (chưa chọn hàng hóa) -> mờ lại */
+.om-stt-badge.is-empty {
+    background: #f3f5f7;
+    border-color: #e3e7eb;
+    color: #c0c7cf;
+    opacity: .55;
+}
+
+.om-doc-row.is-empty-row td {
+    color: #c0c7cf;
+}
+
+.om-doc-row.is-empty-row .om-dc-act {
+    visibility: hidden;
+}
+
+/* ---- Footer: khối A (line bottom) + cụm (dải navy + tam giác + ngày) nằm trên ---- */
+/* Spacer nhỏ; dải dưới nằm trong vùng padding-bottom của .om-doc nên không cần cao */
+.om-doc-footer {
+    position: static;
+    height: 0;
+    margin-top: 10px;
+}
+
+/* KHỐI A — line bottom xanh lá dày 15px, full-width, sát mép dưới .om-doc */
+.om-doc-bottombar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 15px;
+    background: #2e9e57;
+    z-index: 1;
+}
+
+/* Cụm gộp dải navy + ngày — đặt NẰM TRÊN khối A, canh phải, rộng 50% */
+.om-doc-bottom {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 50%;
+    height: 28px;
+    z-index: 2;
+}
+
+/* Dải chữ nhật navy lấp đầy cụm */
+.om-doc-bottom .om-doc-footband {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: #1a2b4a;
+}
+
+/* Tam giác vuông cân sát mép trái dải; xoay 90deg.
+   Dùng transform:rotate (html2canvas hỗ trợ) thay cho property rotate (không được chụp). */
+.om-doc-bottom .om-doc-foottri {
+    position: absolute;
+    left: -28px;
+    top: 0;
+    width: 0;
+    height: 0;
+    border-top: 28px solid #1a2b4a;
+    border-left: 28px solid transparent;
+    transform: rotate(90deg);
+}
+
+/* Ngày đặt nổi trên dải navy, canh phải, padding-right 50px */
+.om-doc-bottom .om-doc-date {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    line-height: 28px;
+    margin: 0;
+    padding-right: 60px;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+/* Textarea sửa địa chỉ nhiều dòng */
+.om-edit-area {
+    min-width: 220px;
+    resize: vertical;
+    line-height: 1.4;
+}
+
+/* ---- Cụm chữ ký động + kéo-thả ---- */
+.om-doc-signs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 16px;
+    text-align: center;
+    margin-top: 14px;
+}
+
+.om-doc-signs:empty::before {
+    content: "Bấm \201CChữ ký\201D để chọn chức danh hiển thị.";
+    color: #b7bdc6;
+    font-style: italic;
+    font-size: 13px;
+    width: 100%;
+}
+
+.om-doc-signs .om-sign {
+    flex: 1 1 0;
+    min-width: 150px;
+    position: relative;
+    cursor: grab;
+    border: 1px dashed transparent;
+    border-radius: 8px;
+    padding: 6px 4px;
+    transition: border-color .15s, background .15s;
+}
+
+.om-doc-signs .om-sign:hover {
+    border-color: #cfe6d8;
+    background: #f7fcf9;
+}
+
+.om-doc-signs .om-sign.dragging {
+    opacity: .45;
+    cursor: grabbing;
+}
+
+.om-doc-signs .om-sign.drag-over {
+    border-color: #2e9e57;
+    background: #eef9f1;
+}
+
+.om-doc.is-capturing .om-doc-signs .om-sign {
+    border-color: transparent !important;
+    background: transparent !important;
+    cursor: default;
+}
+
+.om-doc.is-capturing .om-doc-signs:empty::before {
+    content: "";
+}
+
+/* ---- Modal cài đặt chữ ký ---- */
+.om-sign-rolelist {
+    list-style: none;
+    margin: 6px 0 12px;
+    padding: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.om-sign-roleitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #fafbfc;
+}
+
+.om-sign-roleitem input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.om-sign-rolename {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2939;
+}
+
+.om-sign-rolename[contenteditable="true"] {
+    outline: 2px solid #2e9e57;
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+.om-sign-roleact {
+    display: flex;
+    gap: 4px;
+}
+
+.om-sign-rolebtn {
+    border: none;
+    background: transparent;
+    color: #98a2b3;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 6px;
+    border-radius: 5px;
+}
+
+.om-sign-rolebtn:hover {
+    background: #eef2f7;
+    color: #2e9e57;
+}
+
+.om-sign-rolebtn.danger:hover {
+    color: #d92d20;
+    background: #fde7e5;
+}
+
+.om-sign-addrow {
+    display: flex;
+    gap: 8px;
+}
+
+.om-sign-addrow input {
+    flex: 1;
+    padding: 9px 11px;
+    border: 1px solid #c2c8d0;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.om-sign-addrow input:focus {
+    outline: none;
+    border-color: #2e9e57;
+    box-shadow: 0 0 0 2px rgba(46, 158, 87, .15);
+}

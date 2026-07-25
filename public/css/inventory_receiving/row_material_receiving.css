@@ -1,0 +1,898 @@
+/* ============================================
+   ROW MATERIAL RECEIVING (Nhập NVL mua)
+   - Kế thừa palette từ dashboard.css (--color-green, --color-gray-*, --shadow-*)
+   - Bổ sung tông xanh dương (--rmr-blue) cho khối "thương mại NVL"
+   ============================================ */
+:root {
+    --rmr-blue:        #1a85cc;
+    --rmr-blue-dark:   #146aa3;
+    --rmr-blue-soft:   #e8f3fb;
+    --rmr-amber:       #f59e0b;
+    --rmr-amber-soft:  #fef3c7;
+    --rmr-line:        #e3e8ef;
+    --rmr-row-alt:     #fafbfc;
+}
+
+/* ============================================
+   0. SCROLL: chỉ .content cuộn dọc; cụm history nằm trong .content.
+   - #wrapper KHÔNG cuộn (height 100vh, overflow hidden — kế thừa dashboard.css).
+   - .history-wrap chiếm full bề ngang (vì .content có align-items: center).
+   ============================================ */
+#wrapper {
+    overflow: hidden !important;
+}
+
+.content {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.history-wrap {
+    width: 100%;
+}
+
+/* ============================================
+   0b. HÀNG TRÊN: cụm 1 (tìm/chọn NCC + ngày giờ, trái) | hóa đơn (phải)
+   ============================================ */
+.rmr-top {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.rmr-cluster1 {
+    flex: 1 1 360px;
+    min-width: 0;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* wp-search / wp-date-picker trong cụm 1: full bề ngang cụm, canh trái */
+.rmr-cluster1 .wp-search {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+}
+
+/* Đã chọn nhà cung cấp → ô tìm kiếm in đậm 600 */
+#search-suppliers.is-selected {
+    font-weight: 600;
+}
+
+.rmr-cluster1 .wp-date-picker {
+    margin: 0;
+    justify-content: flex-start;
+}
+
+/* Khối hóa đơn: canh phải, ngang hàng cụm 1; có padding + viền để chứa badge số */
+.rmr-top .wp-invoice-upload {
+    flex: 1 1 360px;
+    min-width: 0;
+    max-width: 460px;
+    margin: 0;
+    position: relative;
+    padding: 14px;
+    border: 1px solid var(--rmr-line);
+    border-radius: 12px;
+    background: var(--color-white);
+}
+
+/* Badge số hóa đơn đã lưu — góc phải trên cụm */
+.wp-invoice-upload .iu-saved-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border: 1px solid var(--color-green);
+    border-radius: 999px;
+    background: #ecfdf3;
+    color: var(--color-green-dark);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.wp-invoice-upload .iu-saved-badge:hover {
+    background: var(--color-green);
+    color: var(--color-white);
+}
+
+/* Danh sách hóa đơn đã lưu (bung ra khi bấm badge) — JS bật display:flex */
+.wp-invoice-upload .iu-saved-list {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rmr-line);
+}
+
+/* ============================================
+   1. DANH SÁCH NHÀ CUNG CẤP ĐÃ CHỌN (pill list)
+   ============================================ */
+.list-supplier {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.list-supplier:empty {
+    display: none;
+}
+
+.list-supplier li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background-color: var(--rmr-blue-soft);
+    border: 1px solid var(--rmr-blue);
+    border-radius: 999px;
+    color: var(--rmr-blue-dark);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.list-supplier li .btn-remove-supplier {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background-color: transparent;
+    color: var(--rmr-blue-dark);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.list-supplier li .btn-remove-supplier:hover {
+    background-color: var(--color-red);
+    color: var(--color-white);
+}
+
+/* ============================================
+   2. KHỐI BẢNG NGUYÊN VẬT LIỆU
+   ============================================ */
+.wp-list-material {
+    width: 100%;
+    background-color: var(--color-white);
+    border: 1px solid var(--rmr-line);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    padding: 16px;
+    overflow-x: auto;
+    /* overflow-y: hidden !important; */
+    /* Là flex-item trong .content: vì overflow-x != visible nên min-height:auto
+       bị coi = 0, khiến flexbox co khối theo chiều dọc → sinh scroll dọc ép bảng.
+       flex-shrink:0 giữ khối ở chiều cao tự nhiên (bỏ scroll dọc), vẫn cuộn ngang. */
+    flex-shrink: 0;
+}
+
+.wp-list-material table {
+    width: auto;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+    color: var(--color-gray-900);
+    table-layout: auto;
+}
+
+/* Mọi cell — không cho wrap; chiều rộng auto theo content */
+.wp-list-material th,
+.wp-list-material td {
+    white-space: nowrap;
+}
+
+/* Header — tông xám */
+.wp-list-material thead tr td,
+.wp-list-material thead tr th {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--color-gray-100) 0%, var(--color-gray-200) 100%);
+    color: var(--color-gray-700);
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    text-align: center;
+    border-bottom: 2px solid var(--color-gray-300);
+    white-space: nowrap;
+}
+
+.wp-list-material thead tr td:first-child,
+.wp-list-material thead tr th:first-child {
+    border-top-left-radius: 10px;
+}
+
+.wp-list-material thead tr td:last-child,
+.wp-list-material thead tr th:last-child {
+    border-top-right-radius: 10px;
+}
+
+/* Body — căn giữa toàn bộ */
+.wp-list-material tbody td {
+    padding: 1px 10px;
+    border-bottom: 1px solid var(--rmr-line);
+    vertical-align: middle;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+/* Ô cố định (đơn vị, thành tiền, giá VAT, tổng GTNK) */
+.wp-list-material tbody td.cell-fixed {
+    color: var(--color-gray-700);
+    font-weight: 600;
+}
+
+/* Cột Tổng GTNK in đậm — chữ đen, KHÔNG nền */
+.wp-list-material tbody td.cell-total {
+    color: var(--color-gray-900);
+    font-weight: 800;
+}
+
+.wp-list-material tbody tr:nth-child(even) td {
+    background-color: var(--rmr-row-alt);
+}
+
+.wp-list-material tbody tr:hover td {
+    background-color: var(--color-gray-50);
+}
+
+.wp-list-material tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ============================================
+   2b. INPUT TRONG Ô (cho cột editable)
+   ============================================ */
+.wp-list-material tbody .cell-input {
+    width: auto;
+    min-width: 60px;
+    field-sizing: content;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background-color: transparent;
+    color: var(--color-gray-900);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: inherit;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    transition: var(--transition);
+}
+
+/* Cell-name cần rộng hơn (tên NVL hay dài) */
+.wp-list-material tbody .cell-name {
+    min-width: 200px;
+}
+
+/* Cell-unit ngắn */
+.wp-list-material tbody .cell-unit {
+    min-width: 50px;
+    max-width: 100px;
+}
+
+.wp-list-material tbody .cell-input::placeholder {
+    color: var(--color-gray-500);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.wp-list-material tbody .cell-input:hover {
+    border-color: var(--color-gray-300);
+    background-color: var(--color-white);
+}
+
+.wp-list-material tbody .cell-input:focus {
+    border-color: var(--color-green);
+    background-color: var(--color-white);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* Cột VAT input: không nền, chữ cam đậm */
+.wp-list-material tbody .cell-vat {
+    color: #c2410c;
+    font-weight: 700;
+    background-color: transparent;
+}
+
+/* Cột tên NVL: cho phép canh trái để đọc dễ */
+.wp-list-material tbody .cell-name {
+    text-align: left;
+}
+
+/* Empty state */
+.wp-list-material tbody:empty::after,
+.wp-list-material tbody tr.material-empty td {
+    content: "Chưa có nguyên vật liệu nào. Hãy chọn nhà cung cấp để thêm.";
+    display: block;
+    text-align: center;
+    padding: 30px 16px;
+    color: var(--color-gray-500);
+    font-style: italic;
+}
+
+/* ============================================
+   3. KHỐI TỔNG (Tổng GTĐH / Tổng CPMH)
+   ============================================ */
+.wp-list-material .total {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+/* Cụm 2 tổng: flex column, canh phải; "Tổng CPMH" nằm trên */
+.wp-list-material .total-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.wp-list-material .total-summary > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1.5px solid var(--rmr-line);
+    background-color: var(--color-gray-50);
+    min-width: 280px;
+}
+
+.wp-list-material .total-summary > div p {
+    margin: 0;
+    color: var(--color-gray-700);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.wp-list-material .total-summary > div .result {
+    margin-left: auto;
+    font-size: 18px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.2px;
+}
+
+.wp-list-material .total .total-value-bill {
+    background: linear-gradient(135deg, #0f5629 0%, #145f30 100%);
+    border-color: #0f5629;
+}
+
+/* Tổng giá trị đơn hàng: chữ trắng (giữ nguyên font-weight) */
+.wp-list-material .total .total-value-bill p,
+.wp-list-material .total .total-value-bill .result {
+    color: #fff;
+}
+
+.wp-list-material .total .total-purchase-cost {
+    background: var(--color-gray-100);
+    border-color: var(--rmr-line);
+}
+
+.wp-list-material .total .total-purchase-cost .result {
+    color: #b45309;
+}
+
+/* ============================================
+   4. NÚT GHI / SỬA — phân biệt primary/secondary
+   ============================================ */
+.wp-button #btn-record {
+    background: linear-gradient(135deg, var(--color-green) 0%, var(--color-green-light) 100%);
+    border-color: var(--color-green-dark);
+    color: var(--color-white);
+}
+
+.wp-button #btn-record p {
+    color: var(--color-white);
+    font-weight: 700;
+}
+
+.wp-button #btn-record:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+.wp-button #btn-record:hover p {
+    color: var(--color-white);
+}
+
+.wp-button #btn-edit {
+    background-color: var(--color-white);
+    border-color: var(--color-orange);
+}
+
+.wp-button #btn-edit p {
+    color: var(--color-orange);
+}
+
+.wp-button #btn-edit:hover {
+    background-color: var(--color-orange);
+    border-color: var(--color-orange);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.wp-button #btn-edit:hover p {
+    color: var(--color-white);
+}
+
+/* ============================================
+   4b. CELL DROPDOWN (tìm NVL trong .cell-name)
+   ============================================ */
+.cell-name-wrap {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Nút xóa dòng lồng bên trái ô tên NVL */
+.cell-name-wrap .btn-remove-row {
+    flex: 0 0 auto;
+}
+
+.cell-name-wrap .cell-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cell-name-wrap .material-dropdown {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    max-height: 240px;
+    /* overflow-y: auto; */
+    z-index: 20;
+    display: none;
+    text-align: left;
+    /* Ghi đè white-space: nowrap kế thừa từ .wp-list-material td — tên NVL dài phải
+       xuống dòng trong dropdown thay vì tràn ngang ra ngoài. */
+    white-space: normal;
+}
+
+.cell-name-wrap .material-dropdown.active {
+    display: block;
+}
+
+.cell-name-wrap .material-dropdown li {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    transition: var(--transition);
+}
+
+.cell-name-wrap .material-dropdown li:hover,
+.cell-name-wrap .material-dropdown li.active {
+    background-color: var(--color-green-soft);
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+.cell-name-wrap .material-dropdown li.empty {
+    color: var(--color-gray-500);
+    font-style: italic;
+    cursor: default;
+    text-align: center;
+}
+
+.cell-name-wrap .material-dropdown li.empty:hover {
+    background: transparent;
+    color: var(--color-gray-500);
+}
+
+/* ============================================
+   4c. COL ACTION (X xóa dòng)
+   ============================================ */
+.wp-list-material th.col-action,
+.wp-list-material td.cell-action {
+    width: 36px;
+    padding: 4px;
+    background: transparent !important;
+    border-bottom-color: transparent;
+}
+
+.wp-list-material .btn-remove-row {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-gray-300);
+    background-color: var(--color-white);
+    color: var(--color-gray-500);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wp-list-material .btn-remove-row:hover {
+    background-color: var(--color-red);
+    border-color: var(--color-red);
+    color: var(--color-white);
+    transform: scale(1.08);
+}
+
+/* ============================================
+   4d. TOTAL block: Thêm dòng + 2 tổng (3 cột)
+   ============================================ */
+.wp-list-material .total {
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.wp-list-material .total .btn-add-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1.5px dashed var(--color-green);
+    border-radius: 10px;
+    background-color: var(--color-green-soft);
+    color: var(--color-green-dark);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+    align-self: flex-start;
+    width: fit-content;       /* chỉ rộng vừa đủ chứa text */
+    flex: 0 0 auto;
+}
+
+.wp-list-material .total .btn-add-row i {
+    font-size: 12px;
+}
+
+.wp-list-material .total .btn-add-row:hover {
+    background-color: var(--color-green);
+    color: var(--color-white);
+    border-style: solid;
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+/* ============================================
+   4e. CELL EMPTY STATE (tbody không có dòng nào)
+   ============================================ */
+.wp-list-material tbody:empty::after {
+    content: "Chưa có dòng nguyên vật liệu nào. Nhấn 'Thêm dòng' để bắt đầu.";
+    display: table-row;
+    color: var(--color-gray-500);
+    font-style: italic;
+    text-align: center;
+    padding: 28px 16px;
+}
+
+/* ============================================
+   5. RESPONSIVE
+   ============================================ */
+@media (max-width: 900px) {
+    .wp-list-material {
+        padding: 12px;
+    }
+
+    .wp-list-material thead tr td,
+    .wp-list-material thead tr th,
+    .wp-list-material tbody td {
+        padding: 9px 10px;
+        font-size: 12px;
+    }
+
+    .wp-list-material .total-summary {
+        min-width: 100%;
+    }
+    .wp-list-material .total-summary > div {
+        min-width: 100%;
+    }
+}
+
+@media (max-width: 700px) {
+    .wp-list-material {
+        padding: 8px;
+        border-radius: 10px;
+    }
+
+    .wp-list-material thead tr td,
+    .wp-list-material thead tr th {
+        font-size: 11px;
+        padding: 8px 6px;
+    }
+
+    .wp-list-material tbody td {
+        padding: 8px 6px;
+        font-size: 12px;
+    }
+
+    .wp-list-material .total-summary > div .result {
+        font-size: 16px;
+    }
+}
+
+/* ===== Modal biến động giá nhập (purchase_price_changes) ===== */
+.ppc-modal-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+}
+.ppc-modal-overlay.active { display: flex; }
+.ppc-modal {
+    background: #fff; border-radius: 8px; width: min(620px, 94vw);
+    max-height: 86vh; display: flex; flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); overflow: hidden;
+}
+.ppc-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid #eee;
+}
+.ppc-modal-head h3 { margin: 0; font-size: 17px; color: #1f2937; }
+.ppc-modal-close {
+    border: 0; background: transparent; font-size: 24px; line-height: 1;
+    cursor: pointer; color: #888;
+}
+.ppc-modal-close:hover { color: #222; }
+.ppc-modal-body { padding: 12px 18px; overflow: auto; }
+.ppc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ppc-table th, .ppc-table td {
+    padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left;
+}
+.ppc-table th { background: #f7f7f9; color: #444; font-weight: 600; }
+.ppc-table th.center, .ppc-table td.center { text-align: center; }
+.ppc-table td.num { white-space: nowrap; }
+.ppc-table .up   { color: #d92d20; font-weight: 600; }
+.ppc-table .down { color: #067647; font-weight: 600; }
+.ppc-modal-foot {
+    padding: 12px 18px; border-top: 1px solid #eee; text-align: right;
+}
+.ppc-modal-ok {
+    background: #2563eb; color: #fff; border: 0; border-radius: 6px;
+    padding: 8px 18px; cursor: pointer; font-size: 14px;
+}
+.ppc-modal-ok:hover { background: #1d4ed8; }
+
+/* ---- Nút icon "Giá vốn ảnh hưởng" (cột Thao tác, modal biến động giá) ---- */
+.ppc-impact-btn {
+    border: 1px solid #d0d5dd; background: #fff; color: #175cd3;
+    width: 32px; height: 32px; border-radius: 7px; cursor: pointer; font-size: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .12s, color .12s, border-color .12s;
+}
+.ppc-impact-btn:hover { background: #eff8ff; border-color: #175cd3; }
+
+/* ---- Modal "Giá vốn ảnh hưởng" — tên sản phẩm dạng nút, click mở modal giải thích ---- */
+.pci-product-name {
+    border: 0; background: transparent; padding: 0; cursor: pointer;
+    color: #2563eb; font-weight: 600; font-size: 14px; text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.pci-product-name:hover { color: #1d4ed8; }
+
+/* ---- Modal "Giải thích giá vốn" — highlight dòng NVL vừa đổi giá + tổng cuối bảng ---- */
+.pcb-row-changed { background: #fffaeb; }
+.pcb-changed-tag {
+    display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+    background: #fef0c7; color: #b54708; font-size: 11px; font-weight: 600; vertical-align: middle;
+}
+.pcb-total-row td {
+    border-top: 2px solid #d0d5dd; border-bottom: 0; font-weight: 700; color: #1f2937;
+    background: #f7f7f9;
+}
+
+/* ===== Khớp đơn đặt hàng NVL (auto-confirm "Đã nhận" + so giá trị dự kiến/thực nhập) ===== */
+.ppc-order-match:empty { display: none; }
+.ppc-om-card {
+    margin: 12px 18px 0; padding: 10px 14px; border-radius: 8px;
+    background: #ecfdf3; border: 1px solid #abefc6; font-size: 13.5px; color: #1f2937;
+}
+.ppc-om-card.has-diff { background: #fffaeb; border-color: #fedf89; }
+.ppc-om-title { font-weight: 600; color: #067647; display: flex; align-items: center; gap: 6px; }
+.ppc-om-card.has-diff .ppc-om-title { color: #b54708; }
+.ppc-om-title i { color: #17b26a; }
+.ppc-om-card.has-diff .ppc-om-title i { color: #f79009; }
+.ppc-om-row { margin-top: 4px; color: #444; }
+.ppc-om-warn { font-weight: 600; }
+.ppc-om-warn.up   { color: #d92d20; }
+.ppc-om-warn.down { color: #067647; }
+.ppc-om-warn i { margin-right: 2px; }
+
+/* ============================================
+   6. GỘP NVL + THÀNH PHẨM (nâng cấp từ product_buy)
+   - Cột "Kho" (NVL/TP), badge loại trong dropdown, popover giải thích CP khác,
+     checkbox "Gồm CP khác" ở VAT, hiệu ứng chớp sáng khi tính lại.
+   ============================================ */
+
+/* Cột Kho: nhãn nhỏ, màu theo loại (xanh dương = NVL, cam = TP) */
+.wp-list-material tbody td.cell-warehouse {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--rmr-blue-dark);
+    white-space: nowrap;
+}
+
+/* Badge loại (NVL/TP) trong dropdown gợi ý tên hàng hóa */
+.item-dd-badge {
+    display: inline-block;
+    min-width: 28px;
+    margin-right: 8px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 0.2px;
+}
+.item-dd-badge-material {
+    background-color: var(--rmr-blue-soft);
+    color: var(--rmr-blue-dark);
+}
+.item-dd-badge-product {
+    background-color: var(--rmr-amber-soft);
+    color: #b45309;
+}
+
+/* ---- CP khác: icon giải thích (chỉ hiện khi giá trị > 0) + popover textarea ---- */
+.cell-other-cost-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cell-other-cost-wrap .cell-note-icon {
+    display: none;
+    color: var(--rmr-amber);
+    font-size: 13px;
+    cursor: pointer;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.cell-other-cost-wrap.has-note-icon .cell-note-icon {
+    display: inline-block;
+}
+
+.cell-other-cost-wrap.has-note-icon:hover .cell-note-icon,
+.cell-other-cost-wrap.note-open .cell-note-icon {
+    opacity: 1;
+}
+
+.cell-other-cost-wrap .cell-note-icon:hover {
+    color: #b45309;
+    transform: scale(1.15);
+}
+
+.cell-other-cost-wrap .cell-note-pop {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 25;
+    width: 220px;
+    padding: 8px;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    text-align: left;
+    white-space: normal;
+}
+
+.cell-other-cost-wrap.note-open .cell-note-pop {
+    display: block;
+}
+
+.cell-other-cost-wrap .cell-note-input {
+    width: 100%;
+    resize: vertical;
+    border: 1px solid var(--rmr-line);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--color-gray-900);
+    outline: none;
+}
+
+.cell-other-cost-wrap .cell-note-input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.15);
+}
+
+/* ---- VAT: checkbox "Gồm CP khác" hiện khi hover và khi VAT > 0 ---- */
+.cell-vat-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cell-vat-wrap .cell-vat-incl {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+.cell-vat-wrap.has-vat-toggle .cell-vat-incl {
+    display: flex;
+}
+
+.cell-vat-wrap.has-vat-toggle:hover .cell-vat-incl,
+.cell-vat-wrap.has-vat-toggle:focus-within .cell-vat-incl,
+.cell-vat-wrap.has-vat-toggle .cell-vat-incl:has(.cell-vat-incl-check:checked) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.cell-vat-incl input {
+    margin: 0;
+    cursor: pointer;
+}
+
+/* ---- Hiệu ứng chớp sáng khi tính lại (vd tick "Gồm CP khác") ---- */
+@keyframes flash-recalc-kf {
+    0%   { background-color: var(--rmr-amber-soft); }
+    100% { background-color: transparent; }
+}
+
+.wp-list-material tbody td.flash-recalc {
+    animation: flash-recalc-kf .7s ease-out;
+}

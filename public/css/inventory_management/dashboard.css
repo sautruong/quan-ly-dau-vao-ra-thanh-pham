@@ -30,18 +30,137 @@
     display: flex;
     flex-direction: column;
     padding: 20px 40px !important;
-    overflow-y: auto !important;
-    min-height: 100vh;
+    /* TASK3: cố định chiều cao wrapper, KHÔNG cuộn cả trang — chỉ .content cuộn. */
+    height: 100vh;
+    overflow: hidden !important;
+    position: relative;
+}
+
+/* ============================================
+   JOURNAL ENTRY CARD (GHI BÚT TOÁN KẾ TOÁN)
+   ============================================ */
+.je-card {
+    position: absolute;
+    top: 110px;
+    right: 40px;
+    width: 260px;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 12px;
+    padding: 12px 14px 14px;
+    box-shadow: var(--shadow-md);
+    z-index: 5;
+}
+
+.je-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+    text-align: center;
+    letter-spacing: 0.4px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--color-green);
+}
+
+.je-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.je-row:last-child {
+    margin-bottom: 0;
+}
+
+.je-row label {
+    width: 56px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    flex-shrink: 0;
+}
+
+.je-input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-gray-900);
+    background: var(--color-white);
+    outline: none;
+    transition: var(--transition);
+}
+
+.je-input:hover {
+    border-color: var(--color-green-light);
+}
+
+.je-input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.je-input-amount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+    .je-card {
+        position: static;
+        margin: 0 auto 16px;
+        width: 100%;
+        max-width: 320px;
+    }
 }
 
 /* ============================================
    1. LOGO + TITLE
    ============================================ */
+.header {
+    position: relative;
+    /* TASK3: header (chứa nav.main-tab) cố định ở trên, không cuộn cùng nội dung. */
+    flex-shrink: 0;
+}
+
 .wp-logo-title {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+}
+
+/* Hamburger toggle — ẩn mặc định, chỉ hiện khi mobile */
+.menu-toggle {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.menu-toggle-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-gray-700);
+    font-size: 22px;
+    border-radius: 8px;
+    transition: var(--transition);
+    user-select: none;
+    visibility: hidden;
+}
+
+.menu-toggle-btn:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-green);
 }
 
 .wp-logo-title .logo img {
@@ -112,10 +231,51 @@
     flex-direction: column;
     align-items: center;
     gap: 24px;
+    /* TASK3: chỉ vùng nội dung cuộn dọc; chiếm hết chiều cao còn lại. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 15px;
+}
+
+/* Cụm history nằm TRONG .content (để cuộn chung); .content có align-items:center
+   nên cần full bề ngang. Dùng chung cho các trang Nhập/Xuất. */
+.history-wrap {
+    width: 100%;
 }
 
 /* ============================================
-   4. SEARCH BAR (matches production_plan, centered)
+   4. TOOLBAR: wp-search (trái) + wp-date-picker (phải) cùng hàng
+   - Có cả 2 khối: search canh trái, date-picker canh phải.
+   - Chỉ 1 khối: canh giữa (:has only-child).
+   - border-bottom phân chia vùng tìm kiếm với nội dung dưới.
+   ============================================ */
+.wp-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.wp-toolbar > .wp-search {
+    margin: 0;           /* bỏ auto -> dính trái */
+}
+
+.wp-toolbar > .wp-date-picker {
+    margin: 0;           /* bỏ auto -> dính phải */
+    padding-right: 10px;
+}
+
+/* Chỉ còn 1 khối trong toolbar -> canh giữa */
+.wp-toolbar:has(> :only-child) {
+    justify-content: center;
+}
+
+/* ============================================
+   4a. SEARCH BAR (matches production_plan, centered)
    ============================================ */
 .wp-search {
     position: relative;
@@ -142,7 +302,7 @@
     border-radius: 10px;
     background-color: var(--color-white);
     font-size: 14px;
-    color: var(--color-gray-700);
+    color: #238b36;
     box-shadow: var(--shadow-sm);
     transition: var(--transition);
     outline: none;
@@ -524,12 +684,78 @@
         padding: 16px !important;
     }
 
+    /* Layout: logo trái – hamburger phải, title hàng dưới canh giữa */
+    .wp-logo-title {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        column-gap: 8px;
+        row-gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .wp-logo-title .logo {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: start;
+    }
+
+    .wp-logo-title .menu-toggle-btn {
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+        visibility: visible;
+    }
+
+    .wp-logo-title .title {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        text-align: center;
+    }
+
     .wp-logo-title .title h1 {
         font-size: 22px;
     }
 
+    /* Main-tab: thu gọn thành dropdown khi click hamburger */
+    nav {
+        position: absolute;
+        top: 56px;
+        right: 0;
+        z-index: 100;
+    }
+
     .main-tab {
-        flex-wrap: wrap;
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        flex-wrap: nowrap;
+        margin: 0;
+        padding: 6px 0;
+        background-color: var(--color-white);
+        border: 1px solid var(--color-gray-200);
+        border-radius: 10px;
+        box-shadow: var(--shadow-md);
+        min-width: 240px;
+    }
+
+    .menu-toggle:checked ~ nav .main-tab {
+        display: flex;
+    }
+
+    .main-tab .tab-item {
+        margin: 0;
+    }
+
+    .main-tab .tab-item a {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .main-tab .active {
+        border-bottom: none;
+        background-color: var(--color-green-soft);
     }
 
     .list-product {
@@ -539,6 +765,21 @@
     .wp-button>div {
         min-width: 100px;
         padding: 10px 20px;
+    }
+
+    /* Toolbar: xuống dòng search trên, date-picker dưới khi màn hẹp */
+    .wp-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .wp-toolbar > .wp-search {
+        max-width: none;
+    }
+
+    .wp-toolbar > .wp-date-picker {
+        justify-content: flex-start;
     }
 }
 .line{
@@ -750,3 +991,37 @@ label {
     padding: 0 4px;
     font-size: 13px;
 }
+
+/* ============================================
+   10. TASK 2 — Bố cục cụm lịch sử
+   - .history ("Lịch sử") + .history-filter cùng 1 hàng, dàn 2 bên.
+   - .edit-batch-banner đẩy lên đầu khu nhập, canh phải cho dễ thấy.
+   ============================================ */
+.history-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.history-bar .history { margin-bottom: 0; flex: 0 0 auto; }
+.history-bar .history-filter { margin: 0; }
+
+/* Banner "đang sửa nhóm" — đưa lên trên (trước .list-product), canh phải.
+   .content có align-items:center nên dùng align-self để đẩy sang phải. */
+.edit-batch-banner { align-self: flex-end; }
+
+@media (max-width: 700px) {
+    .history-bar { align-items: stretch; }
+    .edit-batch-banner { align-self: stretch; }
+}
+
+/* ============================================
+   11. TASK 3 — Nền cho ô tìm kiếm (.wp-search input)
+   - Mặc định nền xám nhạt; khi focus nền xám sáng hơn.
+   - Giữ nguyên viền + hover (không đụng border).
+   ============================================ */
+.wp-search input { background-color: var(--color-gray-100); }
+.wp-search input:focus { background-color: var(--color-gray-50); }

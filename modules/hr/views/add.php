@@ -12,6 +12,7 @@ global $table_hr_config;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>index hr</title>
+    <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/style_edit_hr.css">
@@ -22,6 +23,7 @@ global $table_hr_config;
     <!--Định nghĩa thư viện js-->
     <script src="public/js/jquery-4.0.0.js" type="text/javascript" defer></script>
     <script src="public/js/hr.js" defer></script>
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
 
 <body>
@@ -32,44 +34,11 @@ global $table_hr_config;
             <!-- Require Sidebar-right -->
             <?php require "layouts/top-sidebar-right.php"; ?>
             <div class="main-content">
-                <form method="POST" action="?mod=hr&controllers=hr&action=insert">
-
-                    <?php foreach ($table_hr_config as $table => $config): ?>
-                        <div class="group-table">
-
-                            <h4 class="group-title">
-                                <?= get_table_title($table) ?>
-                            </h4>
-
-                            <div class="form-grid">
-                                <?php
-                                $hiddenFields = $config['hidden']['form'] ?? [];
-
-                                foreach ($config['labels'] as $column => $label):
-
-                                    if (in_array($column, $hiddenFields)) continue;
-                                ?>
-
-                                    <div class="form-group">
-                                        <label><?= $label ?></label>
-
-                                        <?= render_input($table, $column, '') ?>
-
-                                    </div>
-
-                                <?php endforeach; ?>
-                            </div>
-
-                        </div>
-                    <?php endforeach; ?>
-
-                    <input type="submit" value="Thêm nhân sự" id="btn-submit">
-                                    
-                </form>
-
+                <?php require "_add_form.php"; ?>
             </div>
         </div>
     </div>
+    <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 
 </html>

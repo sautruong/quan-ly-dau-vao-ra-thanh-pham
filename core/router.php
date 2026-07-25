@@ -9,6 +9,9 @@ if (file_exists($request_path)) {
     echo "Không tìm thấy:$request_path ";
 }
 
+// Chốt chặn phân quyền: chặn user truy cập view chưa được admin gán.
+permission_guard();
+
 $action_name = get_action().'Action';
 
 call_function(array('construct', $action_name));

@@ -1,0 +1,117 @@
+/* =====================================================================
+ *  Check biến động giá (price_change_check) — tab "Mua hàng"
+ * ===================================================================== */
+
+:root {
+    --pcc-green: #16a34a;
+    --pcc-blue: #2563eb;
+    --pcc-border: #e2e6ea;
+    --pcc-muted: #6b7280;
+    --pcc-text: #1f2937;
+}
+
+/* global.css: #wrapper{display:flex} không có flex-direction -> mặc định row,
+   khiến .app-header và .content nằm NGANG hàng thay vì header trên/content dưới. */
+#wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.content { padding: 24px 32px; display: flex; flex-direction: column; gap: 18px; }
+
+.pcc-page-title h1 {
+    margin: 0 0 4px; font-size: 24px; font-weight: 700; color: var(--pcc-text);
+    display: flex; align-items: center; gap: 10px;
+}
+.pcc-page-title h1 i { color: var(--pcc-green); }
+.pcc-page-hint { margin: 0; color: var(--pcc-muted); font-size: 13.5px; }
+
+/* ---- Toolbar: search + giá NCC báo + nút Kiểm tra ---- */
+.pcc-toolbar {
+    display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+    background: #fff; border: 1px solid var(--pcc-border); border-radius: 12px;
+    padding: 18px 20px;
+}
+.pcc-field { display: flex; flex-direction: column; gap: 6px; }
+.pcc-field label { font-size: 12.5px; font-weight: 600; color: var(--pcc-muted); }
+.pcc-field-search { flex: 1 1 360px; max-width: 460px; position: relative; }
+.pcc-field-price { flex: 0 0 200px; }
+
+.pcc-search-wrap { position: relative; }
+.pcc-search-wrap i.fa-magnifying-glass {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--pcc-muted); font-size: 13px; pointer-events: none;
+}
+#pcc-search-input, #pcc-new-price {
+    width: 100%; box-sizing: border-box; padding: 10px 12px 10px 14px;
+    border: 1.5px solid var(--pcc-border); border-radius: 9px; font-size: 14px;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+}
+#pcc-search-input { padding-left: 36px; }
+#pcc-search-input:focus, #pcc-new-price:focus {
+    border-color: var(--pcc-green); box-shadow: 0 0 0 3px rgba(22, 163, 74, .12);
+}
+
+.pcc-search-dropdown {
+    position: absolute; z-index: 1300; top: calc(100% + 4px); left: 0; right: 0;
+    list-style: none; margin: 0; padding: 4px; background: #fff;
+    border: 1px solid var(--pcc-border); border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.10); max-height: 320px; overflow-y: auto; display: none;
+}
+/* z-index 1300: cao hơn .app-sidebar (1000) và các flyout/dropdown khác của app_shell.css
+   (đa số 1100-1200) để dropdown luôn nổi lên trên khi active, không bị khung sườn che. */
+.pcc-search-dropdown.active { display: block; }
+.pcc-search-dropdown li {
+    display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+    border-radius: 7px; cursor: pointer; font-size: 14px;
+}
+.pcc-search-dropdown li:hover, .pcc-search-dropdown li.active { background: #ecfdf3; }
+.pcc-search-dropdown li.empty { color: var(--pcc-muted); cursor: default; font-style: italic; }
+.pcc-search-dropdown li.empty:hover { background: transparent; }
+.pcc-dd-badge {
+    flex: 0 0 auto; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: .3px;
+}
+.pcc-dd-badge-material { background: #e0f2fe; color: #075985; }
+.pcc-dd-badge-product  { background: #fef3c7; color: #92400e; }
+.pcc-dd-name { font-weight: 500; color: var(--pcc-text); }
+
+.pcc-selected-chip {
+    margin-top: 8px; display: inline-flex; align-items: center; gap: 8px;
+    background: #ecfdf3; border: 1px solid #abefc6; border-radius: 999px;
+    padding: 6px 8px 6px 12px; align-self: flex-start;
+}
+.pcc-selected-type {
+    font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: .3px;
+}
+.pcc-selected-type-material { background: #e0f2fe; color: #075985; }
+.pcc-selected-type-product  { background: #fef3c7; color: #92400e; }
+.pcc-selected-name { font-size: 13.5px; font-weight: 600; color: #067647; }
+#pcc-selected-clear {
+    border: 0; background: transparent; cursor: pointer; color: #067647;
+    width: 20px; height: 20px; border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 11px;
+}
+#pcc-selected-clear:hover { background: rgba(0,0,0,.06); }
+
+.pcc-btn-check {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--pcc-green); color: #fff; border: 0; border-radius: 10px;
+    padding: 11px 22px; font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(22,163,74,.3); transition: background .15s, box-shadow .15s;
+}
+.pcc-btn-check:hover:not(:disabled) { background: #128a3c; box-shadow: 0 4px 12px rgba(22,163,74,.4); }
+.pcc-btn-check:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+
+/* ---- Kết quả ---- */
+.pcc-result { display: flex; flex-direction: column; gap: 12px; }
+.pcc-result-table {
+    background: #fff; border: 1px solid var(--pcc-border); border-radius: 10px; overflow: hidden;
+}
+.pcc-loading, .pcc-empty { color: var(--pcc-muted); font-style: italic; padding: 16px 4px; }
+.pcc-warn {
+    display: flex; align-items: center; gap: 8px; background: #fffaeb; border: 1px solid #fedf89;
+    color: #b54708; border-radius: 9px; padding: 10px 14px; font-size: 13.5px; font-weight: 600;
+}
+.pcc-warn i { color: #f79009; }

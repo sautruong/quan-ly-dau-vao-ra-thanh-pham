@@ -1,0 +1,814 @@
+/* ============================================================
+   MODAL DÙNG CHUNG - product_profile
+   (Thêm sản phẩm, Thêm file, Thay thế, Thông tin SP, Check DB)
+   ============================================================ */
+
+/* OVERLAY */
+.pp-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 40px 16px;
+}
+
+.pp-modal-overlay.is-open {
+    display: flex;
+}
+
+/* KHUNG MODAL */
+.pp-modal {
+    background: #fff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 620px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+    animation: ppModalIn 0.25s ease;
+    margin: auto 0;
+}
+
+.pp-modal--wide {
+    max-width: 960px;
+}
+
+@keyframes ppModalIn {
+    from {
+        opacity: 0;
+        transform: translateY(-18px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* HEADER */
+.pp-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 22px;
+    border-bottom: 1px solid #eef1f4;
+}
+
+.pp-modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #2e7d32;
+}
+
+.pp-modal-close {
+    border: none;
+    background: #f3f4f6;
+    color: #555;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.pp-modal-close:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    transform: rotate(90deg);
+}
+
+/* BODY */
+.pp-modal-body {
+    padding: 22px;
+}
+
+/* ============================================================
+   FORM THÊM SẢN PHẨM  (.wp-content-add-product)
+   ============================================================ */
+.pp-modal .wp-content-add-product {
+    width: 100%;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.pp-modal .name-title {
+    display: none; /* tiêu đề đã nằm ở modal-header */
+}
+
+.wp-content-add-product form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2e7d32;
+    padding: 8px 0;
+    border-bottom: 2px solid #e8f5e9;
+    margin-top: 6px;
+    margin-bottom: 2px;
+}
+
+.wp-name-product,
+.wp-choose-category,
+.wp-upload,
+.wp-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pp-modal label {
+    min-width: 160px;
+    font-size: 14px;
+    color: #444;
+    margin: 0;
+}
+
+.pp-modal input[type="text"] {
+    flex: 1;
+    padding: 8px 6px;
+    border: none;
+    border-bottom: 1.5px solid #ddd;
+    outline: none;
+    transition: 0.25s;
+    font-size: 14px;
+}
+
+.pp-modal input[type="text"]:focus {
+    border-bottom: 1.5px solid #78d675;
+}
+
+.pp-modal select {
+    flex: 1;
+    padding: 4px 10px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+    color: #333;
+    background: #fff;
+    cursor: pointer;
+    transition: 0.25s;
+    appearance: auto;
+}
+
+.pp-modal select:focus {
+    border-color: #78d675;
+}
+
+#file_name,
+.pp-modal .file-name-display {
+    flex: 1;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 8px;
+    border: 1px solid #eee;
+}
+
+.pp-modal #btn_choose,
+.pp-modal .btn-choose {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: #cdf0c6;
+    color: green;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.pp-modal #btn_choose:hover,
+.pp-modal .btn-choose:hover {
+    background: green;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-submit {
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: green;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    margin-top: 6px;
+}
+
+.btn-submit:hover {
+    background: #1b6e1f;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(139, 199, 133, 0.3);
+}
+
+.btn-submit:active,
+.pp-modal #btn_choose:active,
+.pp-modal .btn-choose:active {
+    transform: scale(0.96);
+}
+
+.error-msg {
+    color: #d32f2f;
+    font-size: 13px;
+    background: #ffeaea;
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* SEARCH MATERIAL (dùng ở add-product & thay thế thành phần) */
+.wp-search-material {
+    position: relative;
+}
+
+.wp-search-material input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: 0.25s;
+}
+
+.wp-search-material input[type="text"]:focus {
+    border-color: #78d675;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.search-results .result-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: 0.15s;
+}
+
+.search-results .result-item:hover,
+.search-results .result-item.is-active {
+    background: #e8f5e9;
+}
+
+.search-results .result-item:last-child {
+    border-bottom: none;
+}
+
+.search-results .no-result {
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #999;
+}
+
+.selected-materials {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.selected-material-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f1f8e9;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 10px 14px;
+    gap: 10px;
+}
+
+.selected-material-item .material-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.selected-material-item .material-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+
+.selected-material-item .supplier-name {
+    font-size: 12px;
+    color: #777;
+}
+
+.selected-material-item .btn-remove {
+    background: none;
+    border: none;
+    color: #d32f2f;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+.selected-material-item .btn-remove:hover {
+    background: #ffeaea;
+}
+
+/* ============================================================
+   FORM THÊM / THAY THẾ FILE  (.wp-content-addfile)
+   ============================================================ */
+.pp-modal .wp-content-addfile {
+    width: 100%;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.wp-content-addfile form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.wp-name-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wp-old-file {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #f0f7ee;
+    border-radius: 8px;
+    border: 1px solid #d4e8cf;
+}
+
+.wp-old-file i {
+    color: green;
+}
+
+.wp-old-file span {
+    color: #333;
+    font-size: 14px;
+}
+
+/* ============================================================
+   MODAL THÔNG TIN SẢN PHẨM (info basic) - detail.php
+   ============================================================ */
+.btn-view-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    /* margin-top: 8px; */
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1.5px solid #2e7d32;
+    background: #fff;
+    color: #2e7d32;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.btn-view-info:hover {
+    background: #2e7d32;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
+}
+
+.pp-modal .wp-info-product-basic {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.pp-modal .product-thum img {
+    width: 120px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+}
+
+.pp-modal .info-product-basic p {
+    margin: 6px 0;
+    font-size: 15px;
+    color: #444;
+}
+
+/* ============================================================
+   CHECK DATABASE
+   ============================================================ */
+.btn-check-db {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 6px 16px;
+    border-radius: 10px;
+    border: 1.5px solid #6d28d9;
+    background: #f5f3ff;
+    color: #6d28d9;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.btn-check-db:hover {
+    background: #6d28d9;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.3);
+}
+
+.checkdb-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.checkdb-toolbar label {
+    min-width: auto;
+    font-weight: 600;
+    color: #444;
+    font-size: 14px;
+}
+
+.checkdb-toolbar select {
+    flex: 0 1 auto;
+    min-width: 200px;
+    padding: 8px 10px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.checkdb-meta {
+    font-size: 13px;
+    color: #6b7280;
+    margin-left: auto;
+}
+
+.checkdb-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.checkdb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.checkdb-table th,
+.checkdb-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eef1f4;
+    text-align: left;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.checkdb-table thead th {
+    background: #f5f3ff;
+    color: #4c1d95;
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+}
+
+.checkdb-table tbody tr:hover {
+    background: #fafafa;
+}
+
+.checkdb-table tbody tr.is-affected {
+    background: #ecfdf5;
+    box-shadow: inset 3px 0 0 #16a34a;
+}
+
+.checkdb-table tbody tr.is-affected:hover {
+    background: #d1fae5;
+}
+
+.checkdb-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.checkdb-empty,
+.checkdb-loading {
+    padding: 24px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+/* PHÂN TRANG */
+.checkdb-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.checkdb-pagination button {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+    transition: 0.2s;
+}
+
+.checkdb-pagination button:hover:not(:disabled) {
+    border-color: #6d28d9;
+    color: #6d28d9;
+}
+
+.checkdb-pagination button.active {
+    background: #6d28d9;
+    border-color: #6d28d9;
+    color: #fff;
+    font-weight: 700;
+}
+
+.checkdb-pagination button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    .pp-modal-overlay {
+        padding: 20px 10px;
+    }
+
+    .pp-modal,
+    .pp-modal--wide {
+        max-width: 100%;
+    }
+
+    .wp-name-product,
+    .wp-choose-category,
+    .wp-upload,
+    .wp-input-row,
+    .wp-name-file {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .pp-modal label {
+        min-width: auto;
+    }
+
+    .checkdb-meta {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+/* ============================================================
+   KÉO-THẢ FILE
+   ============================================================ */
+/* Vùng đang được kéo file vào */
+[data-dropzone].is-dragover {
+    outline: 2px dashed #16a34a;
+    outline-offset: -4px;
+    background: rgba(22, 163, 74, 0.06);
+    border-radius: 10px;
+}
+
+/* Dòng tạm trong lúc đang upload */
+.file-item.file-uploading {
+    opacity: 0.75;
+}
+
+.uploading-label {
+    font-size: 13px;
+    color: #16a34a;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Input đổi tên file (kéo-thả) */
+.file-rename {
+    flex: 1;
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-size: 14px;
+    color: #1f2937;
+    outline: none;
+    transition: 0.2s;
+}
+
+.file-rename:hover {
+    border-color: #e5e7eb;
+    background: #fafafa;
+}
+
+.file-rename:focus {
+    border-color: #16a34a;
+    background: #f0fff5;
+}
+
+/* List: tên file dạng input chiếm phần còn lại của dòng */
+.main-file .file-item .title-file.file-rename {
+    font-size: 14px;
+}
+
+/* Nhấp nháy xanh khi đổi tên thành công */
+.file-rename.rename-ok {
+    border-color: #16a34a;
+    background: #dcfce7;
+}
+
+/* Nhấn nhẹ file vừa được thả */
+.file-item.dropped-file {
+    animation: droppedFlash 1s ease-out;
+}
+
+@keyframes droppedFlash {
+    0% {
+        background: #fef9c3;
+    }
+    100% {
+        background: transparent;
+    }
+}
+
+/* ============================================================
+   MODAL THÔNG TIN SẢN PHẨM (editable)
+   ============================================================ */
+.info-edit {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.info-edit .info-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-edit .info-row > label {
+    min-width: 175px;
+    font-size: 14px;
+    color: #444;
+    font-weight: 500;
+    margin: 0;
+}
+
+.info-edit .info-field {
+    flex: 1;
+}
+
+.info-image-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.info-thumb {
+    width: 90px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+}
+
+.btn-update-image {
+    padding: 7px 16px;
+    border: 1.5px solid #2e7d32;
+    background: #fff;
+    color: #2e7d32;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+.btn-update-image:hover {
+    background: #2e7d32;
+    color: #fff;
+}
+
+.pkg-picker {
+    position: relative;
+    flex: 1;
+}
+
+.pkg-picker .pkg-search {
+    width: 100%;
+}
+
+.info-field.saved-ok,
+.pkg-search.saved-ok {
+    border-color: #16a34a !important;
+    background: #dcfce7 !important;
+}
+
+@media (max-width: 768px) {
+    .info-edit .info-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .info-edit .info-row > label {
+        min-width: auto;
+    }
+}
+
+/* Ngày mua gần nhất (Task 1.2) */
+.last-purchase {
+    color: #b45309;
+    font-style: italic;
+}
+
+/* Sửa tên file: tên + nút bút (dùng chung list & detail) */
+.file-name-edit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-edit-filename {
+    color: #9ca3af;
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-edit-filename:hover {
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.inline-rename {
+    flex: 1;
+    width: 100%;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 14px;
+    color: #1f2937;
+    outline: none;
+    background: #fff;
+}

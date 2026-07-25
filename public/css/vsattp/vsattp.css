@@ -1,0 +1,443 @@
+/* ============================================================
+ *  VSATTP — Biểu mẫu QL VSATTP (dùng chung cho 7 view)
+ * ============================================================ */
+
+.content {
+    padding: 16px 20px 40px;
+}
+
+/* ---------- Thanh điều khiển ---------- */
+.vt-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.vt-daterange {
+    display: flex;
+    gap: 12px;
+}
+
+.vt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vt-field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.vt-field input[type="date"] {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* ---------- Buttons ---------- */
+.vt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.vt-btn:hover { background: #f1f5f9; }
+
+.vt-btn-primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+.vt-btn-primary:hover { background: #1d4ed8; }
+
+.vt-btn-excel {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+.vt-btn-excel:hover { background: #15803d; }
+
+.vt-btn-print {
+    background: #475569;
+    border-color: #475569;
+    color: #fff;
+}
+.vt-btn-print:hover { background: #334155; }
+
+/* ---------- Hành động trên bảng ---------- */
+.vt-table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.vt-actions-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.vt-page-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #334155;
+}
+
+.vt-page-size select {
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.vt-actions-right { display: flex; gap: 10px; }
+
+/* ---------- Vùng biểu mẫu (in/xuất) ---------- */
+.vt-sheet {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 24px 28px;
+}
+
+.vt-sheet-head {
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.vt-company {
+    font-size: 15px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.vt-form-title {
+    margin: 8px 0 4px;
+    font-size: 19px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #0f172a;
+}
+
+.vt-period {
+    font-size: 13px;
+    font-style: italic;
+    color: #475569;
+}
+
+/* ---------- Bảng dữ liệu ---------- */
+.vt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.vt-table th,
+.vt-table td {
+    border: 1px solid #94a3b8;
+    padding: 6px 8px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.vt-table thead th {
+    background: #f1f5f9;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.vt-table td.vt-cell-name,
+.vt-table td.vt-cell-supplier {
+    text-align: left;
+}
+
+.vt-table .vt-empty-row td {
+    padding: 22px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.vt-cell-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    text-align: center;
+    padding: 2px 4px;
+}
+
+.vt-cell-input:focus {
+    outline: none;
+    background: #eff6ff;
+    border-radius: 4px;
+}
+
+/* nút "sao chép cho các dòng dưới" cạnh ô người kiểm tra dòng đầu */
+.vt-cell-inspector { position: relative; }
+
+.vt-copy-down {
+    display: none;
+    margin-top: 3px;
+    font-size: 11px;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+}
+.vt-copy-down.show { display: inline-block; }
+.vt-copy-down:hover { background: #dbeafe; }
+
+/* ---------- Phân trang ---------- */
+.vt-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin: 14px 0 6px;
+}
+
+.vt-pagination button {
+    min-width: 34px;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.vt-pagination button:hover:not(:disabled) { background: #f1f5f9; }
+.vt-pagination button.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+.vt-pagination button:disabled { opacity: .5; cursor: default; }
+
+/* ---------- Chữ ký ---------- */
+.vt-signatures {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 36px;
+    text-align: center;
+}
+
+.vt-sign-col { min-width: 180px; }
+
+.vt-sign-role {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.vt-sign-note {
+    font-size: 12px;
+    font-style: italic;
+    color: #475569;
+}
+
+/* ============================================================
+ *  Modal chọn NVL
+ * ============================================================ */
+.vt-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+.vt-modal.open { display: block; }
+
+.vt-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .45);
+}
+
+.vt-modal-box {
+    position: relative;
+    width: min(560px, 92vw);
+    max-height: 86vh;
+    margin: 6vh auto 0;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.vt-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.vt-modal-head h3 { font-size: 16px; font-weight: 700; color: #0f172a; }
+
+.vt-modal-close {
+    border: none;
+    background: transparent;
+    font-size: 26px;
+    line-height: 1;
+    color: #64748b;
+    cursor: pointer;
+}
+.vt-modal-close:hover { color: #0f172a; }
+
+.vt-modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+}
+
+.vt-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* search trong modal */
+.vt-search { position: relative; }
+
+.vt-search > i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+}
+
+.vt-search input {
+    width: 100%;
+    padding: 10px 12px 10px 34px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.vt-search-dropdown {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 5;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .12);
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+}
+.vt-search-dropdown.active { display: block; }
+
+.vt-search-dropdown li {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.vt-search-dropdown li:hover,
+.vt-search-dropdown li.kbd-active { background: #eff6ff; }
+.vt-search-dropdown li.empty { color: #94a3b8; cursor: default; font-style: italic; }
+.vt-search-dropdown li.added { opacity: .5; cursor: default; }
+
+.vt-selected-label {
+    margin: 16px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.vt-selected-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.vt-selected-list .vt-selected-empty {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 13px;
+}
+
+.vt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px 5px 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    font-size: 13px;
+    color: #1e40af;
+}
+
+.vt-chip button {
+    border: none;
+    background: transparent;
+    color: #1e40af;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+.vt-chip button:hover { color: #b91c1c; }
+
+/* ---------- Placeholder ---------- */
+.vt-coming-soon {
+    text-align: center;
+    padding: 70px 20px;
+    color: #64748b;
+}
+.vt-coming-soon i { font-size: 46px; color: #94a3b8; }
+.vt-coming-soon h2 { margin: 16px 0 8px; color: #0f172a; }
+
+/* ============================================================
+ *  In biểu mẫu
+ * ============================================================ */
+@media print {
+    body * { visibility: hidden; }
+    #vt-sheet, #vt-sheet * { visibility: visible; }
+    #vt-sheet {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: none;
+        padding: 0;
+    }
+    .vt-pagination { display: none !important; }
+    .vt-copy-down { display: none !important; }
+    .vt-cell-input { border: none; }
+    @page { size: A4 landscape; margin: 12mm; }
+}

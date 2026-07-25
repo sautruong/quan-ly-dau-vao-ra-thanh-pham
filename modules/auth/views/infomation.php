@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký thành công</title>
+    <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
 
     <style>
         * {

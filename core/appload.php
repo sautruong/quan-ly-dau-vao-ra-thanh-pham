@@ -11,6 +11,9 @@ require_once CONFIGPATH . DIRECTORY_SEPARATOR . 'table_hr_config.php';
 // Include file config/email
 require_once CONFIGPATH . DIRECTORY_SEPARATOR . 'email.php';
 
+// Include file config/crypto (khóa mã hóa dữ liệu cá nhân hóa)
+require_once CONFIGPATH . DIRECTORY_SEPARATOR . 'crypto.php';
+
 // Include file config/autoload
 require_once CONFIGPATH . DIRECTORY_SEPARATOR . 'autoload.php';
 
@@ -39,6 +42,18 @@ if (is_array($autoload)) {
 //
 //connect db
 db_connect($db);
+
+// Giải mã URL gọn /{mod}/{action}[/{id}] -> $_GET['mod'/'controllers'/'action'/'id'].
+// Cần chạy SAU db_connect() vì nhánh tương thích ngược (link token cũ) tra bảng nav_tokens.
+if (function_exists('nav_parse_path')) {
+    nav_parse_path();
+}
+
+// Lọc HTML đầu ra: đổi href/action dạng ?mod=..&controllers=..&action=.. sang URL gọn
+// (chuỗi endpoint AJAX trong JS không khớp mẫu nên giữ nguyên).
+if (function_exists('nav_start_output_filter')) {
+    nav_start_output_filter();
+}
 
 require COREPATH . DIRECTORY_SEPARATOR . 'router.php';
 

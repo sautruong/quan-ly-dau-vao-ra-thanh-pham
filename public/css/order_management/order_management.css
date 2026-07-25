@@ -1,0 +1,639 @@
+/* =====================================================================
+   order_management — Đơn hàng từ chi nhánh + Phiếu soạn hàng (A4)
+   ===================================================================== */
+:root {
+    --om-green: #16a34a;
+    --om-green-dark: #15803d;
+    --om-green-soft: #dcfce7;
+    --om-red: #dc2626;
+    --om-red-soft: #fee2e2;
+    --om-gray-100: #f3f4f6;
+    --om-gray-200: #e5e7eb;
+    --om-gray-300: #d1d5db;
+    --om-gray-500: #6b7280;
+    --om-gray-700: #374151;
+    --om-radius: 14px;
+    --om-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+}
+
+* { box-sizing: border-box; }
+body { background: var(--om-gray-100); color: #111827; font-family: "Segoe UI", sans-serif; }
+
+/* App shell: header lên trên, content xuống dưới (không giàn ngang). */
+#wrapper { display: block; }
+
+.om-page { padding: 16px 4px 48px; }
+.om-page-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
+}
+.om-page-head h1 { font-size: 22px; font-weight: 700; color: var(--om-gray-700); }
+.om-page-head-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.om-empty { text-align: center; color: gray; padding: 40px; }
+
+/* ----- Buttons ----- */
+.om-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px; border-radius: 10px; border: 1px solid transparent;
+    font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+    transition: all .2s ease;
+}
+.om-btn-primary { background: var(--om-green); color: #fff; }
+.om-btn-primary:hover { background: var(--om-green-dark); }
+.om-btn-ghost { background: #fff; color: var(--om-gray-700); border-color: var(--om-gray-300); }
+.om-btn-ghost:hover { border-color: var(--om-green); color: var(--om-green-dark); }
+
+/* ----- Lưới card đơn hàng (4 card / hàng) ----- */
+.om-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.om-card {
+    background: #fff;
+    border-radius: var(--om-radius);
+    box-shadow: var(--om-shadow);
+    border-top: 4px solid var(--om-accent, var(--om-green));
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+}
+.om-card-top { display: flex; align-items: center; gap: 8px; }
+.om-cust-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--om-accent, var(--om-green));
+    flex: 0 0 auto;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--om-accent, #16a34a) 22%, transparent);
+}
+.om-card-cust {
+    font-size: 14px; font-weight: 700; color: var(--om-gray-700);
+    line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Tên viết tắt (PLHCM, PLDN...) tô màu thứ cấp của chi nhánh */
+.om-card-cust.is-short { color: var(--om-accent, var(--om-green)); letter-spacing: .3px; }
+.om-card-rows { display: flex; flex-direction: column; gap: 3px; color: var(--om-gray-500); font-size: 13px; }
+.om-card-row i { margin-right: 5px; width: 14px; text-align: center; }
+.om-card-short {
+    background: var(--om-gray-100);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+}
+.om-card-short-head { font-weight: 700; color: var(--om-red); margin-bottom: 4px; }
+.om-card-short-head i { margin-right: 4px; }
+.om-card-short-list { list-style: none; margin: 0; padding: 0; }
+.om-card-short-list li { padding: 2px 0; color: var(--om-gray-700); line-height: 1.4; }
+.om-card-short-list b { color: var(--om-red); }
+.om-card-enough { color: var(--om-green-dark); font-weight: 600; }
+.om-card-totals { display: flex; justify-content: space-between; gap: 10px; border-top: 1px dashed var(--om-gray-200); padding-top: 8px; }
+.om-card-totals > div { display: flex; flex-direction: column; }
+.om-card-totals span { font-size: 11px; color: var(--om-gray-500); }
+.om-card-totals b { font-size: 14px; color: var(--om-gray-700); }
+.om-card-actions { display: flex; gap: 8px; margin-top: auto; }
+.om-btn-sm { padding: 7px 10px; font-size: 12.5px; }
+/* 4 nút thao tác trên card: chỉ icon, tooltip qua title khi hover, cỡ vuông đều nhau */
+.om-card-actions .om-btn-icon,
+.om-card-actions .om-lock-btn.om-btn-icon {
+    flex: 1 1 0; justify-content: center; align-items: center;
+    padding: 0; height: 34px; gap: 0;
+}
+.om-card-actions .om-btn-icon i { font-size: 14px; }
+
+/* Card đơn vừa tạo thủ công: phóng to nhẹ rồi trở lại (thay cho hộp thoại xác nhận) */
+@keyframes om-card-pulse {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.06); box-shadow: 0 10px 24px rgba(22, 163, 74, .35); }
+    100% { transform: scale(1); }
+}
+.om-card-pulse { animation: om-card-pulse .6s ease; position: relative; z-index: 2; }
+
+/* ----- Modal "Xem đơn hàng" ----- */
+.om-modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center; z-index: 1400; padding: 20px;
+}
+.om-modal-box {
+    background: #fff; border-radius: var(--om-radius);
+    width: min(720px, 96vw); max-height: 90vh; overflow-y: auto;
+    padding: 22px 24px; position: relative; box-shadow: var(--om-shadow);
+}
+.om-modal-close { position: absolute; top: 12px; right: 16px; font-size: 26px; cursor: pointer; color: var(--om-gray-500); line-height: 1; }
+.om-modal-close:hover { color: var(--om-red); }
+.om-modal-title { font-size: 17px; font-weight: 700; color: var(--om-gray-700); margin-bottom: 14px; }
+.om-modal-title i { color: var(--om-green-dark); margin-right: 6px; }
+
+/* ----- Items table (modal) ----- */
+.om-items { width: 100%; border-collapse: collapse; }
+.om-items th, .om-items td {
+    padding: 8px 10px; border-bottom: 1px solid var(--om-gray-200);
+    font-size: 14px; text-align: center;
+}
+.om-items th { background: var(--om-green-soft); color: var(--om-green-dark); font-weight: 700; }
+.om-items .text-left { text-align: left; }
+.om-items tbody tr.is-short { background: var(--om-red-soft); }
+.om-items tfoot td { border-top: 2px solid var(--om-gray-300); font-size: 14px; }
+.om-items tfoot td:has(#om-modal-value), #om-modal-value { white-space: nowrap; }
+.om-unit { color: var(--om-gray-500); font-size: 12px; }
+.om-tag-short { display: inline-block; padding: 1px 8px; border-radius: 10px; background: var(--om-red); color: #fff; font-size: 12px; font-weight: 700; }
+.om-tag-ok { display: inline-block; padding: 1px 8px; border-radius: 10px; background: var(--om-green-soft); color: var(--om-green-dark); font-size: 12px; font-weight: 700; }
+
+/* ----- Đổi sản phẩm trong dòng (modal Xem đơn hàng): hover tên hiện viền, click -> ô tìm ----- */
+.om-name-swap-wrap { position: relative; display: inline-block; }
+.om-name-swap {
+    display: inline-block; padding: 1px 6px; border-radius: 6px;
+    border: 1px dashed transparent; cursor: pointer; transition: border-color .12s, background-color .12s;
+}
+.om-name-swap:hover { border-color: var(--om-green); background: var(--om-green-soft); }
+.om-swap-input {
+    padding: 6px 10px; border: 1px dashed var(--om-green); border-radius: 6px;
+    font-size: 14px; background: var(--om-green-soft); box-sizing: border-box; min-width: 220px;
+}
+.om-swap-input:focus { outline: none; border-style: solid; }
+.om-swap-suggest { min-width: 240px; }
+
+/* ----- Thêm sản phẩm vào đơn (modal) ----- */
+.om-modal-add { margin-top: 12px; }
+.om-modal-add .om-add-input {
+    width: 100%; padding: 9px 12px; border: 1px dashed var(--om-green);
+    border-radius: 8px; font-size: 14px; background: var(--om-green-soft);
+}
+.om-modal-add .om-add-input:focus { outline: none; border-style: solid; }
+
+/* Nút "x" bỏ dòng: hình tròn, chỉ nổi bật (đỏ) khi hover — dùng chung cho cả 2 modal
+   (Xem đơn hàng .om-row-del / Thêm đơn hàng thủ công .om-new-row-del). */
+.om-row-del, .om-new-row-del {
+    width: 20px; height: 20px; border-radius: 50%; border: none;
+    background: var(--om-gray-100); color: var(--om-gray-500);
+    font-size: 12px; line-height: 1; cursor: pointer; margin-right: 6px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    transition: background .12s, color .12s;
+}
+.om-row-del:hover, .om-new-row-del:hover { background: var(--om-red); color: #fff; }
+
+/* Dòng nhập nhanh trong bảng "Thêm đơn hàng thủ công" (tạo sẵn dưới cột Tên sản phẩm) */
+.om-new-row-search {
+    width: 100%; padding: 6px 10px; border: 1px dashed var(--om-green);
+    border-radius: 6px; font-size: 14px; background: var(--om-green-soft); box-sizing: border-box;
+}
+.om-new-row-search:focus { outline: none; border-style: solid; }
+.om-items td .om-suggest { min-width: 260px; }
+
+.om-add-row-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border: 1px dashed var(--om-green); border-radius: 8px;
+    background: var(--om-green-soft); color: var(--om-green-dark);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.om-add-row-btn:hover { background: var(--om-green); color: #fff; border-style: solid; }
+
+/* ----- Responsive cards ----- */
+@media (max-width: 1280px) { .om-cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .om-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .om-cards { grid-template-columns: 1fr; } }
+
+/* ----- Pagination ----- */
+.om-pagination { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.om-pagination a {
+    padding: 6px 12px; border: 1px solid var(--om-gray-300); border-radius: 6px;
+    text-decoration: none; color: var(--om-gray-700); font-size: 13px;
+}
+.om-pagination a.active { background: var(--om-green); color: #fff; border-color: var(--om-green); }
+
+/* =====================================================================
+   PHIẾU SOẠN HÀNG (A4)
+   ===================================================================== */
+.om-slip-toolbar {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.om-slip-manual { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+.om-field { display: flex; flex-direction: column; gap: 5px; }
+.om-field label { font-size: 13px; font-weight: 600; color: var(--om-gray-700); }
+.om-field select, .om-field input {
+    padding: 8px 12px; border: 1px solid var(--om-gray-300); border-radius: 8px; font-size: 14px;
+    min-width: 240px; background: #fff;
+}
+.om-search-box { position: relative; }
+.om-suggest {
+    list-style: none; margin: 0; padding: 0; position: absolute; z-index: 30;
+    top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--om-gray-200);
+    border-radius: 8px; box-shadow: var(--om-shadow); max-height: 280px; overflow-y: auto; display: none;
+}
+.om-suggest li { padding: 8px 12px; cursor: pointer; font-size: 14px; }
+.om-suggest li:hover { background: var(--om-green-soft); }
+.om-suggest .muted { color: var(--om-gray-500); font-size: 12px; }
+
+/* ----- Tờ A4 ----- */
+/* Vùng cuộn cho phiếu: cuộn cả ngang (A4 rộng 210mm) lẫn dọc (phiếu dài) */
+.om-slip-scroll {
+    max-height: calc(100vh - 150px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 6px;
+}
+.om-slip {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: #fff;
+    padding: 4mm 14mm;
+    box-shadow: var(--om-shadow);
+    border-top: 6px solid var(--om-accent, var(--om-green));
+    color: #111;
+}
+/* Bố cục đầu phiếu: tiêu đề+ngày (trái) và thông tin KH (phải) dàn 2 bên */
+.om-slip-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.om-slip-head-main { flex: 0 0 auto; }
+.om-slip-head .om-slip-info { margin-bottom: 0; text-align: right; }
+.om-slip-title {
+    text-align: left; font-size: 24px; font-weight: 700; letter-spacing: 1px;
+    color: var(--om-accent, var(--om-green)); text-transform: uppercase;
+}
+.om-slip-date { text-align: left; font-style: italic; margin: 2px 0 0; font-size: 14px; }
+.om-slip-info { display: flex; flex-direction: column; gap: 4px; font-size: 15px; margin-bottom: 14px; }
+.om-slip-info b { font-weight: 700; }
+/* Tên khách hàng viết tắt: to hơn, tô theo màu thứ cấp của khách hàng (--om-accent) */
+#ps-cust { font-size: 22px; color: var(--om-accent, var(--om-green)); font-weight: 800; }
+
+.om-slip-table { width: 100%; border-collapse: collapse; }
+.om-slip-table th, .om-slip-table td {
+    border: none; border-bottom: 1px dashed #cbd5e1; padding: 4px 8px; font-size: 14px; vertical-align: top; text-align: center;
+}
+/* STT, SL đặt hàng, chung kiện: canh giữa theo chiều dọc của cell */
+.om-slip-table td.text-center,
+.om-slip-table td.ps-qty,
+.om-slip-table td.ps-qty-cell,
+.om-slip-table td.ps-shapes { vertical-align: middle; }
+/* Tiêu đề bảng: mỗi cột là 1 khối bo góc riêng (gap 3px), nền tô trên .ps-th-chip thay vì trên th.
+   vertical-align: bottom để các khối tiêu đề canh ngang mép dưới, không lệch dù chiều cao khác nhau. */
+.om-slip-table thead th { padding: 0; border-bottom: none; background: transparent; color: #111; font-weight: 700; vertical-align: bottom; }
+.ps-th-chip { display: block; margin: 0 1.5px; padding: 6px 8px; border-radius: 4px; }
+.ps-th-chip.ps-th-accent { background: color-mix(in srgb, var(--om-accent, #16a34a) 16%, #fff); }
+.ps-th-chip.ps-th-gray { background: var(--om-gray-100, #f1f5f9); color: #111; }
+.om-slip-table .text-left { text-align: left; }
+.om-slip-table td.text-left { padding: 3.5px 8px; }
+.ps-pname { font-weight: 700; text-transform: uppercase; font-size: 12px; }
+.ps-short-flag { color: var(--om-red); margin-right: 4px; font-size: 13px; }
+.ps-sub { font-size: 11px; color: #555; margin-top: 2px; display: flex; gap: 14px; flex-wrap: wrap; }
+.ps-sub .ps-tk { font-weight: 600; color: var(--om-green-dark); font-size: 10.5px; }
+.ps-sub .ps-reminder { font-weight: 600; color: #c2410c; flex-basis: 100%; }
+.ps-sub .ps-reminder i { margin-right: 3px; }
+.om-slip-table th.ps-qty-h { text-align: center; }
+.ps-qty, .ps-qty-cell { text-align: left; }
+.ps-qty-line { justify-content: flex-start !important; }
+/* Số thứ tự: viên tròn nền đen chữ trắng; dòng trống (không có SP) chìm lại */
+.ps-stt-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #000; color: #fff; font-weight: 700; font-size: 12px;
+}
+tr.ps-empty-row { background: #fafafa; }
+tr.ps-empty-row .ps-stt-badge { background: #e2e2e2; color: #b3b3b3; }
+/* Vòng tròn nền trắng để NV tick kiểm, đặt bên trái số lượng */
+.ps-check {
+    display: inline-block; width: 15px; height: 15px;
+    border: 1.6px solid #333; border-radius: 50%; background: #fff;
+    vertical-align: middle; margin-right: 6px; flex: 0 0 auto;
+}
+.ps-qty { font-weight: 700; font-size: 16px; }
+.ps-qty .ps-qty-val { vertical-align: middle; }
+.ps-qty-cell .ps-qty-input { width: 78px; padding: 4px 6px; border: 1px solid var(--om-gray-300); border-radius: 6px; text-align: center; }
+.ps-qty-line { display: flex; align-items: center; justify-content: center; margin-top: 4px; }
+.ps-qty-cell .ps-qty-text { font-weight: 700; font-size: 16px; }
+
+/* Chung kiện: ô hình để tick tay */
+.ps-shapes { position: relative; }
+.ps-shape { display: inline-block; width: 16px; height: 16px; border: 1.6px solid #333; margin: 0 4px; vertical-align: middle; background: #fff; position: relative; }
+.ps-shape.ps-sq { border-radius: 2px; }
+.ps-shape.ps-ci { border-radius: 50%; }
+/* Lục giác viền đen, nền trắng (dùng 2 lớp clip-path).
+   ps-hex hiển thị bằng MÀU NỀN (không có border) -> phải ép in màu nền để không bị ẩn khi in. */
+.ps-shape.ps-hex {
+    border: none; background: #333;
+    clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.ps-shape.ps-hex::after {
+    content: ''; position: absolute; inset: 1.6px; background: #fff;
+    clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.ps-row-del { position: absolute; right: 4px; top: 4px; cursor: pointer; color: var(--om-red); font-weight: 700; font-size: 16px; }
+
+/* Toggle quy đổi kiện <-> số: ẩn, chỉ hiện khi hover vào ô (TK / SL) */
+.ps-conv-tg {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; margin-left: 5px; border-radius: 5px;
+    background: var(--om-gray-200); color: var(--om-gray-700);
+    font-size: 10px; cursor: pointer; vertical-align: middle;
+    opacity: 0; transition: opacity .15s ease, background .15s ease;
+}
+.ps-tk:hover .ps-conv-tg,
+.ps-qty-line:hover .ps-conv-tg { opacity: 1; }
+.ps-conv-tg:hover { background: var(--om-green-soft); color: var(--om-green-dark); }
+/* Sau khi quy đổi, toggle ẩn lại; hover vào ô mới hiện để quy đổi tiếp */
+.ps-conv-tg.is-on { background: var(--om-green); color: #fff; }
+
+.om-slip-foot { margin-top: 10px; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.ps-note-label { color: var(--om-red); font-weight: 600; }
+.om-slip-kien b { font-weight: 700; }
+
+/* ----- Nút phụ (xanh lá đậm) cho "Xác nhận xuất kho" ----- */
+.om-btn-success { background: var(--om-green-dark); color: #fff; }
+.om-btn-success:hover { background: #166534; color: #fff; }
+.om-btn-success i { color: #fff; }
+
+/* ----- Toolbar phiếu nhập tay: 2 khối căn giữa ----- */
+.om-slip-toolbar.is-manual { flex-direction: column; align-items: center; gap: 14px; }
+.om-slip-manual { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+.om-field-branch { align-items: center; text-align: center; }
+.om-slip-manual-actions { display: flex; align-items: flex-end; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.om-slip-tb-right { display: flex; align-items: center; gap: 10px; }
+
+/* Item NVL trong gợi ý + ô đang chọn bằng phím */
+.om-suggest li.active { background: var(--om-green-soft); }
+.ps-sg-badge {
+    display: inline-block; padding: 0 6px; border-radius: 8px; margin-left: 4px;
+    background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700;
+}
+
+/* Ghi chú: input nhập (màn hình) + span (chỉ khi in) */
+.ps-note-input {
+    border: none; border-bottom: 1px dashed var(--om-gray-300);
+    outline: none; font-size: 14px; min-width: 220px; padding: 2px 4px;
+    background: transparent; color: #111;
+}
+.ps-note-input:focus { border-bottom-color: var(--om-green); }
+.ps-note-print { display: none; }
+
+/* Cảnh báo thiếu tồn */
+.ps-stock-warn {
+    margin: 10px 0; padding: 10px 14px; border-radius: 8px;
+    background: var(--om-red-soft); border: 1px solid #fca5a5; color: #991b1b; font-size: 13px;
+}
+.ps-warn-head { font-weight: 700; margin-bottom: 4px; }
+.ps-warn-head i { margin-right: 6px; }
+.ps-stock-warn ul { margin: 0; padding-left: 18px; }
+.ps-stock-warn li { padding: 1px 0; }
+
+.om-outbound-confirm-box { width: min(420px, 96vw); }
+
+/* ----- Modal Setting: thứ tự hiển thị phiếu soạn ----- */
+.ps-setting-box { width: min(640px, 96vw); }
+.ps-setting-search {
+    width: 100%; padding: 9px 12px; margin-bottom: 10px;
+    border: 1px solid var(--om-gray-300); border-radius: 8px; font-size: 14px; outline: none;
+}
+.ps-setting-search:focus { border-color: var(--om-green); }
+.ps-setting-list { max-height: 56vh; overflow-y: auto; border: 1px solid var(--om-gray-200); border-radius: 8px; }
+.ps-setting-loading { padding: 20px; text-align: center; color: var(--om-gray-500); }
+.ps-set-table { width: 100%; border-collapse: collapse; }
+.ps-set-table th, .ps-set-table td { padding: 7px 10px; border-bottom: 1px solid var(--om-gray-200); font-size: 13.5px; text-align: center; }
+.ps-set-table th { position: sticky; top: 0; background: var(--om-green-soft); color: var(--om-green-dark); font-weight: 700; }
+.ps-set-table td.text-left, .ps-set-table th.text-left { text-align: left; }
+.ps-set-cat { font-size: 11px; color: var(--om-gray-500); }
+.ps-set-input { width: 84px; padding: 5px 7px; border: 1px solid var(--om-gray-300); border-radius: 6px; text-align: center; font-size: 14px; }
+.ps-set-input:focus { outline: none; border-color: var(--om-green); }
+
+/* ----- Modal "Thêm đơn hàng thủ công": chi nhánh + ngày tạo đơn cạnh nhau ----- */
+.om-new-order-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.om-new-order-row select,
+.om-new-order-row input[type="date"] {
+    padding: 8px 12px; border: 1px solid var(--om-gray-300); border-radius: 8px; font-size: 14px; background: #fff;
+}
+.om-new-order-row select { min-width: 240px; }
+#om-new-customer { margin-bottom: 8px; }
+.om-new-order-note { margin-bottom: 14px; }
+.om-new-order-note input {
+    width: 100%; padding: 8px 12px; border: 1px solid #fde68a; border-radius: 8px; font-size: 14px; background: #fffbeb;
+}
+
+/* Ô số lượng modal "Thêm đơn hàng thủ công": input thường, không cần nút bước nhảy */
+.om-new-qty-input::-webkit-outer-spin-button,
+.om-new-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.om-new-qty-input { -moz-appearance: textfield; }
+
+/* Ô tên sản phẩm đã chọn: hover hiện viền, click để đổi sang SP khác.
+   border-bottom riêng = màu line ngăn hàng mặc định (border:transparent phía trên đè mất,
+   khiến cột "Tên sản phẩm" mất line dưới so với các cột khác cùng hàng) — bổ sung lại. */
+#om-new-modal-body td.text-left {
+    border: 1px solid transparent; border-bottom-color: var(--om-gray-200); border-radius: 6px; transition: border-color .15s ease;
+}
+#om-new-modal-body tr:not(.om-new-row-draft):not(.om-new-row-editing) td.text-left {
+    cursor: pointer;
+}
+#om-new-modal-body tr:not(.om-new-row-draft):not(.om-new-row-editing) td.text-left:hover {
+    border-color: var(--om-green);
+}
+
+/* ----- Modal "Xem đơn hàng": tiêu đề + nút "Xem hàng thiếu" cùng hàng ----- */
+.om-modal-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.om-modal-title-row .om-modal-title { margin-bottom: 0; }
+
+/* Rộng hơn .om-modal-box mặc định (720px) để cột "Tên sản phẩm" đủ chỗ hiện trọn 1 dòng,
+   không bị xuống dòng (bảng giờ có thêm cột Khối lượng, nhiều cột hơn các modal khác). */
+.om-order-box { width: min(940px, 96vw); }
+.om-order-box .om-items td.text-left,
+.om-order-box .om-items th.text-left { white-space: nowrap; }
+
+/* Vùng đệm quanh nội dung khi "Chụp" (html2canvas chụp đúng #om-order-capture) —
+   không để nội dung sát mép ảnh khi gửi khách. */
+#om-order-capture { padding: 14px; background: #fff; }
+
+/* ----- Modal "Xem hàng thiếu" ----- */
+.om-shortage-box { width: min(880px, 96vw); }
+.om-shortage-empty { text-align: center; color: var(--om-gray-500); padding: 20px 0; }
+/* border shorthand transparent (hover ring) sẽ đè mất border-bottom kẻ hàng của .om-items td —
+   phải trả lại border-bottom-color để đường line row liền mạch qua cả 2 ô click được này. */
+.om-shortage-table td.om-shortage-lack {
+    font-weight: 700; color: var(--om-red); cursor: pointer;
+    border: 1px solid transparent; border-bottom-color: var(--om-gray-200);
+    border-radius: 6px; transition: border-color .15s ease;
+}
+.om-shortage-table td.om-shortage-lack:hover { border-color: var(--om-red); background: var(--om-red-soft); }
+.om-shortage-table td.om-shortage-date {
+    cursor: pointer; color: var(--om-gray-700);
+    border: 1px solid transparent; border-bottom-color: var(--om-gray-200);
+    border-radius: 6px; transition: border-color .15s ease;
+}
+.om-shortage-table td.om-shortage-date.is-unset { color: var(--om-gray-500); font-style: italic; }
+.om-shortage-table td.om-shortage-date:hover { border-color: var(--om-green); }
+/* Cột thao tác (thêm vào lịch SX + gỡ tạm): 2 nút nằm NGANG hàng, không wrap dọc khi cột hẹp. */
+.om-shortage-table td.no-capture { white-space: nowrap; }
+.om-shortage-table td.om-shortage-date input[type="date"] { border: 1px solid var(--om-gray-300); border-radius: 6px; padding: 4px 6px; font-size: 13px; }
+.om-shortage-row-del, .om-shortage-row-addplan {
+    width: 20px; height: 20px; border-radius: 50%; border: none;
+    background: var(--om-gray-100); color: var(--om-gray-500);
+    font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .12s, color .12s;
+}
+.om-shortage-row-del:hover { background: var(--om-red); color: #fff; }
+.om-shortage-row-addplan { margin-right: 4px; font-size: 11px; }
+.om-shortage-row-addplan:hover { background: var(--om-green); color: #fff; }
+
+/* Select "Thêm vào lịch sản xuất" TỪNG DÒNG — xổ ra thay chỗ 2 nút icon lúc bấm (giống ô
+ * "Dự kiến ngày có lại" xổ input[date]), đóng lại (chọn xong hoặc rời đi) là render lại bảng. */
+.om-shortage-row-select {
+    padding: 3px 6px; border: 1px solid var(--om-green); border-radius: 6px;
+    font-size: 12px; color: var(--om-gray-700); background: #fff; cursor: pointer; max-width: 118px;
+}
+
+/* Toast góc trái dưới — thông báo tự ẩn, không cần bấm OK (thay cho alert() ở các thao tác nhanh). */
+.om-toast {
+    position: fixed; left: 20px; bottom: 20px; z-index: 5000;
+    background: #111827; color: #fff; padding: 11px 18px; border-radius: 10px;
+    font-size: 13.5px; max-width: min(360px, 80vw);
+    box-shadow: var(--om-shadow); opacity: 0; transform: translateY(6px);
+    transition: opacity .2s ease, transform .2s ease;
+}
+.om-toast.show { opacity: 1; transform: translateY(0); }
+
+/* Nút "Xem hàng thiếu" (mở modal trên) — pill gọn, tông đỏ cảnh báo thay vì ghost xám mặc định. */
+#om-view-shortage-btn {
+    background: var(--om-red-soft);
+    color: var(--om-red);
+    border-color: var(--om-red-soft);
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+#om-view-shortage-btn:hover { background: var(--om-red); color: #fff; border-color: var(--om-red); }
+
+/* ----- Modal "Đối chiếu công thức" ----- */
+.om-recipe-box { width: min(620px, 96vw); }
+.om-recipe-verdict {
+    padding: 10px 14px; border-radius: 8px; font-weight: 700; font-size: 14px; margin-bottom: 14px;
+}
+.om-recipe-verdict.is-ok { background: var(--om-green-soft); color: var(--om-green-dark); }
+.om-recipe-verdict.is-bad { background: var(--om-red-soft); color: var(--om-red); }
+.om-recipe-table td.is-short { color: var(--om-red); font-weight: 700; }
+.om-recipe-table td.is-ok { color: var(--om-green-dark); font-weight: 700; }
+
+/* ----- Modal Cài đặt: tự xóa đơn đã bốc ----- */
+.om-auto-delete-box { width: min(420px, 96vw); }
+.om-auto-delete-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.om-auto-delete-opt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border: 1px solid var(--om-gray-200); border-radius: 8px;
+    font-size: 14px; cursor: pointer; transition: var(--om-transition, .15s ease);
+}
+.om-auto-delete-opt:hover { border-color: var(--om-green); background: var(--om-green-soft); }
+.om-auto-delete-opt input { margin: 0; }
+
+/* ----- In ----- */
+@media print {
+    .no-print, .app-sidebar, .app-header, .om-slip-toolbar, .ps-conv-tg { display: none !important; }
+    /* global.css khóa html/body/#wrapper ở height:100% + overflow:hidden (khung app 1 màn hình) ->
+       phải gỡ mới cho nội dung phiếu dài hơn 1 trang A4 tự phân trang khi in, không bị cắt mất. */
+    html, body, #wrapper { height: auto !important; overflow: visible !important; }
+    body { background: #fff; }
+    body.app-has-sidebar #wrapper { padding-left: 0 !important; }
+    #wrapper { padding: 0 !important; }
+    .om-page { padding: 0 !important; }
+    /* Bỏ giới hạn cuộn khi in để nội dung tự trải dài (tự phân trang nếu > A4) */
+    .om-slip-scroll { max-height: none !important; overflow: visible !important; padding: 0 !important; }
+    .om-slip {
+        box-shadow: none; margin: 0; width: 100%; padding: 4mm 12mm;
+        border-top: 6px solid var(--om-accent, var(--om-green));
+        max-height: none !important; overflow: visible !important; min-height: 0;
+    }
+    /* Ép giữ màu nhấn (tiêu đề, viền, nền th) khi in màu, không bị trình duyệt/máy in lược bớt. */
+    .om-slip, .om-slip-title, .om-slip-table th, .ps-th-chip, .ps-stt-badge {
+        -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+    }
+    .ps-qty-input { display: none !important; }
+    .ps-qty-cell .ps-qty-text { margin-top: 0; }
+    /* Tự phân trang gọn: lặp lại tiêu đề bảng, không cắt ngang 1 dòng SP */
+    .om-slip-table thead { display: table-header-group; }
+    .om-slip-table tr { page-break-inside: avoid; }
+    /* Ghi chú: ẩn ô input, hiện text đã nhập */
+    .ps-note-print { display: inline !important; }
+    /* Ép in màu nền cho lục giác (vẽ bằng background, không có border) */
+    .ps-shape.ps-hex, .ps-shape.ps-hex::after {
+        -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+    }
+}
+@page { size: A4; margin: 0 10mm 10mm; }
+
+/* =====================================================================
+   branch_orders — trạng thái đơn (bốc/khóa), hẹn bốc, nút, modal sửa SL
+   ===================================================================== */
+.om-card { position: relative; }
+.om-card.is-picked { opacity: .55; }
+.om-card.is-locked { box-shadow: 0 0 0 2px #fcd34d inset, var(--om-shadow); }
+
+.om-card-del {
+    position: absolute; top: 8px; right: 10px;
+    border: none; background: transparent; color: var(--om-gray-500);
+    font-size: 20px; line-height: 1; cursor: pointer; z-index: 2;
+}
+.om-card-del:hover { color: var(--om-red); }
+.om-picked-flag {
+    position: absolute; top: 10px; right: 34px;
+    color: var(--om-green-dark); font-size: 12px; font-weight: 700;
+}
+
+/* Nhắc "trước bốc hàng" theo chi nhánh (Điểm nhắc) — chỉ hiện khi đã bốc + đã xác nhận. */
+.om-branch-reminder { display: flex; flex-direction: column; gap: 4px; margin: -2px 0 4px; }
+.om-branch-reminder-item {
+    background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
+    padding: 6px 10px; font-size: 12.5px; font-weight: 600; color: #c2410c;
+}
+.om-branch-reminder-item i { margin-right: 4px; }
+
+/* Cụm thời gian / người nhận: xanh dương nhạt */
+.om-card-row { color: #4a4f58; }
+.om-card-row i { color:#7f8791; }
+
+/* Hẹn bốc: label 1 dòng, dòng dưới là input + nút gửi */
+.om-card-pickup { display: flex; flex-direction: column; gap: 5px; }
+.om-card-pickup label { font-size: 12px; color: var(--om-gray-500); }
+.om-card-pick { display: flex; align-items: center; gap: 6px; }
+.om-pickup-input { flex: 1; min-width: 0; padding: 5px 7px; border: 1px solid var(--om-gray-300); border-radius: 6px; font-size: 12px; }
+.om-send-pickup { flex: 0 0 auto; border: none; background: var(--om-green); color: #fff; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; }
+.om-send-pickup:hover { background: var(--om-green-dark); }
+
+/* Hàng check: Xác nhận đơn hàng + Đã bốc cùng 1 hàng ngang */
+.om-card-checks {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border-top: 1px dashed var(--om-gray-200); padding-top: 8px;
+}
+.om-card-confirm, .om-card-flags { display: flex; align-items: center; }
+.om-confirm-toggle { font-size: 12.5px; color: var(--om-gray-700); display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600; }
+.om-confirm-toggle input { accent-color: var(--om-green); }
+.om-card.is-confirmed .om-confirm-toggle { color: var(--om-green-dark); }
+.om-picked-toggle { font-size: 12.5px; color: var(--om-gray-700); display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.om-lock-btn { border: 1px solid var(--om-gray-300); background: #fff; color: var(--om-gray-700); border-radius: 8px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.om-lock-btn:hover { border-color: #f59e0b; color: #b45309; }
+.om-lock-btn.is-on { background: #fef3c7; border-color: #f59e0b; color: #b45309; }
+
+/* Nút giữ chữ/icon trắng + không gạch chân khi hover */
+.om-btn, .om-btn:hover, .om-btn:focus { text-decoration: none; }
+.om-btn-primary, .om-btn-primary:hover, .om-btn-primary:focus { color: #fff; }
+.om-btn-primary:hover i, .om-btn-primary i { color: #fff; }
+
+/* Modal sửa số lượng */
+.om-modal-hint { color: var(--om-gray-500); font-size: 13px; margin-bottom: 12px; }
+.om-modal-warn {
+    margin-bottom: 12px; padding: 10px 14px; border-radius: 8px;
+    background: var(--om-red-soft); border: 1px solid #fca5a5; color: #991b1b; font-size: 13px;
+}
+.om-warn-head { font-weight: 700; margin-bottom: 4px; }
+.om-warn-head i { margin-right: 6px; }
+.om-modal-warn ul { margin: 0; padding-left: 18px; }
+.om-modal-warn li { padding: 1px 0; }
+.om-modal-foot { margin-top: 14px; text-align: right; }
+/* Gọn gàng: không viền lúc bình thường, chỉ hiện viền khi hover/focus — dùng chung cho cả 2 modal. */
+.om-qty-input, .om-new-qty-input {
+    width: 56px; padding: 4px 6px; border: 1px solid transparent; border-radius: 6px;
+    text-align: center; font-size: 13px; background: transparent;
+    transition: border-color .12s, background-color .12s;
+}
+.om-qty-input:hover, .om-new-qty-input:hover { border-color: var(--om-gray-300); background: #fff; }
+.om-qty-input:focus, .om-new-qty-input:focus { outline: none; border-color: var(--om-green); background: #fff; }

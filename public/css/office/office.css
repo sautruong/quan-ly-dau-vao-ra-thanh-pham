@@ -1,0 +1,598 @@
+/* =====================================================================
+ *  OFFICE (Docs + Sheets) — office.css
+ * ===================================================================== */
+:root {
+    --of-green: #16a34a;
+    --of-green-d: #15803d;
+    --of-bd: #e5e7eb;
+    --of-muted: #6b7280;
+}
+
+/* ================= Danh sách (docs_list / sheets_list) ================= */
+.of-content {
+    padding: 18px 22px 60px;
+    background: #f6f8fa;
+    min-height: 100vh;
+    overflow-x: auto;
+}
+
+.of-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid var(--of-bd);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    margin-bottom: 18px;
+}
+
+.of-tb-left { display: flex; align-items: center; gap: 14px; }
+.of-tb-right { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.of-page-title { display: flex; align-items: center; gap: 8px; font-size: 18px; margin: 0; color: #1f2937; }
+/* Link nhỏ cạnh tiêu đề trang để chuyển nhanh qua lại Docs ⇄ Sheets. */
+.of-page-switch {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--of-muted);
+    border: 1px solid var(--of-bd); border-radius: 20px; padding: 5px 11px; text-decoration: none;
+}
+.of-page-switch:hover { color: var(--of-green-d); border-color: var(--of-green); }
+
+.of-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--of-bd); background: #fff; color: #374151;
+    padding: 9px 14px; border-radius: 9px; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: .15s;
+}
+.of-btn:hover { background: #f3f4f6; border-color: #d1d5db; }
+.of-btn:disabled { opacity: .5; cursor: not-allowed; }
+.of-btn-primary { background: #e9f9ee; border-color: var(--of-green); color: var(--of-green-d); }
+.of-btn-primary:hover { background: #d7f3e0; }
+.of-btn-danger { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.of-btn-danger:hover { background: #fee2e2; border-color: #fca5a5; }
+
+/* Nút "Lưu": chìm khi chưa có thay đổi (disabled), sáng xanh khi có thay đổi chưa lưu. */
+.of-btn-save { background: #f3f4f6; border-color: var(--of-bd); color: #9ca3af; }
+.of-btn-save:disabled { opacity: 1; background: #f3f4f6; color: #9ca3af; }
+.of-btn-save.is-dirty { background: var(--of-green); border-color: var(--of-green-d); color: #fff; opacity: 1; }
+.of-btn-save.is-dirty:hover { background: var(--of-green-d); }
+
+.of-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--of-bd); background: #fff; color: #374151;
+    padding: 8px 13px; border-radius: 20px; font-size: 13.5px; cursor: pointer;
+}
+.of-chip.is-active { background: var(--of-green); border-color: var(--of-green); color: #fff; }
+.of-badge {
+    background: #ef4444; color: #fff; border-radius: 10px; font-size: 11px;
+    padding: 1px 6px; margin-left: 2px;
+}
+
+.of-section-head {
+    display: flex; align-items: center; gap: 8px; font-weight: 600; color: #374151;
+    margin: 18px 0 10px;
+}
+
+.of-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;
+    user-select: none; /* khua chuột kéo chọn nhiều thẻ không bị dính bôi đen chữ ngoài ý muốn */
+}
+/* Khung chữ nhật khi khua chuột kéo chọn nhiều thẻ cùng lúc (xem bindDragSelect() trong list.js). */
+.of-drag-select-box {
+    position: fixed; z-index: 50; background: rgba(22, 163, 74, .12);
+    border: 1px solid var(--of-green); border-radius: 2px; pointer-events: none;
+}
+
+.of-card {
+    position: relative; background: #fff; border: 1px solid var(--of-bd); border-radius: 12px;
+    padding: 4px; transition: .15s; cursor: pointer;
+}
+.of-card:hover { border-color: var(--of-green); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.of-card-star {
+    position: absolute; top: 8px; right: 34px; color: #d1d5db; cursor: pointer; z-index: 2;
+}
+.of-card-star.is-on { color: #f59e0b; }
+/* Checkbox chọn nhiều để xóa/chia sẻ hàng loạt — đặt cạnh PHẢI của sao (sao đã dịch trái ở trên
+   để nhường chỗ), style tròn xanh lá dùng chung .app-round-check (app_shell.css). */
+.of-card-check { position: absolute; top: 7px; right: 8px; z-index: 2; }
+.of-card-open { padding: 18px 14px 12px; text-align: center; }
+.of-card-icon { font-size: 34px; color: var(--of-green); margin-bottom: 10px; }
+.of-card-title {
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    font-size: 13.5px; font-weight: 500; color: #1f2937;
+}
+.of-card-title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.of-card-rename-pencil { display: none; color: var(--of-muted); font-size: 10.5px; cursor: pointer; flex: 0 0 auto; }
+.of-card:hover .of-card-rename-pencil { display: inline-block; }
+.of-card-rename-pencil:hover { color: var(--of-green-d); }
+.of-card-title-input {
+    width: 100%; font-size: 13.5px; font-weight: 500; text-align: center; color: #1f2937;
+    border: 1px solid var(--of-green); border-radius: 6px; padding: 2px 4px; outline: none;
+}
+.of-card-sub { font-size: 11.5px; color: var(--of-muted); margin-top: 4px; }
+.of-card-perm {
+    display: inline-block; margin-left: 6px; background: #eef2ff; color: #4338ca;
+    border-radius: 8px; padding: 1px 6px; font-size: 10.5px;
+}
+.of-card-actions {
+    display: flex; gap: 4px; justify-content: center; padding: 0 8px 10px;
+}
+.of-card-act {
+    width: 26px; height: 26px; border: 1px solid var(--of-bd); border-radius: 6px; background: #fff;
+    color: #6b7280; display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px;
+    cursor: pointer; text-decoration: none;
+}
+.of-card-act:hover { background: #f3f4f6; color: #374151; }
+.of-card-lib.is-on { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+.of-card-leave:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+
+.of-empty {
+    text-align: center; color: var(--of-muted); padding: 40px 10px;
+}
+.of-empty i { font-size: 34px; margin-bottom: 10px; display: block; }
+
+/* ---------- Modal / toast / context menu (dùng chung cho list + editor) ---------- */
+.of-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+}
+.of-modal {
+    background: #fff; border-radius: 14px; width: 420px; max-width: 92vw;
+    max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,.2);
+}
+.of-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--of-bd);
+}
+.of-modal-head h3 { margin: 0; font-size: 16px; }
+.of-modal-x { border: 0; background: none; cursor: pointer; color: var(--of-muted); font-size: 16px; }
+.of-modal-body { padding: 16px 18px; overflow-y: auto; }
+
+.of-toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px);
+    background: #111827; color: #fff; padding: 10px 18px; border-radius: 10px;
+    font-size: 13.5px; opacity: 0; pointer-events: none; transition: .2s; z-index: 300;
+}
+.of-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.of-toast.err { background: #b91c1c; }
+
+.of-ctxmenu {
+    position: absolute; background: #fff; border: 1px solid var(--of-bd); border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.12); z-index: 250; min-width: 150px; overflow: hidden;
+}
+.of-ctx-item { padding: 9px 14px; font-size: 13.5px; cursor: pointer; }
+.of-ctx-item:hover { background: #f3f4f6; }
+
+.of-muted { color: var(--of-muted); font-size: 13px; }
+.of-link { border: 0; background: none; color: #b91c1c; cursor: pointer; font-size: 12.5px; }
+/* "← Quay lại danh sách" trong modal Chia sẻ khi mở TỪ 1 danh sách khác (vd kết quả Trộn file)
+   — dùng chung khung .of-link nhưng đổi màu, tránh đỏ (ngầm hiểu là xoá/nguy hiểm). */
+.of-share-back { display: block; color: var(--of-muted); }
+.of-share-back:hover { color: var(--of-green-d); }
+
+.of-backguard-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* ---------- "Thiết lập gridlines" (modal chọn viền theo vùng, mô phỏng khối vuông của Excel) ---------- */
+.of-border-color-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; margin-bottom: 14px; }
+.of-border-preview {
+    position: relative; width: 100px; height: 100px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1px;
+    background: #cbd5e1; border-radius: 4px;
+}
+.of-border-preview .obp-cell { background: #fff; }
+.obp-line { position: absolute; cursor: pointer; z-index: 2; }
+.obp-line::after { content: ''; position: absolute; background: #94a3b8; border-radius: 2px; transition: .1s; }
+.obp-line:hover::after { background: #64748b; }
+.obp-line.is-on::after { background: #2563eb; }
+.obp-top, .obp-bottom { left: 10px; right: 10px; height: 10px; }
+.obp-top { top: -5px; } .obp-bottom { bottom: -5px; }
+.obp-top::after, .obp-bottom::after { left: 0; right: 0; top: 4px; height: 2px; }
+.obp-top.is-on::after, .obp-bottom.is-on::after { height: 3px; }
+.obp-left, .obp-right { top: 10px; bottom: 10px; width: 10px; }
+.obp-left { left: -5px; } .obp-right { right: -5px; }
+.obp-left::after, .obp-right::after { top: 0; bottom: 0; left: 4px; width: 2px; }
+.obp-left.is-on::after, .obp-right.is-on::after { width: 3px; }
+.obp-vmid { top: 10px; bottom: 10px; left: calc(50% - 5px); width: 10px; }
+.obp-vmid::after { top: 0; bottom: 0; left: 4px; width: 2px; }
+.obp-vmid.is-on::after { width: 3px; }
+.obp-hmid { left: 10px; right: 10px; top: calc(50% - 5px); height: 10px; }
+.obp-hmid::after { left: 0; right: 0; top: 4px; height: 2px; }
+.obp-hmid.is-on::after { height: 3px; }
+
+/* ---------- Chia sẻ ---------- */
+.of-share-tabs { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1px solid var(--of-bd); }
+.of-share-tab {
+    border: 0; background: none; padding: 8px 4px; font-size: 13.5px; color: var(--of-muted);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.of-share-tab.is-active { color: var(--of-green-d); border-bottom-color: var(--of-green); font-weight: 600; }
+.of-share-chat-label { display: block; font-size: 13px; color: #374151; margin-bottom: 6px; }
+.of-share-chat-note {
+    width: 100%; min-height: 70px; margin-top: 10px; padding: 8px; border: 1px solid var(--of-bd);
+    border-radius: 8px; font-size: 13px; resize: vertical;
+}
+.of-share-list { max-height: 160px; overflow-y: auto; border: 1px solid var(--of-bd); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+.of-share-row { display: block; padding: 5px 4px; font-size: 13.5px; }
+.of-share-perm-row { margin-bottom: 12px; font-size: 13.5px; }
+.of-share-perm-row select { margin-left: 6px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--of-bd); }
+
+/* ---------- "Trộn file" (mail-merge Docs ⇄ Sheets) ---------- */
+.of-merge-field { margin-bottom: 12px; }
+.of-merge-field label { display: block; font-size: 13px; color: #374151; margin-bottom: 6px; }
+.of-merge-field select, .of-merge-field input[type="text"] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--of-bd); border-radius: 8px; font-size: 13.5px;
+}
+#of-merge-confirm { width: 100%; justify-content: center; margin-top: 4px; }
+.of-merge-dl-all { width: 100%; justify-content: center; margin-bottom: 10px; }
+.of-merge-save-btn { width: 100%; justify-content: center; margin-bottom: 14px; }
+.of-merge-result-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+.of-merge-result-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border: 1px solid var(--of-bd); border-radius: 8px; padding: 9px 12px;
+}
+.of-merge-result-title { font-size: 13.5px; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.of-merge-result-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.of-merge-result-actions a, .of-merge-result-actions button {
+    display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+    border: 1px solid var(--of-bd); border-radius: 7px; background: #fff; color: #374151;
+    cursor: pointer; text-decoration: none; font-size: 13px;
+}
+.of-merge-result-actions a:hover, .of-merge-result-actions button:hover { background: #f3f4f6; border-color: #d1d5db; }
+.of-merge-act-del:hover { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
+.of-share-sep { border: 0; border-top: 1px solid var(--of-bd); margin: 16px 0; }
+.of-share-exist { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13.5px; }
+.of-share-exist span:first-child { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.of-share-perm { color: var(--of-muted); font-size: 12px; }
+.of-share-perm-select {
+    font-size: 12.5px; padding: 4px 6px; border: 1px solid var(--of-bd); border-radius: 6px; color: #374151;
+}
+
+/* ---------- Lịch sử phiên bản ---------- */
+.of-version-row { padding: 10px 0; border-bottom: 1px solid var(--of-bd); }
+.of-version-row .of-btn { margin-top: 6px; }
+
+/* ================= Editor (chung Docs + Sheets) ================= */
+/* Trang editor NẰM TRONG sidebar + header dùng chung (#wrapper.has-sider > .content),
+   không đứng độc lập. .content vốn được app_shell.css cấp flex:1 1 auto — ở đây ép nó
+   thành 1 cột chiều cao cố định (trừ chiều cao header) rồi tự chứa layout con: thanh tiêu đề
+   (of-ed-head) → thanh công cụ → vùng soạn thảo/bảng tính cuộn RIÊNG bên trong (giống
+   .pm-ws của project_management/detail.css), nhờ vậy khổ giấy/bảng tính luôn nằm NGAY DƯỚI
+   thanh tiêu đề và xem được trọn vẹn thay vì bị đẩy ra ngoài hoặc chồng lên nhau. */
+.of-ed-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--app-header-h, 64px));
+    overflow: hidden;
+    padding: 0;
+    background: #f6f8fa;
+}
+
+.of-ed-head {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+    background: #fff; border-bottom: 1px solid var(--of-bd);
+}
+.of-ed-back { color: #374151; font-size: 16px; padding: 6px; }
+.of-ed-icon { color: var(--of-green); font-size: 18px; }
+.of-ed-title {
+    border: 1px solid transparent; background: transparent; font-size: 16px; font-weight: 600;
+    padding: 6px 8px; border-radius: 8px; max-width: 320px;
+}
+.of-ed-title:hover, .of-ed-title:focus { border-color: var(--of-bd); background: #f9fafb; outline: none; }
+.of-ed-savestate { font-size: 12px; color: var(--of-muted); white-space: nowrap; }
+.of-ed-presence { font-size: 12.5px; color: #4338ca; white-space: nowrap; }
+.of-ed-typing { color: #d97706; font-style: italic; }
+.of-ed-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.of-ed-gridcheck { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; cursor: pointer; user-select: none; }
+/* Ctrl+lăn chuột trong vùng trang/lưới đổi số này — bấm vào để về lại 100% (xem initZoom() ở
+   office_common.js). */
+.of-ed-zoom {
+    border: 1px solid var(--of-bd); background: #fff; color: #374151; cursor: pointer;
+    padding: 6px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 600; min-width: 48px;
+}
+.of-ed-zoom:hover { background: #f3f4f6; }
+.of-sheet-subbar {
+    flex: 0 0 auto; display: flex; align-items: center; padding: 6px 14px;
+    background: #fff; border-bottom: 1px solid var(--of-bd);
+}
+
+.of-noaccess { text-align: center; padding: 80px 20px; color: var(--of-muted); }
+.of-noaccess i { font-size: 40px; display: block; margin-bottom: 14px; }
+
+/* ---------- Docs ---------- */
+.of-doc-toolbar {
+    flex: 0 0 auto;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+    background: #fff; border-bottom: 1px solid var(--of-bd); padding: 6px 14px;
+}
+.of-tb-btn {
+    border: 1px solid transparent; background: none; color: #374151; padding: 7px 9px;
+    border-radius: 7px; cursor: pointer; font-size: 13.5px; display: inline-flex; align-items: center; gap: 5px;
+}
+.of-tb-btn:hover { background: #f3f4f6; }
+.of-tb-btn.is-active { background: var(--of-green-soft, #dcfce7); color: var(--of-green-d); }
+.of-tb-sep { width: 1px; height: 20px; background: var(--of-bd); margin: 0 6px; }
+.of-tb-select { border: 1px solid var(--of-bd); border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+
+/* ---------- Thước kẻ thụt lề (ruler) — hiện khi bôi đen văn bản trong Docs ---------- */
+/* Cùng width:800px;max-width:100%;margin:0 auto như .of-doc-page để 2 thanh LUÔN khớp bề ngang —
+   xem docs_editor.js syncRulerMargin() (đặt .of-ruler-track.left/right = docMargin, cùng số cm
+   như padding của .of-doc-page, nên vùng nội dung 2 bên luôn cùng độ rộng px). */
+.of-ruler {
+    position: relative; flex: 0 0 auto; width: 800px; max-width: 100%; margin: 0 auto;
+    height: 22px; background: #e2e8f0; border-bottom: 1px solid var(--of-bd);
+}
+.of-ruler-track { position: absolute; top: 0; bottom: 0; background: #fff; }
+.of-ruler-handle { position: absolute; top: 3px; width: 0; height: 0; cursor: ew-resize; z-index: 2; }
+.of-ruler-handle-left {
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-top: 10px solid var(--of-green); margin-left: -8px;
+}
+.of-ruler-handle-right {
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-top: 10px solid var(--of-green); margin-right: -8px;
+}
+.of-ruler-handle:hover { border-top-color: var(--of-green-d); }
+
+/* #of-doc-scroll = khung CUỘN cố định (không zoom) bọc ngoài #of-doc-editor — tách riêng để
+   Ctrl+lăn chuột (CSS `zoom` trên #of-doc-editor, xem office_common.js initZoom()) không phóng
+   to luôn cả thanh cuộn: `zoom` ảnh hưởng layout thật (không như transform), nên overflow:auto
+   của khung NGOÀI tự tính lại đúng kích thước cuộn theo nội dung đã zoom, không cần bù trừ gì
+   thêm ở JS. */
+.of-doc-scroll { flex: 1 1 auto; overflow-y: auto; }
+/* #of-doc-editor = vùng chứa NHIỀU trang thật (mỗi .of-doc-page là 1 <div contenteditable>
+   khổ A4 riêng) — xếp DỌC, canh giữa, có khoảng cách giữa các trang giống chế độ xem liên tục
+   của Word. Ngắt trang thủ công (Ctrl+Enter) tạo hẳn 1 trang DOM mới, không phải giả lập. */
+.of-doc-page-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 24px;
+    padding: 26px 14px 80px;
+}
+.of-doc-page {
+    width: 800px; max-width: 100%; min-height: 1123px; background: #fff;
+    border: 1px solid var(--of-bd); border-radius: 2px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    padding: 60px 70px; font-size: 15px; line-height: 1.6; outline: none;
+    flex: 0 0 auto;
+}
+.of-doc-page:focus { box-shadow: 0 0 0 2px var(--of-green); }
+/* padding mặc định ở trên bị GHI ĐÈ bằng inline style (canh lề do user chọn) ngay khi tạo trang
+   — xem createPageEl() trong docs_editor.js — chỉ còn là fallback cho khoảnh khắc trước khi JS
+   chạy xong. */
+
+/* ---------- "Điều chỉnh canh lề" (modal) ---------- */
+.of-margin-presets { display: flex; gap: 8px; margin-bottom: 16px; }
+.of-margin-preset {
+    flex: 1 1 0; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left;
+    white-space: normal;
+}
+.of-margin-preset .of-muted { font-size: 11.5px; }
+.of-margin-custom-title { font-size: 13px; color: #374151; margin-bottom: 8px; font-weight: 600; }
+.of-margin-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-bottom: 14px; }
+.of-margin-inputs label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #374151; }
+.of-margin-inputs input {
+    padding: 8px 10px; border: 1px solid var(--of-bd); border-radius: 8px; font-size: 13.5px;
+}
+#of-margin-apply { width: 100%; justify-content: center; }
+.of-doc-page table.of-doc-table { border-collapse: collapse; width: 100%; margin: 0; }
+.of-doc-page table.of-doc-table td {
+    border: 1px solid #cbd5e1; padding: 6px 8px; min-width: 40px; position: relative;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;
+}
+/* Tô nền cả ô khi kéo chuột chọn nhiều ô (kể cả kéo dọc theo cột) — xem cellSel trong
+   docs_editor.js. Dùng ::after phủ lớp màu thay vì đổi thẳng background: ô có thể đã có sẵn màu
+   nền riêng (nút "Màu nền" trên thanh công cụ bảng), ::after phủ lên trên không xoá mất màu gốc. */
+.of-doc-page table.of-doc-table td.is-cellsel::after {
+    content: ''; position: absolute; inset: 0; background: rgba(37, 99, 235, .18); pointer-events: none;
+}
+
+/* ---------- Bảng: khung chọn + thanh công cụ nổi khi hover ---------- */
+.of-table-wrap { position: relative; display: block; margin: 10px 0; }
+.of-table-wrap.is-selected table { outline: 2px solid var(--of-green); outline-offset: 1px; }
+.of-table-bar {
+    position: absolute; top: -34px; left: 0; display: none; align-items: center; gap: 16px;
+    background: #fff; border: 1px solid var(--of-bd); border-radius: 8px; padding: 3px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.12); z-index: 6;
+}
+.of-table-wrap:hover .of-table-bar, .of-table-wrap.is-selected .of-table-bar { display: flex; }
+.of-table-grip {
+    width: 26px; height: 26px; border: 0; border-radius: 6px; background: #f3f4f6; color: #374151;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.of-table-grip:hover { background: #e5e7eb; }
+.of-table-wrap.is-selected .of-table-grip { background: var(--of-green); color: #fff; }
+/* Các nút công cụ khác trên thanh nổi (viền/gộp ô/chia ô) — CÙNG style .of-table-grip nhưng
+   TÁCH RIÊNG class để không bị click handler của "chọn cả bảng" (dựa vào .of-table-grip) coi
+   nhầm là bấm vào tay nắm chọn bảng. */
+.of-table-tool-btn {
+    width: 26px; height: 26px; border: 0; border-radius: 6px; background: #f3f4f6; color: #374151;
+    cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.of-table-tool-btn:hover { background: #e5e7eb; }
+.of-table-color-btn {
+    width: 26px; height: 26px; border-radius: 6px; background: #f3f4f6; display: inline-flex;
+    align-items: center; justify-content: center; cursor: pointer; position: relative; color: #374151; font-size: 12px;margin:0px;
+}
+.of-table-color-btn input[type=color] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.of-table-dim-row { display: flex; gap: 16px; margin-bottom: 6px; }
+.of-table-dim-row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #374151; }
+.of-table-dim-row input { width: 90px; padding: 6px 8px; border: 1px solid var(--of-bd); border-radius: 6px; }
+.of-table-dim-hint { font-size: 12px; color: var(--of-muted); margin-bottom: 14px; }
+
+/* Dải "thoát bảng" LUÔN nằm ngay dưới mỗi bảng — bấm vào đây để đặt con trỏ vào đoạn văn
+   SAU bảng (không lọt vào ô cuối), tránh Enter trong ô cuối bị hiểu nhầm thành "kéo bảng
+   xuống theo". Mờ nhạt lúc bình thường, rõ hơn khi rê chuột qua để biết có thể bấm. */
+.of-table-exit {
+    height: 16px; margin: -4px 0 6px; border-radius: 4px; cursor: text;
+    display: flex; align-items: center; padding: 0 6px;
+}
+.of-table-exit span { font-size: 10.5px; color: transparent; transition: color .15s; }
+.of-table-exit:hover { background: #ecfdf5; }
+.of-table-exit:hover span { color: var(--of-green-d); }
+
+/* ---------- Ảnh: click chọn, kéo góc đổi cỡ, xóa ---------- */
+.of-img-wrap { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
+.of-img-wrap img { max-width: 100%; display: block; }
+.of-img-wrap.is-selected img { outline: 2px solid var(--of-green); outline-offset: 1px; }
+.of-img-del {
+    position: absolute; top: -10px; right: -10px; width: 22px; height: 22px; border-radius: 50%;
+    background: #dc2626; color: #fff; display: none; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 11px; z-index: 4;
+}
+.of-img-resize {
+    position: absolute; right: -4px; bottom: -4px; width: 14px; height: 14px; background: var(--of-green);
+    border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; display: none; z-index: 4;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.of-img-wrap:hover .of-img-del, .of-img-wrap.is-selected .of-img-del,
+.of-img-wrap:hover .of-img-resize, .of-img-wrap.is-selected .of-img-resize { display: flex; }
+
+/* ---------- Sheets ---------- */
+.of-sheet-toolbar {
+    flex: 0 0 auto;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+    background: #fff; border-bottom: 1px solid var(--of-bd); padding: 6px 14px;
+}
+.of-tb-color { display: inline-flex; align-items: center; gap: 4px; padding: 6px 8px; cursor: pointer; }
+.of-tb-color input[type=color] { width: 20px; height: 20px; border: 0; padding: 0; background: none; cursor: pointer; }
+
+/* ---------- Hộp công thức (giống Excel: ô địa chỉ + fx + nội dung/công thức) ---------- */
+.of-formula-bar {
+    flex: 0 0 auto; position: relative; display: flex; align-items: center; gap: 8px;
+    background: #fff; border-bottom: 1px solid var(--of-bd); padding: 5px 14px;
+}
+.of-formula-ref {
+    flex: 0 0 auto; min-width: 50px; font-size: 12.5px; font-weight: 600; color: #374151;
+    padding: 4px 8px; background: #f3f4f6; border-radius: 6px; text-align: center;
+}
+.of-formula-fx { flex: 0 0 auto; color: var(--of-green-d); font-size: 12px; }
+.of-formula-input-wrap { position: relative; flex: 1 1 auto; }
+#of-formula-input {
+    width: 100%; box-sizing: border-box; border: 1px solid var(--of-bd); border-radius: 6px; padding: 6px 18px 6px 10px;
+    font-size: 13px; font-family: 'Courier New', monospace;
+    /* Textarea (không phải input) để hỗ trợ Alt+Enter xuống dòng như Excel — mặc định trông như
+       1 ô nhập 1 dòng, JS tự phình chiều cao (auto-grow) khi nội dung có nhiều dòng, hoặc user tự
+       kéo .of-formula-resizer bên dưới để mở rộng/thu nhỏ thủ công. */
+    resize: none; overflow-y: auto; line-height: 1.4; display: block;
+}
+#of-formula-input:focus { border-color: var(--of-green); outline: none; }
+.of-formula-resizer {
+    position: absolute; right: 2px; bottom: 1px; width: 16px; height: 10px; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    color: #9ca3af; font-size: 9px; cursor: ns-resize; line-height: 1;
+}
+.of-formula-resizer:hover { color: var(--of-green); }
+.of-formula-suggest {
+    position: absolute; top: 100%; left: 90px; background: #fff; border: 1px solid var(--of-bd);
+    border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); z-index: 30; min-width: 200px;
+    overflow: hidden;
+}
+.of-formula-suggest-item { padding: 8px 12px; font-size: 13px; font-family: 'Courier New', monospace; cursor: pointer; }
+.of-formula-suggest-item.is-active, .of-formula-suggest-item:hover { background: #ecfdf5; color: var(--of-green-d); }
+
+/* ---------- Biểu đồ (Sheets) ---------- */
+.of-sheet-charts {
+    flex: 0 0 260px; overflow-y: auto; border-top: 1px solid var(--of-bd); background: #f9fafb;
+    padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 14px; align-content: flex-start;
+}
+.of-chart-card {
+    background: #fff; border: 1px solid var(--of-bd); border-radius: 10px; padding: 10px;
+    width: 320px; flex: 0 0 auto; position: relative;
+}
+.of-chart-card-title { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.of-chart-card-del {
+    position: absolute; top: 8px; right: 8px; border: 0; background: none; color: #dc2626;
+    cursor: pointer; font-size: 12px;
+}
+.of-chart-dim-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.of-chart-dim-row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #374151; }
+.of-chart-dim-row input, .of-chart-dim-row select {
+    padding: 7px 8px; border: 1px solid var(--of-bd); border-radius: 6px; font-size: 13px;
+}
+.of-chart-svg { width: 100%; height: auto; display: block; }
+.of-chart-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: 11px; color: #475569; }
+.of-chart-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.of-chart-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* min-width:0 BẮT BUỘC: .of-sheet-scroll là flex item trong .of-ed-page (flex-direction:column)
+   — mặc định flex item có min-width:auto, khiến nó tự phình rộng theo bảng thay vì cho phép
+   overflow:auto cuộn NGANG khi có nhiều cột. Không có dòng này, cuộn ngang sẽ không hoạt động.
+   Tách .of-sheet-scroll (cuộn, cố định) ra khỏi .of-sheet-wrap (nội dung, bị Ctrl+lăn chuột zoom
+   qua CSS `zoom` — xem office_common.js initZoom()) để phóng to không kéo theo phóng to cả
+   thanh cuộn/khung xung quanh — `zoom` ảnh hưởng layout thật nên overflow:auto ở khung NGOÀI tự
+   tính lại đúng kích thước cuộn, không cần bù trừ toạ độ chuột ở bindGrid() (isNearCellEdge()...). */
+.of-sheet-scroll { flex: 1 1 auto; min-width: 0; overflow: auto; }
+.of-sheet-wrap { background: #fff; }
+table.of-sheet-table { border-collapse: collapse; table-layout: fixed; }
+table.of-sheet-table th, table.of-sheet-table td {
+    border: 1px solid #cbd5e1; font-size: 13px; padding: 0;
+}
+.of-sheet-corner, .of-sheet-colhead, .of-sheet-rowhead {
+    background: #f1f5f9; color: #475569; font-weight: 600; text-align: center;
+    position: sticky; z-index: 5; user-select: none; cursor: pointer;
+}
+.of-sheet-colhead { top: 0; height: 28px; position: relative; }
+.of-sheet-rowhead { left: 0; width: 44px; min-width: 44px; position: sticky; }
+.of-sheet-corner { top: 0; left: 0; z-index: 6; width: 44px; }
+.of-col-resizer { position: absolute; right: 0; top: 0; width: 5px; height: 100%; cursor: col-resize; z-index: 7; }
+.of-row-resizer { position: absolute; left: 0; bottom: 0; height: 5px; width: 100%; cursor: row-resize; z-index: 7; }
+.of-sheet-colhead.is-active-header, .of-sheet-rowhead.is-active-header {
+    background: var(--of-green); color: #fff;
+}
+.of-sheet-cell {
+    padding: 3px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    outline: none; cursor: cell;
+}
+/* Nền TRONG SUỐT một phần (không phải màu đặc #dbeafe như trước) — để đường gióng (gridlines,
+   giờ đã đậm hơn 1 chút, xem border ở trên) vẫn nổi rõ xuyên qua vùng đang bôi đen, giống Excel/
+   Google Sheets: bôi đen chỉ là 1 lớp phủ nhẹ, không "xoá" mất lưới ô bên dưới. */
+.of-sheet-cell.is-sel { background: rgba(37, 99, 235, .12); }
+.of-sheet-cell.is-active { outline: 2px solid var(--of-green); outline-offset: -2px; background: #fff; }
+.of-sheet-cell.is-editing { white-space: pre-wrap; overflow: visible; background: #fff; z-index: 8; position: relative; cursor: text; }
+.of-sheet-cell.is-drop-target { outline: 2px dashed var(--of-green); outline-offset: -2px; }
+/* Hiệu ứng "kiến bò" (marching ants) như Excel khi Ctrl+C / Ctrl+X — giữ tới khi dán/Esc/copy khác. */
+.of-sheet-cell.is-clip { outline: 2px dashed #2563eb; outline-offset: -2px; animation: of-clip-marquee 0.8s linear infinite; }
+@keyframes of-clip-marquee {
+    0% { outline-color: #2563eb; }
+    50% { outline-color: #93c5fd; }
+    100% { outline-color: #2563eb; }
+}
+.of-sheet-wrap.is-painting .of-sheet-cell { cursor: copy; }
+/* "Ẩn gridlines": chỉ hoà màu viền mặc định của Ô DỮ LIỆU vào màu nền vùng làm việc (trắng) —
+   header dòng/cột (th) CỐ TÌNH giữ nguyên viền, giống Excel (ẩn gridlines không ẩn khung tiêu
+   đề). Viền do người dùng TỰ vẽ qua "Thiết lập gridlines" dùng box-shadow riêng (xem cellStyleAttr
+   trong sheets_editor.js) nên KHÔNG bị ảnh hưởng — vẫn hiện dù đã ẩn gridlines mặc định. */
+.of-sheet-wrap.of-hide-gridlines td.of-sheet-cell { border-color: #fff; }
+
+/* ---------- In ---------- */
+@media print {
+    /* global.css khóa html/body/#wrapper ở overflow:hidden + height:100% (khung app 1 màn hình
+       cố định) — khi in, việc này CẮT CỤT mọi nội dung vượt quá 1 trang màn hình, khiến xem
+       trước khi in chỉ thấy đúng "trang 1". Gỡ khóa riêng cho lúc in để nội dung chảy tự nhiên
+       qua nhiều trang giấy thật. */
+    html, body, #wrapper { height: auto !important; overflow: visible !important; }
+    .of-ed-head, .of-doc-toolbar, .of-ruler, .of-sheet-toolbar, .of-formula-bar, .app-sidebar, .app-header { display: none !important; }
+    .is-cellsel::after { display: none !important; }
+    .of-ed-page { height: auto; overflow: visible; }
+    /* Zoom màn hình (Ctrl+lăn chuột, CSS `zoom`) KHÔNG được ảnh hưởng tới bản in — luôn in ở
+       đúng 100% bất kể đang xem phóng to/thu nhỏ bao nhiêu trên màn hình. */
+    .of-doc-scroll, #of-doc-editor, #of-sheet-wrap { zoom: 1 !important; overflow: visible; }
+    .of-doc-page-wrap { padding: 0; overflow: visible; gap: 0; }
+    /* Mỗi .of-doc-page giờ là 1 trang DOM thật (xem docs_editor.js) — ngắt trang GIẤY thật giữa
+       các trang (trừ trang cuối, tránh sinh thêm 1 tờ trắng thừa). */
+    .of-doc-page {
+        box-shadow: none; border: none; width: auto; min-height: 0;
+        -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact;
+    }
+    .of-doc-page:not(:last-child) { break-after: page; page-break-after: always; }
+    .of-sheet-scroll { overflow: visible; }
+    /* Ẩn thanh công cụ nổi của bảng + nút chọn/kéo giãn ảnh + dải "thoát bảng" khi in. */
+    .of-table-bar, .of-img-del, .of-img-resize, .of-table-exit { display: none !important; }
+    /* Loại các phần tử nổi/ẩn (toast, modal, context menu) — khi gỡ overflow:hidden ở #wrapper
+       để in nhiều trang, các phần tử position:fixed này có thể lộ ra thành 1 khối mờ vô nghĩa
+       trên bản in nếu trình duyệt không tôn trọng opacity/display lúc in. */
+    .of-toast, .of-modal-overlay, .of-ctxmenu { display: none !important; }
+}

@@ -1,0 +1,24 @@
+# ============================================================
+#  .gitignore — nvsxvat.vn
+#  Nguyên tắc: CODE lên git; BÍ MẬT + DỮ LIỆU thì KHÔNG.
+#  (Dữ liệu nguồn thật nằm ở MÁY CHỦ — không để bản máy code đè lên.)
+# ============================================================
+
+# ---- Bí mật / cấu hình riêng từng máy (KHÔNG đưa lên git) ----
+config/config.php
+config/database.php
+config/crypto.php
+config/email.php
+
+# ---- Dữ liệu do người dùng tải lên / do app quản lý (nguồn thật ở MÁY CHỦ) ----
+public/uploads/
+public/images/avatar/
+public/images/product_profile/
+public/images/home_bg_library/
+public/images/thumnail/
+
+# ---- Rác hệ điều hành / nén ----
+Thumbs.db
+.DS_Store
+*.rar
+*.log

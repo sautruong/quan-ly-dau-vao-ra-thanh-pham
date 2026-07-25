@@ -1,0 +1,61 @@
+/* ============================================
+   OTHER ROW MATERIAL RECEIVING (Nhập NVL khác)
+   - Kế thừa từ row_material_receiving.css
+   - Thêm style cho .general_interpretation và đẩy .wp-list-material xuống
+     để tránh đụng .je-card.
+   ============================================ */
+
+/* Khoảng đệm trên cho khối bảng NVL — tránh đụng .je-card ở góc phải trên */
+.wp-list-material.wp-list-material-other {
+    margin-top: 40px;
+}
+
+/* ============================================
+   GENERAL INTERPRETATION — Mô tả chung của phiếu
+   ============================================ */
+.wp-list-material .general_interpretation {
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--rmr-blue-soft) 0%, #f0f7fc 100%);
+    border: 1.5px solid var(--rmr-blue);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.wp-list-material .general_interpretation input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--rmr-blue-dark);
+    font-family: inherit;
+    padding: 4px 0;
+}
+
+.wp-list-material .general_interpretation input::placeholder {
+    color: var(--rmr-blue);
+    font-weight: 500;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+.wp-list-material .general_interpretation input:focus {
+    border-bottom: 1.5px dashed var(--rmr-blue);
+}
+
+/* ============================================
+   CELL-NOTE (Diễn giải per-row)
+   ============================================ */
+.wp-list-material tbody .cell-note {
+    min-width: 180px;
+    text-align: left;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .wp-list-material.wp-list-material-other {
+        margin-top: 24px;
+    }
+}

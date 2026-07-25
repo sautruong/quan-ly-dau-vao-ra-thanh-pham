@@ -100,6 +100,62 @@ function get_list_content_table($table, $branch)
 
     return db_fetch_array($final_sql);
 }
+/* ============================================================
+ *  Cấu hình hợp đồng (BÊN A + Giám đốc) — sửa 1 lần dùng dài lâu.
+ *  Lưu app_settings, prefix 'contract.'.
+ * ============================================================ */
+function contract_settings_defaults()
+{
+    return [
+        'company_name'    => 'CÔNG TY TNHH VUA AN TOÀN',
+        'company_address' => '1/13Z Ấp Tiền Lân, Xã Bà Điểm, Thành Phố Hồ Chí Minh, Việt Nam.',
+        'director_name'   => 'LÊ HỮU TRÍ',
+    ];
+}
+
+function contract_settings_ensure_table()
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    db_query("CREATE TABLE IF NOT EXISTS app_settings (
+        setting_key   VARCHAR(100) NOT NULL,
+        setting_value TEXT DEFAULT NULL,
+        PRIMARY KEY (setting_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+}
+
+function contract_settings_get()
+{
+    contract_settings_ensure_table();
+    $out  = contract_settings_defaults();
+    $rows = db_fetch_array("SELECT setting_key, setting_value FROM app_settings
+                            WHERE setting_key LIKE 'contract.%'");
+    foreach (($rows ?: []) as $r) {
+        $k = substr((string) $r['setting_key'], strlen('contract.'));
+        if (array_key_exists($k, $out) && $r['setting_value'] !== null && $r['setting_value'] !== '') {
+            $out[$k] = (string) $r['setting_value'];
+        }
+    }
+    return $out;
+}
+
+function contract_settings_save($key, $value)
+{
+    $key = (string) $key;
+    if (!array_key_exists($key, contract_settings_defaults())) return false;
+    contract_settings_ensure_table();
+    $full = 'contract.' . $key;
+    $fk   = escape_string($full);
+    $exists = db_num_rows("SELECT 1 FROM app_settings WHERE setting_key = '$fk'") > 0;
+    if ($exists) {
+        db_update('app_settings', ['setting_value' => (string) $value], "setting_key = '$fk'");
+    } else {
+        db_insert('app_settings', ['setting_key' => $full, 'setting_value' => (string) $value]);
+    }
+    return true;
+}
+
 function get_data_contract_hr_by_id($id)
 {
     $id = (int)$id;
@@ -138,6 +194,9 @@ function get_data_contract_hr_by_id($id)
     $info_hr_for_contract['work_address'] = $info_hr_db[0]['work_address'];
     $info_hr_for_contract['position'] = $info_hr_db[0]['position'];
     $info_hr_for_contract['insurance_salary'] = $info_hr_db[0]['social_insurance_salary'];
+
+    // Cấu hình BÊN A + Giám đốc (sửa 1 lần dùng dài lâu).
+    $info_hr_for_contract['contract_settings'] = contract_settings_get();
     return $info_hr_for_contract;
     //show_array( $info_hr_db); 
 }

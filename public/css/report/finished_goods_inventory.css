@@ -1,0 +1,223 @@
+/* ============================================
+   COLOR PALETTE
+   ============================================ */
+:root {
+    --color-green: #16a34a;
+    --color-green-light: #22c55e;
+    --color-green-soft: #dcfce7;
+    --color-blue: #1a85cc;
+    --color-red: #dc2626;
+    --color-white: #ffffff;
+    --color-gray-50: #f9fafb;
+    --color-gray-100: #f3f4f6;
+    --color-gray-200: #e5e7eb;
+    --color-gray-300: #d1d5db;
+    --color-gray-400: #9ca3af;
+    --color-gray-500: #6b7280;
+    --color-gray-700: #374151;
+    --color-gray-900: #111827;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.2s ease;
+}
+
+/* ============================================
+   DATE (xám nhạt, in nghiêng)
+   ============================================ */
+.header .date {
+    text-align: left;
+    margin: 6px;
+}
+
+.header .date p {
+    margin: 0;
+    color: var(--color-gray-400);
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: 0.2px;
+}
+
+/* ============================================
+   SEARCH (#search-product) — canh trái, hover + focus
+   ============================================ */
+.wp-search {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    margin: 0;
+}
+
+.wp-search i.fa-magnifying-glass {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-gray-500);
+    font-size: 14px;
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+#search-product {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-700);
+    text-align: left;
+    box-shadow: var(--shadow-sm);
+    outline: none;
+    transition: var(--transition);
+}
+
+#search-product::placeholder {
+    color: var(--color-gray-400);
+}
+
+#search-product:hover {
+    border-color: var(--color-green-light);
+    box-shadow: var(--shadow-md);
+}
+
+#search-product:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.wp-search:focus-within i.fa-magnifying-glass {
+    color: var(--color-green);
+}
+
+/* ============================================
+   CONTENT
+   ============================================ */
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+/* ============================================
+   GROUP
+   ============================================ */
+.wp-group-product {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* CATEGORY — bold 600, đỏ */
+.wp-group-product .category {
+    font-weight: 600;
+    color: var(--color-red);
+    font-size: 18px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding-bottom: 4px;
+}
+
+/* ============================================
+   LIST-PRODUCT — flex grid 6, chỉ border ngăn cách giữa 2 li
+   (dùng trick gap + background container để chỉ xuất hiện
+    line giữa các ô, không bao quanh ngoài)
+   ============================================ */
+.list-product {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    /* background-color: var(--color-gray-200); */
+
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.content {
+    align-items: flex-start !important;
+}
+
+.product-item {
+    list-style: none;
+    position: relative;
+    background-color: var(--color-white);
+    padding: 10px 12px;
+    transition: var(--transition);
+    cursor: default;
+    /* override dashboard.css .product-item: bỏ border/round/shadow để khung phẳng */
+    border: 1px solid rgb(230, 230, 230);
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+.product-item:hover {
+    background-color: var(--color-green-soft);
+    /* override dashboard.css hover: không nhô lên, không đổi border */
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+/* name-product: blue, bold 500 */
+.product-item .name-product {
+    margin: 0 0 4px 0;
+    color: #021946;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+/* outer-pack-stock-conv: xám, italic */
+.product-item .outer-pack-stock-conv {
+    margin: 0;
+    color: var(--color-gray-500);
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+/* Empty group placeholder */
+.list-product:empty::before {
+    content: "Không có sản phẩm tồn kho.";
+    grid-column: 1 / -1;
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: var(--color-gray-500);
+    font-style: italic;
+    background-color: var(--color-white);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1400px) {
+    .list-product {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .list-product {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .list-product {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .list-product {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 420px) {
+    .list-product {
+        grid-template-columns: 1fr;
+    }
+}

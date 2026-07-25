@@ -1,0 +1,84 @@
+/* =====================================================================
+   KẾ TOÁN - NHÀ MÁY — Luồng NVL / sản phẩm (TASK 4)
+   ===================================================================== */
+.af-wrap { width: 100%; max-width: 1000px; margin: 0 auto; }
+
+.af-controls {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px;
+    margin-bottom: 22px;
+}
+.af-field { display: flex; flex-direction: column; gap: 5px; }
+.af-field label { font-size: 13px; font-weight: 600; color: #374151; }
+.af-field input[type="text"],
+.af-field input[type="date"] {
+    padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+    font-size: 14px; outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.af-field input:focus { border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.15); }
+.af-search { position: relative; min-width: 320px; }
+.af-search input { width: 100%; }
+.af-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+    list-style: none; margin: 0; padding: 4px 0; background: #fff;
+    border: 1.5px solid #e5e7eb; border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,.08);
+    max-height: 280px; overflow-y: auto; display: none;
+}
+.af-dropdown.active { display: block; }
+.af-dropdown li { padding: 9px 14px; cursor: pointer; font-size: 14px; color: #374151; }
+.af-dropdown li:hover, .af-dropdown li.active { background: #dcfce7; color: #15803d; font-weight: 600; }
+.af-dropdown li.empty { color: #9ca3af; font-style: italic; cursor: default; }
+
+.af-btn-pdf {
+    padding: 9px 18px; border: 0; border-radius: 8px; cursor: pointer;
+    background: #b91c1c; color: #fff; font-size: 14px; font-weight: 600; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 8px; transition: background .2s;
+}
+.af-btn-pdf:hover { background: #991b1b; }
+.af-btn-pdf:disabled { background: #d1d5db; cursor: not-allowed; }
+
+/* Khu báo cáo */
+.af-report { display: none; }
+.af-report.show { display: block; }
+.af-empty { padding: 40px 20px; text-align: center; color: #9ca3af; font-style: italic; }
+
+.af-sheet-head { text-align: center; margin-bottom: 18px; }
+.af-sheet-head .af-company { font-weight: 700; color: #111827; }
+.af-sheet-head h2 { margin: 6px 0 2px; font-size: 19px; color: #111827; }
+.af-sheet-head .af-meta { font-size: 13px; color: #6b7280; }
+
+.af-balance {
+    display: flex; justify-content: space-between; gap: 16px;
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 12px 18px; margin-bottom: 18px;
+}
+.af-balance .lbl { font-size: 13px; color: #6b7280; }
+.af-balance .val { font-size: 18px; font-weight: 700; color: #111827; }
+
+.af-section { margin-bottom: 18px; }
+.af-section h3 {
+    font-size: 15px; color: #15803d; margin: 0 0 8px;
+    padding-bottom: 6px; border-bottom: 2px solid #dcfce7;
+}
+.af-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.af-table th, .af-table td { border: 1px solid #e5e7eb; padding: 7px 10px; text-align: right; }
+.af-table th { background: #f3f4f6; font-weight: 600; text-align: center; color: #374151; }
+.af-table td.l { text-align: left; }
+.af-table tfoot td { font-weight: 700; background: #f9fafb; }
+.af-table tbody tr.empty td { text-align: center; color: #9ca3af; font-style: italic; }
+
+.af-totals {
+    display: flex; gap: 24px; flex-wrap: wrap;
+    background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px;
+    padding: 12px 18px; margin-bottom: 18px;
+}
+.af-totals .item { font-size: 14px; color: #065f46; }
+.af-totals .item b { font-size: 16px; }
+
+/* ===== PRINT ===== */
+@media print {
+    .app-sidebar, .app-header, .af-controls, .line, .history, .history-table, .history-pagination { display: none !important; }
+    body.app-has-sidebar #wrapper { padding-left: 0 !important; }
+    #wrapper { height: auto !important; overflow: visible !important; padding: 0 !important; }
+    .content { overflow: visible !important; }
+    .af-report { display: block !important; }
+}

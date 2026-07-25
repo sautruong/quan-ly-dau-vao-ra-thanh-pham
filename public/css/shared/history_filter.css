@@ -1,0 +1,233 @@
+/* ============================================================
+   HISTORY FILTER — thanh lọc cho vùng "Lịch sử" (dùng chung)
+   Gồm: lọc khoảng ngày (Từ ngày … đến ngày …), chọn số dòng,
+   và phễu lọc theo từ khóa gắn trên 1 cột của bảng lịch sử.
+   Cách dùng: include file này + markup .history-filter +
+   .th-filterable trên cột muốn lọc, rồi gọi JS trong view.
+   ============================================================ */
+
+.history-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin: 4px 0 12px;
+    padding: 10px 14px;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 10px;
+}
+
+.history-filter .hf-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.history-filter label {
+    font-size: 13px;
+    color: var(--color-gray-600, #4b5563);
+    white-space: nowrap;
+}
+
+/* ---- Khoảng ngày: gộp thành 1 "pill" cho gọn & chuyên nghiệp ---- */
+.history-filter .hf-daterange {
+    gap: 8px;
+    height: 38px;
+    padding: 0 12px;
+    background: #fff;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 10px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+/* Sáng cả pill khi 1 trong 2 ô ngày được focus */
+.history-filter .hf-daterange:focus-within {
+    border-color: var(--color-green, #16a34a);
+    box-shadow: 0 0 0 3px var(--color-green-soft, rgba(22, 163, 74, .12));
+}
+
+.history-filter .hf-cal-icon {
+    display: inline-flex;
+    color: var(--color-green, #16a34a);
+    font-size: 14px;
+}
+
+.history-filter .hf-daterange label {
+    font-size: 12px;
+    color: var(--color-gray-500, #6b7280);
+}
+
+.history-filter .hf-arrow {
+    display: inline-flex;
+    color: var(--color-gray-300, #d1d5db);
+    font-size: 12px;
+}
+
+/* Ô date bên trong pill: bỏ viền, để pill làm khung chung */
+.history-filter .hf-date {
+    height: 30px;
+    padding: 0 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-900, #111827);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+
+.history-filter .hf-date:hover {
+    background: var(--color-gray-50, #f3f4f6);
+}
+
+/* Tô màu xanh cho icon lịch mặc định của trình duyệt (WebKit) */
+.history-filter .hf-date::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: .65;
+    filter: invert(46%) sepia(94%) saturate(431%) hue-rotate(86deg) brightness(92%) contrast(88%);
+    transition: opacity .15s ease;
+}
+
+.history-filter .hf-date::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+.history-filter .hf-select {
+    height: 38px;
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--color-gray-900, #111827);
+    background: #fff;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.history-filter .hf-select:focus {
+    border-color: var(--color-green, #16a34a);
+    box-shadow: 0 0 0 3px var(--color-green-soft, rgba(22, 163, 74, .12));
+}
+
+.history-filter .hf-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    margin-left: auto;
+    padding: 0 14px;
+    font-size: 13px;
+    color: var(--color-gray-600, #4b5563);
+    background: #fff;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.history-filter .hf-reset:hover {
+    border-color: var(--color-green, #16a34a);
+    color: var(--color-green-dark, #15803d);
+    background: var(--color-green-soft, rgba(22, 163, 74, .08));
+}
+
+.history-filter .hf-count {
+    font-size: 12px;
+    color: var(--color-gray-500, #6b7280);
+    font-style: italic;
+}
+
+/* ---- Phễu lọc gắn trên header cột ---- */
+.th-filterable {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.th-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 12px;
+    color: var(--color-gray-400, #9ca3af);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.th-filter-btn:hover {
+    color: var(--color-green, #16a34a);
+    background: var(--color-green-soft, rgba(22, 163, 74, .1));
+}
+
+/* Đang lọc → tô màu phễu để user biết bộ lọc còn hiệu lực */
+.th-filter-btn.active {
+    color: #fff;
+    background: var(--color-green, #16a34a);
+    border-color: var(--color-green-dark, #15803d);
+}
+
+.th-filter-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 30;
+    display: none;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+
+.th-filter-pop.open {
+    display: block;
+}
+
+.th-filter-pop input {
+    width: 220px;
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 8px;
+    outline: none;
+}
+
+.th-filter-pop input:focus {
+    border-color: var(--color-green, #16a34a);
+    box-shadow: 0 0 0 3px var(--color-green-soft, rgba(22, 163, 74, .12));
+}
+
+/* ---- Màu cột "ngày" trong bảng lịch sử theo độ mới/cũ ---- */
+.history-table .hist-date-fresh  { color: #16a34a; }  /* vừa xong / hôm nay: xanh lá */
+.history-table .hist-date-recent { color: #bd621c;}  /* hôm qua / 2 ngày trước: nâu nhạt */
+.history-table .hist-date-old    { color: #111827; }  /* cũ hơn: đen */
+
+/* Cột "Ngày" luôn là cột đầu tiên: rộng vừa khít theo chữ, không xuống dòng */
+.history-table td:first-child {
+    white-space: nowrap;
+    width: 1%;
+}
+
+@media (max-width: 700px) {
+    .history-filter {
+        gap: 10px;
+    }
+    .history-filter .hf-reset {
+        margin-left: 0;
+    }
+    .th-filter-pop input {
+        width: 170px;
+    }
+}

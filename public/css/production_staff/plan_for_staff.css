@@ -29,7 +29,7 @@
     overflow-y: auto !important;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     background-color: var(--color-white);
     min-height: 100vh;
 }
@@ -106,12 +106,172 @@ a img {
 }
 
 /* ============================================
+   HEADER ACTIONS (choose-display + Share + Check DB)
+   ============================================ */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-share-khsx {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-blue);
+    color: var(--color-white);
+    border: 0;
+    padding: 9px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(26, 133, 204, .3);
+    transition: var(--transition);
+}
+
+.btn-share-khsx:hover {
+    background: #1567a0;
+    box-shadow: 0 4px 12px rgba(26, 133, 204, .45);
+    transform: translateY(-1px);
+}
+
+.btn-reset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border: 1.5px solid var(--color-red);
+    background-color: var(--color-white);
+    color: var(--color-red);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.btn-reset:hover {
+    background: linear-gradient(135deg, var(--color-red) 0%, var(--color-red-dark) 100%);
+    color: var(--color-white);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
+    transform: translateY(-1px);
+}
+
+/* ============================================
    CONTENT
    ============================================ */
 .content {
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+/* ============================================
+   Ô TÌM KIẾM THÊM SẢN PHẨM
+   ============================================ */
+.wp-search {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+}
+
+.wp-search i.fa-magnifying-glass {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-gray-500);
+    font-size: 14px;
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+.wp-search input {
+    width: 100%;
+    padding: 11px 16px 11px 42px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-700);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    outline: none;
+}
+
+.wp-search input::placeholder {
+    color: var(--color-gray-500);
+}
+
+.wp-search input:hover {
+    border-color: var(--color-green-light);
+    box-shadow: var(--shadow-md);
+}
+
+.wp-search input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(26, 204, 151, 0.15);
+}
+
+.wp-search input:focus + i.fa-magnifying-glass,
+.wp-search:focus-within i.fa-magnifying-glass {
+    color: var(--color-green-light);
+}
+
+.search-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    background-color: var(--color-white);
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+}
+
+.search-dropdown.active {
+    display: block;
+}
+
+.search-dropdown li {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-gray-700);
+    transition: var(--transition);
+    border-bottom: 1px solid var(--color-gray-50);
+}
+
+.search-dropdown li:last-child {
+    border-bottom: none;
+}
+
+.search-dropdown li:hover,
+.search-dropdown li.active {
+    background-color: var(--color-green-soft);
+    color: var(--color-green);
+    font-weight: 600;
+}
+
+.search-dropdown li.empty {
+    color: var(--color-gray-500);
+    font-style: italic;
+    cursor: default;
+    text-align: center;
+}
+
+.search-dropdown li.empty:hover {
+    background: transparent;
+    color: var(--color-gray-500);
 }
 
 /* ============================================
@@ -134,7 +294,6 @@ a img {
     border: 1.5px solid var(--color-gray-200);
     background-color: var(--color-white);
     box-shadow: var(--shadow-sm);
-    overflow: hidden;
     padding-bottom: 15px;
 }
 
@@ -148,6 +307,7 @@ a img {
     gap: 10px;
     padding: 12px 14px;
     background: linear-gradient(135deg, rgb(4, 78, 4) 0%, rgb(8, 143, 8) 100%);
+    border-radius: 13px 13px 0 0;
 }
 
 .name-product p {
@@ -156,6 +316,44 @@ a img {
     font-size: 18px;
     font-weight: 500;
     letter-spacing: 0.3px;
+}
+
+.name-product {
+    display: flex;
+    align-items: center;
+}
+
+.pf-name-edit-btn {
+    opacity: 0;
+    margin-left: 6px;
+    border: none;
+    background: rgba(255, 255, 255, .2);
+    color: var(--color-white);
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity .12s, background .12s;
+}
+
+.name-product:hover .pf-name-edit-btn {
+    opacity: 1;
+}
+
+.pf-name-edit-btn:hover {
+    background: rgba(255, 255, 255, .35);
+}
+
+.pf-name-text[contenteditable="true"] {
+    outline: 1px dashed rgba(255, 255, 255, .7);
+    border-radius: 4px;
+    padding: 0 4px;
+    cursor: text;
 }
 
 .num input {
@@ -169,7 +367,11 @@ a img {
     color: var(--color-red-dark);
     background-color: var(--color-green-soft);
     outline: none;
-    pointer-events: none;
+    cursor: text;
+}
+
+.num input:focus {
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, .35);
 }
 
 /* ============================================
@@ -207,6 +409,7 @@ a img {
     color: var(--color-gray-500);
     user-select: none;
     font-weight: 500;
+    cursor: pointer;
 }
 
 .list-QC input[type="checkbox"] {
@@ -221,6 +424,7 @@ a img {
     position: relative;
     flex-shrink: 0;
     margin: 0;
+    cursor: pointer;
 }
 
 .list-QC input[type="checkbox"]:checked {
@@ -332,6 +536,109 @@ a img {
     text-align: right;
 }
 
+/* ----- Editable info fields (Bao bì + QC) ----- */
+.info-item .info-field,
+.info-item .pkg-search {
+    flex: 1;
+    min-width: 0;
+    max-width: 60%;
+    margin-left: auto;
+    text-align: right;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    background-color: transparent;
+    outline: none;
+    transition: var(--transition);
+}
+
+.info-item .info-field:hover,
+.info-item .pkg-search:hover {
+    border-color: var(--color-gray-200);
+    background-color: var(--color-white);
+}
+
+.info-item .info-field:focus,
+.info-item .pkg-search:focus {
+    border-color: var(--color-blue);
+    background-color: var(--color-white);
+    box-shadow: 0 0 0 2px rgba(26, 133, 204, .15);
+}
+
+.info-item .info-field::placeholder,
+.info-item .pkg-search::placeholder {
+    color: var(--color-gray-500);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.info-item .pkg-picker {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    max-width: 60%;
+    margin-left: auto;
+}
+
+.info-item .pkg-picker .pkg-search {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+}
+
+.info-field.saved-ok,
+.pkg-search.saved-ok {
+    border-color: var(--color-green) !important;
+    background: var(--color-green-soft) !important;
+}
+
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--color-gray-200);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    box-shadow: var(--shadow-md);
+    text-align: left;
+}
+
+.search-results .result-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    border-bottom: 1px solid #f0f0f0;
+    transition: .15s;
+}
+
+.search-results .result-item:hover,
+.search-results .result-item.active {
+    background: var(--color-green-soft);
+    color: var(--color-green);
+}
+
+.search-results .result-item:last-child {
+    border-bottom: none;
+}
+
+.search-results .no-result {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+    font-style: italic;
+}
+
 /* ============================================
    OTHER WORK SECTION
    ============================================ */
@@ -342,12 +649,20 @@ a img {
     margin-top: 16px;
     padding: 16px;
     background-color: var(--color-white);
-    border-radius: 12px;
+    border-radius: 8px;
     border: 1.5px solid var(--color-gray-200);
     box-shadow: var(--shadow-sm);
 }
 
-/* 3. ADD-OTHER-WORK (Heading, not button) */
+/* 3. ADD-OTHER-WORK (Heading trái, nút "Việc khác" canh phải cùng hàng) */
+.add-other-work {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .add-other-work p {
     margin: 0;
     font-size: 16px;
@@ -360,6 +675,52 @@ a img {
     display: inline-block;
 }
 
+.btn-add-other-work {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-blue);
+    color: var(--color-white);
+    border: 0;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(26, 133, 204, .3);
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.btn-add-other-work:hover {
+    background: #1567a0;
+    box-shadow: 0 4px 12px rgba(26, 133, 204, .45);
+    transform: translateY(-1px);
+}
+
+/* Ô nhập "việc khác" mới, hiện ra khi bấm nút ở trên */
+.other-work-form {
+    display: flex;
+    gap: 8px;
+}
+
+.other-work-form input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--color-gray-900);
+    outline: none;
+    transition: var(--transition);
+}
+
+.other-work-form input:focus {
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 2px rgba(26, 133, 204, .15);
+}
+
 /* 4. LIST-OTHER-WORK (Read-only, no hover) */
 .list-other-work {
     margin: 0;
@@ -370,19 +731,47 @@ a img {
 }
 
 .other-work-item {
+    position: relative;
     list-style: none;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px 6px 6px;
+    padding: 4px 26px 4px 8px;
     background-color: var(--color-white);
-    border-radius: 24px;
+    border-radius: 8px;
     border: 1px solid var(--color-gray-200);
 }
 
+/* Nút gỡ "việc khác": ẩn mặc định, hiện khi hover vào dòng (đè lên .content-other-work) */
+.task-delete {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--color-red);
+    color: var(--color-white);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s;
+}
+
+.other-work-item:hover .task-delete {
+    opacity: 1;
+}
+
+.task-delete:hover {
+    background: var(--color-red-dark);
+}
+
 .serial {
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: linear-gradient(135deg, rgb(6, 114, 6) 0%, rgb(7, 153, 7) 100%);
     display: flex;
@@ -395,8 +784,8 @@ a img {
 .serial p {
     margin: 0;
     color: var(--color-white);
-    font-weight: 700;
-    font-size: 13px;
+    font-weight: 500;
+    font-size: 11px;
     line-height: 1;
 }
 
@@ -474,4 +863,367 @@ a img {
         display: flex;
         flex-wrap: wrap;
     }
+}
+
+/* ============================================================
+   MODAL SHARE KHSX — tiêu đề (.pf-share-*) mượn nguyên style từ
+   modal share công thức của production_formula (cùng tên class).
+   ============================================================ */
+.khsx-backdrop {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, .55);
+    display: none; align-items: flex-start; justify-content: center;
+    z-index: 3000; padding: 30px 0; overflow-y: auto;
+}
+.khsx-backdrop.show { display: flex; }
+.khsx-modal {
+    background: #fff; border-radius: 12px; width: 640px; max-width: 95vw;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .3); overflow: hidden;
+}
+.khsx-bar {
+    display: flex; justify-content: flex-end; gap: 10px; padding: 10px 16px;
+    border-bottom: 1px solid var(--color-gray-200); background: #f9fafb; position: sticky; top: 0;
+}
+.khsx-bar .khsx-share {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--color-green); color: #fff;
+    border: 0; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+}
+.khsx-bar .khsx-share:hover { background: #128a3c; }
+.khsx-bar .khsx-share[disabled] { opacity: .6; cursor: not-allowed; }
+.khsx-bar .khsx-close {
+    border: 0; background: var(--color-gray-200); color: var(--color-gray-700);
+    width: 34px; border-radius: 8px; cursor: pointer; font-size: 18px;
+}
+.khsx-bar .khsx-close:hover { background: var(--color-gray-300); }
+
+/* ---- Phiếu (.khsx-sheet) — mượn nguyên khối .pf-share-* của production_formula ---- */
+.khsx-sheet {
+    --pf-green: #1f8a4c; --pf-green-dark: #166e3c; --pf-green-light: #e8f5ee;
+    position: relative; padding: 26px 26px 30px; background: #fff; overflow: hidden;
+}
+.pf-share-deco { position: absolute; left: 0; right: 0; height: 12px; }
+.pf-share-deco-top { top: 0; background: var(--pf-green); }
+.pf-share-deco-bottom {
+    bottom: -12px; height: 24px; background: var(--pf-green);
+    border-top: 12px solid var(--pf-green);
+}
+
+/* ---- Dải navy + tam giác + ngày, mượn nguyên .om-doc-footband/.om-doc-foottri của
+   order_material — đặt NẰM TRÊN .pf-share-deco-bottom, canh phải. ---- */
+.khsx-doc-bottom { position: absolute; right: 0; bottom: 12PX; width: 50%; height: 22px; z-index: 2; }
+.khsx-doc-footband { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: #1a2b4a; }
+/* Tam giác vuông cân sát mép trái dải; xoay bằng transform (html2canvas hỗ trợ, property rotate thì không). */
+.khsx-doc-foottri {
+    position: absolute; left: -22px; top: 0; width: 0; height: 0;
+    border-top: 22px solid #1a2b4a; border-left: 22px solid transparent;
+    transform: rotate(90deg);
+}
+.khsx-doc-bottom .khsx-share-date {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+    line-height: 22px; margin: 0; padding-right: 60px; box-sizing: border-box;
+    z-index: 1; text-align: right; font-style: italic; font-size: 11px; font-weight: 500;
+    color: #fff; white-space: nowrap;
+}
+.pf-share-header {
+    display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding: 6px 0;
+}
+.pf-share-group-a { display: flex; align-items: center; gap: 16px; }
+.pf-share-titles { text-align: left; }
+.pf-share-titles h1 {
+    font-size: 20px; margin: 0px; letter-spacing: .6px; font-weight: 700;
+    display: inline-flex; align-items: center;
+}
+.pf-share-titles h4 { font-size: 16px; margin: 0; font-weight: 700; display: inline-flex; align-items: center; }
+.pf-share-logo-wrap {
+    width: 55px; height: 55px; border-radius: 50%; background: #ededed;
+    display: flex; align-items: center; justify-content: center; flex: 0 0 auto; border: 1px solid #d4d7dd;
+}
+.pf-share-logo { width: 40px; height: 40px; }
+.pf-share-titles h1 .pf-share-etext {
+    font-size: 22px; font-weight: 800; color: #1a2b4a; text-transform: uppercase;
+    font-family: Arial, "Segoe UI", sans-serif; letter-spacing: .8px;
+}
+.pf-share-titles h4 .pf-share-etext {
+    font-size: 17px; font-weight: 500; color: #3d3c50; white-space: pre-line;
+    line-height: 1.4; font-family: Arial, sans-serif; letter-spacing: .4px;
+}
+.pf-share-doctitle-wrap { text-align: right; flex: 0 0 auto; }
+.pf-share-doctitle { color: #c51212; font-size: 24px; font-weight: 750; margin: 2px 0 2px; white-space: nowrap; }
+.pf-share-rope {
+    height: 4px; margin: 12px 0 18px; border-radius: 10px; background-color: var(--pf-green);
+    background-image: repeating-linear-gradient(-45deg, var(--pf-green) 0, var(--pf-green) 5px, #ffffff 10px, #c9c7c7 10px, var(--pf-green) 5px, var(--pf-green) 11px, #736969 12px, #ffffff 12px);
+    background-size: 18px 18px; background-repeat: repeat; box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+/* html2canvas không vẽ được repeating-linear-gradient -> lúc chụp đổi sang linear-gradient lát ô. */
+.khsx-sheet.is-capturing .pf-share-rope {
+    box-shadow: none; background-color: var(--pf-green);
+    background-image: linear-gradient(-45deg,
+        var(--pf-green) 0%, var(--pf-green) 42%, #ffffff 83%,
+        var(--pf-green) 84%, var(--pf-green) 91%, #736969 99%, var(--pf-green) 100%);
+    background-size: 8.5px 8.5px; background-repeat: repeat;
+}
+.pf-share-edit {
+    opacity: 0; margin-left: 8px; border: none; background: none; cursor: pointer;
+    color: var(--pf-green); font-size: 11px; padding: 2px 5px; border-radius: 5px;
+    transition: opacity .12s,  .12s;
+}
+.pf-share-editable:hover .pf-share-edit { opacity: 1; }
+.pf-share-edit:hover { background: var(--pf-green-light); }
+.pf-share-edit-input {
+    font: inherit; color: inherit; border: 1px solid var(--pf-green); border-radius: 6px;
+    padding: 2px 6px; outline: none; min-width: 220px; max-width: 100%;
+}
+.pf-share-edit-area { min-width: 220px; resize: vertical; line-height: 1.4; }
+
+/* ---- Danh sách sản phẩm trong phiếu share: 2 card / hàng ---- */
+.khsx-share-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.khsx-share-card {
+    border: 1px solid #909297; border-radius: 8px;
+    padding: 12px 14px; background: #fff;
+    box-shadow: 1px 1px 4px gainsboro;
+}
+.khsx-share-card-head { font-size: 20px; font-weight: 750; color: #c9000f;; margin-bottom: 6px; }
+/* Checkbox QC trong card share: dùng lại tông màu/hình dạng của .list-QC ở view chính
+   (tròn, xanh khi tích) — nhưng KHÔNG dùng <input type="checkbox"> thật, vì html2canvas
+   không chụp được appearance:none trên checkbox (khi share ra ảnh nó trả về ô vuông tích
+   đen mặc định của trình duyệt). Thay bằng <span> giả lập cùng style -> chụp ảnh đúng. */
+.khsx-share-card-qc.list-QC { margin: 0 0 12px; justify-content: flex-start; gap: 14px; }
+.khsx-share-card-qc.list-QC .khsx-fake-check {
+    display: inline-block;
+    width: 15px; height: 15px;
+    border: 1.5px solid var(--color-gray-300);
+    border-radius: 50%;
+    background-color: var(--color-white);
+    position: relative;
+    flex-shrink: 0;
+}
+.khsx-share-card-qc.list-QC .khsx-fake-check.checked {
+    border-color: var(--color-green);
+    background-color: var(--color-green-soft);
+}
+.khsx-share-card-qc.list-QC .khsx-fake-check.checked::after {
+    content: "";
+    position: absolute;
+    left: 50%; top: 45%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 4px; height: 8px;
+    border: solid var(--color-green);
+    border-width: 0 2px 2px 0;
+}
+.khsx-share-card-qc.list-QC .khsx-fake-check.checked + label {
+    color: var(--color-green);
+    font-weight: 600;
+}
+.khsx-share-card-list {
+    list-style: disc; margin: 0; padding-left: 22px;
+    display: flex; flex-direction: column; gap: 2.5px;
+}
+.khsx-share-card-list li { font-size: 14px; color: var(--color-gray-700); }
+.khsx-stock-val { color: #2563eb; font-weight: 600; }
+.khsx-note-line { color: #ea580c; font-weight: 700; list-style: none; margin-left: -22px; display: flex; align-items: flex-start; gap: 6px; }
+.khsx-note-label { flex-shrink: 0; }
+.khsx-note-text { flex: 1; min-width: 0; outline: none; word-break: break-word;color:#dd1919;font-weight: 500; background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px 6px; transition: .12s; }
+.khsx-note-text:focus { background: #fff7ed; border-radius: 4px; box-shadow: 0 0 0 2px #fed7aa; }
+.khsx-note-del {
+    border: 0; background: transparent; color: #ea580c; font-size: 15px; line-height: 1; cursor: pointer; flex-shrink: 0;
+    opacity: 0; transition: opacity .12s;
+}
+.khsx-note-line:hover .khsx-note-del { opacity: 1; }
+.khsx-note-del:hover { color: #9a3412; }
+.khsx-share-empty { text-align: center; color: var(--color-gray-500); font-style: italic; padding: 30px; margin: 0; }
+.khsx-share-tasks { margin: 16px 0px 4px; }
+.khsx-share-tasks .wp-other-work { margin-top: 0; background-color: #fef9c3; }
+.khsx-share-tasks .other-work-item { border: none; }
+
+.khsx-toast {
+    position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%);
+    background: #111827; color: #fff; padding: 10px 20px; border-radius: 8px;
+    font-size: 14px; z-index: 3100; opacity: 0; transition: opacity .25s ease;
+}
+.khsx-toast.show { opacity: 1; }
+
+/* ============================================================
+   IN BÁO CÁO SẢN XUẤT (BC) — biểu mẫu A4 in tay cuối ngày
+   ============================================================ */
+.btn-print-bc {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-orange);
+    color: var(--color-white);
+    border: 0;
+    padding: 9px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, .3);
+    transition: var(--transition);
+}
+.btn-print-bc:hover {
+    background: #ea670a;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, .45);
+    transform: translateY(-1px);
+}
+
+.print-modal {
+    position: fixed; inset: 0; z-index: 4000;
+    display: flex; align-items: flex-start; justify-content: center;
+    overflow-y: auto; padding: 24px;
+}
+.print-modal-overlay {
+    position: fixed; inset: 0; background-color: rgba(15, 23, 42, .5); z-index: 0;
+}
+.print-modal-content {
+    position: relative; z-index: 1; background-color: var(--color-white);
+    border-radius: 10px; box-shadow: var(--shadow-md);
+    max-width: 900px; width: 100%; padding: 0; margin: 24px 0;
+}
+.print-modal-toolbar {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--color-gray-200);
+    background: #f9fafb; border-radius: 10px 10px 0 0;
+}
+.print-modal-toolbar button {
+    padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer;
+    font-weight: 700; font-size: 13px;
+}
+.print-modal-toolbar .btn-do-print { background-color: var(--color-blue); color: var(--color-white); }
+.print-modal-toolbar .btn-close-print { background-color: var(--color-gray-200); color: var(--color-gray-700); }
+
+.bc-print-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 18mm 16mm;
+    box-sizing: border-box;
+    background: #fff;
+    color: #111;
+    font-family: "Times New Roman", Times, serif;
+}
+.bc-title {
+    text-align: center;
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.bc-date {
+    text-align: center;
+    font-style: italic;
+    margin: 0 0 24px;
+    font-size: 14px;
+}
+.bc-product-list {
+    list-style: none;
+    margin: 0 0 28px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.bc-product-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 15px;
+    padding: 10px 14px;
+    border: 1.5px solid #111;
+    border-radius: 10px;
+}
+.bc-product-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.bc-product-name {
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.bc-qty-box {
+    display: inline-block;
+    width: 70px;
+    height: 40px;
+    border: 1.5px solid #111;
+    border-radius: 4px;
+}
+.bc-product-row.bc-empty {
+    font-style: italic;
+    color: var(--color-gray-500);
+}
+
+.bc-date-block {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 22px;
+    font-size: 13px;
+    padding-top: 8px;
+}
+.bc-date-block-label { font-weight: 700; margin-right: 4px; }
+.bc-radio-opt { display: inline-flex; align-items: center; gap: 6px; }
+.bc-bullet {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid #111;
+    background: #fff;
+    flex-shrink: 0;
+}
+.bc-fill-line {
+    display: inline-block;
+    width: 120px;
+    border-bottom: 1px dotted #111;
+    height: 14px;
+}
+
+.bc-other-work .bc-ow-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+    font-size: 14px;
+    letter-spacing: .4px;
+}
+.bc-ow-list {
+    margin: 0;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.bc-ow-list li {
+    min-height: 22px;
+    border-bottom: 1px dotted #111;
+    font-size: 14px;
+}
+
+@media print {
+    @page { size: A4; margin: 12mm; }
+
+    body * { visibility: hidden; }
+    .print-modal, .print-modal * { visibility: visible; }
+    .print-modal {
+        position: absolute;
+        inset: 0;
+        padding: 0;
+        overflow: visible;
+    }
+    .print-modal-overlay { display: none; }
+    .print-modal-content {
+        box-shadow: none;
+        margin: 0;
+        max-width: none;
+        border-radius: 0;
+    }
+    .no-print { display: none !important; }
+    .bc-print-sheet {
+        width: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0 8px;
+    }
+    .bc-ow-list li,
+    .bc-product-row { page-break-inside: avoid; }
 }

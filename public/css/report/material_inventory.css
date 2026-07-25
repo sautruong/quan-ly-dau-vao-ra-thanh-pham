@@ -1,0 +1,87 @@
+/* material_inventory: cùng "ngôn ngữ thị giác" với finished_goods_inventory
+   nhưng dùng selector riêng (.wp-group-material / .list-material / .material-item)
+   và grid 3 cột thay vì 6. */
+
+/* GROUP */
+.wp-group-material {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* CATEGORY (= supplier_name) — bold 600, đỏ */
+.wp-group-material .category {
+    font-weight: 600;
+    color: var(--color-red);
+    font-size: 18px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding-bottom: 4px;
+}
+
+/* LIST-MATERIAL — flex grid 3 cột */
+.list-material {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* ITEM */
+.material-item {
+    list-style: none;
+    position: relative;
+    background-color: var(--color-white);
+    padding: 10px 12px;
+    border: 1px solid rgb(230, 230, 230);
+    border-radius: 8px;
+    transition: var(--transition);
+    cursor: default;
+}
+
+.material-item:hover {
+    background-color: var(--color-green-soft);
+    border-color: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+/* name-material: blue, bold 500 */
+.material-item .name-material {
+    margin: 0 0 4px 0;
+    color: #021946;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+/* inventory-material: xám, italic */
+.material-item .inventory-material {
+    margin: 0;
+    color: var(--color-gray-500);
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+/* Empty placeholder */
+.list-material:empty::before {
+    content: "Không có nguyên vật liệu tồn kho.";
+    grid-column: 1 / -1;
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: var(--color-gray-500);
+    font-style: italic;
+    background-color: var(--color-white);
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+    .list-material { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+    .list-material { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,454 @@
+/* =====================================================================
+ *  daily_events.css — "Thảo luận" (Tường kiểu Facebook).
+ *  (Bộ tab .de-tabs cũ đã tách ra public/css/shared/tabs.css — trang này
+ *  không còn dùng tab, chỉ còn 1 luồng đăng bài + bình luận liên tục.)
+ * ===================================================================== */
+
+/* #wrapper.has-sider > .content{height:auto!important;min-height:0!important;flex:1 1 auto}
+   (app_shell.css) tính đúng chiều cao còn lại (viewport - header), nhưng KHÔNG tự cuộn —
+   phải tự thêm overflow-y:auto ở đây để nội dung dài (feed) cuộn được bên trong đúng
+   khung đó thay vì tràn ra ngoài #wrapper (bị overflow:hidden của #wrapper/body cắt mất
+   và "nuốt" luôn cả việc bắt sự kiện chuột phía dưới, kể cả sidebar/header). */
+.dew-content {
+    max-width: 720px;
+    margin: 0 auto;
+    padding-bottom: 60px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.dew-btn {
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid #d8dde3;
+    background: #fff;
+    color: #374151;
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s ease, border-color .15s ease;
+}
+.dew-btn:hover { background: #f3f5f7; }
+.dew-btn-primary { background: #2e9e57; border-color: #2e9e57; color: #fff; }
+.dew-btn-primary:hover { background: #1f6f3d; }
+
+/* ---------- Avatar ---------- */
+.dew-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #e5e7eb;
+}
+.dew-avatar-sm { width: 32px; height: 32px; }
+.dew-avatar-fallback {
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #9ca3af; font-size: 44px; line-height: 1;
+}
+.dew-avatar-fallback i { font-size: inherit; }
+.dew-avatar-sm.dew-avatar-fallback { font-size: 32px; }
+
+/* ---------- Ô soạn bài gọn (avatar + input, click mở modal) ---------- */
+.dew-composer-mini {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 999px;
+    padding: 8px 16px 8px 8px;
+    margin: 16px 0;
+    cursor: pointer;
+    transition: box-shadow .15s ease, border-color .15s ease;
+}
+.dew-composer-mini:hover { border-color: #2e9e57; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+.dew-composer-trigger {
+    flex: 1; min-width: 0;
+    border: none; background: #f3f5f7; border-radius: 999px;
+    padding: 11px 16px; font: inherit; color: #374151; cursor: pointer;
+}
+.dew-composer-trigger::placeholder { color: #6b7280; }
+
+/* ---------- Modal đăng bài ---------- */
+.dew-modal {
+    display: none;
+    position: fixed; inset: 0; z-index: 2000;
+    align-items: flex-start; justify-content: center;
+    padding: 6vh 16px;
+    overflow-y: auto;
+}
+.dew-modal.is-open { display: flex; }
+.dew-modal-overlay { position: fixed; inset: 0; background: rgba(17, 24, 39, .5); }
+.dew-modal-box {
+    position: relative;
+    background: #fff; border-radius: 14px;
+    width: 100%; max-width: 640px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.dew-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid #e6e8ec;
+}
+.dew-modal-head h3 { margin: 0; font-size: 17px; color: #1f2937; }
+.dew-modal-close {
+    border: none; background: none; cursor: pointer; font-size: 22px; line-height: 1;
+    color: #6b7280; padding: 4px 8px; border-radius: 6px;
+}
+.dew-modal-close:hover { background: #f3f5f7; color: #1f2937; }
+.dew-modal-body { padding: 16px 20px 20px; }
+.dew-modal-body .dew-composer { margin: 0; border: none; padding: 0; }
+
+/* ---------- Ô soạn bài (bên trong modal) ---------- */
+.dew-composer {
+    display: flex;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+}
+.dew-composer-body { flex: 1; min-width: 0; }
+.dew-input {
+    width: 100%;
+    border: 1px solid #e6e8ec;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font: inherit;
+    box-sizing: border-box;
+}
+.dew-input:focus { outline: none; border-color: #2e9e57; }
+.dew-input-wrap { position: relative; }
+/* Ô soạn bài = contenteditable (không phải textarea) để định dạng chữ (đậm/nghiêng/
+   gạch chân/màu) hiển thị TRỰC TIẾP ngay khi soạn, giống ô soạn tin nhắn của chat. */
+.dew-input-editable {
+    min-height: 70px; max-height: 320px; overflow-y: auto;
+    line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.dew-input-editable:empty:before {
+    content: attr(data-placeholder); color: #9ca3af; pointer-events: none;
+}
+.dew-dropzone { margin-top: 10px; }
+
+/* ---------- Định dạng chữ (đậm/nghiêng/gạch chân/màu) — cùng quy ước với chat ---------- */
+.dew-format-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
+.dew-fmt-toggle {
+    border: none; background: none; cursor: pointer; color: #6b7280;
+    width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+}
+.dew-fmt-toggle:hover { background: #f3f5f7; color: #1f6f3d; }
+.dew-format-pop {
+    display: flex; align-items: center; gap: 2px;
+    padding: 6px 8px; border: 1px solid #e6e8ec; border-radius: 12px; margin-bottom: 8px; background: #fff;
+}
+.dew-fmt-btn {
+    border: none; background: none; cursor: pointer; font-size: 15px; line-height: 1;
+    width: 30px; height: 30px; border-radius: 8px; color: #374151;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.dew-fmt-btn:hover { background: #f1f5f3; }
+.dew-fmt-color { font-weight: 700; }
+.dew-fmt-sep { width: 1px; height: 18px; background: #e6e8ec; margin: 0 4px; flex: 0 0 auto; }
+
+/* Định dạng áp lên nội dung bài/bình luận đã đăng (khớp với applyTextFormatDisplay() JS). */
+.dew-fmt-underline { text-decoration: underline; }
+.dew-fmt-color-red { color: #ef4444; }
+.dew-fmt-color-yellow { color: #b45309; }
+.dew-fmt-color-blue { color: #2563eb; }
+.dew-fmt-color-green { color: #16a34a; }
+
+.dew-tag-picker { margin-top: 10px; }
+.dew-tag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.dew-tag-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #eaf6ee; color: #1f6f3d;
+    border-radius: 999px; padding: 4px 10px; font-size: 13px;
+}
+.dew-tag-chip button {
+    border: none; background: none; cursor: pointer; color: #1f6f3d;
+    font-size: 15px; line-height: 1; padding: 0;
+}
+.dew-search-wrap { position: relative; }
+.dew-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+.dew-search-input {
+    width: 100%; border: 1px solid #e6e8ec; border-radius: 8px;
+    padding: 8px 10px 8px 32px; font: inherit;
+}
+.dew-search-input:focus { outline: none; border-color: #2e9e57; }
+.dew-dropdown {
+    display: none; position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px);
+    background: #fff; border: 1px solid #e6e8ec; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    max-height: 220px; overflow-y: auto; list-style: none; margin: 0; padding: 4px;
+}
+.dew-dropdown.is-open { display: block; }
+.dew-dropdown li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.dew-dropdown li:hover, .dew-dropdown li.is-active { background: #eaf6ee; }
+.dew-dropdown li.dew-dropdown-empty { color: #9ca3af; cursor: default; }
+.dew-dropdown li.dew-dropdown-empty:hover { background: none; }
+
+.dew-composer-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+.dew-composer-msg { color: #d64545; font-size: 13px; margin-right: auto; }
+
+/* ---------- Tìm theo hashtag ---------- */
+.dew-search-bar {
+    position: relative;
+    margin-bottom: 16px;
+}
+.dew-search-bar > i.fa-hashtag { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+.dew-search-bar input {
+    width: 100%; border: 1px solid #e6e8ec; border-radius: 999px;
+    padding: 10px 36px; font: inherit; background: #fff;
+}
+.dew-search-bar input:focus { outline: none; border-color: #2e9e57; }
+.dew-search-clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    border: none; background: none; cursor: pointer; color: #9ca3af; padding: 4px;
+}
+
+/* ---------- Permalink (mở từ chuông) ---------- */
+.dew-permalink { margin-bottom: 20px; }
+.dew-permalink-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff7e6; color: #a16207; border: 1px solid #fde68a;
+    border-radius: 8px; padding: 6px 12px; font-size: 13px; margin-bottom: 8px;
+}
+
+/* ---------- Feed / thẻ bài viết ---------- */
+.dew-feed { display: flex; flex-direction: column; gap: 16px; }
+.dew-empty { text-align: center; color: #9ca3af; padding: 40px 0; }
+.dew-empty i { font-size: 32px; margin-bottom: 10px; display: block; }
+.dew-loadmore { display: block; margin: 18px auto 0; }
+
+.dew-post {
+    background: #fff;
+    border: 1px solid #e6e8ec;
+    border-radius: 12px;
+    padding: 16px;
+}
+.dew-post-head { display: flex; align-items: center; gap: 10px; }
+.dew-post-headinfo { flex: 1; min-width: 0; }
+.dew-post-name { font-weight: 600; color: #1f2937; }
+.dew-post-time { font-size: 12.5px; color: #9ca3af; }
+.dew-post-del, .dew-comment-del, .dew-post-edit {
+    border: none; background: none; cursor: pointer; color: #9ca3af; padding: 6px;
+    border-radius: 6px;
+}
+.dew-post-del:hover, .dew-comment-del:hover { color: #d64545; background: #fdecec; }
+.dew-post-edit:hover { color: #2e9e57; background: #eaf6ee; }
+
+/* Icon Sửa/Xóa của bài viết chỉ hiện khi hover vào bài (giữ thao tác gọn khi lướt Tường). */
+.dew-post-edit, .dew-post-del { opacity: 0; transition: opacity .15s ease; }
+.dew-post:hover .dew-post-edit, .dew-post:hover .dew-post-del,
+.dew-post-edit:focus, .dew-post-del:focus { opacity: 1; }
+
+.dew-post-content { margin-top: 10px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+
+.dew-post-editbox { margin-top: 10px; }
+.dew-edit-input {
+    width: 100%; border: 1px solid #2e9e57; border-radius: 8px;
+    padding: 10px 12px; font: inherit; min-height: 70px; max-height: 320px; overflow-y: auto;
+    line-height: 1.5; white-space: pre-wrap; word-break: break-word; box-sizing: border-box;
+}
+.dew-edit-input:focus { outline: none; box-shadow: 0 0 0 2px #dcfce7; }
+.dew-edit-tagpicker { margin-top: 8px; }
+.dew-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.dew-hashtag { color: #2e9e57; text-decoration: none; font-weight: 600; }
+.dew-hashtag:hover { text-decoration: underline; }
+
+.dew-media {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+}
+.dew-media-img img {
+    width: 100%; height: 140px; object-fit: cover; border-radius: 8px; cursor: zoom-in;
+    display: block;
+}
+.dew-media-file {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid #e6e8ec; border-radius: 8px; padding: 10px;
+    color: #374151; text-decoration: none; font-size: 13px;
+    background: #f9fafb;
+}
+.dew-media-file i { color: #6b7280; font-size: 18px; }
+.dew-media-file span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.dew-post-tags { margin-top: 8px; font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dew-tag-avatars { display: inline-flex; align-items: center; }
+.dew-tag-avatar {
+    width: 24px; height: 24px; border-radius: 50%; object-fit: cover;
+    border: 2px solid #fff; box-shadow: 0 0 0 1px #e6e8ec;
+    margin-left: -8px; background: #e5e7eb; font-size: 24px;
+}
+.dew-tag-avatars .dew-tag-avatar:first-child { margin-left: 0; }
+.dew-tag-avatar.dew-avatar-fallback { display: inline-flex; align-items: center; justify-content: center; color: #9ca3af; }
+.dew-tag-avatar-more {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%; margin-left: -8px;
+    background: #e5e7eb; color: #374151; font-size: 11px; font-weight: 700;
+    border: 2px solid #fff; box-shadow: 0 0 0 1px #e6e8ec;
+}
+
+.dew-pin-bar { margin-top: 10px; }
+.dew-pin-btn { font-size: 13px; padding: 6px 12px; }
+
+/* ---------- Cảm xúc ---------- */
+.dew-reactions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.dew-reaction-chip {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid #e6e8ec; border-radius: 999px; padding: 3px 8px;
+    font-size: 13px; cursor: pointer; background: #fff;
+}
+.dew-reaction-chip.mine { border-color: #2e9e57; background: #eaf6ee; }
+.dew-reaction-chip .cnt { color: #6b7280; font-size: 12px; }
+.dew-reaction-chip .dew-reaction-tip {
+    display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    background: #111827; color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 6px;
+    white-space: nowrap; z-index: 10;
+}
+.dew-reaction-chip:hover .dew-reaction-tip { display: block; }
+
+.dew-post-actions {
+    position: relative;
+    display: flex; gap: 4px;
+    border-top: 1px solid #f0f1f3; border-bottom: 1px solid #f0f1f3;
+    margin-top: 10px; padding: 6px 0;
+}
+.dew-post-actions button {
+    flex: 1; text-align: center; font: inherit; border: none; background: none; cursor: pointer;
+    color: #6b7280; padding: 8px; border-radius: 6px;
+}
+.dew-post-actions button:hover { background: #f3f5f7; color: #1f6f3d; }
+
+.dew-react-pop {
+    display: none; position: absolute; z-index: 15; bottom: calc(100% + 6px); left: 8px;
+    background: #fff; border: 1px solid #e6e8ec; border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 6px 8px; gap: 4px;
+}
+.dew-react-pop.is-open { display: flex; }
+.dew-react-pop-btn {
+    border: none; background: none; cursor: pointer; font-size: 20px; padding: 2px 4px;
+    transition: transform .1s ease;
+}
+.dew-react-pop-btn:hover { transform: scale(1.25); }
+
+/* ---------- Bình luận + trả lời ---------- */
+.dew-comments { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.dew-comments-more {
+    align-self: flex-start; border: none; background: none; cursor: pointer;
+    color: #6b7280; font-size: 12.5px; font-weight: 600; padding: 2px 0;
+}
+.dew-comments-more:hover { color: #1f6f3d; text-decoration: underline; }
+.dew-comments-older { display: flex; flex-direction: column; gap: 10px; }
+.dew-comment { display: flex; gap: 8px; }
+.dew-comment-main { flex: 1; min-width: 0; }
+.dew-comment-bubble-row { display: flex; align-items: flex-start; gap: 4px; }
+.dew-comment-bubble {
+    background: #f3f5f7; border-radius: 14px; padding: 8px 12px; display: inline-block; max-width: 100%;
+}
+.dew-comment-name { font-weight: 600; font-size: 13px; color: #1f2937; }
+.dew-comment-text { font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+.dew-comment .dew-media { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); max-width: 320px; }
+.dew-comment .dew-media-img img { height: 90px; }
+
+.dew-comment-meta { display: flex; align-items: center; gap: 12px; margin-top: 4px; padding-left: 4px; flex-wrap: wrap; }
+.dew-comment-time { font-size: 12px; color: #9ca3af; }
+.dew-comment-reactbtn, .dew-comment-replybtn {
+    border: none; background: none; cursor: pointer; color: #6b7280; font-size: 12.5px; font-weight: 600; padding: 0;
+}
+.dew-comment-reactbtn:hover, .dew-comment-replybtn:hover { color: #1f6f3d; text-decoration: underline; }
+.dew-comment-meta .dew-reactions { margin-top: 0; }
+
+/* Hover vào "Thích" của bình luận -> hiện sẵn bảng chọn emoji (không cần click).
+   Khoảng cách 6px giữa nút và bảng emoji vốn là "khe hở" làm rê chuột qua bị mất
+   :hover (bảng tắt trước khi bấm kịp) — vá bằng 1 dải vô hình (::after) phủ đúng
+   khe hở đó, vẫn là con cháu của .dew-reactbtn-wrap nên giữ :hover liên tục. */
+.dew-reactbtn-wrap { position: relative; display: inline-flex; }
+.dew-reactbtn-wrap .dew-react-pop { display: none; position: absolute; bottom: calc(100% + 6px); left: 0; }
+.dew-reactbtn-wrap .dew-react-pop::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -10px; height: 10px;
+}
+.dew-reactbtn-wrap:hover .dew-react-pop { display: flex; }
+
+/* "..." nằm ngang hàng với bubble, chỉ hiện khi hover đúng bubble đó (không lan sang bình luận khác). */
+.dew-comment-more-wrap { position: relative; opacity: 0; transition: opacity .15s ease; flex-shrink: 0; margin-top: 2px; }
+.dew-comment-bubble-row:hover .dew-comment-more-wrap,
+.dew-comment-more-wrap:focus-within { opacity: 1; }
+.dew-comment-more-btn {
+    border: none; background: none; cursor: pointer; color: #9ca3af; padding: 4px 6px; border-radius: 6px;
+}
+.dew-comment-more-btn:hover { background: #e5e7eb; color: #374151; }
+.dew-comment-more-menu {
+    display: none; position: absolute; top: calc(100% + 4px); right: 0; z-index: 12;
+    background: #fff; border: 1px solid #e6e8ec; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 4px; min-width: 120px;
+}
+.dew-comment-more-menu.is-open { display: block; }
+.dew-comment-more-menu .dew-comment-del {
+    display: flex; align-items: center; gap: 6px; width: 100%;
+    border: none; background: none; cursor: pointer; color: #d64545;
+    font-size: 13px; padding: 7px 10px; border-radius: 6px; text-align: left;
+}
+.dew-comment-more-menu .dew-comment-del:hover { background: #fdecec; }
+
+/* Thụt lề cho trả lời (chỉ 1 cấp). */
+.dew-comment-replies { margin-top: 8px; margin-left: 24px; padding-left: 14px; border-left: 2px solid #eef0f2; display: flex; flex-direction: column; gap: 10px; }
+.dew-comment-reply .dew-comment-bubble { background: #eef0f2; }
+
+.dew-reply-compose { margin-top: 8px; margin-left: 24px; }
+
+/* ---------- Khung soạn bình luận ---------- */
+.dew-comment-compose { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
+.dew-comment-compose-wrap { flex: 1; min-width: 0; position: relative; }
+.dew-comment-compose-body {
+    display: flex; align-items: flex-end; gap: 6px;
+    background: #f3f5f7; border-radius: 18px; padding: 6px 6px 6px 14px;
+}
+.dew-comment-input {
+    flex: 1; font: inherit; padding: 6px 0;
+}
+.dew-comment-input:focus { outline: none; }
+/* Ô bình luận = contenteditable (không phải textarea) để định dạng chữ (đậm/nghiêng/
+   gạch chân/màu) hiển thị TRỰC TIẾP ngay khi gõ, giống ô soạn bài/ô soạn tin nhắn chat. */
+.dew-comment-input-editable {
+    line-height: 1.4; white-space: pre-wrap; word-break: break-word;
+    min-height: 20px; max-height: 160px; overflow-y: auto;
+}
+.dew-comment-input-editable:empty:before {
+    content: attr(data-placeholder); color: #9ca3af; pointer-events: none;
+}
+.dew-comment-filecount { font-size: 11.5px; color: #6b7280; white-space: nowrap; }
+.dew-comment-attach, .dew-comment-send, .dew-comment-fmt-toggle {
+    border: none; background: none; cursor: pointer; color: #6b7280; width: 30px; height: 30px;
+    border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.dew-comment-attach:hover, .dew-comment-fmt-toggle:hover { background: #e5e7eb; }
+.dew-comment-send { color: #2e9e57; }
+.dew-comment-send:hover { background: #eaf6ee; }
+/* Popup định dạng chữ của ô bình luận — nổi phía trên ô, cùng kiểu .dew-format-pop. */
+.dew-comment-fmt-pop {
+    position: absolute; z-index: 20; bottom: calc(100% + 6px); left: 0;
+    display: flex; align-items: center; gap: 2px;
+    padding: 6px 8px; border: 1px solid #e6e8ec; border-radius: 12px; background: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+}
+
+/* ---------- Toast ---------- */
+.dew-toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px);
+    background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 8px;
+    font-size: 14px; opacity: 0; transition: opacity .2s ease, transform .2s ease;
+    z-index: 999; pointer-events: none;
+}
+.dew-toast.is-err { background: #b91c1c; }
+.dew-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 640px) {
+    .dew-content { padding-left: 8px; padding-right: 8px; }
+    .dew-composer { flex-direction: column; }
+}

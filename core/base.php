@@ -3,6 +3,18 @@
 defined('APPPATH') OR exit('Không được quyền truy cập phần này');
 
 
+/**
+ * URL asset kèm ?v=filemtime để tránh trình duyệt giữ bản CSS/JS cũ sau khi sửa —
+ * dùng cho các file dùng chung (app_shell.css/js...) được link tĩnh ở rất nhiều view,
+ * nơi việc tự tay đổi version thủ công mỗi lần sửa là không khả thi.
+ * @param string $rel  đường dẫn tương đối từ gốc app (vd 'public/css/shared/app_shell.css')
+ */
+function asset_ver($rel) {
+    $abs = APPPATH . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+    $v = is_file($abs) ? filemtime($abs) : time();
+    return $rel . '?v=' . $v;
+}
+
 // get Module name
 
 function get_module() {

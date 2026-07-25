@@ -1,0 +1,1159 @@
+/* =====================================================================
+ *  QUẢN LÝ FILE — file_manager.css
+ * ===================================================================== */
+/* Khai báo ở :root (không phải .fm-content) vì #fm-modal / #fm-ctxmenu / #fm-toast
+   nằm ngoài .fm-content trong DOM (là anh em của #wrapper, không phải con cháu) —
+   nếu khai báo trong .fm-content thì mọi var(--fm-*) dùng bên trong modal sẽ vô hiệu
+   (không thấy màu, không thấy hover) vì custom property chỉ kế thừa cho phần tử con. */
+:root {
+    --fm-green: #16a34a;
+    --fm-green-d: #15803d;
+    --fm-bd: #e5e7eb;
+    --fm-muted: #6b7280;
+}
+.fm-content {
+    padding: 0px 22px 60px;
+    background: #f6f8fa;
+    min-height: 100vh;
+    overflow-x: auto;
+}
+
+/* ---------- Toolbar ---------- */
+/* position:sticky top:0: khi cuộn, nội dung bên dưới (thẻ file/thư mục) trượt "ra"
+   qua góc bo tròn phía dưới của toolbar (2 góc dưới là nơi nội dung đang cuộn thoát
+   lên khỏi viewport đi qua) — chỉ bo tròn 2 góc TRÊN, để cạnh dưới thẳng che kín toàn
+   bộ bề ngang, không còn khe hở lộ nội dung phía sau khi đã dính (stuck) ở top:0. */
+.fm-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid var(--fm-bd);
+    /* border-radius: 12px 12px 0 0; */
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    margin-bottom: 18px;
+}
+
+.fm-tb-left {
+    display: flex;
+    gap: 8px;
+}
+
+.fm-tb-right {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    align-items: center;
+}
+
+.fm-tb-search {
+    position: relative;
+    flex: 1 1 260px;
+    max-width: 460px;
+    display: flex;
+    align-items: center;
+}
+
+.fm-tb-search i.fa-magnifying-glass {
+    position: absolute;
+    left: 12px;
+    color: var(--fm-muted);
+}
+
+.fm-tb-search input {
+    width: 100%;
+    padding: 9px 34px 9px 34px;
+    border: 1px solid var(--fm-bd);
+    border-radius: 9px;
+    font-size: 14px;
+    outline: none;
+    background: #f9fafb;
+}
+
+.fm-tb-search input:focus {
+    border-color: var(--fm-green);
+    background: #fff;
+}
+
+.fm-search-clear {
+    position: absolute;
+    right: 6px;
+    border: 0;
+    background: none;
+    color: var(--fm-muted);
+    cursor: pointer;
+    padding: 6px;
+}
+
+/* ---------- Buttons ---------- */
+.fm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--fm-bd);
+    background: #fff;
+    color: #374151;
+    padding: 9px 14px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: .15s;
+}
+
+.fm-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.fm-btn-primary {
+    background: #e9e9e9;
+    border-color: var(--fm-green);
+    color: #017c13;
+}
+
+.fm-btn-primary:hover {
+    background: gainsboro;
+    border-color: var(--fm-green-d);
+}
+
+.fm-btn-danger {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+}
+
+.fm-btn-danger:hover {
+    background: #b91c1c;
+}
+
+.fm-btn-sm {
+    padding: 6px 11px;
+    font-size: 13px;
+}
+
+.fm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--fm-bd);
+    background: #fff;
+    color: #374151;
+    padding: 8px 13px;
+    border-radius: 20px;
+    font-size: 13.5px;
+    cursor: pointer;
+    position: relative;
+}
+
+.fm-chip.is-active {
+    background: #ecfdf5;
+    border-color: var(--fm-green);
+    color: var(--fm-green-d);
+    font-weight: 600;
+}
+
+.fm-chip-star {
+    border: 1px solid var(--fm-bd);
+    background: #fff;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #9ca3af;
+}
+
+.fm-chip-star.is-active {
+    color: #f59e0b;
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.fm-badge {
+    background: #dc2626;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 11px;
+    padding: 1px 6px;
+    margin-left: 2px;
+    font-weight: 700;
+}
+
+/* ---------- Section ---------- */
+/* ---------- FAQ cố định "File hay dùng" (mặc định mở) ---------- */
+.fm-faq {
+    background: #fff;
+    border: 1px solid var(--fm-bd);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.fm-faq-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 0;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    cursor: pointer;
+}
+
+.fm-faq-header:hover {
+    background: #f0fdf4;
+    color: var(--fm-green-d);
+}
+
+.fm-faq-label {
+    flex: 1;
+    text-align: left;
+}
+
+.fm-faq-icon {
+    font-size: 12px;
+    transition: transform .2s ease;
+    color: var(--fm-muted);
+}
+
+.fm-faq.open .fm-faq-header .fm-faq-icon {
+    transform: rotate(180deg);
+}
+
+.fm-faq-body {
+    display: none;
+    padding: 14px;
+}
+
+.fm-faq.open .fm-faq-body {
+    display: block;
+}
+
+/* ---------- Tab "Được chia sẻ": cuộn dọc riêng khi danh sách dài ---------- */
+#fm-tab-shared {
+    max-height: 72vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.fm-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin: 18px 2px 10px;
+}
+
+.fm-section-head .fm-link {
+    margin-left: auto;
+}
+
+.fm-link {
+    border: 0;
+    background: none;
+    color: var(--fm-green);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.fm-link.danger {
+    color: #dc2626;
+}
+
+.fm-muted {
+    color: var(--fm-muted);
+    font-size: 13.5px;
+    padding: 6px 2px;
+}
+
+/* ---------- Groups (cards dọc) ---------- */
+.fm-groups {
+    display: flex;
+    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+    gap: 16px;
+    align-items: start;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.fm-card {
+    background: #fff;
+    border: 1px solid var(--fm-bd);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    /* overflow: hidden; */
+    height: 72vh;
+    display: flex;
+    flex-direction: column;
+    /* width: 450px;
+    /* overflow: hidden; */
+}
+
+.fm-card.dragging {
+    opacity: .5;
+}
+
+/* Kéo file từ máy tính (ngoài trình duyệt) thả vào 1 nhóm file/thư mục con để tải lên đó. */
+.fm-card.fm-drop-hover,
+.fm-folder.fm-drop-hover {
+    outline: 2px dashed var(--fm-green);
+    outline-offset: -2px;
+    background: var(--fm-green-soft, #dcfce7);
+}
+
+.fm-card-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    border-left: 4px solid var(--fm-green);
+    background: #fafafa;
+}
+
+.fm-card-folder {
+    color: #f59e0b;
+}
+
+.fm-card-name {
+    font-weight: 700;
+    font-size: 15px;
+    flex: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-grip {
+    cursor: grab;
+    color: #cbd5e1;
+}
+
+.fm-card-body,
+.fm-children {
+    padding: 8px 10px 12px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* ---------- Folder node ---------- */
+.fm-children {
+    padding-left: 4px;
+}
+
+.fm-folder {
+    border-radius: 8px;
+}
+
+.fm-folder.dragging {
+    opacity: .5;
+}
+
+.fm-folder-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.fm-folder-head:hover {
+    background: #f3f4f6;
+}
+
+.fm-folder-head .fa-folder,
+.fm-folder-head .fa-folder-open {
+    color: #f59e0b;
+}
+
+.fm-folder-name {
+    flex: 1;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-caret {
+    width: 12px;
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.fm-folder .fm-children {
+    padding-left: 18px;
+    border-left: 1px dashed #e5e7eb;
+    margin-left: 12px;
+}
+
+/* ---------- File row ---------- */
+.fm-filelist {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 14px; /* giữ vùng thả file kể cả khi thư mục đang trống (kéo kiểu Trello) */
+}
+
+.fm-file {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 8px;
+    border-radius: 7px;
+}
+
+.fm-file:hover {
+    background: #f3f4f6;
+}
+
+.fm-file.dragging {
+    opacity: .5;
+}
+
+.fm-file-name {
+    flex: 1;
+    font-size: 13.5px;
+    cursor: pointer;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-file-name:hover {
+    color: var(--fm-green);
+    text-decoration: underline;
+}
+
+.fm-file-meta {
+    font-size: 11.5px;
+    color: var(--fm-muted);
+    white-space: nowrap;
+}
+
+/* icon ô file */
+.fm-ic {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    font-size: 15px;
+    color: #fff;
+    background: #94a3b8;
+}
+
+.fm-ic-pdf {
+    background: #ef4444;
+}
+
+.fm-ic-word {
+    background: #2563eb;
+}
+
+.fm-ic-excel {
+    background: #16a34a;
+}
+
+.fm-ic-ppt {
+    background: #ea580c;
+}
+
+.fm-ic-image {
+    background: #8b5cf6;
+}
+
+.fm-ic-video {
+    background: #db2777;
+}
+
+.fm-ic-audio {
+    background: #0891b2;
+}
+
+.fm-ic-archive {
+    background: #a16207;
+}
+
+.fm-ic-text {
+    background: #475569;
+}
+
+.fm-thumb {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    background-size: cover;
+    background-position: center;
+    display: inline-block;
+}
+
+/* ---------- Buttons trên item ---------- */
+.fm-iconbtn {
+    border: 0;
+    background: none;
+    color: #9ca3af;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 13.5px;
+}
+
+.fm-iconbtn:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.fm-iconbtn.fm-danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.fm-star {
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: #d1d5db;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.fm-star:hover {
+    background: #fef3c7;
+}
+
+.fm-star.on {
+    color: #f59e0b;
+}
+
+/* ---------- Root files / search grid (tiles) ---------- */
+.fm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.fm-tile {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--fm-bd);
+    border-radius: 10px;
+    padding: 16px 10px 10px;
+    text-align: center;
+    transition: .15s;
+}
+
+.fm-tile:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .07);
+}
+
+.fm-tile.dragging {
+    opacity: .5;
+}
+
+.fm-tile-folder { cursor: pointer; }
+
+/* Nháy sáng ngắn khi "đi tới" 1 thư mục từ kết quả tìm kiếm, để user dễ nhận ra vị trí. */
+@keyframes fmGotoFlash {
+    0%, 100% { box-shadow: none; }
+    30% { box-shadow: 0 0 0 3px var(--fm-green); }
+}
+.fm-goto-flash {
+    animation: fmGotoFlash 1.6s ease;
+}
+
+.fm-tile-ic {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.fm-tile-ic .fm-ic,
+.fm-tile-ic .fm-thumb {
+    width: 46px;
+    height: 46px;
+    font-size: 22px;
+    border-radius: 9px;
+}
+
+.fm-tile-name {
+    font-size: 13px;
+    font-weight: 500;
+    word-break: break-word;
+    line-height: 1.3;
+    max-height: 2.6em;
+}
+
+.fm-tile-meta {
+    font-size: 11px;
+    color: var(--fm-muted);
+    margin-top: 3px;
+}
+
+.fm-tile .fm-star {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+}
+
+.fm-tile-menu {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+}
+
+/* ---------- Empty ---------- */
+.fm-empty {
+    text-align: center;
+    color: var(--fm-muted);
+    padding: 50px 20px;
+}
+
+.fm-empty i {
+    font-size: 48px;
+    color: #d1d5db;
+    margin-bottom: 14px;
+    display: block;
+}
+
+/* ---------- "File hay dùng" song song với "Đã lưu từ chia sẻ" (chung 1 FAQ) ---------- */
+.fm-half-row {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+}
+.fm-half-col {
+    flex: 1 1 50%;
+    min-width: 0;
+}
+.fm-half-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--fm-muted);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin: 0 0 8px;
+}
+
+/* ---------- Shared tab ---------- */
+.fm-invite {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid var(--fm-bd);
+    border-left: 4px solid #f59e0b;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+}
+
+.fm-invite-info {
+    flex: 1;
+    font-size: 14px;
+}
+
+.fm-invite-item {
+    color: var(--fm-green-d);
+    font-weight: 600;
+}
+
+.fm-invite-act {
+    display: flex;
+    gap: 7px;
+}
+
+.fm-shared-grid,
+#fm-shared-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.fm-shared-card {
+    background: #fff;
+    border: 1px solid var(--fm-bd);
+    border-radius: 11px;
+    padding: 12px;
+    min-width: 0;
+}
+.fm-shared-draggable { cursor: grab; }
+.fm-shared-draggable.dragging { opacity: .45; }
+/* Khi xổ thư mục con (.fm-shared-children đang mở), cho card chiếm trọn hàng
+   để không bị tràn nội dung ra ngoài (tên file/thư mục dài bên trong). */
+.fm-shared-card.is-open {
+    grid-column: 1 / -1;
+}
+
+.fm-shared-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    cursor: pointer;
+}
+
+.fm-shared-head .fa-folder {
+    color: #f59e0b;
+}
+
+.fm-shared-name {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm-shared-by {
+    font-size: 12px;
+    color: var(--fm-muted);
+    margin-bottom: 9px;
+}
+
+.fm-shared-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.fm-shared-libr-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.fm-shared-children {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #e5e7eb;
+}
+
+/* ---------- Avatars / tags ---------- */
+.fm-ava {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.fm-ava.sm {
+    width: 24px;
+    height: 24px;
+}
+
+.fm-ava-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--fm-green);
+    color: #fff;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 13px;
+}
+
+.fm-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.fm-tag.ok {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.fm-tag.warn {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+/* ---------- Context menu ---------- */
+.fm-ctxmenu {
+    position: fixed;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid var(--fm-bd);
+    border-radius: 9px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .16);
+    padding: 5px;
+    min-width: 188px;
+}
+
+.fm-ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: 0;
+    background: none;
+    text-align: left;
+    padding: 8px 11px;
+    border-radius: 6px;
+    font-size: 13.5px;
+    color: #374151;
+    cursor: pointer;
+}
+
+.fm-ctx-item:hover {
+    background: #f3f4f6;
+}
+
+.fm-ctx-item i {
+    width: 16px;
+    color: #6b7280;
+}
+
+.fm-ctx-item.danger {
+    color: #dc2626;
+}
+
+.fm-ctx-item.danger i {
+    color: #dc2626;
+}
+
+.fm-ctx-sep {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 4px 0;
+}
+
+/* ---------- Modal ---------- */
+.fm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 900;
+    padding: 20px;
+}
+
+.fm-modal {
+    background: #fff;
+    border-radius: 13px;
+    width: 100%;
+    max-width: 460px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .3);
+}
+
+.fm-modal-head {
+    display: flex;
+    align-items: center;
+    padding: 15px 18px;
+    border-bottom: 1px solid var(--fm-bd);
+}
+
+.fm-modal-head h3 {
+    margin: 0;
+    font-size: 16px;
+    flex: 1;
+}
+
+.fm-modal-x {
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: var(--fm-muted);
+    font-size: 17px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: .15s;
+}
+.fm-modal-x:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.fm-modal-body {
+    padding: 18px;
+    overflow-y: auto;
+}
+
+.fm-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 16px;
+}
+
+.fm-field-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #4b5563;
+    margin: 12px 0 5px;
+}
+
+.fm-input {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--fm-bd);
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+}
+
+.fm-input:focus {
+    border-color: var(--fm-green);
+}
+
+.fm-confirm-msg {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.fm-upload-errors {
+    font-size: 13px;
+    color: #b91c1c;
+    line-height: 1.6;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-left: 18px;
+    margin: 0;
+}
+
+/* user list trong modal */
+.fm-user-list {
+    max-height: 230px;
+    overflow-y: auto;
+    border: 1px solid var(--fm-bd);
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.fm-user-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 11px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.fm-user-row:hover {
+    background: #f9fafb;
+}
+
+/* Checkbox hình tròn xanh lá (giống kiểu chọn người ở Chat) — giữ input thật,
+   chỉ ẩn hiển thị gốc; .fm-check-circle mới là phần hiển thị. */
+.fm-user-row input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+}
+.fm-check-circle {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px solid #9ca3af;
+    background: #f3f4f6;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .06);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    transition: .15s;
+}
+.fm-user-row:hover .fm-check-circle { border-color: var(--fm-green); }
+.fm-check-circle i { display: none; }
+.fm-user-row input[type="checkbox"]:checked ~ .fm-check-circle {
+    background: var(--fm-green);
+    border-color: var(--fm-green);
+}
+.fm-user-row input[type="checkbox"]:checked ~ .fm-check-circle i { display: block; }
+
+/* ---------- Dung lượng lưu trữ ---------- */
+.fm-storage-top { display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
+.fm-donut {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e5e7eb; /* nền dự phòng: luôn thấy được vòng tròn kể cả khi chưa có dữ liệu % */
+    border: 1px solid var(--fm-bd);
+    box-shadow: 0 0 0 1px #fff, 0 1px 4px rgba(0, 0, 0, .1);
+    transition: background 0.4s ease;
+}
+.fm-donut span {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #374151;
+    box-shadow: inset 0 0 0 1px var(--fm-bd);
+}
+.fm-storage-info { font-size: 14px; color: #374151; }
+.fm-storage-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 8px 0 12px;
+    padding-bottom: 2px;
+}
+.fm-storage-chips .fm-chip { flex-shrink: 0; }
+.fm-storage-chips .fm-chip:hover {
+    background: var(--fm-green);
+    border-color: var(--fm-green);
+    color: #fff;
+}
+.fm-storage-chips .fm-chip.is-active:hover {
+    background: #ecfdf5;
+    color: var(--fm-green-d);
+}
+#fm-storage-list { max-height: 260px; overflow-y: auto; border: 1px solid var(--fm-bd); border-radius: 8px; }
+#fm-storage-list:empty { display: none; }
+
+.fm-share-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 2px;
+    font-size: 13px;
+}
+
+.fm-share-row .fm-link {
+    margin-left: auto;
+}
+
+/* modal tabs */
+.fm-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--fm-bd);
+    margin-bottom: 14px;
+}
+
+.fm-mtab {
+    border: 0;
+    background: none;
+    padding: 9px 13px;
+    font-size: 13.5px;
+    color: var(--fm-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.fm-mtab.is-active {
+    color: var(--fm-green-d);
+    border-bottom-color: var(--fm-green);
+    font-weight: 600;
+}
+
+/* colors */
+.fm-colors {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.fm-color-dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    cursor: pointer;
+    box-shadow: 0 0 0 1px #e5e7eb;
+    color: #fff;
+    font-size: 16px;
+}
+
+.fm-color-dot.on {
+    box-shadow: 0 0 0 2px var(--fm-green);
+}
+
+.fm-color-none {
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+/* ---------- Sortable feedback ---------- */
+.fm-sortable.reorder-ok {
+    outline: 2px solid #86efac;
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+/* ---------- Toast ---------- */
+.fm-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #111827;
+    color: #fff;
+    padding: 11px 18px;
+    border-radius: 9px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: .25s;
+    z-index: 1100;
+}
+
+.fm-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.fm-toast.err {
+    background: #dc2626;
+}

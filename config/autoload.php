@@ -21,7 +21,7 @@ defined('APPPATH') OR exit('Không được quyền truy cập phần này');
  */
 
 
-// $autoload['libraries'] = array('database');
+$autoload['libraries'] = array('nav');
 
 /*
  * ------------------------------------------------------------------
@@ -32,7 +32,7 @@ defined('APPPATH') OR exit('Không được quyền truy cập phần này');
  */
 
 
-$autoload['helper'] = array('data','auth','format');
+$autoload['helper'] = array('data','auth','permission','format','accounting','invoice_ui');
 
 
 

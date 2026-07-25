@@ -1,0 +1,133 @@
+/* ============================================
+   CASH TRANSACTIONS — form nhập thu chi
+   Bổ sung trên dashboard.css + journal_entry.css.
+   ============================================ */
+.ct-form {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ct-form-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ct-form-row label {
+    width: 110px;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+.ct-input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 12px;
+    border: 1.5px solid var(--color-gray-200);
+    border-radius: 8px;
+    background-color: var(--color-white);
+    font-size: 14px;
+    color: var(--color-gray-900);
+    outline: none;
+    transition: var(--transition);
+}
+
+.ct-input:hover {
+    border-color: var(--color-green-light);
+}
+
+.ct-input:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+select.ct-input {
+    cursor: pointer;
+    background-color: var(--color-white);
+}
+
+.ct-input-amount {
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #003c7c;
+}
+
+/* Lịch sử: phiếu Thu nổi bật bằng chữ xanh. */
+.ct-type-thu {
+    color: var(--color-green, #16a34a);
+    font-weight: 600;
+}
+
+/* ============================================
+   Dropdown chọn nghiệp vụ đã nhập (right-click ô "Diễn giải nghiệp vụ")
+   ============================================ */
+.ct-nv-dropdown {
+    position: absolute;
+    z-index: 1000;
+    max-width: 420px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md, 0 6px 20px rgba(0, 0, 0, 0.15));
+    padding: 4px;
+}
+
+.ct-nv-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ct-nv-item:hover {
+    background: var(--color-green-light, #dcfce7);
+}
+
+.ct-nv-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ct-nv-sub {
+    font-size: 12px;
+    color: var(--color-gray-700, #6b7280);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ct-nv-loading,
+.ct-nv-empty {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--color-gray-700, #6b7280);
+}
+
+@media (max-width: 700px) {
+    .ct-form-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .ct-form-row label {
+        width: auto;
+    }
+}

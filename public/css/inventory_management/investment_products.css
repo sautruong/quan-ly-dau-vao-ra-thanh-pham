@@ -92,6 +92,15 @@
     max-height: 1500px;
 }
 
+/* Khi mở: cho phép tràn để dropdown gợi ý NVL không bị cắt bởi overflow:hidden. */
+.material-faq.open {
+    overflow: visible;
+}
+
+.material-faq.open .material-faq-body {
+    overflow: visible;
+}
+
 /* ============================================
    LIST MATERIAL
    ============================================ */
@@ -106,6 +115,9 @@
 
 .list-material .material-item {
     list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     background-color: var(--color-gray-50);
     border: 1px solid var(--color-gray-200);
     border-radius: 8px;
@@ -118,11 +130,155 @@
     background-color: #f0fdf4;
 }
 
+.list-material .material-item.dragging {
+    opacity: 0.5;
+    border-style: dashed;
+    border-color: var(--color-green);
+    background-color: #ecfdf5;
+}
+
+/* Tay cầm kéo-thả (như card Trello) */
+.list-material .material-drag-handle {
+    flex: 0 0 auto;
+    cursor: grab;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: -2px;
+    user-select: none;
+    padding: 4px 2px;
+}
+
+.list-material .material-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Nút loại bỏ thành phần / gỡ "Chi phí sản xuất" khỏi sản phẩm */
+.list-material .btn-remove-material,
+.list-material .btn-remove-production-cost {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background-color: transparent;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.list-material .btn-remove-material:hover,
+.list-material .btn-remove-production-cost:hover {
+    background-color: #fee2e2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
 .list-material .name-material {
+    flex: 1;
+    min-width: 0;
     display: grid;
     grid-template-columns: minmax(0, 1.6fr) 90px 90px 130px;
     align-items: center;
     gap: 8px;
+}
+
+/* Ô tên thành phần (input + dropdown gợi ý) */
+.list-material .material-name-field {
+    position: relative;
+    min-width: 0;
+}
+
+.list-material .input-material-name {
+    width: 100%;
+    text-align: left !important;
+}
+
+.list-material .material-dropdown {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm, 0 4px 12px rgba(0, 0, 0, 0.12));
+    max-height: 240px;
+    overflow-y: auto;
+    display: none;
+}
+
+.list-material .material-dropdown.active {
+    display: block;
+}
+
+.list-material .material-dropdown li {
+    padding: 7px 12px;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.list-material .material-dropdown li:hover:not(.empty),
+.list-material .material-dropdown li.active {
+    background-color: var(--color-green-soft, #ecfdf5);
+    color: var(--color-green-dark);
+}
+
+.list-material .material-dropdown li.empty {
+    color: var(--color-gray-400, #9ca3af);
+    cursor: default;
+    font-style: italic;
+}
+
+/* Hàng action: Thêm thành phần / Cập nhật định mức */
+.material-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 4px 12px 12px;
+}
+
+.material-actions button {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+}
+
+.material-actions .btn-add-material {
+    background-color: var(--color-white);
+    border-color: var(--color-green-light);
+    color: var(--color-green-dark);
+}
+
+.material-actions .btn-add-material:hover {
+    background-color: var(--color-green-soft, #ecfdf5);
+}
+
+.material-actions .btn-update-norm {
+    background: linear-gradient(135deg, var(--color-green) 0%, var(--color-green-light) 100%);
+    border-color: var(--color-green-dark);
+    color: var(--color-white);
+}
+
+.material-actions .btn-update-norm:hover {
+    filter: brightness(1.05);
 }
 
 .list-material .name-material p {
@@ -177,11 +333,13 @@
 
 /* ============================================
    SUB-TOTAL (per product) — luôn hiển thị, ngoài material-faq
+   Nhóm 1 (Tổng vốn) và Nhóm 2 (Giá trị) flex dàn ra 2 bên.
    ============================================ */
 .product-item .sub-total {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
     margin: 0 14px 14px;
     padding: 10px 12px;
@@ -190,12 +348,20 @@
     border-radius: 8px;
 }
 
+.sub-total-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
 .sub-total .title-total p,
 .sub-total .value-total p {
     margin: 0;
     font-size: 13px;
     color: var(--color-gray-700);
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .sub-total .total p {
@@ -207,19 +373,411 @@
     white-space: nowrap;
 }
 
-.sub-total > .total:nth-of-type(2) p {
+.sub-total-group-value .total {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sub-total-group-value .total p {
     color: #003c7c;
 }
 
 /* ============================================
-   GRAND TOTALS (toàn list)
+   Ghi chú "Điểm nhắc trước nhập sản xuất" — dưới cùng product-item.
    ============================================ */
+.product-reminder {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 0 14px 14px;
+    padding: 8px 12px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 8px;
+    font-size: 13px;
+    position: relative;
+}
+.product-reminder-label {
+    font-weight: 600;
+    color: #c2410c;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.product-reminder-text {
+    flex: 1;
+    min-width: 0;
+    color: var(--color-gray-700);
+    outline: none;
+    word-break: break-word;
+}
+.product-reminder-text:empty::before {
+    content: 'Nhập ghi chú…';
+    color: var(--color-gray-400, #9ca3af);
+}
+.product-reminder-text:focus {
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px #fed7aa;
+}
+.product-reminder-del {
+    border: 0;
+    background: transparent;
+    color: #c2410c;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.product-reminder-del:hover {
+    color: #9a3412;
+}
+
+/* Banner tĩnh (không sửa được) nhắc trừ bao bì khách hàng — module customer_packaging. */
+.product-cpkg-warning {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 14px 14px;
+    padding: 8px 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #991b1b;
+}
+.product-cpkg-warning i {
+    color: #dc2626;
+    flex-shrink: 0;
+}
+.product-cpkg-list {
+    color: #7f1d1d;
+    word-break: break-word;
+}
+.product-cpkg-link {
+    margin-left: auto;
+    color: #b91c1c;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.product-cpkg-link:hover {
+    text-decoration: underline;
+}
+
+/* Chấm tròn cảnh báo tỉ lệ (Giá trị - Tổng vốn) / Tổng vốn, bên phải "Giá trị". */
+.value-warning-dot {
+    display: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+.value-warning-dot.dot-red {
+    display: inline-block;
+    background-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .15);
+}
+
+.value-warning-dot.dot-yellow {
+    display: inline-block;
+    background-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .15);
+}
+
+.value-warning-dot.dot-green {
+    display: inline-block;
+    background-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .15);
+}
+
+/* ============================================
+   MODAL: Cảnh báo tồn nguyên liệu (sau khi Ghi)
+   ============================================ */
+/* Thông báo ngắn tự ẩn (phản hồi "+ Lịch") — không cần bấm OK, tự biến mất sau ~2s. */
+.ip-toast {
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    background: #111827;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 1100;
+    opacity: 0;
+    transition: opacity .25s ease;
+    pointer-events: none;
+}
+.ip-toast.show { opacity: 1; }
+
+.ip-warn-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(16, 24, 40, .45);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: 40px 16px;
+    overflow-y: auto;
+}
+
+.ip-warn-box {
+    background: var(--color-white);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 560px;
+    padding: 20px 22px;
+    box-shadow: 0 20px 50px rgba(16, 24, 40, .25);
+}
+
+.ip-warn-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #b45309;
+    margin: 0 0 14px;
+}
+
+.ip-warn-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.ip-warn-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid;
+}
+
+.ip-warn-item.ip-warn-danger {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+}
+
+.ip-warn-item.ip-warn-caution {
+    background-color: #fffbeb;
+    border-color: #fde68a;
+}
+
+.ip-warn-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.ip-warn-body {
+    min-width: 0;
+}
+
+.ip-warn-name {
+    margin: 0 0 2px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+}
+
+.ip-warn-msg {
+    margin: 0 0 2px;
+    font-size: 13px;
+    color: var(--color-gray-700);
+}
+
+.ip-warn-detail {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.ip-warn-cal {
+    position: relative;
+    margin-top: 6px;
+}
+
+.ip-warn-cal-btn {
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid #d97706;
+    background: var(--color-white);
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ip-warn-cal-btn:hover {
+    background: #fffbeb;
+}
+
+.ip-warn-cal-menu {
+    position: fixed;
+    z-index: 1100;
+    min-width: 130px;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(16, 24, 40, .18);
+}
+
+.ip-warn-cal-menu li {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-gray-700);
+    cursor: pointer;
+}
+
+.ip-warn-cal-menu li:hover {
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.ip-warn-foot {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.ip-warn-close-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--color-green-dark);
+    background: linear-gradient(135deg, var(--color-green) 0%, var(--color-green-light) 100%);
+    color: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ip-warn-close-btn:hover {
+    filter: brightness(1.05);
+}
+
+.ip-dup-cancel-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    background: var(--color-white);
+    color: var(--color-gray-700);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ip-dup-cancel-btn:hover {
+    background: var(--color-gray-100, #f3f4f6);
+}
+
+.ip-dup-overwrite-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid #b45309;
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    color: var(--color-white);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.ip-dup-overwrite-btn:hover {
+    filter: brightness(1.05);
+}
+
+/* Modal "Trừ bao bì khách hàng" — xử lý tại chỗ (nghiệp vụ "Xuất dùng" customer_packaging). */
+.ip-cpkg-box {
+    max-width: 420px;
+}
+.ip-cpkg-title {
+    color: #b91c1c;
+}
+.ip-cpkg-field {
+    margin-bottom: 12px;
+}
+.ip-cpkg-field label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    margin-bottom: 4px;
+}
+.ip-cpkg-field-row {
+    display: flex;
+    gap: 12px;
+}
+.ip-cpkg-field-row .ip-cpkg-field {
+    flex: 1;
+    min-width: 0;
+}
+.ip-cpkg-pair,
+.ip-cpkg-qty,
+.ip-cpkg-date {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-family: inherit;
+    outline: none;
+    transition: var(--transition);
+}
+.ip-cpkg-pair:focus,
+.ip-cpkg-qty:focus,
+.ip-cpkg-date:focus {
+    border-color: #b91c1c;
+    box-shadow: 0 0 0 3px rgba(185, 28, 28, .12);
+}
+.ip-cpkg-fullpage-link {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: var(--color-gray-500);
+    text-decoration: none;
+}
+.ip-cpkg-fullpage-link:hover {
+    text-decoration: underline;
+    color: #b91c1c;
+}
+
+/* ============================================
+   GRAND TOTALS (toàn list)
+   - total-list + total-list-value gom chung 1 cụm, rộng vừa nội dung, canh PHẢI.
+   ============================================ */
+.total-wrap {
+    align-self: flex-end;          /* .content là flex-column -> đẩy cụm sang phải */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;          /* 2 dòng tổng bằng nhau theo dòng rộng nhất */
+    gap: 10px;
+    width: fit-content;
+    max-width: 100%;
+}
+
 .total-list,
 .total-list-value {
-    width: 100%;
+    width: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 32px;                     /* tách nhãn và số khi width co theo nội dung */
     padding: 14px 22px;
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
@@ -327,11 +885,11 @@
     .list-material .name-material {
         grid-template-columns: 1fr 1fr;
     }
-    .list-material .name-material p {
+    .list-material .material-name-field {
         grid-column: 1 / -1;
     }
-    .sub-total {
-        grid-template-columns: 1fr 1fr;
+    .sub-total-group {
+        flex: 1 1 100%;
     }
     .total-list,
     .total-list-value {

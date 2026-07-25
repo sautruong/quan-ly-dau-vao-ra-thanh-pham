@@ -73,7 +73,7 @@ body {
     margin-bottom: 0;
     font-weight: 500;
     position: absolute;
-    top: 0%;
+    top: -6%;
     left: 10px;
     color: black;
     font-size: 19px;
@@ -252,4 +252,108 @@ body {
     margin-bottom: 5px;
     font-style: italic;
     padding-left: 10px;
+}
+
+/* ================================
+   XÁC THỰC OTP ĐĂNG KÝ (register_otp)
+================================ */
+#wrapper #container #otp-register {
+    width: 100%;
+}
+
+#wrapper #container #otp-register .otp-boxes {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin: 10px 0 6px;
+}
+
+#wrapper #container #otp-register .otp-box {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    text-transform: uppercase;
+    border: 1px solid rgb(194, 194, 194);
+    border-radius: 12px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#wrapper #container #otp-register .otp-box:focus {
+    border: 1px solid green;
+    box-shadow: 0 0 0 2px rgba(0, 128, 0, 0.2);
+}
+
+#wrapper #container #otp-register .otp-box:disabled {
+    background: #f1f1f1;
+    color: #9a9a9a;
+}
+
+#wrapper #container #otp-register .otp-message {
+    min-height: 20px;
+    margin: 4px 0;
+    font-size: 15px;
+    font-style: italic;
+    text-align: center;
+}
+
+#wrapper #container #otp-register .otp-message.err {
+    color: rgb(235, 101, 101);
+}
+
+#wrapper #container #otp-register .otp-message.ok {
+    color: green;
+}
+
+#wrapper #container #otp-register #otp-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+
+#wrapper #container #otp-register #otp-countdown {
+    font-size: 15px;
+    color: rgb(82, 82, 82);
+}
+
+#wrapper #container #otp-register #otp-countdown b {
+    color: green;
+}
+
+#wrapper #container #otp-register #btn-resend-otp {
+    padding: 9px 18px;
+    border: 1px solid green;
+    border-radius: 10px;
+    background: #fff;
+    color: green;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+#wrapper #container #otp-register #btn-resend-otp:hover:enabled {
+    background: green;
+    color: #fff;
+}
+
+#wrapper #container #otp-register #btn-resend-otp:disabled {
+    border-color: #ccc;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+#wrapper #container #otp-register .link_login {
+    color: rgb(235, 101, 101);
+    text-align: center;
+    display: block;
+    margin-top: 18px;
+    text-decoration: none;
+}
+
+#wrapper #container #otp-register .link_login:hover {
+    color: rgb(255, 55, 55);
 }

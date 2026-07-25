@@ -1,0 +1,433 @@
+/* =====================================================================
+ *  Việc cần làm — Danh sách công việc (giống Google Tasks)
+ *  Card nhóm dàn ngang, lever 1 / lever 2, kéo-thả Trello, nhắc hẹn.
+ * ===================================================================== */
+
+:root {
+    --tk-blue: #1e8e3e;        /* màu nhấn chính (xanh lá) */
+    --tk-blue-dark: #176c2f;   /* xanh lá đậm khi hover */
+    --tk-blue-soft: #e6f4ea;   /* nền xanh lá nhạt */
+    --tk-green: #188038;
+    --tk-red: #d93025;
+    --tk-border: #e0e3e7;
+    --tk-bg: #f1f3f4;
+    --tk-text: #202124;
+    --tk-muted: #5f6368;
+}
+
+.content {
+    background: var(--tk-bg);
+    min-height: calc(100vh - 60px);
+}
+
+/* ----------- Toolbar ----------- */
+.tk-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px 6px;
+}
+
+.tk-btn-new-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--tk-blue);
+    color: #fff;
+    border: none;
+    border-radius: 22px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, .25);
+    transition: box-shadow .15s, background .15s;
+}
+
+.tk-btn-new-group:hover { background: var(--tk-blue-dark); box-shadow: 0 2px 6px rgba(60, 64, 67, .35); }
+
+/* ----------- Board (hàng ngang các card) ----------- */
+.tk-board {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 20px 40px;
+}
+
+/* ----------- Card 1 nhóm ----------- */
+.tk-card {
+    width: 320px;
+    flex: 0 0 320px;
+    background: #fff;
+    border: 1px solid var(--tk-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, .12);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 150px);
+}
+
+.tk-card.tk-card-dragging { opacity: .5; }
+.tk-card.tk-card-drop-target { outline: 2px dashed var(--tk-blue); outline-offset: 2px; }
+
+.tk-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 14px 10px 14px 16px;
+    border-bottom: 1px solid var(--tk-border);
+    cursor: grab;
+}
+
+.tk-card-head:active { cursor: grabbing; }
+
+.tk-card-title {
+    flex: 1;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--tk-text);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.tk-card-title input {
+    width: 100%;
+    font-size: 15px;
+    font-weight: 600;
+    border: 1px solid var(--tk-blue);
+    border-radius: 6px;
+    padding: 4px 6px;
+    outline: none;
+}
+
+/* Menu kebab */
+.tk-card-menu-wrap { position: relative; }
+
+.tk-card-menu-btn {
+    background: none;
+    border: none;
+    color: var(--tk-muted);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.tk-card-menu-btn:hover { background: var(--tk-bg); }
+
+.tk-card-menu {
+    position: absolute;
+    right: 0;
+    top: 34px;
+    min-width: 210px;
+    background: #fff;
+    border: 1px solid var(--tk-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(60, 64, 67, .25);
+    padding: 6px 0;
+    z-index: 30;
+    display: none;
+    list-style: none;
+    margin: 0;
+}
+
+.tk-card-menu.open { display: block; }
+
+.tk-card-menu li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    font-size: 13.5px;
+    color: var(--tk-text);
+    cursor: pointer;
+}
+
+.tk-card-menu li:hover { background: var(--tk-bg); }
+.tk-card-menu li.tk-danger { color: var(--tk-red); }
+.tk-card-menu li i { width: 16px; text-align: center; color: var(--tk-muted); }
+.tk-card-menu li.tk-danger i { color: var(--tk-red); }
+
+/* Nút thêm việc */
+.tk-add-task {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--tk-blue);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.tk-add-task:hover { background: var(--tk-blue-soft); }
+.tk-add-task i { font-size: 12px; }
+
+/* Ô nhập việc lever 1 */
+.tk-add-box { padding: 8px 14px 12px; border-bottom: 1px solid var(--tk-border); }
+
+.tk-add-input {
+    width: 100%;
+    border: 1px solid var(--tk-blue);
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 14px;
+    outline: none;
+}
+
+/* Nhắc hẹn KHÔNG còn đặt lúc thêm việc — dời sang chuông trên .tk-item-row (chỉ hiện khi hover). */
+.tk-add-cancel {
+    display: block;
+    margin-top: 6px;
+    background: none;
+    border: none;
+    color: var(--tk-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+.tk-add-cancel:hover { background: var(--tk-bg); }
+
+/* ----------- Danh sách việc ----------- */
+.tk-list, .tk-done-list, .tk-sublist {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    overflow-y: auto;
+}
+
+.tk-list { flex: 1; min-height: 12px; }
+.tk-list.tk-drop-hover, .tk-sublist.tk-drop-hover { background: var(--tk-blue-soft); }
+
+/* Việc lever 1 */
+.tk-item {
+    border-bottom: 1px solid #f1f3f4;
+    padding: 4px 8px 4px 14px;
+}
+
+.tk-item.tk-dragging { opacity: .45; }
+.tk-item-row { display: flex; align-items: flex-start; gap: 10px; }
+
+.tk-check {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--tk-muted);
+    border-radius: 50%;
+    margin-top: 2px;
+    cursor: pointer;
+    position: relative;
+    transition: border-color .15s;
+}
+
+.tk-check:hover { border-color: var(--tk-blue); }
+.tk-check.checked { background: var(--tk-blue); border-color: var(--tk-blue); }
+
+.tk-check.checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.tk-check-sm { width: 15px; height: 15px; }
+.tk-check-sm.checked::after { left: 3.5px; top: 0; width: 4px; height: 8px; }
+
+.tk-item-text {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--tk-text);
+    line-height: 1.45;
+    cursor: pointer;
+    word-break: break-word;
+    padding-top: 1px;
+}
+
+.tk-item.done .tk-item-text,
+.tk-subitem.done .tk-subitem-text { text-decoration: line-through; color: var(--tk-muted); }
+
+/* Sửa tiêu đề tại chỗ (bút trên .tk-item-row / .tk-subitem-row) */
+.tk-item-text input,
+.tk-subitem-text input {
+    width: 100%;
+    font: inherit;
+    font-weight: 600;
+    border: 1px solid var(--tk-blue);
+    border-radius: 6px;
+    padding: 3px 6px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.tk-item-tools { display: flex; align-items: center; gap: 2px; }
+
+/* Chuông nhắc hẹn + bút sửa tiêu đề: ẩn mặc định, chỉ hiện khi hover .tk-item-row (giống .tk-item-del) —
+   riêng chuông vẫn hiện thường trực (has-remind) nếu việc đã có nhắc hẹn, để không mất dấu hiệu đang hẹn. */
+.tk-item-remind-btn,
+.tk-item-edit-btn,
+.tk-subitem-edit-btn {
+    background: none;
+    border: none;
+    color: var(--tk-muted);
+    cursor: pointer;
+    opacity: 0;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: opacity .12s, color .12s;
+}
+
+.tk-item-row:hover .tk-item-remind-btn,
+.tk-item-row:hover .tk-item-edit-btn,
+.tk-subitem-row:hover .tk-subitem-edit-btn { opacity: 1; }
+
+.tk-item-remind-btn.has-remind { opacity: 1; color: var(--tk-blue); }
+.tk-item-remind-btn.overdue { color: var(--tk-red); }
+.tk-item-remind-btn:hover,
+.tk-item-edit-btn:hover,
+.tk-subitem-edit-btn:hover { color: var(--tk-blue); background: var(--tk-bg); }
+
+.tk-item-del {
+    background: none;
+    border: none;
+    color: var(--tk-muted);
+    cursor: pointer;
+    opacity: 0;
+    font-size: 13px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: opacity .12s;
+}
+
+.tk-item:hover .tk-item-del,
+.tk-subitem:hover .tk-item-del { opacity: 1; }
+.tk-item-del:hover { color: var(--tk-red); background: var(--tk-bg); }
+
+/* Nhắc hẹn tag (hiển thị gọn dưới text) */
+.tk-remind-tag {
+    margin: 2px 0 2px 28px;
+    display: inline-block;
+    font-size: 12px;
+    color: var(--tk-blue);
+    background: var(--tk-blue-soft);
+    border-radius: 6px;
+    padding: 1px 8px;
+}
+
+.tk-remind-tag.overdue { color: var(--tk-red); background: #fce8e6; }
+
+/* Vùng sửa lever 1 (mô tả + nhắc hẹn) — chỉ hiện khi click nội dung */
+.tk-item-edit { padding: 6px 0 4px 28px; }
+
+.tk-desc {
+    width: 100%;
+    border: 1px solid var(--tk-border);
+    border-radius: 8px;
+    padding: 7px 9px;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    font-family: inherit;
+}
+
+.tk-desc:focus { border-color: var(--tk-blue); }
+
+.tk-detail-remind {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0;
+    font-size: 12.5px;
+    color: var(--tk-muted);
+}
+
+.tk-detail-remind input { border: 1px solid var(--tk-border); border-radius: 6px; padding: 3px 6px; font-size: 12.5px; }
+
+.tk-remind-clear {
+    background: none;
+    border: none;
+    color: var(--tk-red);
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* Việc lever 2 — luôn hiển thị (canh lề như vùng chi tiết) */
+.tk-sublist { padding: 2px 0 0 28px; margin: 0; }
+
+.tk-subitem { padding: 3px 4px 3px 0; }
+.tk-subitem.tk-dragging { opacity: .45; }
+
+.tk-subitem-row { display: flex; align-items: center; gap: 8px; }
+.tk-subitem-text { flex: 1; font-size: 13px; color: var(--tk-text); word-break: break-word; cursor: pointer; }
+
+/* Mô tả của việc lever 2 (ẩn cho tới khi click vào nội dung) */
+.tk-sub-desc {
+    width: calc(100% - 23px);
+    margin: 4px 0 2px 23px;
+    border: 1px solid var(--tk-border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 12.5px;
+    resize: vertical;
+    outline: none;
+    font-family: inherit;
+}
+
+.tk-sub-desc:focus { border-color: var(--tk-blue); }
+
+.tk-sub-input {
+    width: calc(100% - 28px);
+    margin: 4px 0 8px 28px;
+    border: none;
+    border-bottom: 1px solid var(--tk-border);
+    padding: 6px 2px;
+    font-size: 13px;
+    outline: none;
+}
+
+.tk-sub-input:focus { border-bottom-color: var(--tk-blue); }
+
+/* ----------- Khu Đã hoàn thành ----------- */
+.tk-done-wrap { border-top: 1px solid var(--tk-border); padding: 4px 0; }
+
+.tk-done-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: var(--tk-muted);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.tk-done-toggle:hover { background: var(--tk-bg); }
+.tk-done-caret { transition: transform .15s; font-size: 11px; }
+.tk-done-wrap.open .tk-done-caret { transform: rotate(90deg); }
+.tk-done-list .tk-item { padding-left: 14px; }
+
+/* Empty board */
+.tk-board:empty::after,
+.tk-empty {
+    content: '';
+    color: var(--tk-muted);
+}

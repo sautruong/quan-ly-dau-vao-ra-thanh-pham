@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trang chủ</title>
+    <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
@@ -99,17 +100,17 @@
                 </a>
             </li>
             <li class="card-item">
-                <a href="?mod=production_staff&controllers=production_staff&action=production_plan">
+                <a href="?mod=production_staff&controllers=production_staff&action=plan_for_staff">
                     <div class="img">
                         <img src="public/images/thumnail/lap-ke-hoach-san-xuat.JPG" alt="">
                     </div>
                     <div class="title-card">
-                        <p>Lập kế hoạch sản xuất</p>
+                        <p>Kế hoạch sản xuất hằng ngày</p>
                     </div>
                 </a>
             </li>
             <li class="card-item">
-                <a href="?mod=inventory_management&controllers=inventory_management&action=dashboard">
+                <a href="<?php echo nav_url('inventory_management', 'inventory_management', 'dashboard'); ?>">
                     <div class="img">
                         <img src="public/images/thumnail/lap-ke-hoach-san-xuat.JPG" alt="">
                     </div>

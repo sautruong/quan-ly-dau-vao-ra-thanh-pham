@@ -1,0 +1,341 @@
+/* Style cho khối bút toán kế toán dùng chung. Áp dụng cho cả .je-card và .wp-journal-entry
+   (gắn thêm class .je-block để override layout/position cũ trong dashboard.css, sales_issue.css). */
+
+.je-block {
+    position: static !important;       /* override absolute/fixed nếu có */
+    float: none !important;
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.je-block .je-card-title,
+.je-block .je-title {
+    font-weight: 600;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Mỗi hàng */
+.je-block .je-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.je-block .je-row label {
+    min-width: 130px;
+    font-weight: 500;
+}
+
+.je-block .je-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font: inherit;
+}
+
+/* Hàng full-width: input chiếm hết phần còn lại */
+.je-block .je-row-full .je-input {
+    flex: 1 1 auto;
+}
+
+/* Hàng 2 cột: Nợ | Có  và  Tên TK Nợ | Tên TK Có */
+.je-block .je-row-pair {
+    align-items: stretch;
+    gap: 16px;
+}
+.je-block .je-row-pair .je-col {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.je-block .je-row-pair .je-col label {
+    min-width: 90px;
+}
+.je-block .je-row-pair .je-col .je-input {
+    flex: 1 1 auto;
+    width: 100%;
+}
+
+/* Hàng textarea */
+.je-block .je-row-textarea {
+    align-items: flex-start;
+}
+.je-block .je-textarea {
+    resize: vertical;
+    min-height: 48px;
+    font-family: inherit;
+}
+
+/* Badge trạng thái save (JS tự thêm khi cần) */
+.je-block .je-save-status {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+    min-height: 14px;
+}
+.je-block .je-save-status.is-saving { color: #d97706; }
+.je-block .je-save-status.is-ok     { color: #16a34a; }
+.je-block .je-save-status.is-error  { color: #dc2626; }
+
+/* Mobile: pair gấp xuống 1 cột */
+@media (max-width: 640px) {
+    .je-block .je-row-pair {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* ============================================================
+   MULTI MODE — nhiều bút toán / 1 vụ (THÊM BÚT TOÁN)
+   Chỉ áp dụng khi có .je-multi nên không ảnh hưởng trang single-block.
+   ============================================================ */
+.je-multi {
+    width: 100%;
+    margin: 12px 0 16px;
+    box-sizing: border-box;
+}
+
+.je-multi-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.je-multi-head .je-card-title,
+.je-multi-head .je-title {
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.je-multi .btn-add-je {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border: 1px solid #16a34a;
+    border-radius: 8px;
+    background: #fff;
+    color: #15803d;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color .2s ease;
+}
+
+.je-multi .btn-add-je:hover {
+    background: #ecfdf5;
+}
+
+/* Nhóm nút bên phải head: "+ THÊM BÚT TOÁN" + nút xổ/thu */
+.je-multi-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-right: 10px;
+}
+
+/* Nút xổ/thu (^) — KHÔNG phải faq, chỉ thu gọn/mở rộng list bút toán */
+.je-multi .btn-toggle-je {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #16a34a;
+    border-radius: 8px;
+    background: #fff;
+    color: #15803d;
+    cursor: pointer;
+    transition: background-color .2s ease;
+}
+
+.je-multi .btn-toggle-je:hover {
+    background: #ecfdf5;
+}
+
+.je-multi .btn-toggle-je i {
+    transition: transform .25s ease;
+}
+
+/* Mặc định BUNG RA → mũi tên hướng lên (^). Khi thu lại → hướng xuống. */
+.je-multi:not(.je-collapsed) .btn-toggle-je i {
+    transform: rotate(180deg);
+}
+
+/* Vùng xổ/thu list bút toán — nền vàng nhạt, bo góc, có padding */
+.je-collapse {
+    max-height: 4000px;
+    overflow: hidden;
+    box-sizing: border-box;
+    background: #fef3c7;
+    border-radius: 12px;
+    padding: 14px;
+    transition: max-height .3s ease, padding .3s ease;
+}
+
+.je-multi.je-collapsed .je-collapse {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* je-list bên trong đã có nền vàng từ je-collapse nên bỏ padding-top thừa */
+.je-collapse .je-list {
+    padding-top: 12px;
+}
+
+/* ---- Highlight nút xổ/thu khi bút toán đang ẩn mặc định lúc vào page: phóng to một
+   xíu rồi trả lại kích thước cũ, nối tiếp NGAY SAU khi hiệu ứng .gdtp-trigger dừng ---- */
+.je-multi .btn-toggle-je.je-toggle-highlight {
+    animation: je-toggle-pulse .8s ease-in-out 2;
+}
+@keyframes je-toggle-pulse {
+    0%, 100% { transform: scale(1); box-shadow: none; }
+    50% { transform: scale(1.04); box-shadow: 0 0 0 2px rgba(255, 72, 0, 0.85); }
+}
+
+/* ------------------------------------------------------------------
+   BỐ CỤC LẠI mỗi bút toán (.je-block je-entry):
+   Diễn giải > Mô tả (textarea) > Nợ (số hiệu + tên) > Có (số hiệu + tên) > Giá trị.
+   Các ô input nền trắng để nổi trên nền vàng; KHÔNG tô màu Nợ/Có.
+   ------------------------------------------------------------------ */
+.je-block .je-input {
+    background: #fff;
+}
+
+/* Diễn giải nghiệp vụ: chữ vàng đậm (giữ nguyên font-weight) */
+.je-block .je-input.je-transaction-name {
+    color: #a16207;
+}
+
+/* Mô tả nghiệp vụ: nhãn trên, textarea xuống dòng chiếm hết bề ngang, in nghiêng */
+.je-block .je-row-textarea {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.je-block .je-row-textarea > label {
+    min-width: 0;
+    width: 100%;
+    display: block;
+}
+
+.je-block .je-row-textarea .je-textarea {
+    width: 100%;
+    font-style: italic;
+    color: #4b5563;
+}
+
+/* Hàng Nợ / Có: nhãn + số hiệu (hẹp) + tên tài khoản (rộng) trên cùng 1 dòng */
+.je-block .je-row-account {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.je-block .je-row-account > label {
+    min-width: 40px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.je-block .je-row-account .je-account-code {
+    flex: 0 0 92px;
+    max-width: 92px;
+}
+
+.je-block .je-row-account .je-debit-name,
+.je-block .je-row-account .je-credit-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Hàng Giá trị: input vừa đủ text, canh phải */
+.je-block .je-row-amount {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.je-block .je-row-amount > label {
+    min-width: 40px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.je-block .je-row-amount .je-amount {
+    margin-left: auto;
+    flex: 0 0 auto;
+    width: 170px;
+    max-width: 60%;
+    text-align: right;
+    font-weight: 700;
+    color: #a16207;          /* chữ vàng đậm, giữ font-weight 700 */
+}
+
+.je-multi .je-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+    padding-top: 12px;   /* chừa chỗ cho nút bỏ bút toán nằm trên viền block */
+}
+
+.je-multi .je-list .je-block {
+    position: relative;
+    flex: 1 1 calc(50% - 8px);
+    max-width: calc(50% - 8px);
+    margin: 0 !important;
+}
+
+/* Nút bỏ bút toán: nằm TRÊN block .je-block je-entry, canh giữa theo chiều ngang
+   (ngậm trên viền trên của block). */
+.je-multi .je-list .je-block .btn-remove-je {
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid #fecaca;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.je-multi .je-list .je-block .btn-remove-je:hover {
+    background: #fecaca;
+}
+
+@media (max-width: 900px) {
+    .je-multi .je-list .je-block {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+}

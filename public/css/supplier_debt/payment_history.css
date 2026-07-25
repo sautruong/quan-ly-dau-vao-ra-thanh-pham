@@ -1,0 +1,609 @@
+/* ============================================================
+   payment_history.css — Công nợ NCC / Lịch sử thanh toán
+   ============================================================ */
+
+.content {
+    padding: 20px 24px;
+}
+
+/* ---------- Card nhập liệu ---------- */
+.sd-form-card,
+.sd-history-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+    margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sd-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.sd-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.sd-field-full { margin-bottom: 12px; }
+
+.sd-field > label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+.sd-field .sd-hint {
+    font-weight: 400;
+    color: #9ca3af;
+    font-size: 11.5px;
+}
+
+.sd-field input[type="datetime-local"],
+.sd-input-amount {
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+.sd-field input:focus,
+.sd-input-amount:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+.sd-input-amount {
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Diễn giải (note) */
+.sd-textarea {
+    min-height: 56px;
+    padding: 9px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    line-height: 1.4;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+}
+.sd-textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+/* wp-search bên trong card — canh cho giống 2 ô phẳng kế bên (datetime / giá trị) */
+.sd-field .wp-search {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+}
+.sd-field .wp-search input {
+    width: 100%;
+    height: 40px;
+    box-sizing: border-box;
+    padding: 0 12px 0 36px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: none;
+}
+.sd-field .wp-search input:hover {
+    border-color: #d1d5db;
+    box-shadow: none;
+}
+.sd-field .wp-search input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+.sd-field .wp-search i.fa-magnifying-glass {
+    left: 12px;
+    font-size: 13px;
+    color: #9ca3af;
+}
+.sd-field .wp-search:focus-within i.fa-magnifying-glass {
+    color: #2563eb;
+}
+
+/* ---------- Nút hành động ---------- */
+.sd-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.sd-btn-create,
+.sd-btn-record,
+.sd-btn-update {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s, background-color .12s;
+}
+.sd-btn-create { background: #2563eb; }
+.sd-btn-record { background: #16a34a; }
+.sd-btn-update { background: #f59e0b; }
+.sd-btn-create:hover,
+.sd-btn-record:hover,
+.sd-btn-update:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .18);
+}
+
+.edit-batch-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 13px;
+}
+.edit-batch-banner a { color: #b91c1c; font-weight: 700; text-decoration: none; }
+.edit-batch-banner a:hover { text-decoration: underline; }
+
+/* ---------- Lịch sử ---------- */
+.sd-history-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.sd-history-head h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #111827;
+}
+.sd-history-tools {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+/* Bộ lọc NCC — canh ngang gọn (không kế thừa max-width/centering của .wp-search) */
+.sd-history-tools .sd-filter-search.wp-search {
+    position: relative;
+    width: 280px;
+    max-width: 280px;
+    min-width: 0;
+    margin: 0;
+    flex: 0 0 auto;
+}
+.sd-filter-search i.fa-filter {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 13px;
+    pointer-events: none;
+}
+.sd-history-tools .sd-filter-search input {
+    width: 100%;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0 30px 0 36px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 13.5px;
+}
+.sd-filter-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: #e5e7eb;
+    color: #6b7280;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+}
+.sd-perpage {
+    font-size: 13px;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.sd-perpage select {
+    height: 32px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 0 6px;
+    font-size: 13px;
+}
+
+/* ---------- Bảng ---------- */
+.sd-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+.sd-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    text-align: left;
+    font-weight: 700;
+    padding: 11px 12px;
+    border-bottom: 2px solid #e5e7eb;
+}
+.sd-table tbody td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1f2937;
+}
+.sd-table .center { text-align: center; }
+.sd-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.sd-table thead th.num { text-align: right; }
+.sd-table tbody tr:hover { background: #f9fafb; }
+.sd-table .sd-empty { text-align: center; color: #9ca3af; padding: 26px; font-style: italic; }
+
+.sd-amount-cell { font-weight: 700; color: #b91c1c; }
+
+.sd-supplier-link {
+    color: #2563eb;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+.sd-supplier-link:hover { text-decoration: underline; }
+
+/* Diễn giải dưới tên NCC trong lịch sử */
+.sd-row-note {
+    margin-top: 3px;
+    font-style: italic;
+    color: #9ca3af;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.sd-att-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all .12s;
+}
+.sd-att-badge:hover { background: #dbeafe; border-color: #93c5fd; }
+.sd-att-none { color: #cbd5e1; }
+
+/* Lưới ảnh trong modal "Ảnh thanh toán" */
+.sd-modal-att .sd-modal-content { width: 560px; }
+.sd-att-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+}
+.sd-att-grid .sd-att-item {
+    position: relative;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    background: #f8fafc;
+    cursor: pointer;
+}
+.sd-att-grid .sd-att-item img { width: 100%; height: 100%; object-fit: cover; }
+.sd-att-grid .sd-att-item .sd-att-pdf {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 36px;
+    color: #b91c1c;
+}
+.sd-att-grid .sd-att-empty { grid-column: 1 / -1; text-align: center; color: #9ca3af; padding: 24px; font-style: italic; }
+
+.sd-row-actions { display: inline-flex; gap: 8px; }
+.sd-row-actions button {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    color: #475569;
+    transition: all .12s;
+}
+.sd-row-actions .sd-act-print:hover { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.sd-row-actions .sd-act-edit:hover  { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+.sd-row-actions .sd-act-del:hover   { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+/* ---------- Phân trang ---------- */
+.sd-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+.sd-pagination button {
+    min-width: 34px;
+    height: 34px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #374151;
+}
+.sd-pagination button:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; }
+.sd-pagination button.active { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 700; }
+.sd-pagination button:disabled { opacity: .45; cursor: default; }
+.sd-pagination .sd-page-info { color: #9ca3af; font-size: 12.5px; margin: 0 8px; }
+
+/* ---------- Modal "các lần mua" ---------- */
+.sd-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.sd-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .55);
+}
+.sd-modal-content {
+    position: relative;
+    z-index: 1;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .3);
+    width: 680px;
+    max-width: 100%;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+}
+.sd-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.sd-modal-head h3 { margin: 0; font-size: 16px; color: #111827; }
+.sd-modal-close {
+    border: none;
+    background: none;
+    font-size: 26px;
+    line-height: 1;
+    color: #9ca3af;
+    cursor: pointer;
+}
+.sd-modal-close:hover { color: #ef4444; }
+.sd-modal-body { padding: 16px 20px; overflow-y: auto; }
+.sd-modal-tools { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+
+/* ---------- Phiếu chi (in) — bố cục riêng cho PHIẾU CHI (style theo om-doc) ---------- */
+/* .print-sheet có width cố định 210mm (khổ A4 thật khi in) — khác với .om-doc (chỉ hiển
+   thị/chụp màn hình, không bị giới hạn A4). Nếu tổng bề ngang logo+tên+contact vượt quá
+   bề ngang khả dụng (210mm - padding), Chrome sẽ tự "thu nhỏ vừa trang" khi in → cả phiếu
+   bị bóp lại. Mọi cụm bên dưới đều có min-width:0 để chữ tự xuống dòng thay vì đẩy tràn
+   khổ giấy, và kích cỡ đã giảm so với bản gốc để luôn vừa 1 trang A4 dọc. */
+.print-sheet .pc-company {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+.print-sheet .pc-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+/* Logo lồng trong huy hiệu tròn nền xám nhạt, có viền — hệt om-doc-logo-badge. */
+.print-sheet .pc-logo-badge {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #f6f8fa0f 0%, #e9eef2ad 100%);
+    border: 1px solid #cdd6de;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px #fff, 0 2px 2px rgba(31, 41, 55, .12);
+}
+.print-sheet .pc-logo {
+    width: auto;
+    height: auto;
+    max-width: 40px;
+    max-height: 40px;
+}
+.print-sheet .pc-co-textwrap {
+    line-height: 1.3;
+    text-align: left;
+    padding-top: 4px;
+    min-width: 0;
+}
+.print-sheet .pc-co-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #142037;
+    text-transform: uppercase;
+    font-family: Arial, sans-serif;
+    letter-spacing: .6px;
+    -webkit-text-stroke: .6px #1a2b4a;
+    text-shadow: 0 1px 2px rgba(26, 43, 71, .25);
+    word-break: break-word;
+}
+.print-sheet .pc-co-enname {
+    font-size: 12px;
+    font-weight: 600;
+    color: #66676b;
+    letter-spacing: 0.3px;
+    font-family: Arial, sans-serif;
+    word-break: break-word;
+}
+.print-sheet .pc-contact {
+    text-align: left;
+    max-width: 210px;
+    min-width: 0;
+    flex: 0 1 auto;
+}
+.print-sheet .pc-co-addr {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1a2b4a;
+    white-space: pre-line;
+    word-break: break-word;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+.print-sheet .pc-co-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: #1a2b4a;
+    min-width: 0;
+}
+.print-sheet .pc-co-line .pr-editable { min-width: 0; overflow-wrap: anywhere; }
+.print-sheet .pc-co-ico { color: #3a3e4b; font-size: 11px; width: 12px; text-align: center; }
+
+/* Đường line ngang kiểu dây thừng. Trình duyệt mặc định KHÔNG in background-image/color
+   (để tiết kiệm mực) trừ khi khai báo print-color-adjust: exact -> giữ lại hoa văn dây
+   thừng khi in, không chỉ hiện trên màn hình xem trước. */
+.print-sheet .pc-rope {
+    height: 4px;
+    margin: 6px 0 4px;
+    border-radius: 10px;
+    background-color: #2e9e57;
+    background-image: repeating-linear-gradient(-45deg, #2e9e57 0, #2e9e57 5px, #ffffff 10px, #c9c7c7 10px, #2e9e57 5px, #2e9e57 11px, #736969 12px, #ffffff 12px);
+    background-size: 18px 18px;
+    background-repeat: repeat;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* Tiêu đề "PHIẾU CHI" phóng to (thay cho .pr-title mặc định 22px của print_receipt.css —
+   phải khớp độ đặc thù "h2.pr-title" của rule gốc thì mới ghi đè được font-size). */
+.print-sheet h2.pc-title-big {
+    font-family: Arial, "Segoe UI", sans-serif;
+    font-size: 32px;
+    letter-spacing: 1px;
+    margin: 18px 0 2px;
+}
+
+.print-sheet .pc-rows { margin: 14px 0 8px; }
+.print-sheet .pc-rows .row { margin: 6px 0; }
+.print-sheet .pc-rows .lab { font-weight: 600; margin-right: 6px; }
+.print-sheet .pc-receiver-name { font-size: 16px; font-weight: 700; }
+.print-sheet .pc-words { font-style: italic; margin: 6px 0 18px; }
+.print-sheet .pc-date-right { text-align: right; font-style: italic; margin: 12px 0 6px; }
+
+/* Dòng xác nhận đã nhận đủ tiền — dưới cụm ký */
+.print-sheet .pc-received { font-style: italic; margin: 18px 0 4px; }
+
+/* Số lượng chữ ký ở đây là ĐỘNG (tùy user chọn ở "Cài đặt vùng ký") — với flex:1 mặc định
+   của print_receipt.css, ít chữ ký (1-2) vẫn bị kéo giãn full-width nên chữ nằm giữa mỗi ô
+   to đó nhìn như dồn vào giữa trang. Bỏ flex:1 (chỉ rộng theo nội dung) + giữ
+   justify-content:space-between -> luôn dạt về 2 mép trái/phải bất kể có bao nhiêu chữ ký. */
+.print-sheet .pr-signatures {
+    justify-content: space-between;
+}
+.print-sheet .pr-signatures .signer {
+    flex: 0 0 auto;
+    min-width: 110px;
+}
+
+/* Cụm chữ ký động: kéo-thả sắp xếp (trừ "Người nhận tiền" — cố định, không kéo được) */
+.print-sheet .pr-signatures .signer[draggable="true"] {
+    cursor: grab;
+    border: 1px dashed transparent;
+    border-radius: 8px;
+    padding: 4px 2px;
+    transition: border-color .15s, background .15s;
+}
+.print-sheet .pr-signatures .signer[draggable="true"]:hover { border-color: #cfe6d8; background: #f7fcf9; }
+.print-sheet .pr-signatures .signer.dragging { opacity: .45; cursor: grabbing; }
+.print-sheet .pr-signatures .signer.drag-over { border-color: #2e9e57; background: #eef9f1; }
+
+/* ---------- Toolbar: nút "Vùng ký" ---------- */
+.print-modal-toolbar .btn-sign-cfg {
+    background-color: #6b7280;
+    color: #fff;
+    margin-right: auto;
+}
+.print-modal-toolbar .btn-sign-cfg:hover { background-color: #4b5563; }
+
+/* ---------- Modal: Cài đặt vùng ký ---------- */
+.sd-modal-signcfg { width: 480px; }
+.sd-signcfg-hint { font-size: 13px; color: #6b7280; margin: 0 0 12px; }
+.sd-signcfg-list { list-style: none; margin: 0 0 12px; padding: 0; max-height: 320px; overflow-y: auto; }
+.sd-signcfg-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #f9fafb;
+}
+.sd-signcfg-cb { width: 17px; height: 17px; cursor: pointer; flex-shrink: 0; }
+.sd-signcfg-name { flex: 1; font-size: 14px; font-weight: 600; color: #1f2937; }
+.sd-signcfg-name[contenteditable="true"] { outline: 2px solid #2563eb; border-radius: 4px; padding: 2px 4px; }
+.sd-signcfg-act { display: flex; gap: 4px; }
+.sd-signcfg-btn { border: none; background: transparent; color: #9ca3af; cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 5px; }
+.sd-signcfg-btn:hover { background: #eef2f7; color: #2563eb; }
+.sd-signcfg-btn.danger:hover { color: #dc2626; background: #fef2f2; }
+.sd-signcfg-addrow { display: flex; gap: 8px; }
+.sd-signcfg-addrow input { flex: 1; padding: 9px 11px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+.sd-signcfg-addrow input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, .15); }
+
+/* ---------- Khi in PHIẾU CHI: không cần khung viền đen quanh phiếu, lề trái/phải hẹp hơn
+   (8mm thay vì 12mm mặc định ở print_receipt.css dùng chung) để nội dung rộng hơn theo
+   chiều ngang. Ghi đè @page/.print-sheet riêng cho trang này — không đụng tới các views
+   khác (vd row_material_receiving) cũng dùng chung print_receipt.css. ---------- */
+@media print {
+    @page { margin: 12mm 8mm; }
+    .print-sheet { border: none; max-width: 194mm; }
+}

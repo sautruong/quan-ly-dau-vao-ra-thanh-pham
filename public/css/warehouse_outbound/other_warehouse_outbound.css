@@ -1,0 +1,47 @@
+/* ============================================
+   PAGE: Xuất kho khác (other_warehouse_outbound)
+   - Sửa lại layout cho phù hợp tab này: dùng .je-card phía trên + .list-product 3-cột (giống other_receipt).
+   ============================================ */
+
+#wrapper {
+    position: relative;
+    /* Chỉ .content cuộn (giống các trang Nhập/Xuất khác); wrapper không cuộn. */
+    overflow: hidden !important;
+}
+
+/* Tắt mọi cuộn nội bộ của khối bút toán đa dòng để nó hiển thị tự nhiên;
+   việc cuộn dồn về .content. */
+.je-multi,
+.je-card-multi {
+    overflow: visible !important;
+    max-height: none !important;
+}
+
+/* .content là vùng cuộn dọc duy nhất; full bề ngang cho cụm history. */
+.content {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.history-wrap {
+    width: 100%;
+}
+
+/* Block .inventory hiển thị Kho TP/NVL dưới phần tên hàng */
+.list-product .product-item .inventory {
+    padding: 8px 14px 0 14px;
+}
+
+.list-product .product-item .inventory p {
+    margin: 0;
+    font-size: 13px;
+    color: #003c7c;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* JE inputs readonly nhìn không xám */
+.je-input[readonly] {
+    background-color: var(--color-gray-50);
+    cursor: not-allowed;
+}

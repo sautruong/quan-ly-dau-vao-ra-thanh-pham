@@ -17,12 +17,57 @@
     const $btnEdit  = document.getElementById('btn-edit');
     const $histBody = document.getElementById('history-tbody');
     const $histPager = document.getElementById('history-pagination');
-    const PAGE_SIZE = 10;
+    let pageSize = 10; // số dòng/trang — đổi qua select #hf-page-size
     let historyPage = 1;
+    // Bộ lọc lịch sử (client-side trên INITIAL.history đã nạp sẵn).
+    const histFilter = { keyword: '', dateFrom: '', dateTo: '' };
+    const $hfDateFrom = document.getElementById('hf-date-from');
+    const $hfDateTo   = document.getElementById('hf-date-to');
+    const $hfPageSize = document.getElementById('hf-page-size');
+    const $hfReset    = document.getElementById('hf-reset');
+    const $hfCount    = document.getElementById('hf-count');
+    const $hfKeyword    = document.getElementById('hf-keyword');
+    const $hfKeywordBtn = document.getElementById('hf-keyword-btn');
+    const $hfKeywordPop = document.getElementById('hf-keyword-pop');
     const $banner   = document.getElementById('edit-batch-banner');
     const $bannerLb = document.getElementById('edit-batch-label');
     const $btnCancelEdit = document.getElementById('cancel-edit-batch');
     const $dateTime = document.getElementById('record-datetime');
+
+    // ---------- Journal Entry (form GHI BÚT TOÁN KẾ TOÁN) ----------
+    const JE_DEFAULTS = { debit: '156', credit: '338' };
+    const $jeDebit  = document.getElementById('je-debit');
+    const $jeCredit = document.getElementById('je-credit');
+    const $jeAmount = document.getElementById('je-amount');
+
+    function jeFormatAmount(n) {
+        const v = Math.round(Number(n) || 0);
+        return v > 0 ? v.toLocaleString('en-US') : '';
+    }
+    function jeParseAmount(s) {
+        return Number(String(s == null ? '' : s).replace(/[^\d.-]/g, '')) || 0;
+    }
+    function jePayload() {
+        const p = {
+            je_debit:  ($jeDebit  && $jeDebit.value.trim())  || '',
+            je_credit: ($jeCredit && $jeCredit.value.trim()) || '',
+            je_amount: jeParseAmount($jeAmount && $jeAmount.value)
+        };
+        if (window.JE && window.JE.collectEntries) p.je_entries = JSON.stringify(window.JE.collectEntries());
+        return p;
+    }
+    function setupJe() {
+        if (!$jeDebit || !$jeCredit || !$jeAmount) return;
+        if (!$jeDebit.value)  $jeDebit.value  = JE_DEFAULTS.debit;
+        if (!$jeCredit.value) $jeCredit.value = JE_DEFAULTS.credit;
+        $jeAmount.addEventListener('blur', () => {
+            $jeAmount.value = jeFormatAmount(jeParseAmount($jeAmount.value));
+        });
+        $jeAmount.addEventListener('focus', () => {
+            const n = jeParseAmount($jeAmount.value);
+            $jeAmount.value = n > 0 ? String(n) : '';
+        });
+    }
 
     // ---------- Helpers ----------
     function postForm(action, payload) {
@@ -179,9 +224,10 @@
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             activeIdx = (activeIdx - 1 + items.length) % items.length;
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (activeIdx >= 0) selectDropdownItem(items[activeIdx]);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            // Enter hoặc Tab đều chọn item đang active (hoặc item đầu nếu chưa di chuyển).
+            const idx = activeIdx >= 0 ? activeIdx : 0;
+            if (items[idx]) { e.preventDefault(); selectDropdownItem(items[idx]); }
             return;
         } else if (e.key === 'Escape') {
             hideDropdown();
@@ -279,6 +325,7 @@
             $dateTime.value = localVal;
             INITIAL.planDate = pickerToDateVN();
         }
+        if (window.JE && window.JE.loadTemplatesAsBlocks) window.JE.loadTemplatesAsBlocks();
         clearList();
         batch.items.forEach(it => {
             addProductItem({
@@ -293,6 +340,7 @@
         $banner.style.display = 'flex';
         $bannerLb.textContent = batch.date_display;
         $btnRec.style.display = 'none';
+        if ($btnEdit) $btnEdit.style.display = '';
         document.querySelector('.content').scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -300,6 +348,8 @@
         editingBatchKey = null;
         $banner.style.display = 'none';
         $btnRec.style.display = '';
+        if ($btnEdit) $btnEdit.style.display = 'none';
+        if (window.JE && window.JE.reset) window.JE.reset();
         clearList();
     }
 
@@ -336,19 +386,20 @@
             alert('Chưa có sản phẩm nào có số lượng hợp lệ để ghi.');
             return;
         }
-        if (!confirm('Ghi nhập kho khác vào tồn kho?')) return;
-
+        // Ghi thẳng, không hỏi xác nhận OK — phản hồi bằng hiệu ứng icon bay vào "Lịch sử"
+        // + nhãn "Lịch sử" chớp sáng khi thành công. (Vẫn giữ cảnh báo TRÙNG NGÀY có điều kiện
+        // trong checkDuplicatesThen: chỉ hỏi khi thật sự phát hiện sản phẩm đã ghi trong ngày.)
         const productIds = items.map(it => it.product_id).filter(Boolean);
         checkDuplicatesThen(productIds, () => {
             flashActive($btnRec);
-            postForm('record_stock', {
+            postForm('record_stock', Object.assign({
                 items:       JSON.stringify(items),
                 created_at:  pickerToMysql(),
                 type_import: TYPE_IMPORT
-            }).then(res => {
+            }, jePayload())).then(res => {
                 if (res && res.success) {
-                    alert('Đã ghi ' + res.count + ' sản phẩm vào tồn kho.');
-                    renderHistory(res.history || []);
+                    if (window.appFlyToHistory) window.appFlyToHistory($btnRec);
+                    setTimeout(() => window.location.reload(), 950);
                 } else {
                     alert(res && res.message ? res.message : 'Có lỗi xảy ra.');
                 }
@@ -367,13 +418,13 @@
             return;
         }
         flashActive($btnEdit);
-        postForm('edit_batch_stock', {
+        postForm('edit_batch_stock', Object.assign({
             items:       JSON.stringify(items),
             created_at:  pickerToMysql(),
             type_import: TYPE_IMPORT
-        }).then(res => {
+        }, jePayload())).then(res => {
             if (res && res.success) {
-                alert('Đã cập nhật ' + res.count + ' dòng.');
+                if (window.appFlyToHistory) window.appFlyToHistory($btnEdit);
                 renderHistory(res.history || []);
                 exitEditMode();
             } else {
@@ -389,23 +440,73 @@
         renderHistoryPage();
     }
 
+    // Ngày của batch dạng 'YYYY-MM-DD'. Ưu tiên created_at ('YYYY-MM-DD HH:MM:SS');
+    // fallback parse từ date_display ('HH:ii:ss dd/mm/yyyy' hoặc 'dd/mm/yyyy').
+    function batchDateYMD(b) {
+        const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(b && b.created_at ? b.created_at : ''));
+        if (iso) return iso[1] + '-' + iso[2] + '-' + iso[3];
+        const vn = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(String(b && b.date_display ? b.date_display : ''));
+        if (vn) return vn[3] + '-' + pad2(vn[2]) + '-' + pad2(vn[1]);
+        return '';
+    }
+
+    // Áp dụng bộ lọc (từ khóa + khoảng ngày) lên INITIAL.history.
+    function getFilteredHistory() {
+        const all = INITIAL.history || [];
+        const kw = histFilter.keyword.trim().toLowerCase();
+        const from = histFilter.dateFrom;
+        const to   = histFilter.dateTo;
+        if (!kw && !from && !to) return all;
+        return all.filter(b => {
+            if (kw) {
+                const inSummary = String(b.summary || '').toLowerCase().indexOf(kw) !== -1;
+                const inItems = Array.isArray(b.items) && b.items.some(it =>
+                    String(it.product_name || '').toLowerCase().indexOf(kw) !== -1);
+                if (!inSummary && !inItems) return false;
+            }
+            if (from || to) {
+                const d = batchDateYMD(b);
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+            }
+            return true;
+        });
+    }
+
+    function updateFilterUI() {
+        const active = histFilter.keyword.trim() !== '';
+        if ($hfKeywordBtn) $hfKeywordBtn.classList.toggle('active', active);
+    }
+
     function renderHistoryPage() {
-        const data = INITIAL.history || [];
-        const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+        const total = (INITIAL.history || []).length;
+        const data = getFilteredHistory();
+        const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
         if (historyPage > totalPages) historyPage = totalPages;
         if (historyPage < 1) historyPage = 1;
+
+        if ($hfCount) {
+            $hfCount.textContent = data.length === total
+                ? (total + ' nhóm')
+                : (data.length + '/' + total + ' nhóm');
+        }
+        updateFilterUI();
+
         if (!data.length) {
-            $histBody.innerHTML = '<tr class="history-empty"><td colspan="3">Chưa có thao tác nào.</td></tr>';
+            const msg = total ? 'Không có nhóm nào khớp bộ lọc.' : 'Chưa có thao tác nào.';
+            $histBody.innerHTML = '<tr class="history-empty"><td colspan="3">' + msg + '</td></tr>';
             if ($histPager) $histPager.innerHTML = '';
             return;
         }
-        const start = (historyPage - 1) * PAGE_SIZE;
-        const slice = data.slice(start, start + PAGE_SIZE);
-        $histBody.innerHTML = slice.map((b, i) => {
-            const idx = start + i;
+
+        const start = (historyPage - 1) * pageSize;
+        const slice = data.slice(start, start + pageSize);
+        // data-group-key là khóa duy nhất → handler Sửa/Xóa tra cứu theo nó,
+        // không phụ thuộc index (an toàn khi đang lọc/phân trang).
+        $histBody.innerHTML = slice.map(b => {
             return `
-                <tr data-group-key="${escapeHtml(b.group_key)}" data-idx="${idx}">
-                    <td>${escapeHtml(b.date_display)}</td>
+                <tr data-group-key="${escapeHtml(b.group_key)}">
+                    <td class="${b.date_color ? 'hist-date-' + b.date_color : ''}">${escapeHtml(b.date_display)}</td>
                     <td title="${escapeHtml(b.summary)}">${escapeHtml(b.summary)}</td>
                     <td class="history-actions">
                         <a href="#" class="edit-list-import">Sửa</a>
@@ -463,8 +564,8 @@
         e.preventDefault();
         const tr = e.target.closest('tr');
         if (!tr) return;
-        const idx = parseInt(tr.getAttribute('data-idx'), 10);
-        const batch = (INITIAL.history || [])[idx];
+        const gk = tr.getAttribute('data-group-key');
+        const batch = (INITIAL.history || []).find(b => b.group_key === gk);
         if (!batch) return;
 
         if (editLink) {
@@ -485,12 +586,73 @@
         }
     });
 
+    // ---------- History filter wiring ----------
+    function setupHistoryFilter() {
+        if ($hfPageSize) {
+            pageSize = parseInt($hfPageSize.value, 10) || 10;
+            $hfPageSize.addEventListener('change', () => {
+                pageSize = parseInt($hfPageSize.value, 10) || 10;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        if ($hfDateFrom) {
+            $hfDateFrom.addEventListener('change', () => {
+                histFilter.dateFrom = $hfDateFrom.value;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        if ($hfDateTo) {
+            $hfDateTo.addEventListener('change', () => {
+                histFilter.dateTo = $hfDateTo.value;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        if ($hfKeyword) {
+            $hfKeyword.addEventListener('input', () => {
+                histFilter.keyword = $hfKeyword.value;
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+        // Mở/đóng popover phễu
+        if ($hfKeywordBtn && $hfKeywordPop) {
+            $hfKeywordBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const open = $hfKeywordPop.classList.toggle('open');
+                if (open && $hfKeyword) $hfKeyword.focus();
+            });
+            $hfKeywordPop.addEventListener('click', (e) => e.stopPropagation());
+            document.addEventListener('click', () => $hfKeywordPop.classList.remove('open'));
+            $hfKeyword && $hfKeyword.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') $hfKeywordPop.classList.remove('open');
+            });
+        }
+        if ($hfReset) {
+            $hfReset.addEventListener('click', () => {
+                histFilter.keyword = '';
+                histFilter.dateFrom = '';
+                histFilter.dateTo = '';
+                if ($hfKeyword)  $hfKeyword.value = '';
+                if ($hfDateFrom) $hfDateFrom.value = '';
+                if ($hfDateTo)   $hfDateTo.value = '';
+                if ($hfKeywordPop) $hfKeywordPop.classList.remove('open');
+                historyPage = 1;
+                renderHistoryPage();
+            });
+        }
+    }
+
     // ---------- Init ----------
     function init() {
         $dateTime.value = nowLocalValue();
         INITIAL.planDate = pickerToDateVN();
         $dateTime.addEventListener('change', syncInterpretationsDate);
 
+        setupJe();
+        setupHistoryFilter();
         renderHistory(INITIAL.history || []);
     }
 

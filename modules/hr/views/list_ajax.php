@@ -29,7 +29,8 @@
                                      <a href="<?= $item_hr['url_delete'] ?>" onclick="return confirm('Xóa?')">
                                          <i class="fa-solid fa-trash-can"></i>
                                      </a>
-                                     <a href="<?= $item_hr['url_create_contract'] ?>" class="tooltip" target="_blank">
+                                     <a href="<?= $item_hr['url_create_contract'] ?>" class="tooltip btn-open-contract"
+                                        data-contract-url="<?= $item_hr['url_create_contract'] ?>">
                                          <i class="fa-regular fa-id-badge"></i>
                                          <span class="tooltip-text">Tạo hợp đồng lao động</span>
                                      </a>

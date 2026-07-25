@@ -1,0 +1,96 @@
+/* =====================================================================
+   Sự kiện nhà máy — báo cáo dạng lịch (chỉ đọc).
+   Nạp SAU app_shell.css + calendar_full.css (dùng chung biến --app-*,
+   .app-modal, .calfull-day/.calfull-grid/.calfull-weekdays...).
+   ===================================================================== */
+
+.fev-page { padding-top: 18px; }
+
+/* ---------------- Bộ lọc ---------------- */
+.fev-filters {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px 16px; background: #fff; border: 1px solid var(--app-gray-100);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+}
+.fev-filter-row { display: flex; flex-direction: column; gap: 8px; }
+.fev-filter-check {
+    display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600;
+    color: var(--app-gray-700); cursor: pointer; user-select: none;
+}
+.fev-filter-check input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none; margin: 0; flex-shrink: 0; cursor: pointer;
+    width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--app-gray-300);
+    position: relative; transition: var(--app-trans);
+}
+.fev-filter-check input[type="checkbox"]:checked {
+    background: var(--app-green, #096926); border-color: var(--app-green, #096926);
+}
+.fev-filter-check input[type="checkbox"]:checked::after {
+    content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 6px; height: 6px; border-radius: 50%; background: #fff;
+}
+.fev-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+.fev-combo { position: relative; }
+.fev-combo-input {
+    width: 100%; box-sizing: border-box; border: 1px solid var(--app-gray-200); border-radius: 8px;
+    padding: 7px 10px; font-size: 13px; outline: none; transition: var(--app-trans);
+}
+.fev-combo-input:focus { border-color: var(--app-green, #096926); }
+.fev-combo-drop {
+    position: absolute; z-index: 40; top: calc(100% + 3px); left: 0; right: 0;
+    max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid var(--app-gray-200);
+    border-radius: 8px; box-shadow: var(--app-shadow); margin: 0; padding: 4px; list-style: none;
+}
+.fev-combo-opt {
+    padding: 6px 8px; border-radius: 6px; font-size: 13px; color: var(--app-gray-700); cursor: pointer;
+}
+.fev-combo-opt:hover, .fev-combo-opt.is-active { background: var(--app-green-soft, #dcfce7); }
+.fev-combo-opt.is-selected { font-weight: 600; color: var(--app-green-dark, #075a1f); }
+
+.fev-combo-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fev-chip-tag {
+    display: inline-flex; align-items: center; gap: 5px; background: var(--app-gray-100);
+    border-radius: 999px; padding: 3px 6px 3px 10px; font-size: 12px; color: var(--app-gray-700);
+}
+.fev-chip-tag button {
+    border: 0; background: transparent; color: var(--app-gray-500); cursor: pointer;
+    font-size: 13px; line-height: 1; padding: 2px;
+}
+.fev-chip-tag button:hover { color: #dc2626; }
+
+/* ---------------- Chip sự kiện trên lưới tháng ---------------- */
+.fev-chip {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; padding: 4px 7px; border-radius: 7px;
+    background: var(--app-gray-50); color: var(--app-gray-800); cursor: pointer;
+}
+.fev-chip:hover { background: var(--app-gray-100); }
+.fev-chip .fev-bullet { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.fev-chip .fev-amt, .fev-tx .fev-amt { font-weight: 600; }
+.fev-chip .fev-tx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fev-chip.fev-more {
+    justify-content: center; background: var(--app-gray-100); color: var(--app-gray-500);
+    font-weight: 700; letter-spacing: 2px;
+}
+.fev-chip.fev-more:hover { background: var(--app-gray-200); color: var(--app-green, #096926); }
+
+.fev-day-modal-events .fev-chip .fev-tx { white-space: normal; }
+
+/* ---------------- Modal thư viện ảnh ---------------- */
+.fev-att-box { width: 520px; max-width: 94vw; }
+.fev-att-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;
+    max-height: 60vh; overflow-y: auto;
+}
+.fev-att-item {
+    border: 1px solid var(--app-gray-100); border-radius: 8px; overflow: hidden; cursor: pointer;
+    aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; background: var(--app-gray-50);
+}
+.fev-att-item img { width: 100%; height: 100%; object-fit: cover; }
+.fev-att-pdf { font-size: 32px; color: #b91c1c; }
+.fev-att-empty { color: var(--app-gray-500); font-size: 13.5px; padding: 12px 0; }
+
+@media (max-width: 900px) {
+    .fev-grid { grid-template-columns: repeat(7, minmax(90px, 1fr)); overflow-x: auto; }
+}
