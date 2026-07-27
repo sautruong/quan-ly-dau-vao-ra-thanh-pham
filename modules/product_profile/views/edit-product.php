@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/product_profile/list.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/list.css'); ?>">
 
     <script src="public/js/menu_sidebar_left.js" defer></script>
     <script src="public/js/jquery-4.0.0.js" type="text/javascript" defer></script>

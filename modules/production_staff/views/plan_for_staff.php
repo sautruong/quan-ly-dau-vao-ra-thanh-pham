@@ -15,7 +15,7 @@ $ps_share = function_exists('ps_get_share_settings')
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/production_staff/plan_for_staff.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/production_staff/plan_for_staff.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
 

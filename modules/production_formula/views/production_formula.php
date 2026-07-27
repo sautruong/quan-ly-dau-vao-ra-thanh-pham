@@ -16,7 +16,7 @@ $pf_share = function_exists('pf_get_share_settings')
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/production_formula/production_formula.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/production_formula/production_formula.css'); ?>">
 </head>
 
 <body>
@@ -496,7 +496,7 @@ $pf_share = function_exists('pf_get_share_settings')
         };
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="public/js/production_formula/production_formula.js"></script>
+    <script src="<?php echo asset_ver('public/js/production_formula/production_formula.js'); ?>"></script>
     <script src="public/js/shared/check_database.js"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>

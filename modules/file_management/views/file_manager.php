@@ -24,7 +24,7 @@ $fm_pending_count = count($shared['pending'] ?? []);
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/file_management/file_manager.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/file_management/file_manager.css'); ?>">
 </head>
 
 <body>

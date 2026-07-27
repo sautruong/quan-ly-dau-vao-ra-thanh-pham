@@ -81,7 +81,7 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/production_staff/long_term_production_plan.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/production_staff/long_term_production_plan.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
 
@@ -297,7 +297,7 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
     <script>
         window.LTP_CONFIG = { baseUrl: '?mod=production_staff&controllers=production_staff&action=' };
     </script>
-    <script src="public/js/production_staff/long_term_production_plan.js"></script>
+    <script src="<?php echo asset_ver('public/js/production_staff/long_term_production_plan.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

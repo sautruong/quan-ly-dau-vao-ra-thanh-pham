@@ -42,7 +42,7 @@ if (!$is_manual && !empty($order['kien_sum'])) {
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/order_management/order_management.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/order_management/order_management.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <script src="public/js/jquery-4.0.0.js"></script>
 </head>

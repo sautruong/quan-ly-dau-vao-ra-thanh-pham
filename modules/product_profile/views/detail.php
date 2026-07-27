@@ -16,7 +16,7 @@ $detail_error    = $_GET['error'] ?? '';
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/product_profile/detail.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/detail.css'); ?>">
     <link rel="stylesheet" href="public/css/product_profile/modal.css">
 
 

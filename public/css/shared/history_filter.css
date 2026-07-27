@@ -243,21 +243,31 @@
     .history-bar .history-filter,
     .history-filter { display: none !important; }
 
-    /* Bảng -> danh sách card dọc */
-    .history-table { border: 0; }
-    .history-table thead { display: none; }
+    /* Bảng -> danh sách card dọc.
+       DÙNG !important + phủ cả 'tbody td'/'thead td' vì CSS module của một số view
+       (vd dashboard.css: .history-table tbody td, .history-table thead td) có độ ưu
+       tiên cao hơn (0,2,1) sẽ đè lên rule dùng chung -> "chỉ nhận một số style". */
+    .history-table {
+        border: 0 !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+    .history-table thead { display: none !important; }
     .history-table,
     .history-table tbody,
+    .history-table tbody tr,
     .history-table tr,
-    .history-table td { display: block; width: 100%; }
+    .history-table tbody td,
+    .history-table td { display: block !important; width: 100% !important; }
 
+    .history-table tbody tr,
     .history-table tr {
-        margin: 0 0 12px;
-        padding: 12px 14px;
-        background: #fff;
-        border: 1px solid var(--color-gray-200, #e5e7eb);
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+        margin: 0 0 12px !important;
+        padding: 12px 14px !important;
+        background: #fff !important;
+        border: 1px solid var(--color-gray-200, #e5e7eb) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .05) !important;
     }
     .history-table tr.history-empty {
         text-align: center;
@@ -266,11 +276,14 @@
     /* Dòng "trống" (1 ô colspan) không gắn nhãn Ngày/Diễn giải */
     .history-table tr.history-empty td::before { content: none !important; }
 
+    .history-table tbody td,
     .history-table td {
-        padding: 3px 0;
-        white-space: normal;   /* huỷ nowrap của desktop cho cột Ngày */
+        padding: 3px 0 !important;
+        border: 0 !important;
+        white-space: normal !important;   /* huỷ nowrap của desktop cho cột Ngày */
+        font-size: 14px !important;
+        vertical-align: baseline !important;
     }
-    .history-table td:first-child { width: 100%; }  /* huỷ width:1% desktop */
 
     /* Nhãn nhỏ phía trên nội dung từng dòng */
     .history-table td:nth-child(1)::before { content: "Ngày"; }
@@ -285,16 +298,16 @@
         color: var(--color-gray-400, #9ca3af);
         margin-bottom: 2px;
     }
-    .history-table td:nth-child(1) { font-size: 15px; font-weight: 700; }
+    .history-table td:nth-child(1) { font-size: 15px !important; font-weight: 700 !important; }
 
     /* Cụm "Thao tác" thành hàng nút ở đáy card */
     .history-table td.history-actions {
-        display: flex;
+        display: flex !important;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 8px;
-        padding-top: 10px;
-        border-top: 1px dashed var(--color-gray-200, #e5e7eb);
+        margin-top: 8px !important;
+        padding-top: 10px !important;
+        border-top: 1px dashed var(--color-gray-200, #e5e7eb) !important;
     }
 
     /* Phân trang: căn giữa, cho phép xuống dòng */

@@ -14,7 +14,7 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/sell-factory/order-factory.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/sell-factory/order-factory.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <script src="public/js/jquery-4.0.0.js"></script>
 </head>

@@ -18,7 +18,7 @@ $read_only = !empty($read_only);
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/payroll/payroll.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/payroll/payroll.css'); ?>">
 </head>
 
 <body>

@@ -9,12 +9,12 @@
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/inventory_management/dashboard.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
     <link rel="stylesheet" href="public/css/accounting/journal_entry.css">
     <link rel="stylesheet" href="public/css/cash_transactions/cash_transactions.css">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="public/css/shared/datetime_picker.css">
-    <link rel="stylesheet" href="public/css/shared/history_filter.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/history_filter.css'); ?>">
 </head>
 
 <body>
@@ -167,7 +167,7 @@
         };
     </script>
     <script src="public/js/accounting/journal_entry.js"></script>
-    <script src="public/js/cash_transactions/cash_transactions.js"></script>
+    <script src="<?php echo asset_ver('public/js/cash_transactions/cash_transactions.js'); ?>"></script>
     <script src="public/js/shared/check_database.js"></script>
     <script src="public/js/shared/datetime_picker.js"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>

@@ -14,8 +14,8 @@ $days = isset($days) && is_array($days) ? $days : [];
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/sell-factory/order-factory.css">
-    <link rel="stylesheet" href="public/css/production_staff/long_term_production_plan.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/sell-factory/order-factory.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/production_staff/long_term_production_plan.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <style>
         /* App shell: full width (order-factory.css đặt .inventory-factory = 50%) */

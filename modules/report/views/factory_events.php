@@ -15,7 +15,7 @@ defined('APPPATH') OR exit('Không được quyền truy cập phần này');
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="public/css/calendar_full.css">
     <link rel="stylesheet" href="public/css/shared/invoice_upload.css">
-    <link rel="stylesheet" href="public/css/report/factory_events.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/report/factory_events.css'); ?>">
 </head>
 
 <body>
@@ -128,7 +128,7 @@ defined('APPPATH') OR exit('Không được quyền truy cập phần này');
     </div>
 
     <script src="public/js/shared/invoice_dropzone.js"></script>
-    <script src="public/js/report/factory_events.js"></script>
+    <script src="<?php echo asset_ver('public/js/report/factory_events.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

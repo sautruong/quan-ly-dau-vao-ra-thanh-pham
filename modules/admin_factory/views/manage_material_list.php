@@ -20,7 +20,7 @@ $classifications = function_exists('admin_material_classification_options')
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/inventory_management/dashboard.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
     <link rel="stylesheet" href="public/css/inventory_management/investment_products.css">
     <link rel="stylesheet" href="public/css/accounting/journal_entry.css">
     <style>

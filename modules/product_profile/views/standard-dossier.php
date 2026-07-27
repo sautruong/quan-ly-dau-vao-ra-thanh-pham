@@ -10,9 +10,9 @@
     <link rel="stylesheet" href="public/css/reset.css">
     <link rel="stylesheet" href="public/css/all.css">
     <link rel="stylesheet" href="public/css/global.css">
-    <link rel="stylesheet" href="public/css/product_profile/detail.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/detail.css'); ?>">
     <link rel="stylesheet" href="public/css/product_profile/modal.css">
-    <link rel="stylesheet" href="public/css/product_profile/standard.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/standard.css'); ?>">
 
     <script src="public/js/jquery-4.0.0.js" type="text/javascript" defer></script>
     <!-- modal dùng chung (mở/đóng) -->
