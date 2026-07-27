@@ -21,7 +21,7 @@ $__chat_css_v = is_file($__chat_css) ? filemtime($__chat_css) : time();
 $__chat_js_v  = is_file($__chat_js)  ? filemtime($__chat_js)  : time();
 ?>
 <link rel="stylesheet" href="public/css/shared/chat.css?v=<?php echo $__chat_css_v; ?>">
-<link rel="stylesheet" href="public/css/shared/user_card.css">
+<link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/user_card.css'); ?>">
 
 <div id="chat-widget" class="chat-widget" data-me-id="<?php echo (int) ($__chat_user['id'] ?? 0); ?>">
     <!-- Nút nổi -->
@@ -411,7 +411,7 @@ $__chat_js_v  = is_file($__chat_js)  ? filemtime($__chat_js)  : time();
     <div class="chat-toast-wrap" id="chat-toast-wrap"></div>
 </div>
 
-<script src="public/js/shared/user_card.js"></script>
+<script src="<?php echo asset_ver('public/js/shared/user_card.js'); ?>"></script>
 <script>window.UserCard && UserCard.setApi('?mod=chat&controllers=chat&action=userCard');</script>
 <script src="public/js/shared/chat.js?v=<?php echo $__chat_js_v; ?>"></script>
 <?php

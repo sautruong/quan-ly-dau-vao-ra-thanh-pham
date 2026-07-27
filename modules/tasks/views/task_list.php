@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Danh sách công việc — Việc cần làm</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/tasks/task_list.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/tasks/task_list.css'); ?>">
 </head>
 
 <body>
@@ -118,7 +118,7 @@
         window.TK_CONFIG = { baseUrl: '?mod=tasks&controllers=tasks&action=' };
         window.TK_DATA = { groups: <?php echo json_encode($groups ?? [], JSON_UNESCAPED_UNICODE); ?> };
     </script>
-    <script src="public/js/tasks/task_list.js"></script>
+    <script src="<?php echo asset_ver('public/js/tasks/task_list.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

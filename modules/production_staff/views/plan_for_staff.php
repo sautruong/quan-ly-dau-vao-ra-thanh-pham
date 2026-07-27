@@ -12,9 +12,9 @@ $ps_share = function_exists('ps_get_share_settings')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kế hoạch sản xuất (NVSX)</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/production_staff/plan_for_staff.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
@@ -257,9 +257,9 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
         </div>
     </div>
 
-    <script src="public/js/shared/check_database.js"></script>
+    <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="public/js/production_staff/plan_for_staff.js"></script>
+    <script src="<?php echo asset_ver('public/js/production_staff/plan_for_staff.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

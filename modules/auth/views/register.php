@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký tài khoản hệ thống safeking</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/style_register.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/style_register.css'); ?>">
     <style>
         /* Lớp phủ loading khi submit đăng ký (đang gửi mã OTP qua email). */
         #app-loading {
@@ -170,6 +170,6 @@
         <div class="loading-text">Đang gửi mã xác thực tới email…</div>
     </div>
 </body>
-<script src="public/js/app_register.js"></script>
+<script src="<?php echo asset_ver('public/js/app_register.js'); ?>"></script>
 
 </html>

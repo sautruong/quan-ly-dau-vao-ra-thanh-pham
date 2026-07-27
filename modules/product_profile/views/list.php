@@ -6,30 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Danh sách sản phẩm</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/list.css'); ?>">
-    <link rel="stylesheet" href="public/css/product_profile/modal.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/modal.css'); ?>">
     <!-- Lightbox xem ảnh dùng chung -->
-    <link rel="stylesheet" href="public/css/shared/invoice_upload.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/invoice_upload.css'); ?>">
 
     <!-- Thư viện -->
-    <script src="public/js/jquery-4.0.0.js" type="text/javascript" defer></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>" type="text/javascript" defer></script>
     <!--js của menu sidebarleft-->
-    <!-- <script src="public/js/menu_sidebar_left.js" defer></script> -->
+    <!-- <script src="<?php echo asset_ver('public/js/menu_sidebar_left.js'); ?>" defer></script> -->
     <!-- Modal dùng chung (Thêm SP, Check DB...) -->
-    <script src="public/js/product_profile_modal.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_modal.js'); ?>" defer></script>
     <!-- Kéo-thả file vào card sản phẩm -->
-    <script src="public/js/product_profile_dragdrop.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_dragdrop.js'); ?>" defer></script>
     <!-- Tạo bộ hồ sơ (ghi cây thư mục ra máy) -->
-    <script src="public/js/product_profile_dossier.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_dossier.js'); ?>" defer></script>
     <!-- Modal "Tần suất" (dùng chung với trang Chi tiết sản phẩm) -->
-    <script src="public/js/product_profile_frequency.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_frequency.js'); ?>" defer></script>
     <!-- Lightbox xem ảnh dùng chung (InvoiceViewer) -->
-    <script src="public/js/shared/invoice_dropzone.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/shared/invoice_dropzone.js'); ?>" defer></script>
     <!-- Đổi ảnh sản phẩm: chọn tệp / dán Ctrl+V / kéo-thả trên .img_product -->
-    <script src="public/js/product_profile_image.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_image.js'); ?>" defer></script>
     <!-- Nén ZIP cho modal "Tần suất" (tải xuống tất cả file) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">

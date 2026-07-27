@@ -14,9 +14,9 @@ $read_only = !empty($read_only);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bảng chấm công</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/payroll/payroll.css'); ?>">
 </head>
@@ -153,7 +153,7 @@ $read_only = !empty($read_only);
         };
     </script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
-    <script src="public/js/payroll/timesheet.js"></script>
+    <script src="<?php echo asset_ver('public/js/payroll/timesheet.js'); ?>"></script>
 </body>
 
 </html>

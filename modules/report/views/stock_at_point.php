@@ -10,12 +10,12 @@ $today_ymd  = date('Y-m-d');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tồn tại một thời điểm</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
-    <link rel="stylesheet" href="public/css/report/finished_goods_inventory.css">
-    <link rel="stylesheet" href="public/css/report/stock_at_point.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/report/finished_goods_inventory.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/report/stock_at_point.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
 
@@ -130,7 +130,7 @@ $today_ymd  = date('Y-m-d');
     <script>
         window.REPORT_CFG = { baseUrl: '?mod=report&controllers=report&action=' };
     </script>
-    <script src="public/js/report/stock_at_point.js"></script>
+    <script src="<?php echo asset_ver('public/js/report/stock_at_point.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

@@ -13,31 +13,31 @@ $detail_error    = $_GET['error'] ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chi tiết sản phẩm</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/detail.css'); ?>">
-    <link rel="stylesheet" href="public/css/product_profile/modal.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/modal.css'); ?>">
 
 
     <!--js của menu sidebarleft-->
-    <script src="public/js/menu_sidebar_left.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/menu_sidebar_left.js'); ?>" defer></script>
 
     <!--Định nghĩa thư viện js-->
-    <script src="public/js/jquery-4.0.0.js" type="text/javascript" defer></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>" type="text/javascript" defer></script>
 
     <!--app-->
-    <script src="public/js/product_profile_detail.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_detail.js'); ?>" defer></script>
     <!-- Modal dùng chung (xem thông tin, thêm/thay thế file, thay thế thành phần, check DB) -->
-    <script src="public/js/product_profile_modal.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_modal.js'); ?>" defer></script>
     <!-- Kéo-thả file vào vùng NCC / nguyên liệu -->
-    <script src="public/js/product_profile_dragdrop.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_dragdrop.js'); ?>" defer></script>
     <!-- Kéo sắp xếp thứ tự thành phần (Trello-like) -->
-    <script src="public/js/product_profile_sortable.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_sortable.js'); ?>" defer></script>
     <!-- Sửa thông tin sản phẩm trong modal (ảnh + các trường) -->
-    <script src="public/js/product_profile_info.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_info.js'); ?>" defer></script>
     <!-- Tìm & đổi sang xem sản phẩm khác -->
-    <script src="public/js/product_profile_switch_search.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_switch_search.js'); ?>" defer></script>
     <!-- Chụp ảnh modal "Hóa đơn còn thiếu" để Ctrl+V dán sang app khác -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Nén ZIP cho modal "Tần suất" (tải xuống tất cả file) -->
@@ -844,7 +844,7 @@ $detail_error    = $_GET['error'] ?? '';
     </script>
     <!-- Modal "Tần suất" — giới hạn theo sản phẩm đang xem (dùng chung JS với trang Danh sách sản phẩm) -->
     <script>window.PP_FREQ_PRODUCT_ID = <?= (int) $data['product_id'] ?>;</script>
-    <script src="public/js/product_profile_frequency.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_frequency.js'); ?>" defer></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

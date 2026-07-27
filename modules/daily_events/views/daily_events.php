@@ -17,11 +17,11 @@ $dew_boot = json_encode([
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thảo luận</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/shared/invoice_upload.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/invoice_upload.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/daily_events/daily_events.css'); ?>">
 </head>
 
@@ -130,7 +130,7 @@ $dew_boot = json_encode([
     </div>
 
     <script>window.__DEW_BOOT__ = <?php echo $dew_boot; ?>;</script>
-    <script src="public/js/shared/invoice_dropzone.js"></script>
+    <script src="<?php echo asset_ver('public/js/shared/invoice_dropzone.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/daily_events/daily_events.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>

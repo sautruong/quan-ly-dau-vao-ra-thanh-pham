@@ -6,16 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nhập NVL khác</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
-    <link rel="stylesheet" href="public/css/inventory_receiving/row_material_receiving.css">
-    <link rel="stylesheet" href="public/css/inventory_receiving/other_row_material_receiving.css">
-    <link rel="stylesheet" href="public/css/accounting/journal_entry.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_receiving/row_material_receiving.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_receiving/other_row_material_receiving.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/accounting/journal_entry.css'); ?>">
 
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/shared/datetime_picker.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/datetime_picker.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/history_filter.css'); ?>">
 </head>
 
@@ -205,10 +205,10 @@
             typeImport:  'other_row_material_receiving'
         };
     </script>
-    <script src="public/js/accounting/journal_entry.js"></script>
-    <script src="public/js/inventory_receiving/other_row_material_receiving.js"></script>
-    <script src="public/js/shared/check_database.js"></script>
-    <script src="public/js/shared/datetime_picker.js"></script>
+    <script src="<?php echo asset_ver('public/js/accounting/journal_entry.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/inventory_receiving/other_row_material_receiving.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/datetime_picker.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

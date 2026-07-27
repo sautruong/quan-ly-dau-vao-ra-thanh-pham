@@ -12,12 +12,12 @@ $ajax_base = '?mod=admin_factory&controllers=admin&action=';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QUẢN LÝ DANH SÁCH NHÀ CUNG CẤP</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
-    <link rel="stylesheet" href="public/css/inventory_management/investment_products.css">
-    <link rel="stylesheet" href="public/css/accounting/journal_entry.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/investment_products.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/accounting/journal_entry.css'); ?>">
     <style>
         .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .admin-table th, .admin-table td { border: 1px solid #ccc; padding: 6px; vertical-align: middle; text-align: left; }
@@ -408,9 +408,9 @@ $ajax_base = '?mod=admin_factory&controllers=admin&action=';
         });
     })();
     </script>
-    <script src="public/js/admin_factory/data_export_excel.js"></script>
+    <script src="<?php echo asset_ver('public/js/admin_factory/data_export_excel.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
-    <script src="public/js/admin_factory/sticky_table.js"></script>
+    <script src="<?php echo asset_ver('public/js/admin_factory/sticky_table.js'); ?>"></script>
 </body>
 
 </html>

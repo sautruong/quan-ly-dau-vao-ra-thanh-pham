@@ -7,11 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luồng một sản phẩm</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
-    <link rel="stylesheet" href="public/css/accounting_factory/flow.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/accounting_factory/flow.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
 
@@ -100,7 +100,7 @@
             baseUrl: '?mod=accounting_factory&controllers=accounting_factory&action='
         };
     </script>
-    <script src="public/js/accounting_factory/flow.js"></script>
+    <script src="<?php echo asset_ver('public/js/accounting_factory/flow.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

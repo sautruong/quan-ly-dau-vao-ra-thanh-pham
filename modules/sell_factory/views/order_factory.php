@@ -78,12 +78,12 @@ if (!function_exists('of_render_product')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đặt hàng nhà máy</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/sell-factory/order-factory.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <script src="public/js/jquery-4.0.0.js"></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
@@ -315,7 +315,7 @@ if (!function_exists('of_render_product')) {
         </div>
     </div>
 
-    <script src="public/js/sell-factory/order-factory.js"></script>
+    <script src="<?php echo asset_ver('public/js/sell-factory/order-factory.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

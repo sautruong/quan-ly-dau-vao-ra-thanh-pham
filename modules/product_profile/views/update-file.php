@@ -6,16 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cập nhật file</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/list.css'); ?>">
 
     <!--Định nghĩa thư viện js-->
-    <script src="public/js/jquery-4.0.0.js" type="text/javascript" defer></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>" type="text/javascript" defer></script>
     <!--js của menu sidebarleft-->
-    <script src="public/js/menu_sidebar_left.js" defer></script>
-    <!-- <script src="public/js/product_profile_list.js" defer></script> -->
+    <script src="<?php echo asset_ver('public/js/menu_sidebar_left.js'); ?>" defer></script>
+    <!-- <script src="<?php echo asset_ver('public/js/product_profile_list.js'); ?>" defer></script> -->
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
 </head>
 <style>

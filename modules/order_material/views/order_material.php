@@ -12,11 +12,11 @@ $om_today = 'Ngày ' . date('j') . ' tháng ' . date('m') . ' năm ' . date('Y')
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đặt hàng NVL</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/order_material/order_material.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/order_material/order_material.css'); ?>">
 </head>
 
 <body>
@@ -443,9 +443,9 @@ $om_today = 'Ngày ' . date('j') . ' tháng ' . date('m') . ' năm ' . date('Y')
         };
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="public/js/order_material/order_material.js"></script>
+    <script src="<?php echo asset_ver('public/js/order_material/order_material.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
-    <script src="public/js/shared/resizable_split.js"></script>
+    <script src="<?php echo asset_ver('public/js/shared/resizable_split.js'); ?>"></script>
 </body>
 
 </html>

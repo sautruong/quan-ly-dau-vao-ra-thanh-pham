@@ -19,9 +19,9 @@ $can_edit = $doc && in_array($doc['my_permission'], ['owner', 'edit'], true);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $doc ? htmlspecialchars($doc['title']) : 'Không tìm thấy'; ?></title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="<?php echo office_asset('public/css/office/office.css'); ?>">
 </head>

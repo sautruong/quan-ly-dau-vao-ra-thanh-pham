@@ -7,28 +7,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bộ hồ sơ sản phẩm chuẩn</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/detail.css'); ?>">
-    <link rel="stylesheet" href="public/css/product_profile/modal.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/modal.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/product_profile/standard.css'); ?>">
 
-    <script src="public/js/jquery-4.0.0.js" type="text/javascript" defer></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>" type="text/javascript" defer></script>
     <!-- modal dùng chung (mở/đóng) -->
-    <script src="public/js/product_profile_modal.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_modal.js'); ?>" defer></script>
     <!-- rename file (cây bút) -->
-    <script src="public/js/product_profile_dragdrop.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_dragdrop.js'); ?>" defer></script>
     <!-- kéo sắp xếp + xóa thành phần -->
-    <script src="public/js/product_profile_sortable.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_sortable.js'); ?>" defer></script>
     <!-- tạo bộ hồ sơ (ghi cây thư mục) -->
-    <script src="public/js/product_profile_dossier.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_dossier.js'); ?>" defer></script>
     <!-- tìm kiếm + xóa file + thêm thành phần (AJAX) -->
-    <script src="public/js/product_profile_standard.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_standard.js'); ?>" defer></script>
     <!-- modal "Hóa đơn, chứng từ còn thiếu" (chụp, in, lọc, tải ZIP) -->
-    <script src="public/js/product_profile_standard_missing.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_standard_missing.js'); ?>" defer></script>
     <!-- modal "Hóa đơn, chứng từ đã có" (chụp, in, lọc, tải ZIP) -->
-    <script src="public/js/product_profile_standard_existing.js" defer></script>
+    <script src="<?php echo asset_ver('public/js/product_profile_standard_existing.js'); ?>" defer></script>
     <!-- Chụp ảnh modal -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <!-- Nén ZIP tải xuống -->

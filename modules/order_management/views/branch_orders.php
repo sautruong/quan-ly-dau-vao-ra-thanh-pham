@@ -18,12 +18,12 @@ if (!function_exists('om_money')) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đơn hàng từ chi nhánh</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/order_management/order_management.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <script src="public/js/jquery-4.0.0.js"></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>"></script>
 </head>
 
 <body>
@@ -379,7 +379,7 @@ if (!function_exists('om_money')) {
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="public/js/order_management/branch_orders.js"></script>
+    <script src="<?php echo asset_ver('public/js/order_management/branch_orders.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

@@ -20,9 +20,9 @@ $fm_pending_count = count($shared['pending'] ?? []);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý file</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/file_management/file_manager.css'); ?>">
 </head>
@@ -150,7 +150,7 @@ $fm_pending_count = count($shared['pending'] ?? []);
     <div class="fm-toast" id="fm-toast"></div>
 
     <script type="application/json" id="fm-boot"><?php echo $fm_boot; ?></script>
-    <script src="public/js/file_management/file_manager.js"></script>
+    <script src="<?php echo asset_ver('public/js/file_management/file_manager.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

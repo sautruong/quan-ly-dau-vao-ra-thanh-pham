@@ -11,9 +11,9 @@ $users   = isset($users) && is_array($users) ? $users : [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gửi báo cáo tự động</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/report/auto_report.css'); ?>">
 </head>

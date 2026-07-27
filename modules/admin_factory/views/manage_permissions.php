@@ -23,9 +23,9 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PHÂN QUYỀN NGƯỜI DÙNG</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <style>
         body { font-family: Arial, sans-serif; background: #eef1f5; color: #1f2733; margin: 0; }
         /* App shell: header nằm trên, nội dung cuộn dọc toàn trang (không kẹt overflow:hidden của #wrapper). */

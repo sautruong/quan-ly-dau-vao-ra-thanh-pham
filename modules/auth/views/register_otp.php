@@ -12,9 +12,9 @@ $otp_sent     = !isset($otp_sent) || $otp_sent; // mặc định coi như đã g
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xác thực email đăng ký - SAFEKING</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/style_register.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/style_register.css'); ?>">
 </head>
 
 <body>

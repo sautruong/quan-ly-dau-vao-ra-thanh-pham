@@ -82,9 +82,9 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BC sản xuất hằng ngày</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/invoice_upload.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/report/daily_dashboard.css'); ?>">
@@ -741,7 +741,7 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
             'production_day' => $d_prodDay,
         ], JSON_UNESCAPED_UNICODE); ?>;
     </script>
-    <script src="public/js/chart.min.js"></script>
+    <script src="<?php echo asset_ver('public/js/chart.min.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/invoice_dropzone.js'); ?>"></script>
     <!-- html2canvas: chụp header + nội dung báo cáo thành ảnh PNG để copy vào clipboard (nút "máy ảnh") -->

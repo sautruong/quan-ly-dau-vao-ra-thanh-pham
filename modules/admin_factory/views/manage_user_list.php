@@ -18,12 +18,12 @@ $ajax_base      = '?mod=admin_factory&controllers=admin&action=';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QUẢN LÝ NGƯỜI DÙNG</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
-    <link rel="stylesheet" href="public/css/inventory_management/investment_products.css">
-    <link rel="stylesheet" href="public/css/accounting/journal_entry.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/investment_products.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/accounting/journal_entry.css'); ?>">
     <style>
         /* ----- Lưới thẻ người dùng: 4 thẻ / hàng, style như "modal avatar" ----- */
         .user-grid {

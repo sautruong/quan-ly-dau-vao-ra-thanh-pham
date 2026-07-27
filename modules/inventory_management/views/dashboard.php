@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nhập kho</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
 
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/shared/datetime_picker.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/datetime_picker.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/history_filter.css'); ?>">
 </head>
 
@@ -161,8 +161,8 @@
         };
     </script>
     <script src="<?php echo asset_ver('public/js/inventory_management/dashboard.js'); ?>"></script>
-    <script src="public/js/shared/check_database.js"></script>
-    <script src="public/js/shared/datetime_picker.js"></script>
+    <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/datetime_picker.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

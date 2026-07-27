@@ -10,11 +10,11 @@ $setups = $setups ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QL bao bì khách hàng</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/customer_packaging/customer_packaging.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/customer_packaging/customer_packaging.css'); ?>">
 </head>
 
 <body>
@@ -230,8 +230,8 @@ $setups = $setups ?? [];
             setups: <?php echo json_encode($setups, JSON_UNESCAPED_UNICODE); ?>
         };
     </script>
-    <script src="public/js/customer_packaging/customer_packaging.js"></script>
-    <script src="public/js/admin_factory/data_export_excel.js"></script>
+    <script src="<?php echo asset_ver('public/js/customer_packaging/customer_packaging.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/admin_factory/data_export_excel.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

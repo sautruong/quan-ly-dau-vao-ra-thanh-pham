@@ -23,9 +23,9 @@ $c_edit = function ($key, $val, $bold = false) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hợp đồng lao động nhân viên</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/contract.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/contract.css'); ?>">
     <style>
         .c-editable { position: relative; display: inline-block; border-radius: 3px; padding: 0 2px; }
         .c-editable.c-bold { font-weight: bold; }
@@ -202,7 +202,7 @@ $c_edit = function ($key, $val, $bold = false) {
 
 
 </body>
-<script src="public/js/contract.js"></script>
+<script src="<?php echo asset_ver('public/js/contract.js'); ?>"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
     const employeeName = <?php echo json_encode($data['employee_name']); ?>;

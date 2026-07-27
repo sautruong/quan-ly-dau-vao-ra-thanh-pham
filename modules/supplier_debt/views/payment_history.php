@@ -6,16 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ghi thanh toán — Công nợ nhà cung cấp</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
-    <link rel="stylesheet" href="public/css/shared/invoice_upload.css">
-    <link rel="stylesheet" href="public/css/inventory_receiving/print_receipt.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/invoice_upload.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_receiving/print_receipt.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/shared/datetime_picker.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/datetime_picker.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/history_filter.css'); ?>">
-    <link rel="stylesheet" href="public/css/supplier_debt/payment_history.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/supplier_debt/payment_history.css'); ?>">
 </head>
 
 <body>
@@ -247,10 +247,10 @@
         window.SIGN_CONFIG = <?php echo json_encode($sign_config ?? ['sign_roles' => [], 'signs' => []], JSON_UNESCAPED_UNICODE); ?>;
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="public/js/shared/invoice_dropzone.js"></script>
-    <script src="public/js/supplier_debt/payment_history.js"></script>
-    <script src="public/js/shared/check_database.js"></script>
-    <script src="public/js/shared/datetime_picker.js"></script>
+    <script src="<?php echo asset_ver('public/js/shared/invoice_dropzone.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/supplier_debt/payment_history.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/datetime_picker.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

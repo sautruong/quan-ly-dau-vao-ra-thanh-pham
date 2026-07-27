@@ -11,12 +11,12 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lịch sử đặt hàng</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/sell-factory/order-factory.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <script src="public/js/jquery-4.0.0.js"></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>"></script>
 </head>
 
 <body>

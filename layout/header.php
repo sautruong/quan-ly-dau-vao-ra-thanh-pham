@@ -5,8 +5,8 @@
 <head>
     <title>Hệ thống điều hướng cơ bản</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <!--<link href="public/css/reset.css" rel="stylesheet" type="text/css"/>-->
-    <link href="public/css/style.css" rel="stylesheet" type="text/css"/>
+    <!--<link href="<?php echo asset_ver('public/css/reset.css'); ?>" rel="stylesheet" type="text/css"/>-->
+    <link href="<?php echo asset_ver('public/css/style.css'); ?>" rel="stylesheet" type="text/css"/>
 </head>
 <body>
     <div id="wrapper">

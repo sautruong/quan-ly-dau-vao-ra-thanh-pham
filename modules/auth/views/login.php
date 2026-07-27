@@ -9,11 +9,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập tài khoản hệ thống Safeking</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
     <link rel="stylesheet" href="public/css/style_login.css?v=<?php echo filemtime(__DIR__ . '/../../../public/css/style_login.css'); ?>">
     <!-- Responsive -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="public/css/all.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
 </head>
 <body>
     <div id="wrapper">
@@ -199,7 +199,7 @@
         .btn-gmail-login .fa-google { color: #ea4335; font-size: 16px; }
     </style>
 </body>
-<script src="public/js/app_register.js"></script>
+<script src="<?php echo asset_ver('public/js/app_register.js'); ?>"></script>
 <script>
 (function () {
     var rememberCheckbox = document.getElementById('remember-me');

@@ -10,11 +10,11 @@ $groups = $groups ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QL nhóm trà ủ hương</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/tea_scent_group/tea_scent_group.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/tea_scent_group/tea_scent_group.css'); ?>">
 </head>
 
 <body>
@@ -252,7 +252,7 @@ $groups = $groups ?? [];
             groups: <?php echo json_encode($groups, JSON_UNESCAPED_UNICODE); ?>
         };
     </script>
-    <script src="public/js/tea_scent_group/tea_scent_group.js"></script>
+    <script src="<?php echo asset_ver('public/js/tea_scent_group/tea_scent_group.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

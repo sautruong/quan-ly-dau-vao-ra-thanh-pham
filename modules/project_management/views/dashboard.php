@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý dự án</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/project_management/dashboard.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/project_management/dashboard.css'); ?>">
 </head>
 
 <body>
@@ -83,7 +83,7 @@
         window.PM_CONFIG = { baseUrl: '?mod=project_management&controllers=project&action=' };
         window.PM_DATA = { projects: <?php echo json_encode($projects ?? [], JSON_UNESCAPED_UNICODE); ?> };
     </script>
-    <script src="public/js/project_management/dashboard.js"></script>
+    <script src="<?php echo asset_ver('public/js/project_management/dashboard.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

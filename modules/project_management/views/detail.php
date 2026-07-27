@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($project['name']) ? htmlspecialchars($project['name']) : 'Dự án'; ?> — Quản lý dự án</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/project_management/detail.css">
-    <link rel="stylesheet" href="public/css/shared/user_card.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/project_management/detail.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/user_card.css'); ?>">
 </head>
 
 <body>
@@ -305,12 +305,12 @@
         };
     </script>
     <?php if (!empty($project)): ?>
-    <script src="public/js/shared/user_card.js"></script>
+    <script src="<?php echo asset_ver('public/js/shared/user_card.js'); ?>"></script>
     <script>window.UserCard && UserCard.setApi('?mod=project_management&controllers=project&action=userCard');</script>
-    <script src="public/js/project_management/composers.js"></script>
-    <script src="public/js/project_management/canvas.js"></script>
-    <script src="public/js/project_management/chat.js"></script>
-    <script src="public/js/project_management/detail.js"></script>
+    <script src="<?php echo asset_ver('public/js/project_management/composers.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/project_management/canvas.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/project_management/chat.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/project_management/detail.js'); ?>"></script>
     <?php endif; ?>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>

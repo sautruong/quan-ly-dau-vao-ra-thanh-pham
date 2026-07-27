@@ -39,12 +39,12 @@ if (!$is_manual && !empty($order['kien_sum'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phiếu soạn hàng</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/order_management/order_management.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <script src="public/js/jquery-4.0.0.js"></script>
+    <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>"></script>
 </head>
 
 <body>
@@ -203,7 +203,7 @@ if (!$is_manual && !empty($order['kien_sum'])) {
         window.OM_MANUAL = <?= $is_manual ? 'true' : 'false' ?>;
         window.OM_ORDER_ID = <?= $is_manual ? '0' : (int) ($order['id'] ?? 0) ?>;
     </script>
-    <script src="public/js/order_management/picking_slip.js"></script>
+    <script src="<?php echo asset_ver('public/js/order_management/picking_slip.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

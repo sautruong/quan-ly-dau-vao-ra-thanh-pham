@@ -6,11 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tạo tem gửi mẫu</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
-    <link rel="stylesheet" href="public/css/reset.css">
-    <link rel="stylesheet" href="public/css/all.css">
-    <link rel="stylesheet" href="public/css/global.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
-    <link rel="stylesheet" href="public/css/sample_label/sample_label.css">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/sample_label/sample_label.css'); ?>">
 </head>
 
 <body>
@@ -121,8 +121,8 @@
             texts: <?= json_encode($texts, JSON_UNESCAPED_UNICODE) ?>
         };
     </script>
-    <script src="public/js/sample_label/sample_label.js"></script>
-    <script src="public/js/shared/check_database.js"></script>
+    <script src="<?php echo asset_ver('public/js/sample_label/sample_label.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 
