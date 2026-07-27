@@ -82,12 +82,29 @@
     }
 
     function ajaxUrl() {
+        // 1) Trang mở bằng URL cũ (?mod=..&controllers=..) -> dùng luôn.
         var p = new URLSearchParams(window.location.search);
-        var mod  = p.get('mod') || '';
-        var ctrl = p.get('controllers') || '';
-        return '?mod=' + encodeURIComponent(mod) +
-               '&controllers=' + encodeURIComponent(ctrl) +
-               '&action=check_database';
+        var mod = p.get('mod') || '';
+        if (mod !== '') {
+            var ctrl = p.get('controllers') || '';
+            return '?mod=' + encodeURIComponent(mod) +
+                   '&controllers=' + encodeURIComponent(ctrl) +
+                   '&action=check_database';
+        }
+        // 2) Trang URL gọn /{mod}/{action}[/{id}] -> lấy mod từ path, gọi
+        //    check_database dạng URL gọn: {gốc app}/{mod}/check_database.
+        //    Dùng <base href> (document.baseURI) để đúng cả khi app nằm thư mục con.
+        var root;
+        try { root = new URL(document.baseURI).pathname; } catch (e) { root = '/'; }
+        if (root.charAt(root.length - 1) !== '/') root += '/';
+        var path = window.location.pathname;
+        if (path.indexOf(root) === 0) path = path.slice(root.length);
+        var seg = path.replace(/^\/+/, '').split('/').filter(Boolean);
+        var m = seg.length ? decodeURIComponent(seg[0]) : '';
+        if (m === '') {
+            return '?mod=&controllers=&action=check_database'; // fallback (hiếm)
+        }
+        return root + encodeURIComponent(m) + '/check_database';
     }
 
     /** Cửa sổ số trang hiển thị: CĂN GIỮA trang hiện tại (±3, tối đa 7 số liên tiếp) để luôn
