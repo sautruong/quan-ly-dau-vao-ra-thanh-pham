@@ -214,7 +214,10 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
                 <!-- Kế hoạch sản xuất dự phòng -->
                 <div class="ltp-backup" id="ltp-backup">
                     <div class="ltp-backup-head">
-                        <span class="ltp-backup-title"><i class="fa-solid fa-box-archive"></i> Kế hoạch sản xuất dự phòng</span>
+                        <span class="ltp-backup-title"><i class="fa-solid fa-box-archive"></i>
+                            <span class="ltp-bk-full">Kế hoạch sản xuất dự phòng</span>
+                            <span class="ltp-bk-short">KHSX Dự phòng</span>
+                        </span>
                         <div class="ltp-backup-actions">
                             <button type="button" class="ltp-btn ltp-backup-add" id="ltp-backup-add">+ Sản phẩm</button>
                             <div class="ltp-backup-setting-wrap">
@@ -276,6 +279,18 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
             <div class="ltp-modal-foot">
                 <button type="button" class="ltp-btn ltp-btn-primary" id="ltp-add-task-confirm">Thêm</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MOBILE: modal xem công việc + việc khác của 1 ngày (Task 7) -->
+    <div class="app-modal" id="ltp-day-modal" aria-hidden="true">
+        <div class="app-modal-overlay" data-ltp-day-close></div>
+        <div class="app-modal-box">
+            <div class="app-modal-head">
+                <h3 id="ltp-day-modal-title"></h3>
+                <button type="button" class="app-modal-close" data-ltp-day-close aria-label="Đóng">&times;</button>
+            </div>
+            <div class="app-modal-body" id="ltp-day-modal-body"></div>
         </div>
     </div>
 

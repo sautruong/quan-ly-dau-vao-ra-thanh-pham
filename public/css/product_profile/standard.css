@@ -257,6 +257,17 @@
     .sd-grid { grid-template-columns: 1fr; }
 }
 
+/* MOBILE (≤768px) — Task 16: ô tìm kiếm nằm độc lập 1 dòng; các control còn lại
+   xuống hàng dưới. */
+@media (max-width: 768px) {
+    .sd-toolbar { flex-wrap: wrap; gap: 10px; }
+    .sd-toolbar .search-box { flex: 1 1 100%; width: 100%; max-width: 100%; }
+    .sd-toolbar .wp-nutrition-filter { flex: 1 1 auto; }
+    .sd-toolbar .btn-missing-docs,
+    .sd-toolbar .btn-existing-docs { flex: 1 1 auto; }
+    .sd-count { flex: 1 1 100%; margin-left: 0; }
+}
+
 /* ============================================================
    Nút "Hóa đơn, chứng từ còn thiếu" (toolbar) — dùng lại màu cảnh báo
    .btn-missing-docs đã có sẵn ở detail.css (page này include chung file)

@@ -83,6 +83,42 @@
 .pf-stock-suggest li:hover { background: var(--pf-green-light); }
 .pf-stock-suggest li.pf-stock-empty { color: var(--pf-muted); cursor: default; font-style: italic; }
 
+/* ---------- MOBILE (≤768px) — Task 8: gom nút công cụ canh phải, cùng hàng với ô tìm ----------
+   Ô tìm kiếm co giãn chiếm chỗ; 4 nút (Xem tồn NVL / Xem tồn TP / Xem hình / Check DB)
+   thu về chỉ-icon và nằm cụm bên phải cùng một hàng. */
+@media (max-width: 768px) {
+    /* R2-6: ô tìm kiếm nằm RIÊNG 1 dòng; cụm nút công cụ icon-only xuống hàng dưới, canh phải */
+    .pf-search-bar { flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .pf-search-wrap { flex: 1 1 100%; min-width: 0; max-width: none; }
+    .pf-tool-btn {
+        font-size: 0;          /* ẩn nhãn chữ (text-node), giữ icon */
+        gap: 0;
+        padding: 9px 11px;
+        flex: 0 0 auto;
+    }
+    .pf-tool-btn > i { font-size: 15px; }
+    .pf-stock-lookup.is-open { width: 46vw; }   /* ô tra tồn thu gọn cho vừa mobile */
+
+    /* R2-6: "Đã xem gần đây" -> dạng FAQ (bấm nhãn để mở/đóng danh sách) */
+    .pf-recent-wrap { flex-direction: column; align-items: stretch; gap: 8px; }
+    .pf-recent-label {
+        display: flex; align-items: center; gap: 6px; cursor: pointer;
+        padding: 8px 0; white-space: normal;
+    }
+    .pf-recent-label::after {
+        content: ''; margin-left: auto;
+        border: 5px solid transparent; border-top-color: var(--pf-muted);
+        transform: translateY(2px); transition: transform .18s ease;
+    }
+    .pf-recent-wrap.is-open .pf-recent-label::after { transform: translateY(-2px) rotate(180deg); }
+    .pf-recent-list { display: none; }
+    .pf-recent-wrap.is-open .pf-recent-list { display: flex; }
+
+    /* R2-6: bảng "Công thức mẻ sản xuất" cuộn ngang */
+    .pf-panel-batch .pf-recipe-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .pf-panel-batch .pf-recipe-table { min-width: 560px; }
+}
+
 /* ---------- Tabs ---------- */
 .pf-tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--pf-border); margin-bottom: 16px; }
 .pf-tab {

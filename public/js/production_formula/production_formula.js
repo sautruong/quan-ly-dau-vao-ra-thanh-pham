@@ -60,6 +60,11 @@
     var $shareTotal = $('pf-share-total'), $shareNote = $('pf-share-note');
 
     var $recentWrap = $('pf-recent-wrap'), $recentList = $('pf-recent-list');
+    // R2-6 (mobile): bấm nhãn "Đã xem gần đây" để mở/đóng danh sách (dạng FAQ).
+    if ($recentWrap) {
+        var $recentLbl = $recentWrap.querySelector('.pf-recent-label');
+        if ($recentLbl) $recentLbl.addEventListener('click', function () { $recentWrap.classList.toggle('is-open'); });
+    }
 
     var $miModal = $('pf-matinfo-modal'), $miOverlay = $('pf-matinfo-overlay'), $miClose = $('pf-matinfo-close');
     var $miName = $('pf-matinfo-name'), $miSysName = $('pf-matinfo-sysname'), $miUnit = $('pf-matinfo-unit');

@@ -240,6 +240,17 @@
         var evs = state.events[dayModalDate] || [];
         if (dayModalTitle) dayModalTitle.textContent = dayTitleLabel(dayModalDate);
         dayModalEvents.innerHTML = evs.map(function (it, i) { return chipHtml(it, i); }).join('');
+        // R2-7: sự kiện có đính kèm (hóa đơn/ảnh) -> gắn icon "hình ảnh" để bấm vào xem.
+        Array.prototype.forEach.call(dayModalEvents.querySelectorAll('.fev-chip[data-idx]'), function (chip) {
+            var idx = parseInt(chip.getAttribute('data-idx'), 10);
+            var ev = evs[idx];
+            if (ev && ev.click && ev.click.kind) {
+                var ic = document.createElement('i');
+                ic.className = 'fa-regular fa-images fev-chip-img';
+                ic.title = 'Xem hình ảnh/hóa đơn';
+                chip.appendChild(ic);
+            }
+        });
     }
     function openDayModal(dateStr) {
         if (!dayModal) return;
@@ -300,6 +311,15 @@
     function onChipAreaClick(e) {
         var more = e.target.closest('.fev-more');
         if (more) { openDayModal(more.getAttribute('data-date')); return; }
+        // Mobile (≤768px): chip đang ẩn (chỉ hiện chấm) -> bấm cả ô ngày mở modal nếu có sự kiện.
+        if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+            var cell = e.target.closest('.calfull-day[data-date]');
+            if (cell) {
+                var cd = cell.getAttribute('data-date');
+                if ((state.events[cd] || []).length) openDayModal(cd);
+                return;
+            }
+        }
         var chip = e.target.closest('.fev-chip[data-idx]');
         if (!chip) return;
         var date = chip.getAttribute('data-date');
@@ -308,6 +328,18 @@
         handleChipClick(evs[idx]);
     }
     grid.addEventListener('click', onChipAreaClick);
+
+    /* Mobile: nút bật/tắt bộ lọc (kiểu FAQ) */
+    (function () {
+        var ft = document.getElementById('fev-filter-toggle');
+        var fb = document.getElementById('fev-filters');
+        if (!ft || !fb) return;
+        ft.addEventListener('click', function () {
+            var open = fb.classList.toggle('is-open');
+            ft.classList.toggle('is-open', open);
+            ft.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    })();
     dayModalEvents.addEventListener('click', onChipAreaClick);
 
     load();

@@ -764,6 +764,19 @@ tr.freq-item:hover .btn-edit-filename { opacity: 1; }
 
 /* Tablet */
 @media (max-width: 768px) {
+    /* R2-10: bỏ padding #sidebar-right cho gọn trên mobile */
+    #sidebar-right { padding: 0; }
+
+    /* Task 14: mỗi card sản phẩm chiếm full chiều ngang trên mobile */
+    #wrapper-product {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .container-product {
+        width: 100%;
+        max-width: 100%;
+    }
+
     .wp-title-category {
         flex-wrap: wrap;
         gap: 6px;

@@ -255,6 +255,9 @@
 .chat-compose-row { display: flex; align-items: center; gap: 4px; }
 /* Các nút trong khung soạn = cùng cỡ nút gửi để cả cụm ngang hàng nhau. */
 .chat-compose-row .chat-icon-btn { width: 38px; height: 38px; flex: 0 0 auto; }
+/* Nhóm công cụ phụ: desktop hiện thẳng hàng; nút "..." chỉ dùng cho mobile. */
+.chat-compose-tools { display: flex; align-items: center; gap: 4px; }
+.chat-more-btn { display: none; }
 /* Ô soạn tin = contenteditable (không phải textarea) để định dạng chữ (đậm/nghiêng/
    gạch chân/màu) hiển thị TRỰC TIẾP ngay khi soạn, thay vì hiện mã [b][/b] thô. */
 .chat-input-editable {
@@ -812,4 +815,59 @@
 @media (max-width: 480px) {
     .chat-widget { right: 12px; bottom: 12px; }
     .chat-panel { width: calc(100vw - 24px); height: calc(100vh - 90px); }
+}
+
+/* =====================================================================
+   MOBILE (≤768px) — Task 1: chat kiểu Zalo
+   - Bấm bóng chat -> panel toàn màn hình, ẩn bóng chat.
+   - Ô soạn tin: emoji canh trái, input full width, các icon phụ gom vào
+     nút "..." canh phải; nút "Gửi" chỉ hiện khi có nội dung.
+   - Xem ảnh: hình full màn, ẩn cột thumbnail bên cạnh.
+   ===================================================================== */
+@media (max-width: 768px) {
+    /* --- Panel toàn màn hình --- */
+    .chat-panel {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;               /* trừ thanh địa chỉ trình duyệt mobile */
+        max-height: none;
+        border-radius: 0;
+        border: 0;
+    }
+    /* Ẩn bóng chat khi panel đang mở (JS gắn .is-panel-open). */
+    .chat-widget.is-panel-open .chat-launcher { display: none; }
+
+    /* --- Ô soạn tin --- */
+    .chat-compose-row { flex-wrap: nowrap; }
+    .chat-emoji-btn-el { order: 0; }
+    .chat-input-editable { order: 1; flex: 1 1 auto; min-width: 0; }
+    .chat-more-btn { display: inline-flex; order: 2; }
+    .chat-send-btn { order: 3; }
+
+    /* Nhóm công cụ phụ -> popover mở từ nút "..." (canh phải, phía trên ô soạn). */
+    .chat-compose-tools {
+        display: none;
+        position: absolute;
+        right: 8px;
+        bottom: 56px;
+        flex-direction: row;
+        gap: 4px;
+        background: #fff;
+        border: 1px solid var(--chat-line);
+        border-radius: 14px;
+        padding: 6px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+        z-index: 6;
+    }
+    .chat-compose-tools.is-open { display: flex; }
+
+    /* Nút "Gửi" chỉ hiện khi có chữ hoặc có tệp đính kèm. */
+    .chat-send-btn { display: none; }
+    .chat-compose-row.chat-has-text .chat-send-btn { display: inline-flex; }
+
+    /* --- Xem ảnh full màn, bỏ cột thumbnail --- */
+    .chat-viewer-thumbs { display: none !important; }
+    .chat-viewer-img { max-width: 100%; }
 }

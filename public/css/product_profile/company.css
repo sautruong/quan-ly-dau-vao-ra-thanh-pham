@@ -337,3 +337,16 @@
 .cp-sel-remove:hover {
     background: #ffeaea;
 }
+
+/* ---------- MOBILE (≤768px) — Task 15: full width + ẩn thanh scroll vật lý ---------- */
+@media (max-width: 768px) {
+    .company-profile-list { max-width: 100%; gap: 16px; }
+    .cp-group { flex: 1 1 100%; max-width: 100%; padding: 20px 16px; }
+    /* Ẩn thanh cuộn vật lý nhưng vẫn lướt cảm ứng bình thường */
+    .main-content {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+    }
+    .main-content::-webkit-scrollbar { width: 0; height: 0; }
+}

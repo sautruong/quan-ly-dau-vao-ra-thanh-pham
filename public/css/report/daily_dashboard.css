@@ -2142,3 +2142,25 @@
         margin-left: auto;
     }
 }
+
+/* =====================================================================
+   MOBILE (≤768px) — Task 10: dashboard full width + full height + cuộn dọc
+   global.css khóa html/body/#wrapper ở overflow:hidden (khung 1 màn hình)
+   -> ở phone cho cuộn dọc tự nhiên; mỗi card chiếm full chiều ngang.
+   ===================================================================== */
+@media (max-width: 768px) {
+    /* Nền global.css của html/body là ĐEN -> khi nội dung ngắn hơn màn hình sẽ
+       lộ "nửa dưới màu đen". Đổi nền sáng + ép #wrapper cao tối thiểu 1 màn hình. */
+    html, body { height: auto; overflow-x: hidden; overflow-y: auto; background: #e9edf1; }
+    body { display: block; }
+    #wrapper { height: auto; min-height: 100dvh; overflow: visible; padding: 8px; background: #e9edf1; }
+    .dd2-content { overflow: visible; height: auto; min-height: 0; }
+    .dd2-body { gap: 12px; }
+    .dd2-main { min-width: 0; }
+    .dd2-row { gap: 12px; }
+    .dd2-card { width: 100%; border-radius: 16px; }
+    /* Chart tràn mép (negative margin) dễ gây lệch trên màn nhỏ -> gọn lại */
+    .dd2-col-export .dd2-chart-box { width: 100%; margin: 0; }
+    /* Thanh icon dọc -> cuộn ngang khi chật */
+    .dd2-sidebar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}

@@ -80,6 +80,36 @@ if (!isset($page_title) || $page_title === '') {
         <?php if ($__hd_todo_visible): ?>
             <?php require __DIR__ . '/header-widgets/todo.php'; ?>
         <?php endif; ?>
+
+        <!-- MOBILE: gom Lịch / Điểm nhắc / Việc cần làm / Sáng-Tối vào 1 nút (cạnh chuông).
+             Ẩn trên desktop (CSS). Mỗi mục bấm sẽ mở đúng công cụ tương ứng dạng modal
+             canh giữa màn hình — xem app_shell.js (wireHeaderTools) + app_shell.css. -->
+        <div class="app-header-tools" id="app-header-tools">
+            <button type="button" class="app-tools-btn" id="app-tools-btn" aria-label="Tiện ích">
+                <i class="fa-solid fa-grip"></i>
+            </button>
+            <div class="app-tools-menu" id="app-tools-menu">
+                <?php if ($__hd_cal_visible): ?>
+                    <button type="button" class="app-tools-item" data-tools-target="app-cal-btn">
+                        <i class="fa-solid fa-calendar-days"></i> Lịch
+                    </button>
+                <?php endif; ?>
+                <?php if ($__hd_remind_visible): ?>
+                    <button type="button" class="app-tools-item" data-tools-target="app-remind-btn">
+                        <i class="fa-solid fa-thumbtack"></i> Điểm nhắc
+                    </button>
+                <?php endif; ?>
+                <?php if ($__hd_todo_visible): ?>
+                    <button type="button" class="app-tools-item" data-tools-target="app-todo-btn">
+                        <i class="fa-solid fa-list-check"></i> Việc cần làm
+                    </button>
+                <?php endif; ?>
+                <button type="button" class="app-tools-item" data-tools-target="app-view-theme-btn">
+                    <i class="fa-solid fa-circle-half-stroke"></i> Sáng / Tối
+                </button>
+            </div>
+        </div>
+
         <?php require __DIR__ . '/header-widgets/bell.php'; ?>
         <?php require __DIR__ . '/header-widgets/user.php'; ?>
     </div>

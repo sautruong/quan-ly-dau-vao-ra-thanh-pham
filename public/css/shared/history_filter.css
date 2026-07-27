@@ -231,3 +231,77 @@
         width: 170px;
     }
 }
+
+/* ============================================================
+   MOBILE (≤768px): khối "Lịch sử" chuyển từ bảng -> danh sách
+   card dọc. Mỗi card gồm Ngày / Diễn giải / Thao tác; ẩn bộ lọc
+   (Bỏ bộ lọc), giữ nguyên phân trang (mặc định 10 dòng/trang).
+   Dùng chung cho MỌI view có .history-table (11 view nhập liệu).
+   ============================================================ */
+@media (max-width: 768px) {
+    /* Bỏ bộ lọc trên mobile */
+    .history-bar .history-filter,
+    .history-filter { display: none !important; }
+
+    /* Bảng -> danh sách card dọc */
+    .history-table { border: 0; }
+    .history-table thead { display: none; }
+    .history-table,
+    .history-table tbody,
+    .history-table tr,
+    .history-table td { display: block; width: 100%; }
+
+    .history-table tr {
+        margin: 0 0 12px;
+        padding: 12px 14px;
+        background: #fff;
+        border: 1px solid var(--color-gray-200, #e5e7eb);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    }
+    .history-table tr.history-empty {
+        text-align: center;
+        color: var(--color-gray-500, #6b7280);
+    }
+    /* Dòng "trống" (1 ô colspan) không gắn nhãn Ngày/Diễn giải */
+    .history-table tr.history-empty td::before { content: none !important; }
+
+    .history-table td {
+        padding: 3px 0;
+        white-space: normal;   /* huỷ nowrap của desktop cho cột Ngày */
+    }
+    .history-table td:first-child { width: 100%; }  /* huỷ width:1% desktop */
+
+    /* Nhãn nhỏ phía trên nội dung từng dòng */
+    .history-table td:nth-child(1)::before { content: "Ngày"; }
+    .history-table td:nth-child(2)::before { content: "Diễn giải"; }
+    .history-table td:nth-child(1)::before,
+    .history-table td:nth-child(2)::before {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        color: var(--color-gray-400, #9ca3af);
+        margin-bottom: 2px;
+    }
+    .history-table td:nth-child(1) { font-size: 15px; font-weight: 700; }
+
+    /* Cụm "Thao tác" thành hàng nút ở đáy card */
+    .history-table td.history-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--color-gray-200, #e5e7eb);
+    }
+
+    /* Phân trang: căn giữa, cho phép xuống dòng */
+    .history-pagination {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+    }
+}

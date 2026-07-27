@@ -24,6 +24,12 @@ defined('APPPATH') OR exit('Không được quyền truy cập phần này');
         <?php get_header('app'); ?>
 
         <div class="content calfull-page fev-page">
+            <!-- MOBILE: gom bộ lọc vào 1 khối bật/tắt (kiểu FAQ) — Task 9 -->
+            <button type="button" class="fev-filter-toggle" id="fev-filter-toggle" aria-expanded="false">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Bộ lọc sự kiện</span>
+                <i class="fa-solid fa-chevron-down fev-filter-toggle-caret"></i>
+            </button>
             <div class="fev-filters" id="fev-filters">
                 <div class="fev-filter-row" data-type="nk_supplier" data-search="suppliers">
                     <label class="fev-filter-check">

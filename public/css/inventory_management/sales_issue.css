@@ -627,6 +627,34 @@
 }
 
 /* ============================================
+   MOBILE (≤768px) — Task 5: khối tên khách hàng
+   Mỗi label 1 dòng, input full width vừa màn hình.
+   ============================================ */
+@media (max-width: 768px) {
+    .wp-custom-imfo .wp-customer,
+    .wp-custom-imfo .wp-address,
+    .wp-custom-imfo .wp-receiver {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+    .wp-custom-imfo label {
+        min-width: 0;
+        width: 100%;
+        text-align: left;
+    }
+    .wp-custom-imfo input {
+        width: 100%;
+        max-width: 100%;
+    }
+    .customer-dropdown {
+        left: 0;
+        right: 0;
+        max-width: 100%;
+    }
+}
+
+/* ============================================
    5. Nút "In đơn"
    ============================================ */
 .wp-button .btn-print {

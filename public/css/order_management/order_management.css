@@ -192,6 +192,24 @@ body { background: var(--om-gray-100); color: #111827; font-family: "Segoe UI", 
 @media (max-width: 900px)  { .om-cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px)  { .om-cards { grid-template-columns: 1fr; } }
 
+/* ----- MOBILE (≤768px) — Task 12 & 13 ----- */
+@media (max-width: 768px) {
+    /* Task 12: global.css khóa html/body/#wrapper ở overflow:hidden (khung 1 màn
+       hình) -> danh sách card bị cắt. Trên mobile cho cuộn dọc tự nhiên. */
+    html, body { height: auto; overflow-x: hidden; overflow-y: auto; }
+    body { display: block; background: var(--om-gray-100); }
+    #wrapper { height: auto; min-height: 100%; overflow: visible; }
+    .om-page { padding: 12px 8px 60px; }
+
+    /* Task 13: phiếu soạn — select "Chi nhánh" chỉ vừa mobile, nhãn canh trái */
+    .om-slip-manual { align-items: stretch; }
+    .om-field { align-items: flex-start; width: 100%; }
+    .om-field label { text-align: left; }
+    .om-field-branch { width: 100%; }
+    .om-field select, .om-field input { min-width: 0; width: 100%; max-width: 100%; }
+    .om-slip-scroll { max-height: none; }
+}
+
 /* ----- Pagination ----- */
 .om-pagination { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .om-pagination a {

@@ -20,3 +20,15 @@
 
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# PWA: kiểu MIME cho web app manifest (một số Apache chưa khai báo sẵn .webmanifest)
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+</IfModule>
+# Service worker: không cache file sw.js để cập nhật SW kịp thời
+<IfModule mod_headers.c>
+    <Files "sw.js">
+        Header set Cache-Control "no-cache"
+        Header set Service-Worker-Allowed "/"
+    </Files>
+</IfModule>

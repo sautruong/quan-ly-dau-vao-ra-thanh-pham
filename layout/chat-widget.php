@@ -157,19 +157,28 @@ $__chat_js_v  = is_file($__chat_js)  ? filemtime($__chat_js)  : time();
                 </div>
 
                 <div class="chat-compose-row">
-                    <label class="chat-icon-btn" title="Gửi ảnh">
-                        <i class="fa-solid fa-image"></i>
-                        <input type="file" id="chat-input-image" accept="image/*" multiple hidden>
-                    </label>
-                    <label class="chat-icon-btn" title="Gửi tệp">
-                        <i class="fa-solid fa-paperclip"></i>
-                        <input type="file" id="chat-input-file" multiple hidden>
-                    </label>
-                    <button type="button" class="chat-icon-btn" id="chat-emoji-btn" title="Emoji">
+                    <!-- Emoji: luôn hiển thị, canh trái (kể cả trên mobile). -->
+                    <button type="button" class="chat-icon-btn chat-emoji-btn-el" id="chat-emoji-btn" title="Emoji">
                         <i class="fa-regular fa-face-smile"></i>
                     </button>
-                    <button type="button" class="chat-icon-btn" id="chat-format-btn" title="Định dạng chữ (bôi đen đoạn text trước)">
-                        <i class="fa-solid fa-font"></i>
+                    <!-- Nhóm công cụ phụ (ảnh/tệp/định dạng): desktop hiện thẳng hàng;
+                         mobile gom vào nút "..." (chat-more-btn) mở dạng popover. -->
+                    <div class="chat-compose-tools" id="chat-compose-tools">
+                        <label class="chat-icon-btn" title="Gửi ảnh">
+                            <i class="fa-solid fa-image"></i>
+                            <input type="file" id="chat-input-image" accept="image/*" multiple hidden>
+                        </label>
+                        <label class="chat-icon-btn" title="Gửi tệp">
+                            <i class="fa-solid fa-paperclip"></i>
+                            <input type="file" id="chat-input-file" multiple hidden>
+                        </label>
+                        <button type="button" class="chat-icon-btn" id="chat-format-btn" title="Định dạng chữ (bôi đen đoạn text trước)">
+                            <i class="fa-solid fa-font"></i>
+                        </button>
+                    </div>
+                    <!-- Nút "..." chỉ hiện trên mobile để mở nhóm công cụ phụ, canh phải. -->
+                    <button type="button" class="chat-icon-btn chat-more-btn" id="chat-more-btn" title="Thêm">
+                        <i class="fa-solid fa-ellipsis"></i>
                     </button>
                     <div id="chat-input-text" class="chat-input-editable" contenteditable="true" role="textbox"
                          data-placeholder="Nhập tin nhắn.."></div>

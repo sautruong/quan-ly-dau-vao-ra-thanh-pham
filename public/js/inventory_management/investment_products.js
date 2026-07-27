@@ -1632,14 +1632,16 @@
     }
 
     function pageRange(current, total) {
+        // Kiểu "1 2 3 4 .. 17 .. 30" (yêu cầu R2-4).
         const out = [];
         if (total <= 7) { for (let i = 1; i <= total; i++) out.push(i); return out; }
-        out.push(1);
-        if (current > 3) out.push('...');
-        const from = Math.max(2, current - 1);
-        const to   = Math.min(total - 1, current + 1);
-        for (let i = from; i <= to; i++) out.push(i);
-        if (current < total - 2) out.push('...');
+        let start = current <= 1 ? 1 : current - 1;
+        let end = start + 3;
+        if (end >= total - 1) { start = Math.max(1, total - 4); for (let i = start; i <= total; i++) out.push(i); return out; }
+        for (let i = start; i <= end; i++) out.push(i);
+        out.push('...');
+        const mid = Math.round((end + total) / 2);
+        if (mid > end && mid < total) { out.push(mid); out.push('...'); }
         out.push(total);
         return out;
     }

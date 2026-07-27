@@ -412,3 +412,47 @@
     .ltp-backup { flex-basis: auto; max-width: none; width: 100%; padding-right: 0; }
     .ltp-completed-main { flex-basis: auto; max-width: none; width: 100%; border-left: 0; border-top: 1px solid #e4e8ee; padding-left: 0; padding-top: 14px; }
 }
+
+/* Nhãn "Kế hoạch sản xuất dự phòng": bản rút gọn chỉ hiện trên mobile (Task 7) */
+.ltp-bk-short { display: none; }
+
+/* =====================================================================
+   MOBILE (≤768px) — Task 7: Kế hoạch sản xuất dài ngày
+   - "Xem tồn NVL / thành phẩm": ô tra cứu mở dạng modal canh giữa.
+   - Board 7 cột -> 1 cột; mỗi ngày rút gọn còn tiêu đề (nút), bấm mở modal
+     xem "công việc + việc khác" (JS: #ltp-day-modal).
+   - Đổi tiêu đề dự phòng thành "KHSX Dự phòng".
+   ===================================================================== */
+@media (max-width: 768px) {
+    .ltp-bk-full { display: none; }
+    .ltp-bk-short { display: inline; }
+
+    /* Ô tra cứu tồn -> modal canh giữa (tái dùng toàn bộ JS sẵn có) */
+    .ltp-stock-lookup.is-open {
+        position: fixed;
+        top: 74px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 92vw;
+        max-width: 440px;
+        z-index: 3000;
+        background: #fff;
+        padding: 12px;
+        border-radius: 14px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, .28);
+        overflow: visible;
+    }
+    .ltp-stock-lookup.is-open .ltp-stock-input { display: block; width: 100%; }
+    .ltp-stock-lookup.is-open .ltp-stock-suggest {
+        position: static; box-shadow: none; max-height: 46vh; margin-top: 8px;
+    }
+
+    /* Board 1 cột; mỗi ngày rút gọn còn phần tiêu đề (bấm mở modal) */
+    .ltp-board { grid-template-columns: 1fr; gap: 8px; }
+    .ltp-card { grid-column: 1 / -1 !important; cursor: pointer; }
+    .ltp-card-body,
+    .ltp-card-foot,
+    .ltp-card-actions { display: none; }
+    .ltp-card-head { margin-bottom: 0; }
+    .ltp-day { margin-bottom: 0; }
+}

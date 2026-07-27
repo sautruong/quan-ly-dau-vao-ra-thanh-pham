@@ -1916,6 +1916,29 @@ input:focus {
     .of-cols-4 { grid-template-columns: minmax(200px, max-content); }
 }
 
+/* --- MOBILE (≤768px) — Task 11: bán hàng nhà máy --- */
+@media (max-width: 768px) {
+    /* Danh sách sản phẩm: 1 cột full width, canh trái */
+    .of-cols,
+    .of-cols-4 { grid-template-columns: 1fr; justify-content: start; justify-items: stretch; }
+    .of-inventory { overflow-x: hidden; }
+    /* R2-9: tên sản phẩm canh trái (cho phép xuống dòng thay vì nowrap) */
+    .of-prod { justify-content: flex-start; }
+    .of-prod-name { text-align: left; white-space: normal; }
+
+    /* 3 tab trên cùng: cuộn ngang bằng cảm ứng, ẩn thanh cuộn vật lý */
+    .of-tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .of-tabs::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    .of-tabs a { flex: 0 0 auto; white-space: nowrap; }
+}
+
 /* --- Badge trạng thái trong lịch sử đặt hàng --- */
 .ofh-badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 12px; font-weight: 700; }
 .ofh-badge.open   { background: var(--color-green-soft); color: var(--color-green-dark); }

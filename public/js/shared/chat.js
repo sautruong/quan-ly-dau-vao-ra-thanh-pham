@@ -191,6 +191,7 @@
         function openPanel() {
             panel.classList.add('is-open');
             panel.setAttribute('aria-hidden', 'false');
+            widget.classList.add('is-panel-open'); // mobile: ẩn bóng chat khi panel toàn màn hình
             showView('home');
             loadConversations();
             loadContacts();
@@ -198,6 +199,7 @@
         function closePanel() {
             panel.classList.remove('is-open');
             panel.setAttribute('aria-hidden', 'true');
+            widget.classList.remove('is-panel-open');
             stopPoll();
         }
         launcher.addEventListener('click', function () {
@@ -861,10 +863,37 @@
         // contenteditable tự giãn theo CSS min/max-height + overflow-y (không cần đo
         // scrollHeight thủ công như textarea) — giữ hàm rỗng để các chỗ gọi cũ không vỡ.
         function autoGrow() {}
+
+        /* Mobile: nút "Gửi" chỉ hiện khi có chữ hoặc có tệp đính kèm; nút "..." mở
+           nhóm công cụ phụ (ảnh/tệp/định dạng). Trên desktop các quy tắc CSS này vô hại. */
+        var composeRow  = widget.querySelector('.chat-compose-row');
+        var moreBtn     = document.getElementById('chat-more-btn');
+        var composeTools = document.getElementById('chat-compose-tools');
+        function updateComposeState() {
+            if (!composeRow) return;
+            var hasText = inputText.textContent.trim() !== '';
+            composeRow.classList.toggle('chat-has-text', hasText || pendingFiles.length > 0);
+        }
+        if (moreBtn && composeTools) {
+            moreBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                composeTools.classList.toggle('is-open');
+            });
+            // Chọn xong 1 công cụ thì đóng popover.
+            composeTools.addEventListener('click', function () { composeTools.classList.remove('is-open'); });
+            document.addEventListener('click', function (e) {
+                if (composeTools.classList.contains('is-open')
+                    && !composeTools.contains(e.target) && !moreBtn.contains(e.target)) {
+                    composeTools.classList.remove('is-open');
+                }
+            });
+        }
+
         inputText.addEventListener('input', function () {
             // Chuẩn hóa về rỗng thật sự (không còn <br> rác) để CSS :empty hiện placeholder.
             if (inputText.textContent === '' && inputText.innerHTML !== '') inputText.innerHTML = '';
             updateMention();
+            updateComposeState();
         });
         inputText.addEventListener('blur', function () { setTimeout(hideMention, 150); });
 
@@ -985,6 +1014,7 @@
         }
         function clearPending() { pendingFiles = []; renderPending(); }
         function renderPending() {
+            updateComposeState();  // mobile: cập nhật hiển thị nút "Gửi" theo số tệp đính kèm
             if (!pendingFiles.length) { attachPrev.style.display = 'none'; attachPrev.innerHTML = ''; return; }
             attachPrev.style.display = 'flex'; attachPrev.innerHTML = '';
             pendingFiles.forEach(function (f, idx) {

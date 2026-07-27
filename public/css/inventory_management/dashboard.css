@@ -718,15 +718,18 @@
         font-size: 22px;
     }
 
-    /* Main-tab: thu gọn thành dropdown khi click hamburger */
-    nav {
+    /* Main-tab: thu gọn thành dropdown khi click hamburger.
+       QUAN TRỌNG: phải scope trong .header — nếu để "nav" trần sẽ đè lên
+       <nav class="app-sb-nav"> của sidebar dùng chung -> sidebar bị "bung"
+       bố cục + mất cuộn trên mobile. (.header vốn display:none.) */
+    .header nav {
         position: absolute;
         top: 56px;
         right: 0;
         z-index: 100;
     }
 
-    .main-tab {
+    .header .main-tab {
         display: none;
         flex-direction: column;
         align-items: stretch;
@@ -740,7 +743,7 @@
         min-width: 240px;
     }
 
-    .menu-toggle:checked ~ nav .main-tab {
+    .header .menu-toggle:checked ~ nav .main-tab {
         display: flex;
     }
 

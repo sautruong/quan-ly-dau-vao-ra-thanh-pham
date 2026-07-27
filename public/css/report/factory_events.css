@@ -94,3 +94,60 @@
 @media (max-width: 900px) {
     .fev-grid { grid-template-columns: repeat(7, minmax(90px, 1fr)); overflow-x: auto; }
 }
+
+/* Nút bật/tắt bộ lọc — chỉ dùng cho mobile (Task 9) */
+.fev-filter-toggle {
+    display: none;
+    align-items: center; gap: 8px; width: 100%;
+    padding: 11px 14px; margin-bottom: 12px;
+    background: #fff; border: 1px solid var(--app-gray-200); border-radius: 12px;
+    font-size: 14px; font-weight: 600; color: var(--app-gray-700); cursor: pointer;
+}
+.fev-filter-toggle .fev-filter-toggle-caret { margin-left: auto; transition: transform .18s ease; }
+.fev-filter-toggle.is-open .fev-filter-toggle-caret { transform: rotate(180deg); }
+
+/* =====================================================================
+   MOBILE (≤768px) — Task 9
+   - Bộ lọc gom vào khối bật/tắt (FAQ).
+   - Ô ngày gọn lại, thẳng cột với tiêu đề thứ (7 cột vừa màn, không cuộn ngang).
+   - Ẩn nội dung chip, chỉ hiện chấm tròn báo có sự kiện; bấm ô -> modal ngày.
+   ===================================================================== */
+@media (max-width: 768px) {
+    .fev-filter-toggle { display: flex; }
+    .fev-filters { display: none; margin-bottom: 12px; }
+    .fev-filters.is-open { display: grid; grid-template-columns: 1fr; }
+
+    /* 7 cột vừa khít, thẳng hàng với .calfull-weekdays (cũng repeat(7,1fr)) */
+    #fev-grid.fev-grid,
+    .calfull-grid.fev-grid { grid-template-columns: repeat(7, 1fr); overflow-x: visible; gap: 3px; }
+    .calfull-weekdays { font-size: 10px; gap: 3px; }
+
+    .calfull-day { min-height: 46px; padding: 2px; cursor: pointer; }
+    .calfull-day-head { justify-content: center; }
+    .calfull-daynum { font-size: 12px; }
+
+    /* Ẩn text chip TRONG Ô LỊCH (chỉ để chấm tròn báo có sự kiện).
+       QUAN TRỌNG: chỉ scope trong .calfull-day (ô lịch) — KHÔNG áp cho modal ngày
+       (#fev-day-modal-events) để modal vẫn hiện đầy đủ thông tin sự kiện. */
+    .calfull-day .calfull-events {
+        flex-direction: row; flex-wrap: wrap; gap: 2px;
+        max-height: none; overflow: visible; justify-content: center; align-items: center;
+    }
+    .calfull-day .calfull-events .fev-chip {
+        background: transparent !important; padding: 0; margin: 0; border: 0;
+        width: auto; min-width: 0; pointer-events: none;
+    }
+    .calfull-day .calfull-events .fev-tx,
+    .calfull-day .calfull-events .fev-more { display: none; }
+    .calfull-day .calfull-events .fev-bullet { width: 6px; height: 6px; }
+
+    /* R2-7: trong modal ngày -> chip hiện đủ chữ + có thể bấm; sự kiện có
+       hình/hóa đơn hiện icon "hình ảnh" (JS gắn .fev-chip-img) để bấm xem. */
+    .fev-day-modal-events .fev-chip { padding: 8px 10px; margin-bottom: 6px; }
+    .fev-day-modal-events .fev-chip-img {
+        margin-left: auto; color: #2563eb; font-size: 17px; flex-shrink: 0; padding-left: 8px;
+    }
+}
+
+/* Icon "hình ảnh" trong modal ngày (mọi kích thước — chỉ hiện khi JS gắn) */
+.fev-chip-img { margin-left: auto; color: #2563eb; cursor: pointer; }

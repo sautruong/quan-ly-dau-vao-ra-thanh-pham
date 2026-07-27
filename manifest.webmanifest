@@ -1,0 +1,17 @@
+{
+  "name": "Vua An Toàn — Hệ thống điều hành nhà máy",
+  "short_name": "Vua An Toàn",
+  "description": "Hệ thống quản lý sản xuất & cung ứng nvsxvat.vn",
+  "start_url": "index.php",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "lang": "vi",
+  "dir": "ltr",
+  "icons": [
+    { "src": "public/images/logo/logo_vat_png.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "public/images/logo/logo_vat_png.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

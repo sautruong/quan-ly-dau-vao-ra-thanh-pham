@@ -1149,3 +1149,24 @@ a {
         padding: 0px;
     }
 }
+
+/* =====================================================================
+   MOBILE (≤768px) — Task 14 (trang chi tiết hồ sơ sản phẩm)
+   - Bổ sung cuộn dọc (cả trang cuộn thay vì 2 panel cuộn riêng).
+   - 2 cột thông tin / thành phần xếp dọc.
+   - Tiêu đề "Thành phần cấu tạo" nằm riêng 1 dòng, cụm nút xuống dưới.
+   ===================================================================== */
+@media (max-width: 768px) {
+    /* R2-10: bỏ padding cho gọn edge-to-edge trên mobile */
+    #sidebar-right { padding: 0; }
+    .main-content { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0; }
+    .wp-content { flex-direction: column; min-height: 0; align-items: stretch; }
+    .wp-info-product,
+    .wp-ingredient { flex: none; width: 100%; }
+    .container-info-product,
+    .container-ingredient { overflow: visible; min-height: 0; }
+    .container-ingredient { max-height: 60vh; overflow-y: auto; }
+
+    .wp-title { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .wp-title-actions { flex-wrap: wrap; width: 100%; }
+}

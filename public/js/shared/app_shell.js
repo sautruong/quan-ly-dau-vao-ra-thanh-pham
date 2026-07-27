@@ -362,6 +362,33 @@
             if (sb && !sb.contains(e.target)) body.classList.remove('app-sidebar-mobile-open');
         });
 
+        /* ---- 3b. Mobile: nút gom công cụ (Lịch/Điểm nhắc/Việc/Sáng-Tối) ----
+           Bấm 1 mục -> mở đúng công cụ tương ứng (dropdown đã được CSS canh giữa
+           màn hình trên mobile). Dùng setTimeout(...,0) để lượt click hiện tại kết
+           thúc bubble (các handler đóng-khi-click-ngoài chạy xong) rồi mới .click()
+           vào nút công cụ ẩn, tránh mở xong bị đóng ngay. */
+        (function () {
+            var toolsWrap = document.getElementById('app-header-tools');
+            var toolsBtn  = document.getElementById('app-tools-btn');
+            var toolsMenu = document.getElementById('app-tools-menu');
+            if (!toolsWrap || !toolsBtn || !toolsMenu) return;
+            toolsBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toolsWrap.classList.toggle('is-open');
+            });
+            document.addEventListener('click', function (e) {
+                if (!toolsWrap.contains(e.target)) toolsWrap.classList.remove('is-open');
+            });
+            toolsMenu.querySelectorAll('.app-tools-item').forEach(function (item) {
+                item.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    toolsWrap.classList.remove('is-open');
+                    var target = document.getElementById(item.getAttribute('data-tools-target'));
+                    if (target) setTimeout(function () { target.click(); }, 0);
+                });
+            });
+        })();
+
         /* ---- 4. Dropdown user ---- */
         var user    = document.getElementById('app-user');
         var userBtn = document.getElementById('app-user-btn');
@@ -1800,6 +1827,45 @@
                 grp.style.display = '';
                 hdrRight.insertBefore(grp, hdrRight.firstChild);
             });
+
+            /* ---- 5c. MOBILE: gom action header cho gọn (Task R2-1, R2-5).
+               Chỉ đổi DOM chung; việc hiển thị (menu/dropdown) do CSS @media 768px quyết định,
+               nên desktop không đổi. ---- */
+            var toolsMenuEl = document.getElementById('app-tools-menu');
+            var toolsWrapEl = document.getElementById('app-header-tools');
+
+            // (R2-1) Check Database -> thêm 1 mục trong menu tiện ích (proxy click), ẩn nút gốc (CSS).
+            var cdbBtn = hdrRight.querySelector('.btn-check-db');
+            if (cdbBtn && toolsMenuEl && toolsWrapEl) {
+                cdbBtn.classList.add('app-cdb-proxied');
+                var cdbItem = document.createElement('button');
+                cdbItem.type = 'button';
+                cdbItem.className = 'app-tools-item';
+                cdbItem.innerHTML = '<i class="fa-solid fa-database"></i> Check Database';
+                cdbItem.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    toolsWrapEl.classList.remove('is-open');
+                    setTimeout(function () { cdbBtn.click(); }, 0);
+                });
+                toolsMenuEl.appendChild(cdbItem);
+            }
+
+            // (R2-5) Reset / In BC / Share KHSX -> gom sau 1 nút icon (dropdown).
+            var actionsGrp = hdrRight.querySelector('.header-actions');
+            if (actionsGrp) {
+                var aWrap = document.createElement('div');
+                aWrap.className = 'app-actions';
+                var aBtn = document.createElement('button');
+                aBtn.type = 'button';
+                aBtn.className = 'app-actions-btn';
+                aBtn.setAttribute('aria-label', 'Thao tác');
+                aBtn.innerHTML = '<i class="fa-solid fa-ellipsis-vertical"></i>';
+                hdrRight.insertBefore(aWrap, actionsGrp);
+                aWrap.appendChild(aBtn);
+                aWrap.appendChild(actionsGrp);
+                aBtn.addEventListener('click', function (e) { e.stopPropagation(); aWrap.classList.toggle('is-open'); });
+                document.addEventListener('click', function (e) { if (!aWrap.contains(e.target)) aWrap.classList.remove('is-open'); });
+            }
         }
 
         /* ---- 6. Upload avatar ---- */
@@ -2986,5 +3052,46 @@
                 searchAction: 'rp_search_product', saveAction: 'rp_pickup_product_save', idParam: 'product_ids', listKey: 'pickup_product'
             });
         })();
+    });
+})();
+
+/* =====================================================================
+ *  PWA — R2-11: nạp manifest + meta iOS + đăng ký service worker.
+ *  Chạy trên mọi trang có app_shell.js. Base URL của app suy ra từ chính
+ *  src của app_shell.js (đáng tin cậy cả khi dùng URL gọn /{mod}/{action}
+ *  lẫn URL ?mod=..., và cả khi app nằm trong thư mục con).
+ * ===================================================================== */
+(function () {
+    if (!('serviceWorker' in navigator)) return;
+
+    var base = '';
+    var scripts = document.getElementsByTagName('script');
+    for (var i = 0; i < scripts.length; i++) {
+        var s = scripts[i].src || '';
+        var idx = s.indexOf('public/js/shared/app_shell.js');
+        if (idx !== -1) { base = s.slice(0, idx); break; }   // -> ".../nvsxvat.vn/"
+    }
+    if (!base) { base = location.origin + location.pathname.replace(/[^/]*$/, ''); }
+
+    var head = document.head || document.getElementsByTagName('head')[0];
+    function addMeta(name, content) {
+        if (document.querySelector('meta[name="' + name + '"]')) return;
+        var m = document.createElement('meta'); m.name = name; m.content = content; head.appendChild(m);
+    }
+    function addLink(rel, href) {
+        if (document.querySelector('link[rel="' + rel + '"]')) return;
+        var l = document.createElement('link'); l.rel = rel; l.href = href; head.appendChild(l);
+    }
+
+    addLink('manifest', base + 'manifest.webmanifest');
+    addMeta('theme-color', '#16a34a');
+    addMeta('mobile-web-app-capable', 'yes');
+    addMeta('apple-mobile-web-app-capable', 'yes');
+    addMeta('apple-mobile-web-app-status-bar-style', 'black-translucent');
+    addMeta('apple-mobile-web-app-title', 'Vua An Toàn');
+    addLink('apple-touch-icon', base + 'public/images/logo/logo_vat_png.png');
+
+    window.addEventListener('load', function () {
+        navigator.serviceWorker.register(base + 'sw.js', { scope: base || './' }).catch(function () {});
     });
 })();

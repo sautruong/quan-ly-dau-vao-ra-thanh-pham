@@ -596,3 +596,35 @@
 .py-kpi-explain-label { color: #555; }
 .py-kpi-explain-value { font-weight: 600; text-align: right; }
 .py-kpi-explain-note { font-size: 12px; color: #888; font-style: italic; margin: 0 0 10px; }
+
+/* =====================================================================
+   MOBILE (≤768px)
+   - Task 18 (Bảng lương): full width, các nút hành động chỉ hiện icon.
+   - Task 19 (Bảng chấm công): bỏ đóng băng cột Tên + Chức vụ để cuộn ngang.
+   ===================================================================== */
+@media (max-width: 768px) {
+    .py-content { padding: 12px 10px 40px; }
+    .py-toolbar { gap: 10px; }
+
+    /* Task 18: nút hành động (Thông tin/Bảng chấm công/Lịch sử/Cài đặt/Lưu) -> chỉ icon.
+       Nhãn là text-node trần nên dùng font-size:0, giữ lại icon. */
+    .py-links .py-btn { font-size: 0; gap: 0; padding: 8px 12px; }
+    .py-links .py-btn > i { font-size: 15px; }
+
+    /* Task 19: bỏ position:sticky (đóng băng) 2 cột Tên nhân viên + Chức vụ.
+       Body: bỏ hẳn dính; header: giữ dính đỉnh (top) nhưng bỏ dính trái để
+       cuộn ngang cùng toàn bảng trong .py-grid-wrap (overflow-x:auto). */
+    .py-grid-table tbody .py-col-name,
+    .py-grid-table tbody .py-col-title {
+        position: static;
+        left: auto;
+        z-index: auto;
+    }
+    .py-grid-table thead .py-col-name,
+    .py-grid-table thead .py-col-title {
+        left: auto;
+        z-index: 3;
+    }
+    .py-grid-table .py-col-name  { min-width: 120px; }
+    .py-grid-table .py-col-title { min-width: 90px; }
+}

@@ -1227,3 +1227,16 @@ a img {
     .bc-ow-list li,
     .bc-product-row { page-break-inside: avoid; }
 }
+
+/* =====================================================================
+   MOBILE (≤768px) — R2-5: modal Share KHSX
+   - Cụm logo nằm riêng 1 dòng, tiêu đề "KẾ HOẠCH SẢN XUẤT" xuống dòng dưới.
+   - Danh sách sản phẩm xếp dọc (1 cột).
+   ===================================================================== */
+@media (max-width: 768px) {
+    .khsx-modal { width: 96vw; max-width: 96vw; }
+    .pf-share-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .pf-share-doctitle-wrap { text-align: left; }
+    .pf-share-doctitle { white-space: normal; font-size: 20px; }
+    .khsx-share-list { grid-template-columns: 1fr; }
+}

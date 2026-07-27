@@ -1157,3 +1157,40 @@
 .fm-toast.err {
     background: #dc2626;
 }
+
+/* =====================================================================
+   MOBILE (≤768px) — Task 17: Quản lý file
+   (a) Nút quanh ô tìm kiếm -> chỉ icon.
+   (b) "File hay dùng" & "Đã lưu từ chia sẻ" xếp dọc; file hay dùng 1 dòng 2 file.
+   (c) Nhóm file xếp dọc (bỏ dải cuộn ngang).
+   + cho cuộn dọc tự nhiên (global.css khóa overflow:hidden).
+   ===================================================================== */
+@media (max-width: 768px) {
+    /* cuộn dọc tự nhiên toàn trang */
+    html, body { height: auto; overflow-x: hidden; overflow-y: auto; }
+    body { display: block; }
+    #wrapper { height: auto; min-height: 100%; overflow: visible; }
+    .fm-content { min-height: 0; overflow-x: hidden; padding: 0 12px 60px; }
+
+    /* (a) nút toolbar -> chỉ icon (nhãn là text-node trần) */
+    .fm-tb-left .fm-btn,
+    .fm-tb-right .fm-chip {
+        font-size: 0;
+        gap: 0;
+        padding: 9px 12px;
+    }
+    .fm-tb-left .fm-btn > i,
+    .fm-tb-right .fm-chip > i { font-size: 15px; }
+    .fm-tb-right .fm-chip .fm-badge { font-size: 11px; }   /* giữ số badge */
+    .fm-tb-search { flex: 1 1 100%; max-width: none; }      /* ô tìm kiếm riêng 1 hàng */
+
+    /* (b) 2 khối xếp dọc; "file hay dùng" 1 dòng 2 file */
+    .fm-half-row { flex-direction: column; gap: 14px; }
+    .fm-half-col { flex: 1 1 auto; width: 100%; min-width: 0; }
+    #fm-frequent-grid { grid-template-columns: repeat(2, 1fr); }
+    #fm-library-shared { grid-template-columns: 1fr; }
+
+    /* (c) nhóm file xếp dọc, card full width */
+    .fm-groups { flex-direction: column; overflow-x: visible; }
+    .fm-card { width: 100%; height: auto; max-height: 72vh; }
+}
