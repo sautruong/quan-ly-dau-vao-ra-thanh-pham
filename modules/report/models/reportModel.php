@@ -3282,10 +3282,44 @@ function rp_dd_attendance_today()
  *  Màu: >50% xanh, 25-50% vàng, <25% đỏ (vạch chưa lấp đầy để xám).
  * ============================================================ */
 
-/** Số ngày lấy dữ liệu "bán chạy / dùng nhiều" và số ngày cần đảm bảo tồn. */
+/** Số ngày lấy dữ liệu "bán chạy / dùng nhiều" và số mục hiển thị mỗi cột. */
 if (!defined('RP_DD_SW_WINDOW_DAYS')) define('RP_DD_SW_WINDOW_DAYS', 90);
-if (!defined('RP_DD_SW_COVER_DAYS'))  define('RP_DD_SW_COVER_DAYS', 14);
 if (!defined('RP_DD_SW_TOP'))         define('RP_DD_SW_TOP', 4);
+/** Mặc định "đảm bảo bán/dùng" trong 2 tuần (đổi được trong bánh răng của khối). */
+if (!defined('RP_DD_SW_COVER_DEFAULT')) define('RP_DD_SW_COVER_DEFAULT', 14);
+
+/** 4 mốc thời gian cho phép chọn: số ngày => nhãn. */
+function rp_dd_sw_cover_options()
+{
+    return [
+        14 => '2 tuần',
+        21 => '3 tuần',
+        30 => '1 tháng',
+        60 => '2 tháng',
+    ];
+}
+
+/** Mốc đang chọn (số ngày). Giá trị lạ / chưa đặt -> mặc định 14. */
+function rp_dd_sw_cover_days()
+{
+    rp_dd_ensure_tables();
+    $row = db_fetch_row("SELECT setting_value FROM app_settings
+                         WHERE setting_key = 'daily_dashboard.stock_watch_cover_days' LIMIT 1");
+    $v = $row ? (int) $row['setting_value'] : 0;
+    return array_key_exists($v, rp_dd_sw_cover_options()) ? $v : RP_DD_SW_COVER_DEFAULT;
+}
+
+/** Lưu mốc thời gian (chỉ nhận 1 trong 4 mốc hợp lệ). */
+function rp_dd_sw_save_cover_days($days)
+{
+    $d = (int) $days;
+    if (!array_key_exists($d, rp_dd_sw_cover_options())) return false;
+    rp_dd_ensure_tables();
+    $exists = db_num_rows("SELECT 1 FROM app_settings WHERE setting_key = 'daily_dashboard.stock_watch_cover_days'") > 0;
+    if ($exists) db_update('app_settings', ['setting_value' => $d], "setting_key = 'daily_dashboard.stock_watch_cover_days'");
+    else db_insert('app_settings', ['setting_key' => 'daily_dashboard.stock_watch_cover_days', 'setting_value' => $d]);
+    return true;
+}
 
 /** Quy đổi 1 dòng thành các chỉ số pin. $used = SL đã xuất/dùng trong cửa sổ ngày. */
 function rp_dd_sw_metrics($used, $stock)
@@ -3293,7 +3327,7 @@ function rp_dd_sw_metrics($used, $stock)
     $used  = (float) $used;
     $stock = (float) $stock;
     $avg_day = $used > 0 ? $used / RP_DD_SW_WINDOW_DAYS : 0;
-    $target  = $avg_day * RP_DD_SW_COVER_DAYS;          // mức 100% của pin
+    $target  = $avg_day * rp_dd_sw_cover_days();        // mức 100% của pin (mốc chọn ở bánh răng)
     $percent = $target > 0 ? ($stock / $target) * 100 : ($stock > 0 ? 100 : 0);
     if ($percent < 0) $percent = 0;                      // tồn âm (lệch sổ) -> pin rỗng
 
@@ -3308,7 +3342,8 @@ function rp_dd_sw_metrics($used, $stock)
         'avg_day'  => $avg_day,
         'target'   => $target,
         'stock'    => $stock,
-        'percent'  => round($percent),
+        // Dưới 10% lấy 1 chữ số thập phân: tránh hiện "0%" trong khi pin vẫn còn 1 vạch đỏ.
+        'percent'  => $percent < 10 ? round($percent, 1) : round($percent),
         'segments' => $segments,
         'level'    => $level,
     ];
@@ -3579,11 +3614,18 @@ function rp_dd_sw_materials($limit = RP_DD_SW_TOP)
 /** Dữ liệu khối "Theo dõi tồn kho": 2 cột thành phẩm / nguyên liệu. */
 function rp_dd_stock_watch()
 {
+    $cover = rp_dd_sw_cover_days();
+    $opts  = [];
+    foreach (rp_dd_sw_cover_options() as $days => $label) {
+        $opts[] = ['days' => $days, 'label' => $label];
+    }
     return [
-        'products'  => rp_dd_sw_products(),
-        'materials' => rp_dd_sw_materials(),
-        'window'    => RP_DD_SW_WINDOW_DAYS,
-        'cover'     => RP_DD_SW_COVER_DAYS,
+        'products'       => rp_dd_sw_products(),
+        'materials'      => rp_dd_sw_materials(),
+        'window'         => RP_DD_SW_WINDOW_DAYS,
+        'cover'          => $cover,
+        'cover_label'    => rp_dd_sw_cover_options()[$cover] ?? '',
+        'cover_options'  => $opts,
     ];
 }
 

@@ -393,6 +393,18 @@ function daily_dashboard_sw_hideAction()
     exit;
 }
 
+/** AJAX: đổi mốc thời gian đảm bảo bán/dùng (2 tuần / 3 tuần / 1 tháng / 2 tháng). POST days. */
+function daily_dashboard_sw_save_coverAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $days = (int) ($_POST['days'] ?? 0);
+    $ok   = rp_dd_sw_save_cover_days($days);
+    echo json_encode($ok
+        ? ['success' => true, 'data' => rp_dd_stock_watch()]
+        : ['success' => false, 'message' => 'Mốc thời gian không hợp lệ.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 /** AJAX: danh sách mục đang ẩn (modal bánh răng của khối). */
 function daily_dashboard_sw_hidden_listAction()
 {

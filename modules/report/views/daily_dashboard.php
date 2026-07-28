@@ -58,7 +58,7 @@ function dd2_battery($m)
     $on  = (int) ($m['segments'] ?? 0);
     $tip = 'Đã dùng ' . RP_DD_SW_WINDOW_DAYS . ' ngày: ' . dd2_num($m['used'])
          . ' · TB/ngày: ' . dd2_num(round($m['avg_day'], 1))
-         . ' · Đủ dùng ' . RP_DD_SW_COVER_DAYS . ' ngày cần: ' . dd2_num(round($m['target']))
+         . ' · Đủ dùng ' . rp_dd_sw_cover_days() . ' ngày cần: ' . dd2_num(round($m['target']))
          . ' · Đang có: ' . dd2_num($m['percent']) . '%';
     $h = '<span class="dd2-bat dd2-bat-' . dd2_esc($m['level']) . '" title="' . dd2_esc($tip) . '">';
     $h .= '<span class="dd2-bat-body">';
@@ -885,12 +885,28 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
         <div class="app-modal-overlay" data-dd2-swh-close></div>
         <div class="app-modal-box dd2-sw-hidden-box">
             <div class="app-modal-head">
-                <h3>Đang ẩn khỏi "Theo dõi tồn kho"</h3>
+                <h3>Cài đặt "Theo dõi tồn kho"</h3>
                 <button type="button" class="app-modal-close" data-dd2-swh-close aria-label="Đóng">&times;</button>
             </div>
             <div class="app-modal-body">
-                <p class="dd2-pci-sub">Các mục dưới đây không được xét vào khối. Bấm "Xét lại" để đưa trở lại danh sách.</p>
-                <div id="dd2-sw-hidden-body"><p class="dd2-empty">Đang tải...</p></div>
+                <!-- Mốc thời gian đảm bảo: đổi mức 100% của pin (mặc định 2 tuần) -->
+                <div class="dd2-sw-set-block">
+                    <div class="dd2-sw-set-name">Mốc đảm bảo bán / dùng</div>
+                    <div class="dd2-sw-set-desc">Tồn hiện tại đủ bán (hoặc đủ dùng) trong bao lâu thì coi là đầy pin 100%.
+                        Mức chuẩn = sản lượng trung bình 1 ngày (tính trên <?php echo (int) $d_stockWatch['window']; ?> ngày gần nhất) × số ngày chọn dưới đây.</div>
+                    <div class="dd2-sw-cover-opts" id="dd2-sw-cover-opts">
+                        <?php foreach ($d_stockWatch['cover_options'] as $opt): ?>
+                            <button type="button" class="dd2-sw-cover-opt<?php echo (int) $opt['days'] === (int) $d_stockWatch['cover'] ? ' is-active' : ''; ?>"
+                                    data-days="<?php echo (int) $opt['days']; ?>"><?php echo dd2_esc($opt['label']); ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="dd2-sw-set-block">
+                    <div class="dd2-sw-set-name">Đang ẩn khỏi khối</div>
+                    <div class="dd2-sw-set-desc">Các mục dưới đây không được xét vào khối. Bấm "Xét lại" để đưa trở lại danh sách.</div>
+                    <div id="dd2-sw-hidden-body"><p class="dd2-empty">Đang tải...</p></div>
+                </div>
             </div>
         </div>
     </div>

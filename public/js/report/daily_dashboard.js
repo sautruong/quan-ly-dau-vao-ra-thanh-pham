@@ -344,6 +344,10 @@
         var mBox = document.getElementById('dd2-sw-materials');
         if (pBox) pBox.innerHTML = swListHtml(data.products, 'product', 'Chưa có dữ liệu bán hàng.');
         if (mBox) mBox.innerHTML = swListHtml(data.materials, 'material', 'Chưa có dữ liệu xuất dùng.');
+        // Đồng bộ mốc đang chọn trong modal cài đặt (nếu đang mở).
+        document.querySelectorAll('#dd2-sw-cover-opts .dd2-sw-cover-opt').forEach(function (b) {
+            b.classList.toggle('is-active', parseInt(b.getAttribute('data-days'), 10) === parseInt(data.cover, 10));
+        });
     }
 
     /* ---- Modal chi tiết: SP -> NVL trong công thức / NVL -> SP đang dùng ---- */
@@ -462,6 +466,16 @@
                 });
             });
             swHiddenModal.addEventListener('click', function (e) {
+                // Đổi mốc thời gian đảm bảo bán/dùng -> tính lại pin cho cả 2 danh sách.
+                var cov = e.target.closest && e.target.closest('.dd2-sw-cover-opt');
+                if (cov) {
+                    if (cov.classList.contains('is-active')) return;
+                    postForm('daily_dashboard_sw_save_cover', { days: cov.getAttribute('data-days') }).then(function (res) {
+                        if (!res || !res.success) { alert((res && res.message) || 'Không lưu được mốc thời gian.'); return; }
+                        renderStockWatch(res.data);
+                    }).catch(function () {});
+                    return;
+                }
                 var b = e.target.closest && e.target.closest('.dd2-sw-unhide');
                 if (!b) return;
                 postForm('daily_dashboard_sw_hide', {
