@@ -1555,6 +1555,14 @@ function rp_dd_ensure_tables()
         value      DECIMAL(15,2) NOT NULL DEFAULT 0,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    // Danh sách SP/NVL bị "ẩn" khỏi khối Theo dõi tồn kho (không xét nữa) — bật lại được
+    // trong nút bánh răng của chính khối đó. kind = 'product' | 'material'.
+    db_query("CREATE TABLE IF NOT EXISTS daily_dashboard_stock_watch_hidden (
+        kind      VARCHAR(16) NOT NULL,
+        item_id   INT NOT NULL,
+        hidden_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (kind, item_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     rp_dd_ensure_month_overrides_metric_column();
 }
 
@@ -2729,7 +2737,13 @@ function rp_dd_ensure_material_order_columns()
     }
 }
 
-function rp_dd_pending_material_orders($page = 1, $per_page = 6)
+/** Số dòng/trang của card "Đặt hàng nguyên liệu" (2026-07-28: 6 -> 5, khớp các khối khác)
+ *  và card "Biến động giá nhập". Khai báo 1 chỗ để view/controller/model dùng chung. */
+if (!defined('RP_DD_MATERIAL_ORDERS_PER_PAGE')) define('RP_DD_MATERIAL_ORDERS_PER_PAGE', 5);
+// Số dòng card "Biến động giá nhập" (JS có hằng PC_PAGE_SIZE phải sửa đồng bộ).
+if (!defined('RP_DD_PRICE_CHANGES_PER_PAGE'))   define('RP_DD_PRICE_CHANGES_PER_PAGE', 6);
+
+function rp_dd_pending_material_orders($page = 1, $per_page = RP_DD_MATERIAL_ORDERS_PER_PAGE)
 {
     $page     = max(1, (int) $page);
     $per_page = max(1, (int) $per_page);
@@ -3259,6 +3273,374 @@ function rp_dd_attendance_today()
     return $out;
 }
 
+/* ============================================================
+ *  KHỐI "THEO DÕI TỒN KHO" (hàng dưới cùng) — pin dung lượng 10 vạch
+ *  ------------------------------------------------------------
+ *  Ý tưởng: tồn hiện tại đủ bán/dùng bao nhiêu % của 2 TUẦN tới?
+ *    mức chuẩn (100%) = (SL xuất 90 ngày / 90) * 14
+ *    phần trăm        = tồn hiện tại / mức chuẩn * 100
+ *  Màu: >50% xanh, 25-50% vàng, <25% đỏ (vạch chưa lấp đầy để xám).
+ * ============================================================ */
+
+/** Số ngày lấy dữ liệu "bán chạy / dùng nhiều" và số ngày cần đảm bảo tồn. */
+if (!defined('RP_DD_SW_WINDOW_DAYS')) define('RP_DD_SW_WINDOW_DAYS', 90);
+if (!defined('RP_DD_SW_COVER_DAYS'))  define('RP_DD_SW_COVER_DAYS', 14);
+if (!defined('RP_DD_SW_TOP'))         define('RP_DD_SW_TOP', 4);
+
+/** Quy đổi 1 dòng thành các chỉ số pin. $used = SL đã xuất/dùng trong cửa sổ ngày. */
+function rp_dd_sw_metrics($used, $stock)
+{
+    $used  = (float) $used;
+    $stock = (float) $stock;
+    $avg_day = $used > 0 ? $used / RP_DD_SW_WINDOW_DAYS : 0;
+    $target  = $avg_day * RP_DD_SW_COVER_DAYS;          // mức 100% của pin
+    $percent = $target > 0 ? ($stock / $target) * 100 : ($stock > 0 ? 100 : 0);
+    if ($percent < 0) $percent = 0;                      // tồn âm (lệch sổ) -> pin rỗng
+
+    // 10 vạch pin. Còn hàng nhưng <5% vẫn để 1 vạch để nhìn thấy màu cảnh báo.
+    $segments = (int) round(min($percent, 100) / 10);
+    if ($segments <= 0 && $percent > 0) $segments = 1;
+    if ($segments > 10) $segments = 10;
+
+    $level = $percent > 50 ? 'ok' : ($percent >= 25 ? 'warn' : 'low');
+    return [
+        'used'     => $used,
+        'avg_day'  => $avg_day,
+        'target'   => $target,
+        'stock'    => $stock,
+        'percent'  => round($percent),
+        'segments' => $segments,
+        'level'    => $level,
+    ];
+}
+
+/* ---- Ẩn / bật lại 1 mục khỏi khối (bảng daily_dashboard_stock_watch_hidden) ---- */
+
+/** Danh sách id đang bị ẩn của 1 loại ('product'|'material'). */
+function rp_dd_sw_hidden_ids($kind)
+{
+    rp_dd_ensure_tables();
+    $k = escape_string($kind === 'material' ? 'material' : 'product');
+    $rows = db_fetch_array("SELECT item_id FROM daily_dashboard_stock_watch_hidden WHERE kind = '$k'") ?: [];
+    return array_map(static fn($r) => (int) $r['item_id'], $rows);
+}
+
+/** Mệnh đề SQL loại các id đang ẩn (rỗng nếu chưa ẩn gì). */
+function rp_dd_sw_hidden_cond($kind, $column)
+{
+    $ids = rp_dd_sw_hidden_ids($kind);
+    return $ids ? " AND $column NOT IN (" . implode(',', $ids) . ")" : '';
+}
+
+/** Ẩn ($hidden=true) hoặc bật lại 1 mục. */
+function rp_dd_sw_set_hidden($kind, $item_id, $hidden = true)
+{
+    rp_dd_ensure_tables();
+    $k  = $kind === 'material' ? 'material' : 'product';
+    $id = (int) $item_id;
+    if ($id <= 0) return false;
+    if ($hidden) {
+        db_query("INSERT IGNORE INTO daily_dashboard_stock_watch_hidden (kind, item_id)
+                  VALUES ('" . escape_string($k) . "', $id)");
+    } else {
+        db_delete('daily_dashboard_stock_watch_hidden', "kind = '" . escape_string($k) . "' AND item_id = $id");
+    }
+    return true;
+}
+
+/** Danh sách mục đang ẩn kèm tên (cho modal bánh răng). */
+function rp_dd_sw_hidden_list()
+{
+    rp_dd_ensure_tables();
+    $out = [];
+    $pids = rp_dd_sw_hidden_ids('product');
+    if ($pids) {
+        $rows = db_fetch_array(
+            "SELECT id, COALESCE(NULLIF(common_product_name, ''), product_name) AS name
+             FROM products WHERE id IN (" . implode(',', $pids) . ") ORDER BY name"
+        ) ?: [];
+        foreach ($rows as $r) $out[] = ['kind' => 'product', 'id' => (int) $r['id'], 'name' => (string) $r['name']];
+    }
+    $mids = rp_dd_sw_hidden_ids('material');
+    if ($mids) {
+        $rows = db_fetch_array(
+            "SELECT id, COALESCE(NULLIF(common_material_name, ''), material_name) AS name
+             FROM material_information WHERE id IN (" . implode(',', $mids) . ") ORDER BY name"
+        ) ?: [];
+        foreach ($rows as $r) $out[] = ['kind' => 'material', 'id' => (int) $r['id'], 'name' => (string) $r['name']];
+    }
+    return $out;
+}
+
+/* ---- Chi tiết khi bấm vào 1 mục ---- */
+
+/** Bấm 1 SẢN PHẨM -> các NVL trong công thức + tồn kho NVL đó. */
+function rp_dd_sw_product_detail($product_id)
+{
+    $pid = (int) $product_id;
+    $p = db_fetch_row("SELECT id, COALESCE(NULLIF(common_product_name, ''), product_name) AS name, unit
+                       FROM products WHERE id = $pid LIMIT 1");
+    if (!$p) return null;
+
+    $rows = db_fetch_array(
+        "SELECT pm.material_id AS id,
+                COALESCE(NULLIF(mi.common_material_name, ''), mi.material_name) AS name,
+                mi.unit AS unit,
+                pm.quantity_required AS need,
+                COALESCE(inv.quantity, 0) AS stock
+         FROM product_materials pm
+         JOIN material_information mi ON mi.id = pm.material_id
+         LEFT JOIN material_inventory inv ON inv.material_id = pm.material_id
+         WHERE pm.product_id = $pid
+         ORDER BY pm.sort_order ASC, pm.id ASC"
+    ) ?: [];
+
+    $items = [];
+    foreach ($rows as $r) {
+        $items[] = [
+            'id'        => (int) $r['id'],
+            'name'      => (string) $r['name'],
+            'unit'      => (string) $r['unit'],   // đơn vị NVL — dùng cho cả tồn kho
+            'need_unit' => (string) $r['unit'],   // định mức cũng tính theo đơn vị NVL
+            'need'      => (float) $r['need'],
+            'stock'     => (float) $r['stock'],
+        ];
+    }
+    return ['title' => (string) $p['name'], 'unit' => (string) $p['unit'], 'items' => $items];
+}
+
+/** Số lượng + đơn vị của 1 dòng công thức mẻ (quy đổi đơn vị riêng của dòng; kg<1 đọc theo gam)
+ *  — cùng quy ước hiển thị với module Công thức sản xuất. */
+function rp_dd_qty_text($qty, $unit, $conv_unit = '', $conv_ratio = 0)
+{
+    $qty  = (float) $qty;
+    $unit = trim((string) $unit);
+    $conv_unit  = trim((string) $conv_unit);
+    $conv_ratio = (float) $conv_ratio;
+    if ($conv_unit !== '' && $conv_ratio > 0) {
+        return rp_dd_num_vn($qty / $conv_ratio) . ' ' . $conv_unit;
+    }
+    if (strtolower($unit) === 'kg' && $qty > 0 && $qty < 1) {
+        return rp_dd_num_vn($qty * 1000) . ' g';
+    }
+    return rp_dd_num_vn($qty) . ($unit !== '' ? ' ' . $unit : '');
+}
+
+/** Số gọn: bỏ .00 thừa, ngăn cách ngàn bằng dấu phẩy (khớp fmtNum phía JS). */
+function rp_dd_num_vn($n)
+{
+    $n = (float) $n;
+    if (abs($n - round($n)) < 1e-9) return number_format(round($n), 0, '.', ',');
+    return rtrim(rtrim(number_format($n, 3, '.', ','), '0'), '.');
+}
+
+/**
+ * Lượng dùng của 1 NVL trong CÔNG THỨC MẺ ĐẦU TIÊN của từng sản phẩm.
+ * Trả [product_id => ['text' => '7.6 kg', 'label' => 'Bột Phô Mai (10 gói)']].
+ * "Mẻ đầu tiên" = product_batch_recipes cũ nhất (cùng quy ước với module Công thức sản xuất).
+ */
+function rp_dd_sw_batch_usage_map($material_id, array $product_ids)
+{
+    $mid = (int) $material_id;
+    $ids = array_values(array_filter(array_map('intval', $product_ids), static fn($v) => $v > 0));
+    if ($mid <= 0 || !$ids) return [];
+    $in = implode(',', $ids);
+
+    $rows = db_fetch_array(
+        "SELECT b.product_id, b.label, i.quantity, i.unit, i.conv_unit, i.conv_ratio
+         FROM (
+             SELECT id, product_id, label,
+                    ROW_NUMBER() OVER (PARTITION BY product_id ORDER BY created_at ASC, id ASC) AS rn
+             FROM product_batch_recipes
+             WHERE product_id IN ($in)
+         ) b
+         JOIN product_batch_recipe_items i ON i.batch_id = b.id AND i.material_id = $mid
+         WHERE b.rn = 1"
+    ) ?: [];
+
+    $map = [];
+    foreach ($rows as $r) {
+        $map[(int) $r['product_id']] = [
+            'text'  => rp_dd_qty_text($r['quantity'], $r['unit'], $r['conv_unit'], $r['conv_ratio']),
+            'label' => trim((string) $r['label']),
+        ];
+    }
+    return $map;
+}
+
+/** Bấm 1 NGUYÊN LIỆU -> các sản phẩm dùng nó + tồn kho thành phẩm. */
+function rp_dd_sw_material_detail($material_id)
+{
+    $mid = (int) $material_id;
+    $m = db_fetch_row("SELECT id, COALESCE(NULLIF(common_material_name, ''), material_name) AS name, unit
+                       FROM material_information WHERE id = $mid LIMIT 1");
+    if (!$m) return null;
+
+    $rows = db_fetch_array(
+        "SELECT p.id AS id,
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS name,
+                p.unit AS unit,
+                pm.quantity_required AS need,
+                COALESCE(fg.quantity, 0) AS stock
+         FROM product_materials pm
+         JOIN products p ON p.id = pm.product_id
+         LEFT JOIN finished_goods_inventory fg ON fg.product_id = p.id
+         WHERE pm.material_id = $mid
+         ORDER BY name ASC"
+    ) ?: [];
+
+    // Lượng dùng trong công thức MẺ ĐẦU TIÊN của từng sản phẩm (1 truy vấn cho cả danh sách).
+    $batch = rp_dd_sw_batch_usage_map($mid, array_map(static fn($r) => (int) $r['id'], $rows));
+
+    $items = [];
+    foreach ($rows as $r) {
+        $pid = (int) $r['id'];
+        $items[] = [
+            'id'          => $pid,
+            'name'        => (string) $r['name'],
+            'unit'        => (string) $r['unit'],       // đơn vị SẢN PHẨM (cột tồn kho)
+            // Định mức là lượng NGUYÊN LIỆU cần cho 1 đơn vị SP -> phải dùng đơn vị NVL,
+            // không phải đơn vị SP (nếu không sẽ ra "5 gói" thay vì "5 kg").
+            'need_unit'   => (string) $m['unit'],
+            'need'        => (float) $r['need'],
+            'stock'       => (float) $r['stock'],
+            'batch_text'  => $batch[$pid]['text']  ?? '',   // rỗng = SP chưa lưu công thức mẻ nào
+            'batch_label' => $batch[$pid]['label'] ?? '',
+        ];
+    }
+    return ['title' => (string) $m['name'], 'unit' => (string) $m['unit'], 'items' => $items];
+}
+
+/** Top sản phẩm BÁN CHẠY 90 ngày (sales_inventory_issue_data — nguồn tin cậy của khối Xuất kho). */
+function rp_dd_sw_products($limit = RP_DD_SW_TOP)
+{
+    $limit = max(1, (int) $limit);
+    $win   = (int) RP_DD_SW_WINDOW_DAYS;
+    $hide  = rp_dd_sw_hidden_cond('product', 's.product_id');
+    $rows  = db_fetch_array(
+        "SELECT s.product_id AS id,
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS name,
+                p.unit AS unit,
+                SUM(s.quantity) AS used,
+                COALESCE(fg.quantity, 0) AS stock
+         FROM sales_inventory_issue_data s
+         JOIN products p ON p.id = s.product_id
+         LEFT JOIN finished_goods_inventory fg ON fg.product_id = s.product_id
+         WHERE s.product_id IS NOT NULL
+           AND s.created_at >= DATE_SUB(CURDATE(), INTERVAL $win DAY)$hide
+         GROUP BY s.product_id, name, p.unit, stock
+         ORDER BY used DESC
+         LIMIT $limit"
+    ) ?: [];
+
+    $out = [];
+    foreach ($rows as $r) {
+        $out[] = array_merge(
+            ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'unit' => (string) $r['unit']],
+            rp_dd_sw_metrics($r['used'], $r['stock'])
+        );
+    }
+    return $out;
+}
+
+/** Top nguyên vật liệu DÙNG NHIỀU 90 ngày. Xếp hạng theo SL quy đổi kg (g/gr chia 1000);
+ *  phần trăm pin thì không phụ thuộc đơn vị (tồn và mức dùng cùng đơn vị gốc). */
+function rp_dd_sw_materials($limit = RP_DD_SW_TOP)
+{
+    $limit = max(1, (int) $limit);
+    $win   = (int) RP_DD_SW_WINDOW_DAYS;
+    $hide  = rp_dd_sw_hidden_cond('material', 'r.material_id');
+    $rows  = db_fetch_array(
+        "SELECT r.material_id AS id,
+                COALESCE(NULLIF(m.common_material_name, ''), m.material_name) AS name,
+                m.unit AS unit,
+                SUM(r.quantity) AS used,
+                SUM(r.quantity) / (CASE WHEN LOWER(TRIM(m.unit)) IN ('g', 'gr', 'gram') THEN 1000 ELSE 1 END) AS used_kg,
+                COALESCE(inv.quantity, 0) AS stock
+         FROM raw_material_production_issue_data r
+         JOIN material_information m ON m.id = r.material_id
+         LEFT JOIN material_inventory inv ON inv.material_id = r.material_id
+         WHERE r.created_at >= DATE_SUB(CURDATE(), INTERVAL $win DAY)$hide
+         GROUP BY r.material_id, name, m.unit, stock
+         ORDER BY used_kg DESC
+         LIMIT $limit"
+    ) ?: [];
+
+    $out = [];
+    foreach ($rows as $r) {
+        $out[] = array_merge(
+            ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'unit' => (string) $r['unit']],
+            rp_dd_sw_metrics($r['used'], $r['stock'])
+        );
+    }
+    return $out;
+}
+
+/** Dữ liệu khối "Theo dõi tồn kho": 2 cột thành phẩm / nguyên liệu. */
+function rp_dd_stock_watch()
+{
+    return [
+        'products'  => rp_dd_sw_products(),
+        'materials' => rp_dd_sw_materials(),
+        'window'    => RP_DD_SW_WINDOW_DAYS,
+        'cover'     => RP_DD_SW_COVER_DAYS,
+    ];
+}
+
+/* ============================================================
+ *  KHỐI "BIẾN ĐỘNG GIÁ NHẬP" (hàng dưới cùng)
+ *  Nguồn: purchase_price_changes (ghi khi nhập mua hàng hóa — xem
+ *  libraries/purchase_price_changes.php). product_id XOR material_id.
+ * ============================================================ */
+
+/** 1 trang biến động giá nhập, mới nhất trước. */
+function rp_dd_price_changes($page = 1, $per_page = 5)
+{
+    $page     = max(1, (int) $page);
+    $per_page = max(1, (int) $per_page);
+    $offset   = ($page - 1) * $per_page;
+
+    $rows = db_fetch_array(
+        "SELECT c.id, c.product_id, c.material_id, c.old_price, c.new_price, c.change_rate, c.created_at,
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name)   AS product_name,
+                COALESCE(NULLIF(m.common_material_name, ''), m.material_name) AS material_name,
+                m.unit AS material_unit, p.unit AS product_unit
+         FROM purchase_price_changes c
+         LEFT JOIN products p             ON p.id = c.product_id
+         LEFT JOIN material_information m ON m.id = c.material_id
+         ORDER BY c.created_at DESC, c.id DESC
+         LIMIT $per_page OFFSET $offset"
+    ) ?: [];
+    $total = (int) db_num_rows("SELECT id FROM purchase_price_changes");
+
+    $out = [];
+    foreach ($rows as $r) {
+        $isMaterial = !empty($r['material_id']);
+        $name = $isMaterial ? (string) $r['material_name'] : (string) $r['product_name'];
+        if (trim($name) === '') $name = $isMaterial ? ('NVL #' . (int) $r['material_id']) : ('SP #' . (int) $r['product_id']);
+        // Hướng biến động lấy theo GIÁ (chắc chắn), change_rate chỉ để hiển thị.
+        $old = (float) $r['old_price'];
+        $new = (float) $r['new_price'];
+        $out[] = [
+            'id'          => (int) $r['id'],
+            'kind'        => $isMaterial ? 'material' : 'product',
+            'item_id'     => $isMaterial ? (int) $r['material_id'] : (int) $r['product_id'],
+            'name'        => $name,
+            'unit'        => (string) ($isMaterial ? $r['material_unit'] : $r['product_unit']),
+            'old_price'   => $old,
+            'new_price'   => $new,
+            'change_rate' => (float) $r['change_rate'],
+            'is_up'       => $new > $old,
+            'date_label'  => date('d/m/Y', strtotime($r['created_at'])),
+            'date_iso'    => date('Y-m-d', strtotime($r['created_at'])),
+        ];
+    }
+    return [
+        'rows' => $out, 'page' => $page, 'per_page' => $per_page,
+        'total' => $total, 'total_pages' => max(1, (int) ceil($total / $per_page)),
+    ];
+}
+
 function rp_dd_dashboard_bootstrap()
 {
     rp_dd_ensure_tables();
@@ -3269,9 +3651,11 @@ function rp_dd_dashboard_bootstrap()
         // 'recent' (mini-list) đã gỡ khỏi card Xuất kho, thay bằng chart — chỉ còn cần summary + series.
         'exports'         => ['summary' => rp_dd_exports_month_total(), 'series' => rp_dd_exports_series_7m(), 'series_qty' => rp_dd_exports_qty_series_7m(), 'axis' => rp_dd_get_export_axis_setting(), 'today_by_customer' => rp_dd_exports_today_by_customer()],
         'production_day'  => ['date' => $today, 'label' => rp_dd_production_day_label($today), 'rows' => rp_dd_production_day_detail($today)],
-        'material_orders' => rp_dd_pending_material_orders(1, 6),
+        'material_orders' => rp_dd_pending_material_orders(1, RP_DD_MATERIAL_ORDERS_PER_PAGE),
         'branch_orders'   => rp_dd_branch_orders_pending(4),
         'fund'            => ['balance' => rp_dd_fund_balance(), 'recent' => rp_dd_fund_recent(1, 3)],
+        'stock_watch'     => rp_dd_stock_watch(),
+        'price_changes'   => rp_dd_price_changes(1, RP_DD_PRICE_CHANGES_PER_PAGE),
         'logo_caption'    => rp_dd_get_logo_caption(),
         'attendance_today'=> rp_dd_attendance_today(),
     ];

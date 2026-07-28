@@ -297,6 +297,341 @@
         });
     }
 
+    /* ---------------- Khối "Theo dõi tồn kho" (hàng dưới cùng) ---------------- */
+    var SW_MIN_ROWS = 4;
+    var swWindow = 90, swCover = 14;   // cập nhật lại theo dữ liệu server mỗi lần nạp
+
+    // Mirror dd2_battery() phía PHP.
+    function batteryHtml(m) {
+        var on = parseInt(m.segments, 10) || 0;
+        var tip = 'Đã dùng ' + swWindow + ' ngày: ' + fmtNum(m.used) +
+            ' · TB/ngày: ' + fmtNum(Math.round(m.avg_day * 10) / 10) +
+            ' · Đủ dùng ' + swCover + ' ngày cần: ' + fmtNum(Math.round(m.target)) +
+            ' · Đang có: ' + fmtNum(m.percent) + '%';
+        var segs = '';
+        for (var i = 1; i <= 10; i++) segs += '<i class="dd2-bat-seg' + (i <= on ? ' is-on' : '') + '"></i>';
+        return '<span class="dd2-bat dd2-bat-' + escapeHtml(m.level) + '" title="' + escapeHtml(tip) + '">' +
+            '<span class="dd2-bat-body">' + segs + '</span><span class="dd2-bat-cap"></span></span>';
+    }
+
+    // Mirror dd2_stock_watch_row() phía PHP.
+    function swRowHtml(m, kind) {
+        var tip = kind === 'material' ? 'Xem sản phẩm đang dùng nguyên liệu này' : 'Xem nguyên vật liệu của sản phẩm này';
+        return '<div class="dd2-sw-row" data-kind="' + kind + '" data-id="' + m.id + '" title="' + tip + '">' +
+            batteryHtml(m) +
+            '<span class="dd2-sw-main"><span class="dd2-sw-name-row">' +
+            '<span class="dd2-sw-name" title="' + escapeHtml(m.name) + '">' + escapeHtml(m.name) + '</span>' +
+            '<button type="button" class="dd2-sw-hide" title="Ẩn khỏi khối (không xét nữa)"><i class="fa-solid fa-eye-slash"></i></button>' +
+            '</span>' +
+            '<span class="dd2-sw-stock dd2-sw-' + escapeHtml(m.level) + '">' + fmtNum(m.stock) +
+            (m.unit ? ' ' + escapeHtml(m.unit) : '') + '</span></span></div>';
+    }
+
+    function swListHtml(list, kind, emptyText) {
+        if (!list || !list.length) return '<p class="dd2-empty">' + emptyText + '</p>';
+        var html = '';
+        for (var i = 0; i < Math.max(SW_MIN_ROWS, list.length); i++) {
+            html += list[i] ? swRowHtml(list[i], kind) : '<div class="dd2-sw-row is-empty"></div>';
+        }
+        return html;
+    }
+
+    function renderStockWatch(data) {
+        if (!data) return;
+        swWindow = data.window || swWindow;
+        swCover = data.cover || swCover;
+        var pBox = document.getElementById('dd2-sw-products');
+        var mBox = document.getElementById('dd2-sw-materials');
+        if (pBox) pBox.innerHTML = swListHtml(data.products, 'product', 'Chưa có dữ liệu bán hàng.');
+        if (mBox) mBox.innerHTML = swListHtml(data.materials, 'material', 'Chưa có dữ liệu xuất dùng.');
+    }
+
+    /* ---- Modal chi tiết: SP -> NVL trong công thức / NVL -> SP đang dùng ---- */
+    var swDetailModal = document.getElementById('dd2-sw-detail-modal');
+    var swHiddenModal = document.getElementById('dd2-sw-hidden-modal');
+
+    function openSwDetail(kind, id, name) {
+        if (!swDetailModal) return;
+        var isMat = kind === 'material';
+        document.getElementById('dd2-sw-detail-title').textContent = name || 'Chi tiết';
+        document.getElementById('dd2-sw-detail-sub').textContent = isMat
+            ? 'Các sản phẩm đang dùng nguyên liệu này và tồn kho thành phẩm hiện tại.'
+            : 'Nguyên vật liệu trong công thức sản phẩm này và tồn kho hiện tại.';
+        document.getElementById('dd2-sw-detail-body').innerHTML = '<p class="dd2-empty">Đang tải...</p>';
+        swDetailModal.classList.add('is-open');
+        swDetailModal.setAttribute('aria-hidden', 'false');
+
+        postForm('daily_dashboard_sw_detail', { kind: kind, id: id }).then(function (res) {
+            var box = document.getElementById('dd2-sw-detail-body');
+            if (!res || !res.success) { box.innerHTML = '<p class="dd2-empty">' + escapeHtml((res && res.message) || 'Không tải được dữ liệu.') + '</p>'; return; }
+            var items = (res.data && res.data.items) || [];
+            if (!items.length) {
+                box.innerHTML = '<p class="dd2-empty">' + (isMat
+                    ? 'Chưa có sản phẩm nào dùng nguyên liệu này.'
+                    : 'Sản phẩm này chưa có công thức nguyên vật liệu.') + '</p>';
+                return;
+            }
+            // Chiều NVL -> SP có thêm cột "Mẻ dùng" = lượng NVL này trong công thức mẻ ĐẦU TIÊN của SP.
+            box.innerHTML = '<table class="dd2-pci-table"><thead><tr>' +
+                '<th>' + (isMat ? 'Tên sản phẩm' : 'Nguyên vật liệu') + '</th>' +
+                '<th class="num">Định mức</th>' +
+                (isMat ? '<th class="num">Mẻ dùng</th>' : '') +
+                '<th class="num">Tồn hiện tại</th>' +
+                '</tr></thead><tbody>' + items.map(function (it) {
+                    var low = Number(it.stock) <= 0;
+                    var nu = it.need_unit || it.unit;   // định mức luôn theo đơn vị NGUYÊN LIỆU
+                    var batch = '';
+                    if (isMat) {
+                        batch = it.batch_text
+                            ? '<td class="num" title="' + escapeHtml(it.batch_label || 'Công thức mẻ đầu tiên') + '">' +
+                              escapeHtml(it.batch_text) + '</td>'
+                            : '<td class="num dd2-pci-flat">—</td>';
+                    }
+                    return '<tr><td>' + escapeHtml(it.name) + '</td>' +
+                        '<td class="num">' + fmtNum(it.need) + (nu ? ' ' + escapeHtml(nu) : '') + '</td>' +
+                        batch +
+                        '<td class="num' + (low ? ' dd2-pci-up' : '') + '">' + fmtNum(it.stock) +
+                        (it.unit ? ' ' + escapeHtml(it.unit) : '') + '</td></tr>';
+                }).join('') + '</tbody></table>';
+        }).catch(function () {
+            document.getElementById('dd2-sw-detail-body').innerHTML = '<p class="dd2-empty">Lỗi kết nối.</p>';
+        });
+    }
+
+    function doSwHide(kind, id) {
+        return postForm('daily_dashboard_sw_hide', { kind: kind, id: id, hidden: 1 }).then(function (res) {
+            if (!res || !res.success) { alert((res && res.message) || 'Không ẩn được mục này.'); return; }
+            renderStockWatch(res.data);
+        }).catch(function () {});
+    }
+
+    /* ---- Modal bánh răng: danh sách đang ẩn + bật lại ---- */
+    function renderHiddenList(items) {
+        var box = document.getElementById('dd2-sw-hidden-body');
+        if (!box) return;
+        if (!items || !items.length) { box.innerHTML = '<p class="dd2-empty">Không có mục nào đang bị ẩn.</p>'; return; }
+        box.innerHTML = '<table class="dd2-pci-table"><thead><tr><th>Tên</th><th>Nhóm</th><th class="num">Thao tác</th></tr></thead><tbody>' +
+            items.map(function (it) {
+                return '<tr><td>' + escapeHtml(it.name) + '</td>' +
+                    '<td>' + (it.kind === 'material' ? 'Nguyên liệu' : 'Thành phẩm') + '</td>' +
+                    '<td class="num"><button type="button" class="dd2-sw-unhide" data-kind="' + it.kind + '" data-id="' + it.id + '">' +
+                    '<i class="fa-solid fa-eye"></i> Xét lại</button></td></tr>';
+            }).join('') + '</tbody></table>';
+    }
+
+    function openSwHidden() {
+        if (!swHiddenModal) return;
+        document.getElementById('dd2-sw-hidden-body').innerHTML = '<p class="dd2-empty">Đang tải...</p>';
+        swHiddenModal.classList.add('is-open');
+        swHiddenModal.setAttribute('aria-hidden', 'false');
+        postForm('daily_dashboard_sw_hidden_list', {}).then(function (res) {
+            if (res && res.success) renderHiddenList(res.items);
+        }).catch(function () {});
+    }
+
+    function wireStockWatch() {
+        // Bấm ô -> modal chi tiết; bấm nút mắt-gạch -> ẩn (không mở modal).
+        ['dd2-sw-products', 'dd2-sw-materials'].forEach(function (id) {
+            var box = document.getElementById(id);
+            if (!box) return;
+            box.addEventListener('click', function (e) {
+                var row = e.target.closest && e.target.closest('.dd2-sw-row');
+                if (!row || row.classList.contains('is-empty')) return;
+                var kind = row.getAttribute('data-kind');
+                var itemId = parseInt(row.getAttribute('data-id'), 10) || 0;
+                if (e.target.closest('.dd2-sw-hide')) { e.stopPropagation(); doSwHide(kind, itemId); return; }
+                var nameEl = row.querySelector('.dd2-sw-name');
+                openSwDetail(kind, itemId, nameEl ? nameEl.textContent : '');
+            });
+        });
+        if (swDetailModal) {
+            swDetailModal.querySelectorAll('[data-dd2-sw-close]').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    swDetailModal.classList.remove('is-open');
+                    swDetailModal.setAttribute('aria-hidden', 'true');
+                });
+            });
+        }
+        var swSettingsBtn = document.getElementById('dd2-sw-settings-btn');
+        if (swSettingsBtn) swSettingsBtn.addEventListener('click', openSwHidden);
+        if (swHiddenModal) {
+            swHiddenModal.querySelectorAll('[data-dd2-swh-close]').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    swHiddenModal.classList.remove('is-open');
+                    swHiddenModal.setAttribute('aria-hidden', 'true');
+                });
+            });
+            swHiddenModal.addEventListener('click', function (e) {
+                var b = e.target.closest && e.target.closest('.dd2-sw-unhide');
+                if (!b) return;
+                postForm('daily_dashboard_sw_hide', {
+                    kind: b.getAttribute('data-kind'), id: b.getAttribute('data-id'), hidden: 0
+                }).then(function (res) {
+                    if (!res || !res.success) { alert((res && res.message) || 'Không bật lại được.'); return; }
+                    renderStockWatch(res.data);
+                    renderHiddenList(res.hidden_list);
+                }).catch(function () {});
+            });
+        }
+    }
+
+    /* ---------------- Khối "Biến động giá nhập" (hàng dưới cùng) ---------------- */
+    // Số dòng/trang — phải khớp RP_DD_PRICE_CHANGES_PER_PAGE phía PHP (đệm dòng rỗng cho card
+    // luôn cao bằng nhau giữa các trang).
+    var PC_PAGE_SIZE = 6;
+    // Mirror bản render PHP trong daily_dashboard.php (cùng convention với rowsMaterialOrders).
+    function rowsPriceChanges(list) {
+        if (!list || !list.length) {
+            return '<tr><td colspan="5" class="dd2-pc-empty">Chưa ghi nhận biến động giá nhập.</td></tr>';
+        }
+        var html = '';
+        for (var i = 0; i < Math.max(PC_PAGE_SIZE, list.length); i++) {
+            var c = list[i];
+            if (!c) { html += '<tr class="dd2-pc-row is-empty"><td colspan="5"></td></tr>'; continue; }
+            var isMat = c.kind === 'material';
+            html += '<tr class="dd2-pc-row' + (isMat ? ' is-clickable' : '') + '"' +
+                ' data-kind="' + escapeHtml(c.kind) + '" data-item-id="' + c.item_id + '"' +
+                ' data-name="' + escapeHtml(c.name) + '" data-old="' + c.old_price + '" data-new="' + c.new_price + '"' +
+                ' title="' + (isMat ? 'Bấm để xem sản phẩm bị ảnh hưởng giá vốn' : 'Biến động giá mua thành phẩm (không tính giá vốn sản xuất)') + '">' +
+                '<td class="dd2-pc-date' + (c.date_iso === TODAY_ISO ? ' is-today' : '') + '">' + escapeHtml(c.date_label) + '</td>' +
+                '<td class="dd2-pc-name" title="' + escapeHtml(c.name) + '">' + escapeHtml(c.name) + '</td>' +
+                '<td class="dd2-pc-old">' + fmtMoney(c.old_price) + '</td>' +
+                '<td class="dd2-pc-new">' + fmtMoney(c.new_price) + '</td>' +
+                '<td class="dd2-pc-rate ' + (c.is_up ? 'is-up' : 'is-down') + '">' +
+                '<i class="fa-solid fa-caret-' + (c.is_up ? 'up' : 'down') + '"></i> ' + fmtNum(c.change_rate) + '%</td>' +
+                '</tr>';
+        }
+        return html;
+    }
+
+    function loadPriceChangesPage(page) {
+        return postForm('daily_dashboard_price_changes', { page: page }).then(function (res) {
+            if (!res || !res.success) return;
+            document.getElementById('dd2-price-changes-body').innerHTML = rowsPriceChanges(res.data.rows);
+            renderBatchPager(document.querySelector('[data-dd2-pager="price_changes"]'), res.data.page, res.data.total_pages, loadPriceChangesPage);
+        });
+    }
+
+    /* ---- Modal "Giá vốn ảnh hưởng": dùng lại 2 endpoint của view row_material_receiving ---- */
+    var IR_URL = '?mod=inventory_receiving&controllers=inventory_receiving&action=';
+    var pciModal = document.getElementById('dd2-price-impact-modal');
+    var pciCtx = null;   // {material_id, name, old_price, new_price} của dòng đang xem
+
+    function postIr(action, payload) {
+        var body = new URLSearchParams();
+        Object.keys(payload || {}).forEach(function (k) { body.append(k, payload[k]); });
+        return fetch(IR_URL + action, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+            credentials: 'same-origin'
+        }).then(function (r) { return r.json(); });
+    }
+
+    function closePriceImpactModal() {
+        if (!pciModal) return;
+        pciModal.classList.remove('is-open');
+        pciModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function rateCell(rate) {
+        var r = Number(rate) || 0;
+        var cls = r > 0 ? 'dd2-pci-up' : (r < 0 ? 'dd2-pci-down' : 'dd2-pci-flat');
+        var ico = r > 0 ? '<i class="fa-solid fa-caret-up"></i> ' : (r < 0 ? '<i class="fa-solid fa-caret-down"></i> ' : '');
+        return '<span class="' + cls + '">' + ico + fmtNum(r) + '%</span>';
+    }
+
+    // Lớp 1: danh sách sản phẩm dùng NVL này + giá vốn cũ/mới.
+    function openPriceImpactModal(ctx) {
+        if (!pciModal) return;
+        pciCtx = ctx;
+        document.getElementById('dd2-pci-back').hidden = true;
+        document.getElementById('dd2-pci-title').textContent = 'Giá vốn ảnh hưởng';
+        document.getElementById('dd2-pci-sub').innerHTML = escapeHtml(ctx.name) + ': ' +
+            fmtMoney(ctx.old_price) + ' → <b>' + fmtMoney(ctx.new_price) + '</b>';
+        document.getElementById('dd2-pci-body').innerHTML = '<p class="dd2-empty">Đang tải...</p>';
+        pciModal.classList.add('is-open');
+        pciModal.setAttribute('aria-hidden', 'false');
+
+        postIr('ajax_material_cost_impact', {
+            material_id: ctx.material_id, old_price: ctx.old_price, new_price: ctx.new_price
+        }).then(function (res) {
+            var box = document.getElementById('dd2-pci-body');
+            if (!res || !res.success) { box.innerHTML = '<p class="dd2-empty">' + escapeHtml((res && res.message) || 'Không tải được dữ liệu.') + '</p>'; return; }
+            var items = res.items || [];
+            if (!items.length) { box.innerHTML = '<p class="dd2-empty">Chưa có sản phẩm nào dùng nguyên liệu này trong công thức.</p>'; return; }
+            box.innerHTML = '<table class="dd2-pci-table"><thead><tr>' +
+                '<th>Tên sản phẩm</th><th class="num">Giá vốn cũ</th><th class="num">Giá vốn mới</th><th class="num">Tỉ lệ biến động</th>' +
+                '</tr></thead><tbody>' + items.map(function (it) {
+                    return '<tr><td><button type="button" class="dd2-pci-product" data-product-id="' + it.product_id + '">' +
+                        escapeHtml(it.product_name) + '</button></td>' +
+                        '<td class="num">' + fmtMoney(it.old_cost) + '</td>' +
+                        '<td class="num">' + fmtMoney(it.new_cost) + '</td>' +
+                        '<td class="num">' + rateCell(it.change_rate) + '</td></tr>';
+                }).join('') + '</tbody></table>';
+        }).catch(function () {
+            document.getElementById('dd2-pci-body').innerHTML = '<p class="dd2-empty">Lỗi kết nối.</p>';
+        });
+    }
+
+    // Lớp 2: giải thích chi tiết giá vốn 1 sản phẩm (bấm tên sản phẩm ở lớp 1).
+    function openCostBreakdown(productId) {
+        if (!pciCtx) return;
+        var box = document.getElementById('dd2-pci-body');
+        box.innerHTML = '<p class="dd2-empty">Đang tải...</p>';
+        document.getElementById('dd2-pci-back').hidden = false;
+
+        postIr('ajax_product_cost_breakdown', {
+            product_id: productId, material_id: pciCtx.material_id,
+            old_price: pciCtx.old_price, new_price: pciCtx.new_price
+        }).then(function (res) {
+            if (!res || !res.success) { box.innerHTML = '<p class="dd2-empty">' + escapeHtml((res && res.message) || 'Không tải được dữ liệu.') + '</p>'; return; }
+            document.getElementById('dd2-pci-title').textContent = res.product_name || 'Chi tiết giá vốn';
+            var rows = (res.rows || []).map(function (m) {
+                var changed = !!m.is_changed;
+                return '<tr' + (changed ? ' class="dd2-pci-row-changed"' : '') + '>' +
+                    '<td>' + escapeHtml(m.material_name) + (changed ? '<span class="dd2-pci-tag">biến động</span>' : '') + '</td>' +
+                    '<td class="num">' + fmtNum(m.quantity_required) + '</td>' +
+                    '<td class="num">' + fmtMoney(m.price_old) + '</td>' +
+                    '<td class="num">' + fmtMoney(m.price_new) + '</td>' +
+                    '<td class="num">' + fmtMoney(m.line_old) + '</td>' +
+                    '<td class="num">' + fmtMoney(m.line_new) + '</td></tr>';
+            }).join('');
+            box.innerHTML = '<table class="dd2-pci-table"><thead><tr>' +
+                '<th>Thành phần</th><th class="num">Định mức</th><th class="num">Đơn giá cũ</th>' +
+                '<th class="num">Đơn giá mới</th><th class="num">Thành tiền cũ</th><th class="num">Thành tiền mới</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody>' +
+                '<tfoot><tr class="dd2-pci-total"><td colspan="4">Giá vốn</td>' +
+                '<td class="num">' + fmtMoney(res.total_old) + '</td>' +
+                '<td class="num">' + fmtMoney(res.total_new) + ' ' + rateCell(res.change_rate) + '</td></tr></tfoot></table>';
+        }).catch(function () { box.innerHTML = '<p class="dd2-empty">Lỗi kết nối.</p>'; });
+    }
+
+    function wirePriceChanges() {
+        var body = document.getElementById('dd2-price-changes-body');
+        if (body) {
+            body.addEventListener('click', function (e) {
+                var tr = e.target.closest && e.target.closest('.dd2-pc-row.is-clickable');
+                if (!tr) return;
+                openPriceImpactModal({
+                    material_id: parseInt(tr.getAttribute('data-item-id'), 10) || 0,
+                    name: tr.getAttribute('data-name') || '',
+                    old_price: parseFloat(tr.getAttribute('data-old')) || 0,
+                    new_price: parseFloat(tr.getAttribute('data-new')) || 0
+                });
+            });
+        }
+        if (pciModal) {
+            pciModal.addEventListener('click', function (e) {
+                if (e.target.closest('[data-dd2-pci-close]')) { closePriceImpactModal(); return; }
+                var back = e.target.closest('#dd2-pci-back');
+                if (back) { openPriceImpactModal(pciCtx); return; }
+                var p = e.target.closest('.dd2-pci-product');
+                if (p) openCostBreakdown(parseInt(p.getAttribute('data-product-id'), 10) || 0);
+            });
+        }
+    }
+
     /* ---------------- Modal: danh sách ĐẦY ĐỦ dùng chung (sidebar 7 icon + nút "..."/"Sales Order") ---------------- */
     var fullListModal = document.getElementById('dd2-full-list-modal');
     var flSearchInput = document.getElementById('dd2-full-list-search');
@@ -1446,6 +1781,10 @@
         if (moPager) renderBatchPager(moPager, moPager.getAttribute('data-page'), moPager.getAttribute('data-total-pages'), loadMaterialOrdersPage);
         var fundPager = document.querySelector('[data-dd2-pager="fund"]');
         if (fundPager) renderBatchPager(fundPager, fundPager.getAttribute('data-page'), fundPager.getAttribute('data-total-pages'), loadFundPage);
+        var pcPager = document.querySelector('[data-dd2-pager="price_changes"]');
+        if (pcPager) renderBatchPager(pcPager, pcPager.getAttribute('data-page'), pcPager.getAttribute('data-total-pages'), loadPriceChangesPage);
+        wirePriceChanges();
+        wireStockWatch();
         renderProductionPage();
 
         // Cài đặt hiệu quả
@@ -1610,14 +1949,66 @@
         if (!contentEl) throw new Error('Không tìm thấy nội dung báo cáo.');
 
         var scale = 2;
+        // 2026-07-28: trang có thêm hàng 3 nên .dd2-main cuộn dọc -> ảnh chụp phải lấy CẢ phần
+        // đang bị cuộn khuất. Cách làm: đo phần dư (scrollHeight - clientHeight) để nới chiều cao
+        // vùng chụp, còn bản CLONE của html2canvas thì mở khóa overflow + ghim chiều cao từng hàng
+        // bằng px đo được từ DOM thật (nếu để calc(50%) trong clone cao hơn, các hàng sẽ giãn theo
+        // và lệch bố cục). Nhờ overflow:visible trên clone, ảnh cũng KHÔNG dính thanh cuộn vật lý.
+        var mainEl = document.querySelector('.dd2-main');
+        var overflowH = mainEl ? Math.max(0, mainEl.scrollHeight - mainEl.clientHeight) : 0;
+        var rowHeights = [];
+        if (mainEl) {
+            mainEl.querySelectorAll(':scope > .dd2-row').forEach(function (r) {
+                rowHeights.push(r.getBoundingClientRect().height);
+            });
+        }
+        // 2 card của hàng 3 có thể đang cuộn bên trong (màn hình thấp) -> nới thêm đúng phần bị
+        // khuất để ảnh có đủ nội dung (hàng 3 là hàng CUỐI nên cho cao tự do được). Lấy MAX vì
+        // 2 card cùng hàng sẽ cùng cao theo card cần nhiều chỗ nhất.
+        var scrollBoxes = ['.dd2-pc-wrap', '.dd2-sw-cols'];
+        var pcExtra = 0;
+        scrollBoxes.forEach(function (sel) {
+            var el = document.querySelector(sel);
+            if (el) pcExtra = Math.max(pcExtra, el.scrollHeight - el.clientHeight);
+        });
+
         // Chụp riêng nội dung, tự vẽ nền/bo góc/đổ bóng ở bước ghép (html2canvas hay cắt box-shadow).
         var contentCanvas = await window.html2canvas(contentEl, {
             backgroundColor: '#ffffff', scale: scale, useCORS: true, logging: false,
+            height: contentEl.offsetHeight + overflowH + pcExtra,
+            windowHeight: window.innerHeight + overflowH + pcExtra,
             // Nút chụp giữ NGUYÊN (icon camera không mờ) trong ảnh — chỉ bỏ disabled trên bản clone.
             // Xem ghi chú cũ: KHÔNG đổi cấu trúc DOM nút này trong onclone (html2canvas render sai).
             onclone: function (clonedDoc) {
                 var b = clonedDoc.getElementById('dd2-capture-btn');
                 if (b) b.disabled = false;
+
+                var cw = clonedDoc.getElementById('wrapper');
+                if (cw) { cw.style.height = 'auto'; cw.style.overflow = 'visible'; }
+                var cc = clonedDoc.querySelector('.dd2-content');
+                if (cc) { cc.style.height = 'auto'; cc.style.overflow = 'visible'; }
+                var cm = clonedDoc.querySelector('.dd2-main');
+                if (cm) {
+                    cm.style.height = 'auto';
+                    cm.style.overflow = 'visible';       // -> ảnh không có thanh cuộn
+                    var last = rowHeights.length - 1;
+                    cm.querySelectorAll(':scope > .dd2-row').forEach(function (r, i) {
+                        if (!rowHeights[i]) return;
+                        r.style.flex = '0 0 auto';
+                        // Hàng cuối được phép cao hơn để chứa hết bảng đang bị cuộn; các hàng
+                        // trên phải ghim đúng chiều cao thật, nếu không bố cục sẽ giãn lệch.
+                        if (i === last) { r.style.height = 'auto'; r.style.minHeight = rowHeights[i] + 'px'; }
+                        else { r.style.height = rowHeights[i] + 'px'; }
+                    });
+                }
+                scrollBoxes.forEach(function (sel) {
+                    var el = clonedDoc.querySelector(sel);
+                    if (el) { el.style.overflow = 'visible'; el.style.height = 'auto'; }
+                });
+                // Sidebar icon neo theo chiều cao màn hình -> kéo dài theo nội dung để nhóm nút
+                // dưới cùng không bị "trôi" giữa ảnh.
+                var cs = clonedDoc.querySelector('.dd2-sidebar');
+                if (cs) cs.style.height = 'auto';
             }
         });
 

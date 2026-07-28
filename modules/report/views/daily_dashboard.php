@@ -10,6 +10,8 @@ $d_material = $data['material_orders'] ?? ['rows' => [], 'page' => 1, 'total_pag
 $d_branch   = $data['branch_orders']   ?? [];
 $d_fund     = $data['fund']            ?? ['balance' => 0, 'recent' => ['rows' => [], 'page' => 1, 'total_pages' => 1]];
 $d_attendance = $data['attendance_today'] ?? [];
+$d_stockWatch = $data['stock_watch']   ?? ['products' => [], 'materials' => [], 'window' => 90, 'cover' => 14];
+$d_priceChg   = $data['price_changes'] ?? ['rows' => [], 'page' => 1, 'total_pages' => 1, 'total' => 0];
 
 /** Số nguyên có dấu phẩy ngăn cách ngàn (bỏ phần thập phân .00 nếu chẵn). */
 function dd2_num($v)
@@ -49,8 +51,42 @@ function dd2_branch_age($created_at)
     return ['text' => (int) floor($days / 7) . ' tuần trước', 'color' => 'danger'];
 }
 
+/* ---- Khối "Theo dõi tồn kho": pin dung lượng 10 vạch (xem rp_dd_sw_metrics()) ----
+   >50% xanh / 25-50% vàng / <25% đỏ; vạch chưa lấp đầy để xám. */
+function dd2_battery($m)
+{
+    $on  = (int) ($m['segments'] ?? 0);
+    $tip = 'Đã dùng ' . RP_DD_SW_WINDOW_DAYS . ' ngày: ' . dd2_num($m['used'])
+         . ' · TB/ngày: ' . dd2_num(round($m['avg_day'], 1))
+         . ' · Đủ dùng ' . RP_DD_SW_COVER_DAYS . ' ngày cần: ' . dd2_num(round($m['target']))
+         . ' · Đang có: ' . dd2_num($m['percent']) . '%';
+    $h = '<span class="dd2-bat dd2-bat-' . dd2_esc($m['level']) . '" title="' . dd2_esc($tip) . '">';
+    $h .= '<span class="dd2-bat-body">';
+    for ($i = 1; $i <= 10; $i++) $h .= '<i class="dd2-bat-seg' . ($i <= $on ? ' is-on' : '') . '"></i>';
+    $h .= '</span><span class="dd2-bat-cap"></span></span>';
+    return $h;
+}
+
+/** 1 ô "{pin} {tên} / {tồn kho hiện tại}" của khối Theo dõi tồn kho (tên trên, tồn dưới).
+ *  Bấm vào ô -> modal chi tiết; hover vào tên -> hiện nút mắt-gạch để ẩn khỏi khối. */
+function dd2_stock_watch_row($m, $kind)
+{
+    $tip = $kind === 'material' ? 'Xem sản phẩm đang dùng nguyên liệu này' : 'Xem nguyên vật liệu của sản phẩm này';
+    return '<div class="dd2-sw-row" data-kind="' . dd2_esc($kind) . '" data-id="' . (int) $m['id'] . '" title="' . $tip . '">'
+        . dd2_battery($m)
+        . '<span class="dd2-sw-main">'
+        . '<span class="dd2-sw-name-row">'
+        . '<span class="dd2-sw-name" title="' . dd2_esc($m['name']) . '">' . dd2_esc($m['name']) . '</span>'
+        . '<button type="button" class="dd2-sw-hide" title="Ẩn khỏi khối (không xét nữa)"><i class="fa-solid fa-eye-slash"></i></button>'
+        . '</span>'
+        . '<span class="dd2-sw-stock dd2-sw-' . dd2_esc($m['level']) . '">' . dd2_num($m['stock'])
+        . ($m['unit'] !== '' ? ' ' . dd2_esc($m['unit']) : '') . '</span>'
+        . '</span></div>';
+}
+
 $MIN_PROD_ROWS = 5;
 $PROD_PAGE_SIZE = 5;
+$SW_MIN_ROWS   = 4;   // đệm cho 2 cột "Theo dõi tồn kho" luôn cao bằng nhau
 $today_label = strtolower(rp_dd_month_short((int) date('n')));
 $page_date_label = date('d') . ' ' . $today_label . ', ' . date('Y');
 
@@ -402,6 +438,103 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                             </div>
                         </div>
                     </div>
+
+                    <!-- HÀNG DƯỚI CÙNG (2026-07-28) — 2 khối bề rộng bằng nhau, nằm dưới màn hình
+                         đầu tiên nên trang có thêm cuộn dọc (.dd2-main overflow-y:auto). -->
+                    <div class="dd2-row dd2-row-extra">
+
+                        <!-- 7. THEO DÕI TỒN KHO (pin dung lượng) -->
+                        <div class="dd2-card dd2-col-stock-watch">
+                            <div class="dd2-card-head">
+                                <p class="dd2-title"><i class="fa-solid fa-battery-three-quarters"></i> Theo dõi tồn kho</p>
+                                <button type="button" class="dd2-icon-btn" id="dd2-sw-settings-btn" title="Danh sách đang ẩn — bật lại để xét">
+                                    <i class="fa-solid fa-gear"></i>
+                                </button>
+                            </div>
+                            <!-- 2 khối con xếp TRÊN/DƯỚI, mỗi khối 4 mục dàn 2 cột (2 mục/dòng);
+                                 chỉ có 1 đường kẻ xám mờ ngăn giữa 2 khối con. -->
+                            <div class="dd2-sw-cols">
+                                <div class="dd2-sw-col">
+                                    <p class="dd2-sw-sub">Tồn kho thành phẩm</p>
+                                    <div class="dd2-sw-list" id="dd2-sw-products">
+                                        <?php
+                                        $swP = $d_stockWatch['products'];
+                                        if (empty($swP)): ?>
+                                            <p class="dd2-empty">Chưa có dữ liệu bán hàng.</p>
+                                        <?php else:
+                                            for ($i = 0; $i < max($SW_MIN_ROWS, count($swP)); $i++):
+                                                if (isset($swP[$i])) { echo dd2_stock_watch_row($swP[$i], 'product'); }
+                                                else { echo '<div class="dd2-sw-row is-empty"></div>'; }
+                                            endfor;
+                                        endif; ?>
+                                    </div>
+                                </div>
+                                <div class="dd2-sw-col">
+                                    <p class="dd2-sw-sub">Tồn kho nguyên liệu</p>
+                                    <div class="dd2-sw-list" id="dd2-sw-materials">
+                                        <?php
+                                        $swM = $d_stockWatch['materials'];
+                                        if (empty($swM)): ?>
+                                            <p class="dd2-empty">Chưa có dữ liệu xuất dùng.</p>
+                                        <?php else:
+                                            for ($i = 0; $i < max($SW_MIN_ROWS, count($swM)); $i++):
+                                                if (isset($swM[$i])) { echo dd2_stock_watch_row($swM[$i], 'material'); }
+                                                else { echo '<div class="dd2-sw-row is-empty"></div>'; }
+                                            endfor;
+                                        endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 8. BIẾN ĐỘNG GIÁ NHẬP -->
+                        <div class="dd2-card dd2-col-price-change">
+                            <div class="dd2-card-head">
+                                <p class="dd2-title"><i class="fa-solid fa-money-bill-trend-up"></i> Biến động giá nhập</p>
+                            </div>
+                            <div class="dd2-pc-wrap">
+                                <table class="dd2-pc-table">
+                                    <thead>
+                                        <tr><th>Ngày</th><th>Tên hàng hóa</th><th>Giá cũ</th><th>Giá mới</th><th>Tỷ lệ</th></tr>
+                                    </thead>
+                                    <tbody id="dd2-price-changes-body">
+                                        <?php
+                                        $pcRows = $d_priceChg['rows'];
+                                        if (empty($pcRows)): ?>
+                                            <tr><td colspan="5" class="dd2-pc-empty">Chưa ghi nhận biến động giá nhập.</td></tr>
+                                        <?php else:
+                                            for ($i = 0; $i < max(RP_DD_PRICE_CHANGES_PER_PAGE, count($pcRows)); $i++):
+                                                $c = $pcRows[$i] ?? null;
+                                                if (!$c): ?>
+                                                    <tr class="dd2-pc-row is-empty"><td colspan="5"></td></tr>
+                                                <?php continue; endif;
+                                                $isMat = $c['kind'] === 'material';
+                                                $pcToday = $c['date_iso'] === date('Y-m-d');
+                                            ?>
+                                                <tr class="dd2-pc-row<?php echo $isMat ? ' is-clickable' : ''; ?>"
+                                                    data-kind="<?php echo dd2_esc($c['kind']); ?>"
+                                                    data-item-id="<?php echo (int) $c['item_id']; ?>"
+                                                    data-name="<?php echo dd2_esc($c['name']); ?>"
+                                                    data-old="<?php echo dd2_num_raw($c['old_price']); ?>"
+                                                    data-new="<?php echo dd2_num_raw($c['new_price']); ?>"
+                                                    title="<?php echo $isMat ? 'Bấm để xem sản phẩm bị ảnh hưởng giá vốn' : 'Biến động giá mua thành phẩm (không tính giá vốn sản xuất)'; ?>">
+                                                    <td class="dd2-pc-date<?php echo $pcToday ? ' is-today' : ''; ?>"><?php echo dd2_esc($c['date_label']); ?></td>
+                                                    <td class="dd2-pc-name" title="<?php echo dd2_esc($c['name']); ?>"><?php echo dd2_esc($c['name']); ?></td>
+                                                    <td class="dd2-pc-old"><?php echo dd2_money($c['old_price']); ?></td>
+                                                    <td class="dd2-pc-new"><?php echo dd2_money($c['new_price']); ?></td>
+                                                    <td class="dd2-pc-rate <?php echo $c['is_up'] ? 'is-up' : 'is-down'; ?>">
+                                                        <i class="fa-solid fa-caret-<?php echo $c['is_up'] ? 'up' : 'down'; ?>"></i>
+                                                        <?php echo dd2_num($c['change_rate']); ?>%
+                                                    </td>
+                                                </tr>
+                                            <?php endfor;
+                                        endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="dd2-pagination" data-dd2-pager="price_changes" data-page="<?php echo (int) $d_priceChg['page']; ?>" data-total-pages="<?php echo (int) $d_priceChg['total_pages']; ?>"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -727,6 +860,56 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                 <div id="dd2-full-list-body"><p class="dd2-empty">Đang tải...</p></div>
                 <div class="dd2-full-list-totals" id="dd2-full-list-totals" hidden></div>
                 <div class="dd2-pagination" id="dd2-full-list-pager"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: chi tiết 1 mục của khối "Theo dõi tồn kho" (bấm vào ô).
+         SP -> NVL trong công thức + tồn NVL; NVL -> SP đang dùng nó + tồn thành phẩm. -->
+    <div class="app-modal" id="dd2-sw-detail-modal" aria-hidden="true">
+        <div class="app-modal-overlay" data-dd2-sw-close></div>
+        <div class="app-modal-box dd2-sw-detail-box">
+            <div class="app-modal-head">
+                <h3 id="dd2-sw-detail-title">Chi tiết</h3>
+                <button type="button" class="app-modal-close" data-dd2-sw-close aria-label="Đóng">&times;</button>
+            </div>
+            <div class="app-modal-body">
+                <p class="dd2-pci-sub" id="dd2-sw-detail-sub"></p>
+                <div id="dd2-sw-detail-body"><p class="dd2-empty">Đang tải...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: danh sách mục đang ẩn khỏi khối "Theo dõi tồn kho" (nút bánh răng) -->
+    <div class="app-modal" id="dd2-sw-hidden-modal" aria-hidden="true">
+        <div class="app-modal-overlay" data-dd2-swh-close></div>
+        <div class="app-modal-box dd2-sw-hidden-box">
+            <div class="app-modal-head">
+                <h3>Đang ẩn khỏi "Theo dõi tồn kho"</h3>
+                <button type="button" class="app-modal-close" data-dd2-swh-close aria-label="Đóng">&times;</button>
+            </div>
+            <div class="app-modal-body">
+                <p class="dd2-pci-sub">Các mục dưới đây không được xét vào khối. Bấm "Xét lại" để đưa trở lại danh sách.</p>
+                <div id="dd2-sw-hidden-body"><p class="dd2-empty">Đang tải...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: "Giá vốn ảnh hưởng" — bấm 1 dòng biến động giá NVL ở khối "Biến động giá nhập".
+         2 lớp: (1) danh sách SP bị ảnh hưởng, (2) giải thích chi tiết giá vốn 1 SP. Dùng lại
+         nguyên 2 endpoint có sẵn của view row_material_receiving (module inventory_receiving):
+         ajax_material_cost_impact / ajax_product_cost_breakdown. -->
+    <div class="app-modal" id="dd2-price-impact-modal" aria-hidden="true">
+        <div class="app-modal-overlay" data-dd2-pci-close></div>
+        <div class="app-modal-box dd2-pci-box">
+            <div class="app-modal-head">
+                <button type="button" class="dd2-pci-back" id="dd2-pci-back" hidden title="Quay lại danh sách"><i class="fa-solid fa-arrow-left"></i></button>
+                <h3 id="dd2-pci-title">Giá vốn ảnh hưởng</h3>
+                <button type="button" class="app-modal-close" data-dd2-pci-close aria-label="Đóng">&times;</button>
+            </div>
+            <div class="app-modal-body">
+                <p class="dd2-pci-sub" id="dd2-pci-sub"></p>
+                <div id="dd2-pci-body"><p class="dd2-empty">Đang tải...</p></div>
             </div>
         </div>
     </div>

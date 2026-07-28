@@ -17,6 +17,9 @@ public/images/product_profile/
 public/images/home_bg_library/
 public/images/thumnail/
 
+# ---- Bản lưu hiện trạng trước khi build lớn (chỉ ở máy code, để rollback nhanh) ----
+backup/
+
 # ---- Rác hệ điều hành / nén ----
 Thumbs.db
 .DS_Store

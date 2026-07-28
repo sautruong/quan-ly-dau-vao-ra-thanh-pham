@@ -351,7 +351,62 @@ function daily_dashboard_material_ordersAction()
 {
     header('Content-Type: application/json; charset=utf-8');
     $page = (int) ($_POST['page'] ?? 1);
-    echo json_encode(['success' => true, 'data' => rp_dd_pending_material_orders($page, 6)], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => true, 'data' => rp_dd_pending_material_orders($page, RP_DD_MATERIAL_ORDERS_PER_PAGE)], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/* ---- Khối "Theo dõi tồn kho" (hàng dưới cùng) ---- */
+
+/** AJAX: nạp lại toàn bộ 2 danh sách (sau khi ẩn / bật lại 1 mục). */
+function daily_dashboard_stock_watchAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => true, 'data' => rp_dd_stock_watch()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** AJAX: bấm 1 mục -> SP thì trả NVL trong công thức, NVL thì trả SP đang dùng nó (kèm tồn).
+ *  POST kind ('product'|'material'), id. */
+function daily_dashboard_sw_detailAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $kind = (string) ($_POST['kind'] ?? '');
+    $id   = (int) ($_POST['id'] ?? 0);
+    $data = $kind === 'material' ? rp_dd_sw_material_detail($id) : rp_dd_sw_product_detail($id);
+    echo json_encode($data
+        ? ['success' => true, 'kind' => $kind, 'data' => $data]
+        : ['success' => false, 'message' => 'Không tìm thấy dữ liệu.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** AJAX: ẩn / bật lại 1 mục khỏi khối. POST kind, id, hidden (1|0). */
+function daily_dashboard_sw_hideAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $kind   = (string) ($_POST['kind'] ?? '');
+    $id     = (int) ($_POST['id'] ?? 0);
+    $hidden = (string) ($_POST['hidden'] ?? '1') === '1';
+    $ok = rp_dd_sw_set_hidden($kind, $id, $hidden);
+    echo json_encode($ok
+        ? ['success' => true, 'data' => rp_dd_stock_watch(), 'hidden_list' => rp_dd_sw_hidden_list()]
+        : ['success' => false, 'message' => 'Không cập nhật được.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** AJAX: danh sách mục đang ẩn (modal bánh răng của khối). */
+function daily_dashboard_sw_hidden_listAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => true, 'items' => rp_dd_sw_hidden_list()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** AJAX: phân trang batch khối "Biến động giá nhập" (hàng dưới cùng). */
+function daily_dashboard_price_changesAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $page = (int) ($_POST['page'] ?? 1);
+    echo json_encode(['success' => true, 'data' => rp_dd_price_changes($page, RP_DD_PRICE_CHANGES_PER_PAGE)], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

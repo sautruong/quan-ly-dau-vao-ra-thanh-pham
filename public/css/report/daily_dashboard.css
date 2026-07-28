@@ -231,6 +231,11 @@
     min-height: 0;
 }
 
+/* 2026-07-28: thêm HÀNG 3 (Theo dõi tồn kho + Biến động giá nhập) nằm DƯỚI màn hình đầu
+   -> .dd2-main trở thành vùng cuộn dọc duy nhất của trang (sidebar icon vẫn đứng yên vì là
+   anh em của .dd2-main, không nằm trong nó). Thanh cuộn để mảnh; lúc chụp báo cáo thì bản
+   clone của html2canvas được set overflow:visible nên ảnh không dính thanh cuộn (xem
+   buildReportBlob() trong daily_dashboard.js). */
 .dd2-main {
     display: flex;
     flex-direction: column;
@@ -238,6 +243,23 @@
     flex: 1 1 auto;
     min-width: 0;
     min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.dd2-main::-webkit-scrollbar {
+    width: 8px;
+}
+
+.dd2-main::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.dd2-main::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 /* ===== SIDEBAR ICON (riêng trang này) — nhóm 1-3 sát mép trên khối Sản lượng, nhóm 4 sát mép dưới khối Sản xuất. ===== */
@@ -290,10 +312,14 @@
     cursor: not-allowed;
 }
 
+/* Chiều cao 1 hàng = đúng nửa vùng cuộn (như cũ khi chỉ có 2 hàng) — nhờ vậy 2 hàng đầu
+   vẫn khít 1 màn hình y hệt trước, hàng 3 nằm ngay dưới mép màn hình và phải cuộn mới thấy.
+   Dùng % (không phải px) để mọi cỡ màn hình đều giữ đúng tỉ lệ cũ. */
 .dd2-row {
     display: flex;
     gap: 24px;
-    flex: 1 1 0;
+    flex: 0 0 auto;
+    height: calc(50% - 12px);
     min-height: 0;
 }
 
@@ -2081,10 +2107,443 @@
 }
 
 /* ===== RESPONSIVE ===== */
+/* =====================================================================
+   HÀNG 3 (2026-07-28): "Theo dõi tồn kho" + "Biến động giá nhập"
+   2 khối bề rộng BẰNG NHAU, xếp ngang hàng.
+   ===================================================================== */
+/* Chiều cao 2 card hàng 3 điều khiển bằng CHIỀU CAO HÀNG (.dd2-row-extra), không phải ở card:
+   card dùng chung `.dd2-card{height:100%}` nên luôn cao bằng hàng chứa nó.
+   2026-07-28 (2): giảm 30% tương đối so với nửa màn hình mặc định của .dd2-row (đỡ trống ở
+   đáy khối "Biến động giá nhập"). Muốn cao/thấp hơn nữa thì đổi đúng hệ số 0.7 dưới đây. */
+.dd2-row-extra {
+    height: calc((50% - 12px) * 0.7);
+}
+
+.dd2-col-stock-watch,
+.dd2-col-price-change {
+    flex: 1 1 50%;
+    min-width: 0;
+    position: relative;
+}
+
+/* ---- Khối "Theo dõi tồn kho": 2 khối con xếp TRÊN/DƯỚI (thành phẩm rồi nguyên liệu),
+       mỗi khối con dàn 4 mục thành lưới 2 cột. Chỉ 1 đường kẻ xám mờ ngăn giữa 2 khối con. ---- */
+.dd2-sw-cols {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Màn hình thấp không đủ chỗ cho 8 mục -> cuộn DỌC trong card thay vì bị cắt chữ.
+       Lúc chụp báo cáo, onclone mở khóa overflow nên ảnh vẫn đủ (xem buildReportBlob).
+       overflow-x: hidden bắt buộc: chỉ đặt overflow-y thì trình duyệt tự cho trục X = auto
+       -> lòi thanh cuộn ngang khi tên dài. */
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    /* Chừa đúng phần lồi của vùng hover từng ô (.dd2-sw-row padding ngang) để không bị cắt. */
+    padding: 0 4px;
+}
+
+.dd2-sw-cols::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dd2-sw-cols::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.dd2-sw-col {
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* margin-top: chừa khoảng thở giữa mục cuối của khối trên và đường kẻ (không để kẻ áp sát
+   "TỒN KHO THÀNH PHẨM"); padding-top: khoảng cách từ kẻ xuống tiêu đề khối dưới. */
+.dd2-sw-col + .dd2-sw-col {
+    border-top: 1px solid #eef0f2;
+    margin-top: 10px;
+    padding-top: 16px;
+}
+
+.dd2-sw-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+    flex: 1 1 auto;
+    align-content: center;
+}
+
+.dd2-sw-sub {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    line-height: 1.1;
+    margin: 0;   /* global.css đặt margin-bottom 16px cho <p> -> phải ép về 0, nếu không khối bị đội cao */
+}
+
+/* 1 ô = pin bên trái + cụm chữ bên phải (tên trên, tồn kho ngay dưới, cùng canh trái).
+   Bấm cả ô -> modal chi tiết; hover vào tên hiện nút mắt-gạch để ẩn khỏi khối. */
+.dd2-sw-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 0 4px;
+    margin: 0 -4px;   /* .dd2-sw-cols có padding 0 4px bù lại -> không lồi ra ngoài vùng cuộn */
+    transition: background .15s ease;
+}
+
+.dd2-sw-row:hover {
+    background: #f6fbf7;
+}
+
+.dd2-sw-name-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+.dd2-sw-hide {
+    flex: 0 0 auto;
+    display: none;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.dd2-sw-hide:hover {
+    color: #dc2626;
+}
+
+.dd2-sw-row:hover .dd2-sw-hide {
+    display: inline-flex;
+}
+
+.dd2-sw-row.is-empty {
+    visibility: hidden;
+}
+
+.dd2-sw-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.dd2-sw-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #111827;
+}
+
+.dd2-sw-stock {
+    font-weight: 700;
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.dd2-sw-ok { color: #16a34a; }
+.dd2-sw-warn { color: #b45309; }
+.dd2-sw-low { color: #dc2626; }
+
+/* ---- Pin dung lượng 10 vạch (mô phỏng pin điện thoại) ----
+   Vạch đã lấp đầy tô theo mức (>50% xanh / 25-50% vàng / <25% đỏ), phần còn lại xám.
+   Dùng màu phẳng + border thường (không gradient/color-mix) để html2canvas chụp đúng. */
+.dd2-bat {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.dd2-bat-body {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    width: 50px;
+    height: 24px;
+    padding: 2px;
+    border: 1.5px solid #9ca3af;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.dd2-bat-seg {
+    flex: 1 1 auto;
+    height: 100%;
+    background: #e5e7eb;
+    border-radius: 1px;
+}
+
+.dd2-bat-cap {
+    width: 3px;
+    height: 10px;
+    border-radius: 0 2px 2px 0;
+    background: #9ca3af;
+}
+
+.dd2-bat-ok .dd2-bat-seg.is-on { background: #16a34a; }
+.dd2-bat-warn .dd2-bat-seg.is-on { background: #f59e0b; }
+.dd2-bat-low .dd2-bat-seg.is-on { background: #dc2626; }
+
+/* Dưới 25%: viền pin đỏ luôn — để mức 0% (không còn vạch nào sáng) vẫn nhìn ra cảnh báo. */
+.dd2-bat-low .dd2-bat-body { border-color: #dc2626; }
+.dd2-bat-low .dd2-bat-cap { background: #dc2626; }
+.dd2-bat-warn .dd2-bat-body { border-color: #f59e0b; }
+.dd2-bat-warn .dd2-bat-cap { background: #f59e0b; }
+
+/* ---- Khối "Biến động giá nhập" ---- */
+/* Màn hình thấp (vd 1366x768) không đủ chỗ cho đủ 9 dòng -> cuộn trong card thay vì bị cắt.
+   Lúc chụp báo cáo thì bản clone được mở khóa overflow nên ảnh luôn có đủ 9 dòng. */
+.dd2-pc-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.dd2-pc-wrap::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dd2-pc-wrap::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.dd2-pc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    table-layout: fixed;
+}
+
+.dd2-pc-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: #6b7280;
+    padding: 0 6px 6px;
+    border-bottom: 1px solid #eef0f2;
+}
+
+.dd2-pc-table td {
+    padding: 6px;
+    border-bottom: 1px solid #f4f5f7;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dd2-pc-table th:nth-child(1), .dd2-pc-table td:nth-child(1) { width: 78px; }
+.dd2-pc-table th:nth-child(3), .dd2-pc-table td:nth-child(3),
+.dd2-pc-table th:nth-child(4), .dd2-pc-table td:nth-child(4) { width: 92px; text-align: right; }
+.dd2-pc-table th:nth-child(5), .dd2-pc-table td:nth-child(5) { width: 76px; text-align: right; }
+
+/* Cần kèm td vì .dd2-pc-table td (đặt trước) có độ ưu tiên cao hơn selector 1 class. */
+.dd2-pc-table td.dd2-pc-date { color: #6b7280; }
+/* Trùng ngày hiện tại -> tô xanh cho dễ nhận ra biến động mới nhất trong ngày. */
+.dd2-pc-table td.dd2-pc-date.is-today { color: #16a34a; font-weight: 700; }
+.dd2-pc-old { color: #6b7280; }
+.dd2-pc-new { font-weight: 700; }
+
+.dd2-pc-rate { font-weight: 700; }
+.dd2-pc-rate.is-up { color: #dc2626; }
+.dd2-pc-rate.is-down { color: #16a34a; }
+
+.dd2-pc-row.is-clickable { cursor: pointer; }
+.dd2-pc-row.is-clickable:hover td { background: #f6fbf7; }
+.dd2-pc-row.is-empty td { border-bottom: none; height: 27px; }
+.dd2-pc-empty { color: #9ca3af; font-size: 12.5px; text-align: center; padding: 14px 0; }
+
+/* Phân trang 2 khối mới + "Đặt hàng nguyên liệu": ẩn, hiện khi hover card (giống Nhập kho/Quỹ) */
+.dd2-col-material-order .dd2-pagination,
+.dd2-col-stock-watch .dd2-pagination,
+.dd2-col-price-change .dd2-pagination {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    margin: 0;
+    transform: translateX(-50%) translateY(8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .15s ease, transform .15s ease;
+    background: #f8f9fb;
+    border: 1px solid #eef0f2;
+    border-radius: 999px;
+    padding: 3px 10px;
+    width: fit-content;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+.dd2-col-material-order:hover .dd2-pagination,
+.dd2-col-stock-watch:hover .dd2-pagination,
+.dd2-col-price-change:hover .dd2-pagination {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.dd2-col-material-order {
+    position: relative;
+}
+
+/* ---- 2 modal của khối "Theo dõi tồn kho" ---- */
+.dd2-sw-detail-box,
+.dd2-sw-hidden-box {
+    width: min(620px, 94vw);
+}
+
+.dd2-sw-unhide {
+    border: 1px solid #d1fae5;
+    background: #ecfdf5;
+    color: #0a741c;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dd2-sw-unhide:hover {
+    background: #d1fae5;
+}
+
+/* ---- Modal "Giá vốn ảnh hưởng" (bấm 1 dòng biến động giá NVL) ---- */
+.dd2-pci-box {
+    width: min(760px, 94vw);
+}
+
+.dd2-pci-back {
+    border: none;
+    background: transparent;
+    color: #4b5563;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 8px;
+    padding: 4px 6px;
+    border-radius: 8px;
+}
+
+.dd2-pci-back:hover {
+    background: #eef2f5;
+}
+
+.dd2-pci-sub {
+    font-size: 12.5px;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.dd2-pci-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.dd2-pci-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    color: #6b7280;
+    padding: 0 8px 6px;
+    border-bottom: 1px solid #eef0f2;
+}
+
+.dd2-pci-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #f4f5f7;
+}
+
+.dd2-pci-table td.num,
+.dd2-pci-table th.num {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dd2-pci-product {
+    border: none;
+    background: transparent;
+    color: #0a741c;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.dd2-pci-product:hover {
+    text-decoration: underline;
+}
+
+.dd2-pci-up { color: #dc2626; font-weight: 700; }
+.dd2-pci-down { color: #16a34a; font-weight: 700; }
+.dd2-pci-flat { color: #6b7280; }
+
+.dd2-pci-row-changed td {
+    background: #fffbeb;
+}
+
+.dd2-pci-tag {
+    margin-left: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #b45309;
+    background: #fef3c7;
+    border-radius: 999px;
+    padding: 1px 6px;
+}
+
+.dd2-pci-total td {
+    border-top: 2px solid #e5e7eb;
+    font-weight: 700;
+    background: #f8fafc;
+}
+
 @media (max-width: 1200px) {
     #wrapper {
         height: auto;
         overflow: visible;
+    }
+
+    /* Hàng lại xếp dọc + cao tự nhiên -> bỏ chiều cao nửa màn hình của hàng và
+       trả .dd2-main về không cuộn riêng (cả trang cuộn như trước). */
+    .dd2-main {
+        overflow: visible;
+    }
+
+    .dd2-row {
+        height: auto;
+        flex: none;
+    }
+
+    .dd2-col-stock-watch,
+    .dd2-col-price-change {
+        flex: none;
     }
 
     .dd2-content {
