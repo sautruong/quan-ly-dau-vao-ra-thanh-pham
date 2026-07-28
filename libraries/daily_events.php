@@ -114,7 +114,7 @@ if (!function_exists('de_ensure_tables')) {
     {
         $kw  = trim((string) $keyword);
         $me  = (int) $me_id;
-        $where = "id <> $me AND (status IS NULL OR status <> 'blocked')";
+        $where = "id <> $me AND (status IS NULL OR status NOT IN ('blocked', 'system'))";
         if ($kw !== '') {
             $k = escape_string($kw);
             $where .= " AND (fullname LIKE '%$k%' OR username LIKE '%$k%')";

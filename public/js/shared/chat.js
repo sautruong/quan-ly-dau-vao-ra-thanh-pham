@@ -117,6 +117,9 @@
         var inputFocused = false;      // chỉ tính "đã xem" khi focus ô nhập
         var notif = { mute_all: false, in_system: true, toast: true }; // trạng thái thông báo (poll cập nhật)
         var leaveConvId = 0;           // hội thoại đang ở luồng "rời nhóm"
+        // Tài khoản hệ thống ("Safe King"): {id, name, can_chat, topics[], is_admin}.
+        // Nạp kèm action contacts/conversations — dùng để ghim danh bạ + hiện khối cài đặt admin.
+        var botState = null;
 
         // "Ẩn bóng chat": gắn bóng chat lên cạnh chuông (.app-header-right). Lưu cục bộ theo user.
         var headerRight = document.querySelector('.app-header-right');
@@ -151,6 +154,16 @@
             cls = (cls || '') + ' group';
             if (av) return '<span class="chat-avatar ' + cls + '"><img src="' + esc(av) + '" alt=""></span>';
             return '<span class="chat-avatar ' + cls + '"><i class="fa-solid fa-user-group"></i></span>';
+        }
+        // Avatar tài khoản hệ thống (khiên) — phân biệt ngay với người thật.
+        function botAvatarHtml(cls) {
+            return '<span class="chat-avatar chat-avatar-bot ' + (cls || '') + '"><i class="fa-solid fa-shield-halved"></i></span>';
+        }
+        // Avatar người gửi 1 tin nhắn: tài khoản hệ thống dùng khiên thay chữ cái đầu.
+        function msgAvatarHtml(m) {
+            var isBotSender = (botState && parseInt(m.sender_id, 10) === parseInt(botState.id, 10))
+                || (current && current.is_bot && parseInt(m.sender_id, 10) === parseInt(current.user_id, 10));
+            return isBotSender ? botAvatarHtml() : avatarHtml(m.sender_avatar, m.sender_name);
         }
         function fmtTime(s) {
             var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(s || ''));
@@ -235,6 +248,7 @@
         function loadConversations(cb) {
             return api('conversations').then(function (res) {
                 if (!res || !res.ok) return;
+                if (res.bot) botState = res.bot;
                 setBadge(res.unread_total);
                 renderConversations(res.conversations || []);
                 if (typeof cb === 'function') cb();
@@ -248,12 +262,14 @@
                 return;
             }
             recentList.innerHTML = items.map(function (c) {
-                var av = c.type === 'group' ? groupAvatarHtml(c.avatar, c.name) : avatarHtml(c.avatar, c.name);
+                var av = c.type === 'group' ? groupAvatarHtml(c.avatar, c.name)
+                       : (c.is_bot ? botAvatarHtml() : avatarHtml(c.avatar, c.name));
                 var preview = c.last_message || '';
                 if (c.type === 'group' && c.last_sender && preview) preview = c.last_sender + ': ' + preview;
                 var badgeHtml = c.unread > 0 ? '<span class="chat-item-badge">' + (c.unread > 99 ? '99+' : c.unread) + '</span>' : '';
                 var mute = c.muted_until ? ' <i class="fa-solid fa-bell-slash chat-item-muted"></i>' : '';
                 var grp  = c.type === 'group' ? ' <i class="fa-solid fa-user-group" style="font-size:11px;color:#999"></i>' : '';
+                if (c.is_bot) grp = ' <span class="chat-bot-tag">Hệ thống</span>';
                 // Badge cảm xúc kiểu Zalo: "{emoji} {tên người thả}" dưới dòng tin nhắn,
                 // chỉ khi người khác vừa thả lên tin của mình và mình chưa mở xem.
                 var rb = c.reaction_badge
@@ -289,10 +305,16 @@
         }
 
         /* ============ danh bạ ============ */
+        // Danh bạ NGƯỜI THẬT (bỏ tài khoản hệ thống): dùng cho tạo nhóm / thêm thành viên /
+        // gợi ý @nhắc tên / chia sẻ tin — bot chỉ trò chuyện 1-1 nên không xuất hiện ở đó.
+        function humanContacts() {
+            return contactsCache.filter(function (u) { return !u.is_bot; });
+        }
         function loadContacts(cb) {
             return api('contacts').then(function (res) {
                 if (!res || !res.ok) return;
                 if (res.me) meBrief = res.me;
+                if (res.bot) botState = res.bot;
                 contactsCache = res.contacts || [];
                 renderContacts(contactsCache);
                 if (typeof cb === 'function') cb();
@@ -301,6 +323,17 @@
         function renderContacts(items) {
             if (!items.length) { contactsList.innerHTML = '<div class="chat-empty">Không có người dùng nào khác.</div>'; return; }
             contactsList.innerHTML = items.map(function (u) {
+                // Tài khoản hệ thống: ghim đầu danh bạ, không đặt biệt danh / không trạng thái online.
+                if (u.is_bot) {
+                    return '<div class="chat-item chat-item-bot" data-user="' + u.id + '"'
+                        + ' data-name="' + esc(u.fullname + ' ' + u.username) + '">'
+                        + botAvatarHtml()
+                        + '<div class="chat-item-main">'
+                        + '<div class="chat-item-name-row"><span class="chat-item-name">' + esc(u.fullname) + '</span>'
+                        + '<span class="chat-bot-tag">Hệ thống</span></div>'
+                        + '<div class="chat-item-sub">' + esc(u.bot_desc || 'Tài khoản hệ thống') + '</div>'
+                        + '</div></div>';
+                }
                 var alias = (u.alias || '').trim();
                 var display = alias || u.fullname;
                 // Sub: đang online → "Đang hoạt động"; có biệt danh → tên thật; còn lại → @username.
@@ -402,9 +435,14 @@
             roomAvatar.classList.toggle('can-edit', isGroup);
             if (isGroup) {
                 roomSub.textContent = (conv.member_count || (conv.members ? conv.members.length : 0)) + ' thành viên';
+            } else if (conv.is_bot) {
+                roomSub.textContent = 'Tài khoản hệ thống · luôn sẵn sàng';
             } else {
                 roomSub.textContent = '@' + (conv.username || '');
             }
+            // Hội thoại với hệ thống: không thêm thành viên (không phải nhóm người dùng).
+            var addMemberBtn = document.getElementById('chat-room-add-member');
+            if (addMemberBtn) addMemberBtn.style.display = conv.is_bot ? 'none' : '';
         }
 
         function enterRoom(conv) {
@@ -412,7 +450,8 @@
             oldestId = 0; newestId = 0; hasMore = false; lastReaders = [];
             clearPending(); hideEmoji(); closeOverlay(); clearReply();
             roomName.textContent = conv.name || 'Hội thoại';
-            roomAvatar.innerHTML = (conv.type === 'group' ? groupAvatarHtml(conv.avatar, conv.name, 'sm') : avatarHtml(conv.avatar, conv.name, 'sm'))
+            roomAvatar.innerHTML = (conv.type === 'group' ? groupAvatarHtml(conv.avatar, conv.name, 'sm')
+                    : (conv.is_bot ? botAvatarHtml('sm') : avatarHtml(conv.avatar, conv.name, 'sm')))
                 + '<span class="chat-room-avatar-cam"><i class="fa-solid fa-camera"></i></span>';
             configureRoomChrome(conv);
             msgsBox.innerHTML = '<div class="chat-empty">Đang tải…</div>';
@@ -500,6 +539,18 @@
             if (m.can_delete) btns += '<button class="act-delete" title="Xóa"><i class="fa-solid fa-trash"></i></button>';
             return '<div class="chat-msg-actions">' + btns + '</div>';
         }
+        // Cụm nút gợi ý do tài khoản hệ thống gửi kèm ("Có phải bạn hỏi về…").
+        // Bấm 1 nút = gửi đúng câu đó kèm lựa chọn đã chốt (bot_pick) nên không phải đoán lại.
+        function botOptionsHtml(m) {
+            if (!m.bot_options || !m.bot_options.length) return '';
+            var used = m.bot_used ? ' is-used' : '';
+            return '<div class="chat-bot-opts' + used + '" data-src="' + m.id + '">'
+                + m.bot_options.map(function (o) {
+                    return '<button type="button" class="chat-bot-opt"'
+                        + ' data-k="' + esc(o.k || '') + '" data-p="' + (parseInt(o.p, 10) || 0) + '"'
+                        + (m.bot_used ? ' disabled' : '') + '>' + esc(o.t || '') + '</button>';
+                }).join('') + '</div>';
+        }
         // Trích dẫn tin gốc (kiểu Zalo) — bấm để nhảy về tin đó.
         function replyQuoteHtml(m) {
             if (!m.reply_to) return '';
@@ -515,14 +566,14 @@
 
             if (m.recalled) {
                 return '<div class="chat-msg' + (isMe ? ' is-me' : '') + '" data-id="' + m.id + '" data-sender="' + m.sender_id + '">'
-                    + (isMe ? '' : avatarHtml(m.sender_avatar, m.sender_name))
+                    + (isMe ? '' : msgAvatarHtml(m))
                     + '<div class="chat-msg-col"><div class="chat-bubble is-recalled">Tin nhắn đã thu hồi</div>'
                     + '<div class="chat-msg-time">' + esc(fmtTime(m.created_at)) + '</div></div></div>';
             }
             // Tôi (người nhận) đã tự xóa tin này — chỉ ẩn phía tôi, người gửi vẫn còn giữ nguyên.
             if (m.deleted_for_me) {
                 return '<div class="chat-msg' + (isMe ? ' is-me' : '') + '" data-id="' + m.id + '" data-sender="' + m.sender_id + '">'
-                    + (isMe ? '' : avatarHtml(m.sender_avatar, m.sender_name))
+                    + (isMe ? '' : msgAvatarHtml(m))
                     + '<div class="chat-msg-col"><div class="chat-bubble is-recalled">Tin nhắn đã xóa</div>'
                     + '<div class="chat-msg-time">' + esc(fmtTime(m.created_at)) + '</div></div></div>';
             }
@@ -553,9 +604,10 @@
             var fwdTag = m.forwarded ? '<div class="chat-fwd-tag"><i class="fa-solid fa-share"></i> Đã chia sẻ</div>' : '';
             var hasReax = !!(m.reactions && m.reactions.length);
             return '<div class="chat-msg' + (isMe ? ' is-me' : '') + (hasReax ? ' has-reactions' : '') + '" data-id="' + m.id + '" data-sender="' + m.sender_id + '">'
-                + (isMe ? '' : avatarHtml(m.sender_avatar, m.sender_name))
+                + (isMe ? '' : msgAvatarHtml(m))
                 + '<div class="chat-msg-col">'
                 + actionsHtml(m) + senderTag + fwdTag + replyQuoteHtml(m) + bodyHtml + atts
+                + botOptionsHtml(m)
                 + reactionsHtml(m)
                 + '<div class="chat-msg-time">' + esc(fmtTime(m.created_at)) + '</div>'
                 + '</div></div>';
@@ -634,13 +686,19 @@
             var rq = e.target.closest('.chat-reply-quote');
             if (rq) { jumpToMessage(parseInt(rq.getAttribute('data-target'), 10)); return; }
 
+            // bấm 1 nút gợi ý của tài khoản hệ thống
+            var botOpt = e.target.closest('.chat-bot-opt');
+            if (botOpt) { pickBotOption(botOpt); return; }
+
             var msgEl = e.target.closest('.chat-msg');
 
             // bấm avatar người gửi → thẻ thông tin
             var av = e.target.closest('.chat-avatar');
             if (av && msgEl && av.parentElement === msgEl && window.UserCard) {
                 var sid = parseInt(msgEl.getAttribute('data-sender'), 10);
-                if (sid && sid !== ME) { UserCard.show(sid); return; }
+                var isBotSender = botState && sid === parseInt(botState.id, 10);
+                // Tài khoản hệ thống không có thẻ thông tin cá nhân để xem.
+                if (sid && sid !== ME && !isBotSender) { UserCard.show(sid); return; }
             }
 
             // chia sẻ tin này
@@ -820,6 +878,46 @@
         }
 
         /* ============ gửi tin ============ */
+        /* ============ tài khoản hệ thống (Safe King) ============ */
+        // Vẽ tin vừa gửi + (nếu có) các câu trả lời của hệ thống trong cùng 1 lượt.
+        function appendSentAndBot(res) {
+            var list = [];
+            if (res.message) list.push(res.message);
+            if (res.bot_replies && res.bot_replies.length) list = list.concat(res.bot_replies);
+            if (!list.length) return;
+            renderMessages(list, 'append');
+            newestId = list[list.length - 1].id;
+            renderSeen();
+            scrollToBottom();
+            // Câu trả lời của hệ thống hiện ngay trước mắt → coi như đã xem, tránh badge ảo.
+            if (res.bot_replies && res.bot_replies.length) markCurrentRead();
+        }
+        // Bấm 1 nút gợi ý: gửi đúng nhãn nút làm tin nhắn + kèm lựa chọn đã chốt.
+        function pickBotOption(btn) {
+            if (btn.disabled || !current) return;
+            var wrap = btn.closest('.chat-bot-opts');
+            var src  = wrap ? (parseInt(wrap.getAttribute('data-src'), 10) || 0) : 0;
+            var label = btn.textContent;
+            if (wrap) {
+                wrap.classList.add('is-used');
+                wrap.querySelectorAll('.chat-bot-opt').forEach(function (b) { b.disabled = true; });
+            }
+            btn.classList.add('is-picked');
+
+            var fd = new FormData();
+            fd.append('conversation_id', current.id);
+            fd.append('body', label);
+            fd.append('bot_pick', JSON.stringify({
+                k: btn.getAttribute('data-k') || '',
+                p: parseInt(btn.getAttribute('data-p'), 10) || 0,
+                src: src
+            }));
+            api('send', { method: 'POST', body: fd }).then(function (res) {
+                if (!res || !res.ok) { alert((res && res.message) || 'Gửi thất bại'); return; }
+                appendSentAndBot(res);
+            }).catch(function () { alert('Lỗi kết nối khi gửi'); });
+        }
+
         function sendMessage() {
             if (!current) return;
             var body = serializeEditable(inputText).trim();
@@ -841,7 +939,7 @@
                 sendBtn.disabled = false;
                 if (!res || !res.ok) { alert((res && res.message) || 'Gửi thất bại'); return; }
                 inputText.innerHTML = ''; clearPending(); hideEmoji(); clearReply();
-                if (res.message) { renderMessages([res.message], 'append'); newestId = res.message.id; renderSeen(); scrollToBottom(); }
+                appendSentAndBot(res);   // tin của tôi + câu trả lời của tài khoản hệ thống (nếu có)
                 if (res.skipped && res.skipped.length) alert('Một số tệp không gửi được:\n• ' + res.skipped.join('\n• '));
             }).catch(function () { sendBtn.disabled = false; alert('Lỗi kết nối khi gửi'); });
         }
@@ -1191,8 +1289,8 @@
         function openGroupCreate() {
             groupSelected = {}; groupNameInp.value = ''; groupSearch.value = ''; updateGroupCount();
             showView('group');
-            if (!contactsCache.length) { groupMembers.innerHTML = '<div class="chat-empty">Đang tải danh bạ…</div>'; loadContacts(function () { renderGroupMembers(contactsCache); }); }
-            else renderGroupMembers(contactsCache);
+            if (!contactsCache.length) { groupMembers.innerHTML = '<div class="chat-empty">Đang tải danh bạ…</div>'; loadContacts(function () { renderGroupMembers(humanContacts()); }); }
+            else renderGroupMembers(humanContacts());
         }
         function renderGroupMembers(items) {
             if (!items.length) { groupMembers.innerHTML = '<div class="chat-empty">Không có người dùng.</div>'; return; }
@@ -1209,7 +1307,7 @@
         }
         groupSearch.addEventListener('input', function () {
             var q = groupSearch.value.trim().toLowerCase();
-            renderGroupMembers(contactsCache.filter(function (u) { return !q || (u.fullname + ' ' + u.username).toLowerCase().indexOf(q) !== -1; }));
+            renderGroupMembers(humanContacts().filter(function (u) { return !q || (u.fullname + ' ' + u.username).toLowerCase().indexOf(q) !== -1; }));
         });
         function updateGroupCount() { groupCount.textContent = 'Đã chọn ' + Object.keys(groupSelected).length; }
         document.getElementById('chat-group-submit').addEventListener('click', function () {
@@ -1287,7 +1385,7 @@
             (current.members || []).forEach(function (m) { existing[m.id] = true; });
             if (current.type === 'direct' && current.user_id) existing[current.user_id] = true;
             var fill = function () {
-                var avail = contactsCache.filter(function (u) { return !existing[u.id]; });
+                var avail = humanContacts().filter(function (u) { return !existing[u.id]; });
                 if (!avail.length) { overlayBody.innerHTML = '<div class="chat-empty">Không còn ai để thêm.</div>'; return; }
                 overlayBody.innerHTML = avail.map(function (u) {
                     return '<label class="chat-item" data-name="' + esc(u.fullname) + '">'
@@ -1480,6 +1578,7 @@
         function openSettings() {
             settingsModal.classList.add('is-open');
             api('settings').then(function (res) { if (res && res.ok) applySettingsToUI(res.settings); }).catch(function () {});
+            loadBotAdmin();   // khối "Tài khoản hệ thống" (tự ẩn nếu không phải admin)
         }
         function applySettingsToUI(s) {
             if (setHideBubble) setHideBubble.checked = hideBubble; // trạng thái cục bộ (không lưu ở máy chủ)
@@ -1515,6 +1614,82 @@
         setNotifyToast.addEventListener('change', function () { saveSettings({ notify_toast: setNotifyToast.checked ? 1 : 0 }); });
         setMuteOptions.querySelectorAll('.chat-set-opt').forEach(function (b) {
             b.addEventListener('click', function () { saveSettings({ mute_mode: b.getAttribute('data-mute') }); });
+        });
+
+        /* ---- Cài đặt tài khoản hệ thống (chỉ admin) ---- */
+        var botAdminBox  = document.getElementById('chat-bot-admin');
+        var botNameInput = document.getElementById('chat-bot-name');
+        var botNameSave  = document.getElementById('chat-bot-name-save');
+        var botAclBox    = document.getElementById('chat-bot-acl');
+        var botTopics    = [];
+
+        function loadBotAdmin() {
+            if (!botAdminBox) return;
+            api('botAdmin').then(function (res) {
+                // Không phải admin → máy chủ trả ok=false, khối này ở lại trạng thái ẩn.
+                if (!res || !res.ok) { botAdminBox.style.display = 'none'; return; }
+                botAdminBox.style.display = '';
+                botTopics = res.topics || [];
+                if (botNameInput) botNameInput.value = res.name || '';
+                renderBotAcl(res.users || []);
+            }).catch(function () {});
+        }
+        function renderBotAcl(users) {
+            if (!botAclBox) return;
+            if (!users.length) { botAclBox.innerHTML = '<div class="chat-empty">Chưa có người dùng nào.</div>'; return; }
+            var head = '<div class="chat-bot-acl-row is-head"><span class="who">Người dùng</span>'
+                + botTopics.map(function (t) { return '<span class="tp">' + esc(t.label) + '</span>'; }).join('')
+                + '</div>';
+            botAclBox.innerHTML = head + users.map(function (u) {
+                var cells = botTopics.map(function (t) {
+                    var on = u.topics.indexOf(t.key) !== -1;
+                    // Admin luôn đủ quyền → tick sẵn và khóa lại, không cần lưu.
+                    return '<span class="tp"><label class="chat-bot-chk">'
+                        + '<input type="checkbox" data-user="' + u.id + '" data-topic="' + esc(t.key) + '"'
+                        + (on ? ' checked' : '') + (u.is_admin ? ' disabled' : '') + '>'
+                        + '<span class="box"></span></label></span>';
+                }).join('');
+                return '<div class="chat-bot-acl-row" data-user="' + u.id + '">'
+                    + '<span class="who"><b>' + esc(u.fullname) + '</b>'
+                    + (u.is_admin ? '<i class="tag">quản trị</i>' : '<i class="sub">@' + esc(u.username) + '</i>')
+                    + '</span>' + cells + '</div>';
+            }).join('');
+
+            botAclBox.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+                cb.addEventListener('change', function () { saveBotAccess(parseInt(cb.getAttribute('data-user'), 10)); });
+            });
+        }
+        // Lưu cả hàng (danh sách chủ đề đang tick) — ghi đè quyền của user đó.
+        function saveBotAccess(userId) {
+            var row = botAclBox.querySelector('.chat-bot-acl-row[data-user="' + userId + '"]');
+            if (!row) return;
+            var fd = new URLSearchParams();
+            fd.append('user_id', userId);
+            row.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+                if (cb.checked) fd.append('topics[]', cb.getAttribute('data-topic'));
+            });
+            row.classList.add('is-saving');
+            api('botSaveAccess', {
+                method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: fd.toString()
+            }).then(function (res) {
+                row.classList.remove('is-saving');
+                if (!res || !res.ok) { alert((res && res.message) || 'Không lưu được quyền'); return; }
+                row.classList.add('is-saved');
+                setTimeout(function () { row.classList.remove('is-saved'); }, 1200);
+                loadContacts();   // người vừa được cấp/thu quyền sẽ thấy/mất bot trong danh bạ
+            }).catch(function () { row.classList.remove('is-saving'); });
+        }
+        if (botNameSave) botNameSave.addEventListener('click', function () {
+            var name = (botNameInput.value || '').trim();
+            if (!name) { alert('Nhập tên tài khoản hệ thống.'); return; }
+            botNameSave.disabled = true;
+            api('botSaveName', form({ name: name })).then(function (res) {
+                botNameSave.disabled = false;
+                if (!res || !res.ok) { alert((res && res.message) || 'Không đổi được tên'); return; }
+                botNameInput.value = res.name;
+                loadContacts(); loadConversations();
+                if (current && current.is_bot) roomName.textContent = res.name;
+            }).catch(function () { botNameSave.disabled = false; });
         });
 
         /* ============ rời nhóm (chọn trưởng mới + im lặng) ============ */
@@ -1739,7 +1914,7 @@
                 if (map[id]) return; map[id] = 1;
                 out.push({ id: id, name: name });
             }
-            contactsCache.forEach(function (u) { add(u.id, u.fullname); });
+            humanContacts().forEach(function (u) { add(u.id, u.fullname); });
             if (current) {
                 if (current.type === 'group' && current.members) current.members.forEach(function (m) { add(m.id, m.fullname); });
                 else if (current.user_id) add(current.user_id, current.real_name || current.name);
@@ -1750,7 +1925,7 @@
         function mentionRoster() {
             var seen = {}, out = [];
             function add(id, name) { if (!name || seen[name]) return; seen[name] = 1; out.push({ id: id, name: name }); }
-            contactsCache.forEach(function (u) { add(u.id, u.fullname); if (u.alias) add(u.id, u.alias); });
+            humanContacts().forEach(function (u) { add(u.id, u.fullname); if (u.alias) add(u.id, u.alias); });
             if (current && current.type === 'group' && current.members) current.members.forEach(function (m) { add(m.id, m.fullname); });
             if (current && current.user_id) add(current.user_id, current.real_name || current.name);
             if (meBrief) add(meBrief.id, meBrief.fullname);
@@ -1865,13 +2040,15 @@
             var q = (shareSearch ? shareSearch.value : '').trim().toLowerCase();
             var html = '';
             if (shareTab === 'contacts') {
-                contactsCache.forEach(function (u) {
+                humanContacts().forEach(function (u) {
                     var nm = (u.alias || u.fullname);
                     if (q && (nm + ' ' + u.fullname + ' ' + u.username).toLowerCase().indexOf(q) === -1) return;
                     html += shareRow('user', u.id, nm, avatarHtml(u.avatar, u.fullname), !!selUser[u.id]);
                 });
             } else {
-                var convs = Object.keys(convCache).map(function (k) { return convCache[k]; });
+                // Bỏ hội thoại với tài khoản hệ thống — chia sẻ tin sang đó không có ý nghĩa.
+                var convs = Object.keys(convCache).map(function (k) { return convCache[k]; })
+                    .filter(function (c) { return !c.is_bot; });
                 if (shareTab === 'groups') convs = convs.filter(function (c) { return c.type === 'group'; });
                 convs.forEach(function (c) {
                     if (q && (c.name || '').toLowerCase().indexOf(q) === -1) return;

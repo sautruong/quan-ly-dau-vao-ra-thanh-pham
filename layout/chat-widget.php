@@ -319,6 +319,24 @@ $__chat_js_v  = is_file($__chat_js)  ? filemtime($__chat_js)  : time();
                     </div>
                 </div>
 
+                <!-- TÀI KHOẢN HỆ THỐNG (chỉ admin thấy) — đổi tên + cấp quyền theo chủ đề.
+                     Xem libraries/chat_bot.php. -->
+                <div class="chat-set-block chat-bot-admin" id="chat-bot-admin" style="display:none;">
+                    <div class="chat-set-name"><i class="fa-solid fa-shield-halved"></i> Tài khoản hệ thống</div>
+                    <div class="chat-set-desc">Tài khoản tự động trả lời trong hộp chat (tra cứu thẳng dữ liệu nhà
+                        máy). Mặc định chỉ quản trị viên trò chuyện được; tick để cho phép từng người theo từng chủ đề.</div>
+
+                    <div class="chat-bot-name-row">
+                        <input type="text" id="chat-bot-name" class="chat-modal-input" maxlength="100"
+                               placeholder="Tên tài khoản hệ thống…" autocomplete="off">
+                        <button type="button" class="chat-send-btn" id="chat-bot-name-save">Lưu tên</button>
+                    </div>
+
+                    <div class="chat-bot-acl" id="chat-bot-acl">
+                        <div class="chat-empty">Đang tải…</div>
+                    </div>
+                </div>
+
                 <div class="chat-modal-actions">
                     <button type="button" class="chat-modal-cancel" data-settings-close>Đóng</button>
                 </div>

@@ -313,7 +313,7 @@ function pm_all_users($me_id = 0)
     $me = (int) $me_id;
     $rows = db_fetch_array(
         "SELECT id, fullname, username, avatar FROM tbl_users
-         WHERE id <> {$me} AND (status IS NULL OR status <> 'blocked')
+         WHERE id <> {$me} AND (status IS NULL OR status NOT IN ('blocked', 'system'))
          ORDER BY fullname, username"
     ) ?: [];
     $out = [];

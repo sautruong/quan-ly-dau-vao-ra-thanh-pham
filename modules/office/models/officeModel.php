@@ -607,7 +607,7 @@ function office_users($uid)
     $uid = (int) $uid;
     $rows = db_fetch_array(
         "SELECT id, fullname, username, avatar FROM tbl_users
-         WHERE id <> $uid AND (status IS NULL OR status NOT IN ('blocked', 'left'))
+         WHERE id <> $uid AND (status IS NULL OR status NOT IN ('blocked', 'left', 'system'))
          ORDER BY fullname, username"
     ) ?: [];
     $aliasMap = office_alias_map($uid);

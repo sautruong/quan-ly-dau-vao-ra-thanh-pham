@@ -684,6 +684,7 @@ function admin_get_user_list()
                 c.name AS classification_name
          FROM tbl_users u
          LEFT JOIN user_classifications c ON c.id = u.classification_id
+         WHERE u.status IS NULL OR u.status <> 'system'
          ORDER BY u.id ASC"
     );
 }

@@ -144,6 +144,10 @@ if (!function_exists('chat_ensure_tables')) {
         chat_add_column('chat_messages',     'forwarded',    "TINYINT(1) NOT NULL DEFAULT 0");
         // admin_only=1: tin hệ thống chỉ trưởng nhóm (admin) thấy — dùng cho "rời nhóm trong im lặng".
         chat_add_column('chat_messages',     'admin_only',   "TINYINT(1) NOT NULL DEFAULT 0");
+        // meta: JSON phụ trợ của 1 tin (hiện dùng cho nút gợi ý của tài khoản hệ thống
+        // "Safe King" — xem libraries/chat_bot.php). KHÔNG mã hóa vì không chứa nội dung
+        // người dùng nhập, chỉ là nhãn nút + product_id.
+        chat_add_column('chat_messages',     'meta',         "TEXT DEFAULT NULL");
         chat_add_column('chat_reminders',     'note',         "TEXT DEFAULT NULL");
         chat_add_column('chat_participants',  'muted_until',  "DATETIME DEFAULT NULL");
         chat_add_column('chat_participants',  'cleared_at',   "DATETIME DEFAULT NULL");
@@ -238,14 +242,16 @@ if (!function_exists('chat_ensure_tables')) {
         return true;
     }
 
-    /** Danh bạ: tất cả user khác (đang hoạt động), kèm avatar + fullname + biệt danh. */
+    /** Danh bạ: tất cả user khác (đang hoạt động), kèm avatar + fullname + biệt danh.
+     *  Tài khoản hệ thống (status='system') KHÔNG nằm ở đây — controller tự chèn lên
+     *  đầu danh bạ cho user có quyền (xem libraries/chat_bot.php). */
     function chat_contacts($me_id)
     {
         $me = (int) $me_id;
         $rows = db_fetch_array(
             "SELECT id, fullname, username, avatar
              FROM tbl_users
-             WHERE id <> {$me} AND (status IS NULL OR status NOT IN ('blocked', 'left'))
+             WHERE id <> {$me} AND (status IS NULL OR status NOT IN ('blocked', 'left', 'system'))
              ORDER BY fullname, username"
         );
         $online  = chat_online_ids();
@@ -655,6 +661,8 @@ if (!function_exists('chat_ensure_tables')) {
             'username'    => $other['username'],
             'muted_until' => $muted,
             'auto_delete_seconds' => $autoDelete,
+            // Hội thoại với tài khoản hệ thống → FE đổi avatar/nhãn (xem chat_bot.php).
+            'is_bot'      => function_exists('chatbot_is_bot') && chatbot_is_bot($other_id),
         ];
     }
 
@@ -884,10 +892,19 @@ if (!function_exists('chat_ensure_tables')) {
             $canDelete = !$recalled && !$deletedMe
                 && (int) $me_id > 0 && (int) $r['sender_id'] !== (int) $me_id
                 && $r['type'] !== 'system';
+            // Nút gợi ý do tài khoản hệ thống gửi kèm (chat_messages.meta, JSON).
+            // Giải mã tại chỗ để chat.php không phụ thuộc ngược vào chat_bot.php.
+            $bmeta = (isset($r['meta']) && $r['meta'] !== '' && $r['meta'] !== null)
+                ? json_decode((string) $r['meta'], true) : null;
+            $bopts = (is_array($bmeta) && !empty($bmeta['options']) && is_array($bmeta['options']))
+                ? $bmeta['options'] : [];
+
             $out[] = [
                 'id'             => $mid,
                 'conversation_id'=> (int) $r['conversation_id'],
                 'sender_id'      => (int) $r['sender_id'],
+                'bot_options'    => ($recalled || $deletedMe) ? [] : $bopts,
+                'bot_used'       => is_array($bmeta) && !empty($bmeta['used']),
                 'sender_name'    => $brief['fullname'],
                 'sender_avatar'  => $brief['avatar'],
                 'body'           => ($recalled || $deletedMe) ? '' : crypto_decrypt((string) ($r['body'] ?? '')),

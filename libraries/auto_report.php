@@ -135,7 +135,7 @@ if (!function_exists('ar_ensure_tables')) {
     {
         $rows = db_fetch_array(
             "SELECT id, fullname, username FROM tbl_users
-             WHERE status IS NULL OR status NOT IN ('blocked','left')
+             WHERE status IS NULL OR status NOT IN ('blocked','left','system')
              ORDER BY fullname, username"
         ) ?: [];
         $out = [];

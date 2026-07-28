@@ -1250,7 +1250,7 @@ function storage_priority_listAction()
     }
     $users = db_fetch_array(
         "SELECT id, fullname, username FROM tbl_users
-         WHERE status IS NULL OR status NOT IN ('blocked', 'left')
+         WHERE status IS NULL OR status NOT IN ('blocked', 'left', 'system')
          ORDER BY fullname, username"
     ) ?: [];
     $userList = array_map(static function ($u) {

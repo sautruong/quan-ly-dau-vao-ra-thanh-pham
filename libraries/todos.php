@@ -427,7 +427,7 @@ if (!function_exists('todo_ensure_tables')) {
         $lid = (int) $list_id;
         if ($uid <= 0 || $lid <= 0) return [];
         todo_ensure_tables();
-        $where = "u.id <> $uid";
+        $where = "u.id <> $uid AND (u.status IS NULL OR u.status <> 'system')";
         $kw = trim((string) $keyword);
         if ($kw !== '') {
             $k = escape_string($kw);

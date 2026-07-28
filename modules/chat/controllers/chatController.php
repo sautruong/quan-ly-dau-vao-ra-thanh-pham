@@ -7,6 +7,7 @@
 
 session_start();
 require_once __DIR__ . '/../../../libraries/chat.php';
+require_once __DIR__ . '/../../../libraries/chat_bot.php';
 require_once __DIR__ . '/../../../libraries/notifications.php';
 
 // construct mặc định (router gọi trước action).
@@ -30,17 +31,52 @@ function chat_require_user()
     return $user;
 }
 
-/** 1. Danh bạ: tất cả user khác (avatar + fullname). */
+/** 1. Danh bạ: tất cả user khác (avatar + fullname).
+ *  Tài khoản hệ thống ("Safe King") được ghim lên đầu, chỉ với user có quyền. */
 function contactsAction()
 {
     $user = chat_require_user();
     if (!$user) return;
+    $uid = (int) $user['id'];
     chat_ensure_tables();
+
+    $contacts = chat_contacts($uid);
+    $botTopics = chatbot_user_topics($uid);
+    if ($botTopics) {
+        $bid = chatbot_user_id();
+        array_unshift($contacts, [
+            'id'       => $bid,
+            'fullname' => chatbot_name(),
+            'username' => CHATBOT_USERNAME,
+            'avatar'   => '',
+            'online'   => true,          // luôn sẵn sàng trả lời
+            'alias'    => '',
+            'is_bot'   => true,
+            'bot_desc' => 'Tài khoản hệ thống · ' . count($botTopics) . ' chủ đề',
+        ]);
+    }
     chat_json([
-        'ok'       => true,
-        'me'       => chat_user_brief((int) $user['id']),
-        'contacts' => chat_contacts((int) $user['id']),
+        'ok'         => true,
+        'me'         => chat_user_brief($uid),
+        'contacts'   => $contacts,
+        'bot'        => chat_bot_state_for_user($uid),
     ]);
+}
+
+/** Trạng thái tài khoản hệ thống theo góc nhìn 1 user (dùng chung cho FE). */
+function chat_bot_state_for_user($uid)
+{
+    $topics = chatbot_user_topics($uid);
+    $all    = chatbot_topics();
+    $list   = [];
+    foreach ($topics as $t) $list[] = ['key' => $t, 'label' => $all[$t]['label']];
+    return [
+        'id'       => chatbot_user_id(),
+        'name'     => chatbot_name(),
+        'can_chat' => count($topics) > 0,
+        'topics'   => $list,
+        'is_admin' => permission_is_admin(),
+    ];
 }
 
 /** 2. Danh sách hội thoại gần đây của tôi. */
@@ -48,10 +84,18 @@ function conversationsAction()
 {
     $user = chat_require_user();
     if (!$user) return;
+    $uid = (int) $user['id'];
+
+    // Quyền chat với hệ thống có thể bị admin thu hồi sau đó → ẩn luôn hội thoại cũ.
+    $convs = chat_conversations($uid, 50);
+    if (!chatbot_can_chat($uid)) {
+        $convs = array_values(array_filter($convs, static fn($c) => empty($c['is_bot'])));
+    }
     chat_json([
         'ok'            => true,
-        'conversations' => chat_conversations((int) $user['id'], 50),
-        'unread_total'  => chat_unread_total((int) $user['id']),
+        'conversations' => $convs,
+        'unread_total'  => chat_unread_total($uid),
+        'bot'           => chat_bot_state_for_user($uid),
     ]);
 }
 
@@ -63,7 +107,17 @@ function openAction()
     $other = (int) ($_POST['user_id'] ?? $_GET['user_id'] ?? 0);
     if ($other <= 0) { chat_json(['ok' => false, 'message' => 'Thiếu user_id.']); return; }
 
-    $cid = chat_get_or_create_direct((int) $user['id'], $other);
+    // Hội thoại với tài khoản hệ thống: phải có ít nhất 1 chủ đề được cấp quyền,
+    // và lần đầu mở thì bot tự gửi lời chào + danh sách chủ đề.
+    if (chatbot_is_bot($other)) {
+        if (!chatbot_can_chat((int) $user['id'])) {
+            chat_json(['ok' => false, 'message' => 'Bạn chưa được cấp quyền trò chuyện với tài khoản hệ thống.']);
+            return;
+        }
+        $cid = chatbot_open_conversation((int) $user['id']);
+    } else {
+        $cid = chat_get_or_create_direct((int) $user['id'], $other);
+    }
     if ($cid <= 0) { chat_json(['ok' => false, 'message' => 'Không tạo được hội thoại.']); return; }
 
     chat_json([
@@ -201,12 +255,26 @@ function sendAction()
         }
     }
 
+    // Hội thoại với tài khoản hệ thống → trả lời NGAY trong cùng request (không chờ
+    // poll) để người dùng thấy câu trả lời liền sau tin của mình. bot_pick = user bấm
+    // 1 nút gợi ý thay vì gõ tay (xem libraries/chat_bot.php).
+    $botReplies = [];
+    if (chatbot_is_bot_conversation($cid) && !chatbot_is_bot($uid)) {
+        $pickRaw = (string) ($_POST['bot_pick'] ?? '');
+        $pick    = $pickRaw !== '' ? json_decode($pickRaw, true) : null;
+        $ids = is_array($pick)
+            ? chatbot_handle_pick($cid, $uid, $pick)
+            : chatbot_handle_message($cid, $uid, $body);
+        $botReplies = chatbot_fetch_messages($ids, $uid);
+    }
+
     $rows = db_fetch_array("SELECT * FROM chat_messages WHERE id = {$mid} LIMIT 1");
     $fmt  = chat_format_messages($rows, $uid);
     chat_json([
-        'ok'      => true,
-        'message' => $fmt ? $fmt[0] : null,
-        'skipped' => $skipped, // tệp bị bỏ qua (nếu có) để cảnh báo người gửi
+        'ok'          => true,
+        'message'     => $fmt ? $fmt[0] : null,
+        'skipped'     => $skipped, // tệp bị bỏ qua (nếu có) để cảnh báo người gửi
+        'bot_replies' => $botReplies,
     ]);
 }
 
@@ -485,4 +553,63 @@ function setReminderAction()
     $at   = (string) ($_POST['remind_at'] ?? '');
     $note = (string) ($_POST['note'] ?? '');
     chat_json(chat_set_reminder((int) $user['id'], $mid, $at, $note));
+}
+
+/* =====================================================================
+ *  TÀI KHOẢN HỆ THỐNG ("Safe King") — chỉ quản trị viên.
+ *  Khối cài đặt nằm trong modal "Cài đặt trò chuyện" của widget.
+ * ===================================================================== */
+
+/** Chỉ cho qua nếu là admin; ngược lại trả JSON lỗi và dừng. */
+function chat_bot_require_admin()
+{
+    $user = chat_require_user();
+    if (!$user) return null;
+    if (!permission_is_admin($user)) {
+        chat_json(['ok' => false, 'message' => 'Chỉ quản trị viên mới cấu hình được tài khoản hệ thống.']);
+        return null;
+    }
+    return $user;
+}
+
+/** 27. Dữ liệu màn hình cấu hình: tên hệ thống + ma trận quyền theo chủ đề. */
+function botAdminAction()
+{
+    $user = chat_bot_require_admin();
+    if (!$user) return;
+
+    $topics = [];
+    foreach (chatbot_topics() as $key => $t) {
+        $topics[] = ['key' => $key, 'label' => $t['label'], 'desc' => $t['desc']];
+    }
+    chat_json([
+        'ok'     => true,
+        'name'   => chatbot_name(),
+        'topics' => $topics,
+        'users'  => chatbot_access_matrix(),
+    ]);
+}
+
+/** 28. Đổi tên hiển thị của tài khoản hệ thống. POST name. */
+function botSaveNameAction()
+{
+    $user = chat_bot_require_admin();
+    if (!$user) return;
+    chat_json(chatbot_set_name((string) ($_POST['name'] ?? '')));
+}
+
+/** 29. Gán lại chủ đề được phép hỏi cho 1 user. POST user_id, topics[]. */
+function botSaveAccessAction()
+{
+    $user = chat_bot_require_admin();
+    if (!$user) return;
+    $target = (int) ($_POST['user_id'] ?? 0);
+    $topics = $_POST['topics'] ?? [];
+    if (!is_array($topics)) $topics = $topics !== '' ? [$topics] : [];
+    if ($target <= 0) { chat_json(['ok' => false, 'message' => 'Thiếu user_id.']); return; }
+
+    $ok = chatbot_set_user_topics($target, $topics, (int) $user['id']);
+    chat_json($ok
+        ? ['ok' => true, 'topics' => chatbot_user_topics($target)]
+        : ['ok' => false, 'message' => 'Không lưu được quyền.']);
 }
