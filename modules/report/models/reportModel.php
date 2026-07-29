@@ -2215,6 +2215,151 @@ function rp_dd_export_invoice_value_map(array $rows)
     return $map;
 }
 
+/* ---------------------------------------------------------------------------
+ *  2026-07-29 — TÁCH GIÁ TRỊ THEO TỪNG PHIẾU XUẤT
+ *
+ *  Bug: 1 khách lấy >1 đơn trong CÙNG NGÀY thì mọi phiếu của khách hôm đó đều
+ *  hiện CÙNG một con số = tổng cả ngày. Nguyên nhân: sales_inventory_issue_data
+ *  lưu created_at DẠNG NGÀY (00:00:00) nên chỉ khớp được tới mức (khách, ngày).
+ *
+ *  Cách tách: stock_exports giữ created_at ĐẦY ĐỦ giờ-phút-giây, và giá trị đó
+ *  CHÍNH LÀ group_key của phiếu — trùng khít sales_warehouse_export_invoices.created_at
+ *  (xem im_find_sales_delivery_invoice()). Vậy khớp phiếu ↔ dòng hàng qua
+ *  (customer_id, created_at đầy đủ) là tách được từng đơn, KHÔNG cần đổi schema
+ *  và KHÔNG ghi gì vào DB.
+ *
+ *  Thứ tự ưu tiên khi lấy giá trị 1 phiếu (rp_dd_export_invoice_value):
+ *    1. stock_exports theo đúng phiếu           -> chuẩn nhất, tách được từng đơn
+ *    2. sales_inventory_issue_data theo ngày    -> chỉ dùng khi ngày đó CHỈ CÓ 1 phiếu
+ *       (giữ nguyên số liệu cũ cho dữ liệu 2025 nhập trước khi có stock_exports)
+ *    3. goods_value x 1.000.000                 -> phiếu cũ nhiều-đơn/ngày mà không có
+ *       stock_exports; goods_value là của RIÊNG phiếu nên vẫn không bị trùng
+ *  Đã đối chiếu dữ liệu thật: 9 phiếu ở các ngày nhiều đơn đổi về đúng giá trị
+ *  riêng (khớp goods_value từng phiếu), 56 phiếu còn lại giữ nguyên y như cũ.
+ * ------------------------------------------------------------------------- */
+
+/** Điều kiện SQL khớp ĐÚNG từng phiếu: (customer_id, created_at đầy đủ). */
+function rp_dd_export_batch_conds(array $rows)
+{
+    $pairs = [];
+    foreach ($rows as $r) {
+        $cid = (int) $r['customer_id'];
+        $ca  = date('Y-m-d H:i:s', strtotime($r['created_at']));
+        if ($cid > 0) $pairs[$cid . '|' . $ca] = true;
+    }
+    $conds = [];
+    foreach (array_keys($pairs) as $key) {
+        list($cid, $ca) = explode('|', $key);
+        $conds[] = "(customer_id = " . (int) $cid . " AND created_at = '" . escape_string($ca) . "')";
+    }
+    return $conds;
+}
+
+/** Giá trị của TỪNG phiếu xuất, khớp stock_exports theo (customer_id, created_at đầy đủ).
+ *  Key trả về: "{customer_id}|{Y-m-d H:i:s}". */
+function rp_dd_export_batch_value_map(array $rows)
+{
+    $conds = rp_dd_export_batch_conds($rows);
+    if (!$conds) return [];
+    $rowsV = db_fetch_array(
+        "SELECT customer_id, created_at, SUM(total_amount) AS amt
+         FROM stock_exports
+         WHERE type_export = 'sales_issue' AND (" . implode(' OR ', $conds) . ")
+         GROUP BY customer_id, created_at"
+    ) ?: [];
+    $map = [];
+    foreach ($rowsV as $rv) {
+        $map[(int) $rv['customer_id'] . '|' . date('Y-m-d H:i:s', strtotime($rv['created_at']))] = (float) $rv['amt'];
+    }
+    return $map;
+}
+
+/** Số PHIẾU của mỗi (khách, ngày) — để biết ngày nào có nhiều đơn thì không được
+ *  phép rơi về cách tính theo ngày (sẽ lại cộng chung). Key: "{customer_id}|{Y-m-d}". */
+function rp_dd_export_day_invoice_counts(array $rows)
+{
+    $pairs = [];
+    foreach ($rows as $r) {
+        $cid = (int) $r['customer_id'];
+        $d   = date('Y-m-d', strtotime($r['created_at']));
+        if ($cid > 0) $pairs[$cid . '|' . $d] = true;
+    }
+    if (!$pairs) return [];
+    $conds = [];
+    foreach (array_keys($pairs) as $key) {
+        list($cid, $d) = explode('|', $key);
+        $conds[] = "(customer_id = " . (int) $cid . " AND DATE(created_at) = '" . escape_string($d) . "')";
+    }
+    $rowsC = db_fetch_array(
+        "SELECT customer_id, DATE(created_at) AS d, COUNT(*) AS n
+         FROM sales_warehouse_export_invoices
+         WHERE " . implode(' OR ', $conds) . "
+         GROUP BY customer_id, DATE(created_at)"
+    ) ?: [];
+    $map = [];
+    foreach ($rowsC as $rc) $map[(int) $rc['customer_id'] . '|' . $rc['d']] = (int) $rc['n'];
+    return $map;
+}
+
+/** Giá trị 1 phiếu theo thứ tự ưu tiên đã mô tả ở khối chú thích phía trên. */
+function rp_dd_export_invoice_value($row, array $batchMap, array $dayMap, array $dayCounts)
+{
+    $cid     = (int) $row['customer_id'];
+    $dateIso = date('Y-m-d', strtotime($row['created_at']));
+    $batchKey = $cid . '|' . date('Y-m-d H:i:s', strtotime($row['created_at']));
+    if (isset($batchMap[$batchKey])) return (float) $batchMap[$batchKey];
+
+    $dayKey = $cid . '|' . $dateIso;
+    // Chỉ tin số theo ngày khi ngày đó đúng 1 phiếu; nhiều phiếu mà rơi vào đây
+    // nghĩa là phiếu cũ không có stock_exports -> lấy goods_value của RIÊNG phiếu.
+    if (isset($dayMap[$dayKey]) && (int) ($dayCounts[$dayKey] ?? 1) <= 1) return (float) $dayMap[$dayKey];
+
+    return (float) $row['goods_value'] * rp_dd_goods_value_scale();
+}
+
+/** Chi tiết mặt hàng của ĐÚNG 1 phiếu — đọc stock_exports theo (customer_id, created_at đầy đủ).
+ *  Trả [] nếu phiếu không có dòng nào trong stock_exports (dữ liệu cũ) để bên gọi rơi về
+ *  rp_dd_export_invoice_items() theo ngày. */
+function rp_dd_export_batch_items($customer_id, $created_at)
+{
+    $cid = (int) $customer_id;
+    $ca  = escape_string(date('Y-m-d H:i:s', strtotime((string) $created_at)));
+    if ($cid <= 0) return [];
+    $rows = db_fetch_array(
+        "SELECT s.quantity, s.unit_price, s.total_amount AS amount,
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name, NULLIF(mi.common_material_name, ''), mi.material_name) AS name,
+                COALESCE(p.unit, mi.unit) AS unit
+         FROM stock_exports s
+         LEFT JOIN products p ON p.id = s.product_id
+         LEFT JOIN material_information mi ON mi.id = s.material_id
+         WHERE s.type_export = 'sales_issue' AND s.customer_id = $cid AND s.created_at = '$ca'
+         ORDER BY s.id ASC"
+    ) ?: [];
+    $out = [];
+    foreach ($rows as $r) {
+        $out[] = [
+            'name'  => (string) ($r['name'] ?? ''),
+            'unit'  => (string) ($r['unit'] ?? ''),
+            'qty'   => (float) $r['quantity'],
+            'price' => (float) $r['unit_price'],
+            'value' => (float) $r['amount'],
+        ];
+    }
+    return $out;
+}
+
+/** Chi tiết mặt hàng 1 phiếu: ưu tiên theo đúng phiếu, hết cách mới lấy theo ngày
+ *  (và chỉ khi ngày đó 1 phiếu, nếu không sẽ hiện nhầm hàng của đơn khác). */
+function rp_dd_export_items_for_invoice($row, array $dayCounts)
+{
+    $cid     = (int) $row['customer_id'];
+    $dateIso = date('Y-m-d', strtotime($row['created_at']));
+    $items = rp_dd_export_batch_items($cid, $row['created_at']);
+    if ($items) return $items;
+    if ((int) ($dayCounts[$cid . '|' . $dateIso] ?? 1) <= 1) return rp_dd_export_invoice_items($cid, $dateIso);
+    return [];
+}
+
 /** Chi tiết từng dòng của 1 phiếu xuất kho — sales_warehouse_export_invoices KHÔNG có FK tới dòng
  *  chi tiết, nên khớp qua (customer_id, DATE(created_at)) giống rp_dd_export_invoice_value_map().
  *  Item có thể là product_id (Kho TP) HOẶC material_id (Kho NVL, bán nguyên liệu) — item.type ở
@@ -2266,17 +2411,19 @@ function rp_dd_exports_recent($page = 1, $per_page = 3, $customer_id = null)
          LIMIT $per_page OFFSET $offset"
     ) ?: [];
     $total = (int) db_num_rows("SELECT id FROM sales_warehouse_export_invoices e WHERE $cond$extra");
-    $valueMap = rp_dd_export_invoice_value_map($rows);
+    // Giá trị TỪNG phiếu (không cộng chung cả ngày) — xem khối chú thích ở rp_dd_export_batch_value_map().
+    $batchMap  = rp_dd_export_batch_value_map($rows);
+    $valueMap  = rp_dd_export_invoice_value_map($rows);
+    $dayCounts = rp_dd_export_day_invoice_counts($rows);
     $out = [];
     foreach ($rows as $r) {
-        $key = (int) $r['customer_id'] . '|' . date('Y-m-d', strtotime($r['created_at']));
         $out[] = [
             'id'             => (int) $r['id'],
             'customer_id'    => (int) $r['customer_id'],
             'customer_label' => (string) ($r['customer_label'] ?: ('#' . $r['customer_id'])),
             'color'          => (string) ($r['secondary_color'] ?: ''),
             'weight'         => (float) $r['weight'],
-            'value'          => $valueMap[$key] ?? ((float) $r['goods_value'] * rp_dd_goods_value_scale()),
+            'value'          => rp_dd_export_invoice_value($r, $batchMap, $valueMap, $dayCounts),
             'date_label'     => rp_dd_short_date($r['created_at']),
             'date_iso'       => date('Y-m-d', strtotime($r['created_at'])),
         ];
@@ -2326,7 +2473,7 @@ function rp_dd_exports_today_by_customer()
 
 /** Danh sách ĐẦY ĐỦ (mọi thời gian) cho modal sidebar/"Sales Order" — mirror rp_dd_exports_recent() bỏ điều kiện tháng.
  *  $keyword: lọc theo tên khách hàng (LIKE). Trả kèm 'totals' = SUM SL/khối lượng/doanh thu của TOÀN BỘ kết quả lọc. */
-function rp_dd_exports_all($page = 1, $per_page = 10, $customer_id = null, $keyword = '')
+function rp_dd_exports_all($page = 1, $per_page = 10, $customer_id = null, $keyword = '', $from = '', $to = '')
 {
     $page     = max(1, (int) $page);
     $per_page = max(1, (int) $per_page);
@@ -2339,6 +2486,12 @@ function rp_dd_exports_all($page = 1, $per_page = 10, $customer_id = null, $keyw
         $kwEsc = escape_string($kw);
         $conds[] = "(c.short_name LIKE '%$kwEsc%' OR c.name LIKE '%$kwEsc%')";
     }
+    // Lọc từ ngày đến ngày (2026-07-29) — 2 đầu đều tùy chọn, so theo DATE() để bao trọn cả ngày biên.
+    $fromIso = rp_dd_valid_date_iso($from);
+    $toIso   = rp_dd_valid_date_iso($to);
+    if ($fromIso !== '' && $toIso !== '' && $fromIso > $toIso) { $tmp = $fromIso; $fromIso = $toIso; $toIso = $tmp; }
+    if ($fromIso !== '') $conds[] = "DATE(e.created_at) >= '" . escape_string($fromIso) . "'";
+    if ($toIso   !== '') $conds[] = "DATE(e.created_at) <= '" . escape_string($toIso) . "'";
     $extra = $conds ? ('WHERE ' . implode(' AND ', $conds)) : '';
     $rows = db_fetch_array(
         "SELECT e.id, e.customer_id, e.quantity, e.goods_value, e.weight, e.created_at,
@@ -2352,24 +2505,29 @@ function rp_dd_exports_all($page = 1, $per_page = 10, $customer_id = null, $keyw
     $total = (int) db_num_rows("SELECT e.id FROM sales_warehouse_export_invoices e LEFT JOIN customers c ON c.id = e.customer_id $extra");
 
     // Totals trên TOÀN BỘ kết quả lọc (không chỉ trang hiện tại) — value phải qua value-map (không SUM(goods_value) trực tiếp).
+    // Trước 2026-07-29 khối này cộng giá-trị-cả-ngày MỘT LẦN CHO MỖI PHIẾU nên ngày nhiều đơn bị tính lặp;
+    // giờ mỗi phiếu góp đúng giá trị của riêng nó.
     $allRows = db_fetch_array(
         "SELECT e.customer_id, e.quantity, e.weight, e.goods_value, e.created_at
          FROM sales_warehouse_export_invoices e LEFT JOIN customers c ON c.id = e.customer_id $extra"
     ) ?: [];
-    $allValueMap = rp_dd_export_invoice_value_map($allRows);
+    $allBatchMap  = rp_dd_export_batch_value_map($allRows);
+    $allValueMap  = rp_dd_export_invoice_value_map($allRows);
+    $allDayCounts = rp_dd_export_day_invoice_counts($allRows);
     $sumQty = 0.0; $sumWeight = 0.0; $sumValue = 0.0;
     foreach ($allRows as $ar) {
-        $key = (int) $ar['customer_id'] . '|' . date('Y-m-d', strtotime($ar['created_at']));
         $sumQty += (float) $ar['quantity'];
         $sumWeight += (float) $ar['weight'];
-        $sumValue += $allValueMap[$key] ?? ((float) $ar['goods_value'] * rp_dd_goods_value_scale());
+        $sumValue += rp_dd_export_invoice_value($ar, $allBatchMap, $allValueMap, $allDayCounts);
     }
 
-    $valueMap = rp_dd_export_invoice_value_map($rows);
+    $batchMap  = rp_dd_export_batch_value_map($rows);
+    $valueMap  = rp_dd_export_invoice_value_map($rows);
+    $dayCounts = rp_dd_export_day_invoice_counts($rows);
     $out = [];
     foreach ($rows as $r) {
         $dateIso = date('Y-m-d', strtotime($r['created_at']));
-        $key = (int) $r['customer_id'] . '|' . $dateIso;
+        $dayKey  = (int) $r['customer_id'] . '|' . $dateIso;
         $out[] = [
             'id'             => (int) $r['id'],
             'customer_id'    => (int) $r['customer_id'],
@@ -2377,16 +2535,28 @@ function rp_dd_exports_all($page = 1, $per_page = 10, $customer_id = null, $keyw
             'color'          => (string) ($r['secondary_color'] ?: ''),
             'quantity'       => (float) $r['quantity'],
             'weight'         => (float) $r['weight'],
-            'value'          => $valueMap[$key] ?? ((float) $r['goods_value'] * rp_dd_goods_value_scale()),
+            'value'          => rp_dd_export_invoice_value($r, $batchMap, $valueMap, $dayCounts),
             'date_label'     => rp_dd_short_date($r['created_at']),
             'date_iso'       => $dateIso,
-            'items'          => rp_dd_export_invoice_items((int) $r['customer_id'], $dateIso),
+            // Giờ lấy hàng: để phân biệt 2 đơn CÙNG NGÀY của cùng 1 khách; chỉ hiện khi ngày đó >1 phiếu.
+            'time_label'     => date('H:i', strtotime($r['created_at'])),
+            'same_day_count' => (int) ($dayCounts[$dayKey] ?? 1),
+            'items'          => rp_dd_export_items_for_invoice($r, $dayCounts),
         ];
     }
     return [
         'rows' => $out, 'page' => $page, 'per_page' => $per_page, 'total' => $total, 'total_pages' => max(1, (int) ceil($total / $per_page)),
-        'totals' => ['quantity' => $sumQty, 'weight' => $sumWeight, 'value' => $sumValue],
+        'totals' => ['quantity' => $sumQty, 'weight' => $sumWeight, 'value' => $sumValue, 'count' => count($allRows)],
+        'from' => $fromIso, 'to' => $toIso,
     ];
+}
+
+/** 'Y-m-d' hợp lệ thì trả lại, còn lại trả ''. Dùng cho các bộ lọc từ ngày/đến ngày. */
+function rp_dd_valid_date_iso($v)
+{
+    $v = trim((string) $v);
+    if ($v === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $v)) return '';
+    return $v;
 }
 
 /* ============================================================
@@ -3284,7 +3454,7 @@ function rp_dd_attendance_today()
 
 /** Số ngày lấy dữ liệu "bán chạy / dùng nhiều" và số mục hiển thị mỗi cột. */
 if (!defined('RP_DD_SW_WINDOW_DAYS')) define('RP_DD_SW_WINDOW_DAYS', 90);
-if (!defined('RP_DD_SW_TOP'))         define('RP_DD_SW_TOP', 4);
+if (!defined('RP_DD_SW_TOP'))         define('RP_DD_SW_TOP', 6);   // 6 mục = 2 dòng x 3 cột
 /** Mặc định "đảm bảo bán/dùng" trong 2 tuần (đổi được trong bánh răng của khối). */
 if (!defined('RP_DD_SW_COVER_DEFAULT')) define('RP_DD_SW_COVER_DEFAULT', 14);
 

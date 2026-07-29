@@ -537,14 +537,20 @@ function daily_dashboard_imports_fullAction()
     exit;
 }
 
-/** AJAX: modal đầy đủ "Xuất kho" (sidebar + nút "Sales Order" trong chart). */
+/** AJAX: modal đầy đủ "Xuất kho" (sidebar + nút "Sales Order" trong chart).
+ *  per_page/from/to do modal gửi lên (chọn số dòng + lọc từ ngày đến ngày); tổng ở chân
+ *  modal tính trên TOÀN BỘ kết quả của chính bộ lọc này. */
 function daily_dashboard_exports_fullAction()
 {
     header('Content-Type: application/json; charset=utf-8');
     $page = (int) ($_POST['page'] ?? 1);
     $cid  = (int) ($_POST['customer_id'] ?? 0);
     $kw   = (string) ($_POST['keyword'] ?? '');
-    echo json_encode(['success' => true, 'data' => rp_dd_exports_all($page, 10, $cid ?: null, $kw)], JSON_UNESCAPED_UNICODE);
+    $from = (string) ($_POST['from'] ?? '');
+    $to   = (string) ($_POST['to'] ?? '');
+    $per  = (int) ($_POST['per_page'] ?? 10);
+    if (!in_array($per, [10, 20, 50, 100], true)) $per = 10;
+    echo json_encode(['success' => true, 'data' => rp_dd_exports_all($page, $per, $cid ?: null, $kw, $from, $to)], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

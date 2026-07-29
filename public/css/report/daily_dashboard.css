@@ -2072,6 +2072,90 @@
     color: #1f2937;
 }
 
+/* Nhãn phạm vi đang tính tổng — nằm bên TRÁI cụm số (khối tổng canh phải) để nói rõ
+   tổng là của bộ lọc hiện tại chứ không phải toàn thời gian. */
+.dd2-totals-scope {
+    float: left;
+    font-size: 12.5px;
+    color: #9ca3af;
+}
+
+/* ---- Thanh lọc modal danh sách đầy đủ (2026-07-29): từ ngày → đến ngày + số dòng/trang ---- */
+.dd2-full-list-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 10px 0 12px;
+    border-bottom: 1px solid #f0f1f3;
+    margin-bottom: 4px;
+}
+
+.dd2-fl-range,
+.dd2-fl-pagesize {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.dd2-fl-range label,
+.dd2-fl-pagesize label {
+    font-size: 13px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.dd2-fl-date,
+.dd2-fl-select {
+    height: 34px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0 10px;
+    font-size: 13.5px;
+    color: #1f2937;
+    background: #f9fafb;
+    font-family: inherit;
+}
+
+.dd2-fl-date:focus,
+.dd2-fl-select:focus {
+    outline: none;
+    border-color: #16a34a;
+    background: #fff;
+}
+
+.dd2-fl-clear {
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.dd2-fl-clear:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
+/* Giờ lấy hàng — chỉ hiện ở phiếu thuộc ngày mà khách lấy nhiều hơn 1 đơn. */
+.dd2-time-chip {
+    flex: 0 0 auto;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    padding: 1px 7px;
+    margin-left: 6px;
+    white-space: nowrap;
+}
+
 .dd2-prod-full-table {
     font-size: 13.5px;
 }
@@ -2127,7 +2211,8 @@
 }
 
 /* ---- Khối "Theo dõi tồn kho": 2 khối con xếp TRÊN/DƯỚI (thành phẩm rồi nguyên liệu),
-       mỗi khối con dàn 4 mục thành lưới 2 cột. Chỉ 1 đường kẻ xám mờ ngăn giữa 2 khối con. ---- */
+       mỗi khối con dàn 6 mục thành lưới 3 cột (2 dòng x 3 mục). Chỉ 1 đường kẻ xám mờ
+       ngăn giữa 2 khối con. ---- */
 .dd2-sw-cols {
     display: flex;
     flex-direction: column;
@@ -2171,10 +2256,12 @@
     padding-top: 16px;
 }
 
+/* 3 mục/dòng: cột hẹp hơn nên khoảng cách ngang giảm còn 12px, tên dài tự cắt bằng
+   ellipsis của .dd2-sw-name (min-width:0 ở .dd2-sw-row/.dd2-sw-main giữ cho cột không phình). */
 .dd2-sw-list {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 12px;
     flex: 1 1 auto;
     align-content: center;
 }
@@ -2670,4 +2757,7 @@
     .dd2-col-export .dd2-chart-box { width: 100%; margin: 0; }
     /* Thanh icon dọc -> cuộn ngang khi chật */
     .dd2-sidebar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    /* "Theo dõi tồn kho": 3 mục/dòng chỉ đủ chỗ trên desktop; ở phone giữ 2 mục/dòng
+       (6 mục -> 3 dòng) để pin + tên không bị bóp. */
+    .dd2-sw-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

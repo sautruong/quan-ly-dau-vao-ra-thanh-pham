@@ -110,10 +110,14 @@
         if (!list || !list.length) return '<p class="dd2-empty">Chưa có phiếu xuất kho.</p>';
         return list.map(function (r) {
             var style = r.color ? ' style="--dd2-accent:' + escapeHtml(r.color) + ';"' : '';
-            return '<div class="dd2-export-row"' + style + '>' +
+            // Khách lấy nhiều đơn trong cùng 1 ngày -> kèm giờ lấy hàng để phân biệt từng phiếu
+            // (giá trị mỗi dòng giờ là của RIÊNG phiếu đó, không còn là tổng cả ngày).
+            var multi = Number(r.same_day_count) > 1 && r.time_label;
+            var timeChip = multi ? '<span class="dd2-time-chip" title="Giờ lấy hàng — khách có ' + r.same_day_count + ' đơn trong ngày">' + escapeHtml(r.time_label) + '</span>' : '';
+            return '<div class="dd2-export-row' + (multi ? ' is-multi-day' : '') + '"' + style + '>' +
                 '<div class="dd2-name-cell">' +
                 '<button type="button" class="dd2-entity-link" data-customer-id="' + r.customer_id + '" data-date-iso="' + escapeHtml(r.date_iso) + '">' + escapeHtml(r.customer_label) + '</button>' +
-                '<span class="dd2-date-chip">/ ' + escapeHtml(r.date_label) + '</span>' +
+                '<span class="dd2-date-chip">/ ' + escapeHtml(r.date_label) + '</span>' + timeChip +
                 '</div>' +
                 '<span class="dd2-qty">' + fmtNum(r.quantity) + ' SP</span>' +
                 '<span class="dd2-weight">' + fmtNum(r.weight) + ' kg</span>' +
@@ -298,7 +302,7 @@
     }
 
     /* ---------------- Khối "Theo dõi tồn kho" (hàng dưới cùng) ---------------- */
-    var SW_MIN_ROWS = 4;
+    var SW_MIN_ROWS = 6;   // khớp $SW_MIN_ROWS phía PHP (2 dòng x 3 cột)
     var swWindow = 90, swCover = 14;   // cập nhật lại theo dữ liệu server mỗi lần nạp
 
     // Mirror dd2_battery() phía PHP.
@@ -651,9 +655,15 @@
     var flSearchInput = document.getElementById('dd2-full-list-search');
     var flFilterSelect = document.getElementById('dd2-full-list-filter');
     var flTotalsEl = document.getElementById('dd2-full-list-totals');
+    var flToolsEl = document.getElementById('dd2-full-list-tools');
+    var flFromInput = document.getElementById('dd2-full-list-from');
+    var flToInput = document.getElementById('dd2-full-list-to');
+    var flRangeClear = document.getElementById('dd2-full-list-range-clear');
+    var flPageSizeSel = document.getElementById('dd2-full-list-pagesize');
     var fullListAction = '', fullListParams = {}, fullListRenderer = null, fullListTotals = null;
 
-    /** opts: { searchParam, searchPlaceholder, filterParam, totals: function(data){return htmlString} } — tất cả tùy chọn, bỏ trống thì ẩn. */
+    /** opts: { searchParam, searchPlaceholder, filterParam, dateRange, pageSize,
+     *          totals: function(data){return htmlString} } — tất cả tùy chọn, bỏ trống thì ẩn. */
     function openFullListModal(title, action, renderer, extraParams, opts) {
         if (!fullListModal) return;
         opts = opts || {};
@@ -664,6 +674,9 @@
         fullListRenderer = renderer;
         fullListParams = extraParams || {};
         fullListTotals = opts.totals || null;
+
+        // Thanh lọc ngày + số dòng/trang: chỉ hiện cho danh sách nào khai dùng.
+        wireFullListTools(opts);
 
         if (opts.searchParam) {
             flSearchInput.hidden = false;
@@ -695,13 +708,70 @@
         loadFullListPage(1);
     }
     function closeFullListModal() { if (fullListModal) { fullListModal.classList.remove('is-open'); fullListModal.setAttribute('aria-hidden', 'true'); } }
+
+    /** Bật/tắt + nối dây thanh lọc "từ ngày → đến ngày" và "số dòng/trang".
+     *  Mọi thay đổi đều nạp lại từ trang 1 (đổi bộ lọc mà giữ trang cũ dễ ra trang trắng). */
+    function wireFullListTools(opts) {
+        var useRange = !!opts.dateRange, usePage = !!opts.pageSize;
+        if (flToolsEl) flToolsEl.hidden = !(useRange || usePage);
+        var rangeBox = flToolsEl ? flToolsEl.querySelector('.dd2-fl-range') : null;
+        var pageBox = flToolsEl ? flToolsEl.querySelector('.dd2-fl-pagesize') : null;
+        if (rangeBox) rangeBox.hidden = !useRange;
+        if (pageBox) pageBox.hidden = !usePage;
+
+        if (useRange && flFromInput && flToInput) {
+            flFromInput.value = '';
+            flToInput.value = '';
+            delete fullListParams.from;
+            delete fullListParams.to;
+            var onRange = function () {
+                var f = flFromInput.value, t = flToInput.value;
+                // Chặn khoảng ngược: chọn "đến ngày" trước "từ ngày" thì kéo đầu kia theo.
+                if (f && t && f > t) { if (this === flFromInput) { flToInput.value = f; t = f; } else { flFromInput.value = t; f = t; } }
+                fullListParams.from = f;
+                fullListParams.to = t;
+                if (flRangeClear) flRangeClear.hidden = !(f || t);
+                loadFullListPage(1);
+            };
+            flFromInput.onchange = onRange;
+            flToInput.onchange = onRange;
+            if (flRangeClear) {
+                flRangeClear.hidden = true;
+                flRangeClear.onclick = function () {
+                    flFromInput.value = ''; flToInput.value = '';
+                    fullListParams.from = ''; fullListParams.to = '';
+                    flRangeClear.hidden = true;
+                    loadFullListPage(1);
+                };
+            }
+        } else {
+            if (flFromInput) flFromInput.onchange = null;
+            if (flToInput) flToInput.onchange = null;
+            if (flRangeClear) flRangeClear.onclick = null;
+        }
+
+        if (usePage && flPageSizeSel) {
+            flPageSizeSel.value = '10';
+            fullListParams.per_page = 10;
+            flPageSizeSel.onchange = function () {
+                fullListParams.per_page = parseInt(flPageSizeSel.value, 10) || 10;
+                loadFullListPage(1);
+            };
+        } else {
+            if (flPageSizeSel) flPageSizeSel.onchange = null;
+            delete fullListParams.per_page;
+        }
+    }
+
     function loadFullListPage(page) {
         var params = Object.assign({ page: page }, fullListParams);
         document.getElementById('dd2-full-list-body').innerHTML = '<p class="dd2-empty">Đang tải...</p>';
         postForm(fullListAction, params).then(function (res) {
             if (!res || !res.success) return;
             var data = res.data;
-            document.getElementById('dd2-full-list-body').innerHTML = fullListRenderer(data.rows);
+            var body = document.getElementById('dd2-full-list-body');
+            body.innerHTML = fullListRenderer(data.rows);
+            body.scrollTop = 0;   // đổi trang/bộ lọc thì xem lại từ dòng đầu
             renderBatchPager(document.getElementById('dd2-full-list-pager'), data.page, data.total_pages, loadFullListPage);
             if (fullListTotals && flTotalsEl) {
                 flTotalsEl.hidden = false;
@@ -751,9 +821,21 @@
         var t = data.totals || {};
         return 'GTNK: <b>' + fmtMoney(t.inventory_value) + '</b> &nbsp;·&nbsp; CPMH: <b>' + fmtMoney(t.purchase_cost) + '</b>';
     }
+    // Tổng tính trên TOÀN BỘ phiếu khớp bộ lọc hiện tại (mọi trang), không phải toàn thời gian.
     function flExportsTotals(data) {
         var t = data.totals || {};
-        return 'SL: <b>' + fmtNum(t.quantity) + '</b> &nbsp;·&nbsp; Khối lượng: <b>' + fmtNum(t.weight) + ' kg</b> &nbsp;·&nbsp; Doanh thu: <b>' + fmtMoney(t.value) + '</b>';
+        var scope = (data.from || data.to)
+            ? (fmtDateVn(data.from) || 'đầu kỳ') + ' → ' + (fmtDateVn(data.to) || 'nay')
+            : 'tất cả';
+        return '<span class="dd2-totals-scope">' + escapeHtml(scope) + ' · ' + fmtNum(t.count || 0) + ' phiếu</span>' +
+            'SL: <b>' + fmtNum(t.quantity) + '</b> &nbsp;·&nbsp; Khối lượng: <b>' + fmtNum(t.weight) + ' kg</b> &nbsp;·&nbsp; Doanh thu: <b>' + fmtMoney(t.value) + '</b>';
+    }
+
+    /** '2026-07-25' -> '25/07/2026'; rỗng/không hợp lệ -> ''. */
+    function fmtDateVn(iso) {
+        if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+        var p = iso.split('-');
+        return p[2] + '/' + p[1] + '/' + p[0];
     }
     function flOutputTotals(data) {
         var t = data.totals || {};
@@ -763,7 +845,7 @@
     function wireSidebarIcons() {
         var map = {
             imports: ['Nhập kho', 'daily_dashboard_imports_full', rowsImports, { searchParam: 'keyword', searchPlaceholder: 'Tìm nhà cung cấp...', totals: flImportsTotals }],
-            exports: ['Xuất kho', 'daily_dashboard_exports_full', rowsExports, { searchParam: 'keyword', searchPlaceholder: 'Tìm khách hàng...', totals: flExportsTotals }],
+            exports: ['Xuất kho', 'daily_dashboard_exports_full', rowsExports, { searchParam: 'keyword', searchPlaceholder: 'Tìm khách hàng...', dateRange: true, pageSize: true, totals: flExportsTotals }],
             output: ['Sản lượng', 'daily_dashboard_output_full', rowsOutputFull, { searchParam: 'keyword', searchPlaceholder: 'Tìm sản phẩm...', totals: flOutputTotals }],
             material_orders: ['Đặt hàng nguyên liệu', 'daily_dashboard_material_orders_full', rowsMaterialOrdersFull, {}],
             branch: ['Chi nhánh đặt hàng', 'daily_dashboard_branch_full', rowsBranchFull, {}],
@@ -1926,7 +2008,7 @@
         });
         var salesOrderBtn = document.getElementById('dd2-export-sales-order-btn');
         if (salesOrderBtn) salesOrderBtn.addEventListener('click', function () {
-            openFullListModal('Xuất kho', 'daily_dashboard_exports_full', rowsExports, {}, { searchParam: 'keyword', searchPlaceholder: 'Tìm khách hàng...', totals: flExportsTotals });
+            openFullListModal('Xuất kho', 'daily_dashboard_exports_full', rowsExports, {}, { searchParam: 'keyword', searchPlaceholder: 'Tìm khách hàng...', dateRange: true, pageSize: true, totals: flExportsTotals });
         });
 
         wireDayNav();

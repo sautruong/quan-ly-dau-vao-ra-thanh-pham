@@ -86,7 +86,7 @@ function dd2_stock_watch_row($m, $kind)
 
 $MIN_PROD_ROWS = 5;
 $PROD_PAGE_SIZE = 5;
-$SW_MIN_ROWS   = 4;   // đệm cho 2 cột "Theo dõi tồn kho" luôn cao bằng nhau
+$SW_MIN_ROWS   = 6;   // đệm cho 2 khối "Theo dõi tồn kho" luôn cao bằng nhau (2 dòng x 3 cột)
 $today_label = strtolower(rp_dd_month_short((int) date('n')));
 $page_date_label = date('d') . ' ' . $today_label . ', ' . date('Y');
 
@@ -451,7 +451,7 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                                     <i class="fa-solid fa-gear"></i>
                                 </button>
                             </div>
-                            <!-- 2 khối con xếp TRÊN/DƯỚI, mỗi khối 4 mục dàn 2 cột (2 mục/dòng);
+                            <!-- 2 khối con xếp TRÊN/DƯỚI, mỗi khối 6 mục dàn 3 cột (3 mục/dòng);
                                  chỉ có 1 đường kẻ xám mờ ngăn giữa 2 khối con. -->
                             <div class="dd2-sw-cols">
                                 <div class="dd2-sw-col">
@@ -854,6 +854,28 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                         <option value="Chi">Chi</option>
                     </select>
                     <button type="button" class="app-modal-close" data-dd2-full-list-close aria-label="Đóng">&times;</button>
+                </div>
+            </div>
+            <!-- Thanh lọc (2026-07-29): từ ngày → đến ngày + số dòng/trang. Ẩn mặc định,
+                 chỉ bật cho danh sách nào khai dateRange/pageSize (xem openFullListModal). -->
+            <div class="dd2-full-list-tools" id="dd2-full-list-tools" hidden>
+                <div class="dd2-fl-range">
+                    <label for="dd2-full-list-from">Từ ngày</label>
+                    <input type="date" id="dd2-full-list-from" class="dd2-fl-date">
+                    <label for="dd2-full-list-to">đến</label>
+                    <input type="date" id="dd2-full-list-to" class="dd2-fl-date">
+                    <button type="button" class="dd2-fl-clear" id="dd2-full-list-range-clear" hidden>
+                        <i class="fa-solid fa-xmark"></i> Bỏ lọc
+                    </button>
+                </div>
+                <div class="dd2-fl-pagesize">
+                    <label for="dd2-full-list-pagesize">Hiển thị</label>
+                    <select id="dd2-full-list-pagesize" class="dd2-fl-select">
+                        <option value="10">10 dòng</option>
+                        <option value="20">20 dòng</option>
+                        <option value="50">50 dòng</option>
+                        <option value="100">100 dòng</option>
+                    </select>
                 </div>
             </div>
             <div class="app-modal-body">
