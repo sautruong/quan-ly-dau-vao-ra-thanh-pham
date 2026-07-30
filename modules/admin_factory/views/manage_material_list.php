@@ -54,6 +54,15 @@ $classifications = function_exists('admin_material_classification_options')
         .admin-table .is-center,
         .admin-table .is-center input { text-align: center; }
 
+        /* .content (dashboard.css) là flex column có align-items:center và chỉ cuộn bên trong.
+           Bảng 10 cột rộng hơn khung -> flex CENTER đẩy bảng lệch sang trái nửa phần tràn,
+           mà scrollLeft không nhận số âm nên phần lệch đó KHÔNG kéo tới được: cột đầu
+           "Tên nguyên vật liệu" bị che mất một phần dù đã cuộn sát biên trái.
+           flex-start = mép trái bảng luôn trùng mép trái khung, chỉ tràn sang PHẢI (cuộn tới được).
+           Toolbar cho stretch để thanh tìm kiếm/nút vẫn trải đủ bề ngang như trước. */
+        .content > .admin-table { align-self: flex-start; }
+        .content > .toolbar     { align-self: stretch; }
+
         /* Cố định cụm toolbar + tiêu đề bảng khi cuộn. */
         .content .toolbar {
             position: sticky; top: 0; z-index: 30;
@@ -72,6 +81,9 @@ $classifications = function_exists('admin_material_classification_options')
             height: 60px; background: #fff;
         }
         .col-name      { min-width: 280px; }
+        /* 2 cột tên phụ (Tên thường gọi / Tên trên nhãn) hẹp hơn cột tên chính để bảng
+           10 cột đỡ phải cuộn ngang. */
+        .col-name-sm   { min-width: 200px; }
         .col-unit      { min-width: 80px; }
         .col-classify  { min-width: 150px; position: relative; }
         .col-supplier  { min-width: 250px; position: relative; }
@@ -260,8 +272,8 @@ $classifications = function_exists('admin_material_classification_options')
                 <thead>
                     <tr>
                         <th class="col-name">Tên nguyên vật liệu</th>
-                        <th class="col-name">Tên thường gọi</th>
-                        <th class="col-name">Tên trên nhãn</th>
+                        <th class="col-name-sm">Tên thường gọi</th>
+                        <th class="col-name-sm">Tên trên nhãn</th>
                         <th class="col-unit is-center">Đơn vị</th>
                         <th class="col-classify">
                             <span class="th-flex">Phân loại
@@ -299,10 +311,10 @@ $classifications = function_exists('admin_material_classification_options')
                         <td class="col-name">
                             <input type="text" data-field="material_name" value="<?php echo $name; ?>">
                         </td>
-                        <td class="col-name">
+                        <td class="col-name-sm">
                             <input type="text" data-field="common_material_name" value="<?php echo $common; ?>" placeholder="Tên thường gọi...">
                         </td>
-                        <td class="col-name">
+                        <td class="col-name-sm">
                             <input type="text" data-field="label_name" value="<?php echo $label; ?>" placeholder="Tên in trên nhãn...">
                         </td>
                         <td class="col-unit is-center">

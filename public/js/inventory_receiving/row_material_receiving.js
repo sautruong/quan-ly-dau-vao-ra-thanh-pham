@@ -534,7 +534,7 @@
             uploadInvoices(res.invoice_id);
             applyHistoryResponse(res);
             clearForm();
-            showPriceChangeModal(res.price_changes || [], res.order_match || null);
+            showPriceChangeModal(res.price_changes || [], res.order_matches || (res.order_match ? [res.order_match] : []));
         });
     }
 
@@ -557,7 +557,7 @@
             uploadInvoices(res.invoice_id);
             applyHistoryResponse(res);
             clearForm();
-            showPriceChangeModal(res.price_changes || [], res.order_match || null);
+            showPriceChangeModal(res.price_changes || [], res.order_matches || (res.order_match ? [res.order_match] : []));
         });
     }
 
@@ -649,9 +649,13 @@
         return sign + (Math.round(n * 100) / 100).toLocaleString('en-US') + '%';
     }
 
-    function showPriceChangeModal(changes, orderMatch) {
+    // orderMatches: mảng đơn đặt hàng vừa được tự động xác nhận "Đã nhận" (1 phiếu có thể
+    // trả cho NHIỀU đơn của cùng NCC). Vẫn nhận 1 object đơn lẻ cho tương thích bản cũ.
+    function showPriceChangeModal(changes, orderMatches) {
         changes = Array.isArray(changes) ? changes : [];
-        if (!changes.length && !orderMatch) {
+        if (orderMatches && !Array.isArray(orderMatches)) orderMatches = [orderMatches];
+        orderMatches = Array.isArray(orderMatches) ? orderMatches.filter(Boolean) : [];
+        if (!changes.length && !orderMatches.length) {
             return;
         }
         let ov = document.getElementById('ppc-modal-overlay');
@@ -711,23 +715,42 @@
         }).join('');
 
         const omBox = ov.querySelector('.ppc-order-match');
-        if (orderMatch) {
-            const diff = Number(orderMatch.diff) || 0;
-            const diffCls = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
-            omBox.innerHTML =
-                '<div class="ppc-om-card' + (diff !== 0 ? ' has-diff' : '') + '">' +
-                    '<div class="ppc-om-title"><i class="fa-solid fa-circle-check"></i> Đơn đặt hàng #' + orderMatch.order_id +
-                        ' (' + escapeHtml(orderMatch.supplier_name || '') + ', ' + orderMatch.item_count + ' mặt hàng)' +
+        if (orderMatches.length) {
+            let html = '';
+            // Nhiều đơn cùng về 1 phiếu -> thêm 1 dòng tổng để user đối chiếu nhanh.
+            if (orderMatches.length > 1) {
+                const gExp = Number(orderMatches[0].group_expected_total) || 0;
+                const gAct = Number(orderMatches[0].group_actual_total) || 0;
+                const gDiff = Math.round(gAct) - Math.round(gExp);
+                html +=
+                    '<div class="ppc-om-card' + (gDiff !== 0 ? ' has-diff' : '') + '">' +
+                        '<div class="ppc-om-title"><i class="fa-solid fa-layer-group"></i> ' +
+                            orderMatches.length + ' đơn đặt hàng của ' + escapeHtml(orderMatches[0].supplier_name || '') +
+                            ' cùng về 1 phiếu nhập này.</div>' +
+                        '<div class="ppc-om-row">Tổng dự kiến: <b>' + fmtMoney(gExp) + '</b>' +
+                            ' &nbsp;·&nbsp; Tổng thực nhập: <b>' + fmtMoney(gAct) + '</b>' +
+                            (gDiff === 0 ? ' &nbsp;·&nbsp; khớp giá trị.' : '') +
+                        '</div>' +
+                    '</div>';
+            }
+            html += orderMatches.map(om => {
+                const diff = Number(om.diff) || 0;
+                const diffCls = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+                return '<div class="ppc-om-card' + (diff !== 0 ? ' has-diff' : '') + '">' +
+                    '<div class="ppc-om-title"><i class="fa-solid fa-circle-check"></i> Đơn đặt hàng #' + om.order_id +
+                        ' (' + escapeHtml(om.supplier_name || '') + ', ' + om.item_count + ' mặt hàng)' +
                         ' đã tự động xác nhận "Đã nhận".</div>' +
-                    '<div class="ppc-om-row">Dự kiến: <b>' + fmtMoney(orderMatch.expected_value) + '</b>' +
-                        ' &nbsp;·&nbsp; Thực nhập: <b>' + fmtMoney(orderMatch.actual_value) + '</b>' +
+                    '<div class="ppc-om-row">Dự kiến: <b>' + fmtMoney(om.expected_value) + '</b>' +
+                        ' &nbsp;·&nbsp; Thực nhập: <b>' + fmtMoney(om.actual_value) + '</b>' +
                         (diff !== 0
                             ? ' &nbsp;·&nbsp; <span class="ppc-om-warn ' + diffCls + '">' +
                                 '<i class="fa-solid fa-triangle-exclamation"></i> Chênh ' + fmtMoney(Math.abs(diff)) +
-                                ' (' + fmtRate(orderMatch.diff_rate) + ') so với dự kiến — NVL đang biến động giá.</span>'
+                                ' (' + fmtRate(om.diff_rate) + ') so với dự kiến — NVL đang biến động giá.</span>'
                             : '') +
                     '</div>' +
                 '</div>';
+            }).join('');
+            omBox.innerHTML = html;
             omBox.style.display = '';
         } else {
             omBox.innerHTML = '';

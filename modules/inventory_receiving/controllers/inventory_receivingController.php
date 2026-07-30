@@ -294,18 +294,22 @@ function record_row_materialAction()
     ppc_reset();
     // Đọc TRƯỚC khi ghi phiếu (ir_record_batch sẽ ghi đè material_purchase_prices),
     // để "giá trị dự kiến" còn lấy được giá lúc đặt hàng. Chỉ đọc, chưa ghi gì.
-    $order_match = om_match_order_for_receipt($supplier_id, ir_extract_material_lines($items));
+    // 1 phiếu có thể trả cho NHIỀU đơn của cùng NCC (tách nhiều lần đặt, giao gộp 1 lần).
+    $order_matches = om_match_orders_for_receipt($supplier_id, ir_extract_material_lines($items));
     // Tương tự cho đơn cà phê (oc_orders): khớp theo bộ DÒNG THÀNH PHẨM của phiếu.
     $coffee_match = oc_match_order_for_receipt($supplier_id, ir_extract_product_lines($items));
     $invoice_id  = ir_record_batch($items, $supplier_id, $ca, $je);
 
-    if ($invoice_id > 0 && $order_match) {
-        // Phiếu ghi thành công + khớp đúng bộ NVL với 1 đơn đã lưu -> tự xác nhận "Đã nhận",
-        // kèm snapshot giá trị dự kiến/thực nhận để daily_dashboard hiển thị so sánh.
-        om_set_received($order_match['order_id'], true, $order_match['expected_value'], $order_match['actual_value']);
+    if ($invoice_id > 0 && $order_matches) {
+        // Phiếu ghi thành công + khớp bộ NVL với các đơn đã lưu -> tự xác nhận "Đã nhận" cho
+        // TẤT CẢ đơn trong tổ hợp, kèm snapshot dự kiến/thực nhận để daily_dashboard so sánh.
+        foreach ($order_matches as $m) {
+            om_set_received($m['order_id'], true, $m['expected_value'], $m['actual_value']);
+        }
     } else {
-        $order_match = null;
+        $order_matches = [];
     }
+    $order_match = $order_matches[0] ?? null;   // giữ khóa cũ cho client bản trước
     if ($invoice_id > 0 && $coffee_match) {
         oc_set_received($coffee_match['order_id'], true, $coffee_match['expected_value'], $coffee_match['actual_value']);
     } else {
@@ -317,6 +321,7 @@ function record_row_materialAction()
         'invoice_id'   => $invoice_id,
         'price_changes'=> ppc_take(),
         'order_match'  => $order_match,
+        'order_matches'=> $order_matches,
         'coffee_match' => $coffee_match,
         'history'      => ir_get_history_page(1, max(1, ir_count_batches())),
         'history_total'=> ir_count_batches(),

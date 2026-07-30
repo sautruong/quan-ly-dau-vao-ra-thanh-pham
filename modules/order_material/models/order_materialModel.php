@@ -777,40 +777,205 @@ function om_find_matching_order($supplier_id, array $material_ids)
  */
 function om_match_order_for_receipt($supplier_id, array $receipt_lines)
 {
-    $mids = [];
+    $matches = om_match_orders_for_receipt($supplier_id, $receipt_lines);
+    return $matches ? $matches[0] : null;
+}
+
+/**
+ * Bản NHIỀU ĐƠN của om_match_order_for_receipt(): 1 phiếu nhập có thể trả cho NHIỀU đơn
+ * đã lưu của CÙNG NCC — tình huống thật là user tách 2 (hoặc nhiều) lần đặt nhưng NCC giao
+ * gộp 1 lần nên chỉ nhập 1 phiếu chung. Khi đó cả 2 đơn đều phải đóng dấu "ĐÃ NHẬN", và
+ * nếu tổng tiền phiếu = tổng giá trị dự kiến các đơn thì KHÔNG được gạch giá (không lệch).
+ *
+ * Thứ tự ưu tiên chọn tổ hợp đơn (đều phải phủ ĐÚNG bộ NVL của phiếu — không thiếu, không thừa):
+ *  1) Tổ hợp có TỔNG dự kiến khớp tiền phiếu (so theo VNĐ làm tròn, giống daily_dashboard);
+ *     nhiều tổ hợp cùng khớp thì lấy tổ hợp NHIỀU ĐƠN nhất rồi FIFO. Nhờ (1) mà 2 đơn giống
+ *     nhau y hệt không bị đánh dấu oan: phiếu chỉ trả tiền 1 đơn thì chỉ 1 đơn được chọn.
+ *  2) Một đơn duy nhất trùng đúng bộ NVL — HÀNH VI CŨ, giữ nguyên cho case đang chạy.
+ *  3) Tổ hợp nhiều đơn KHÔNG trùng NVL nhau (đơn tách rõ ràng): vẫn đóng dấu "ĐÃ NHẬN" cho
+ *     tất cả, tiền lệch thì card tự gạch giá như thường.
+ *
+ * Tiền thực nhập được chia cho từng đơn theo TỈ LỆ giá trị dự kiến (phần dư dồn vào đơn cuối
+ * để tổng không lệch): tổng khớp thì từng đơn cũng khớp -> không đơn nào bị gạch giá.
+ *
+ * $receipt_lines: [ ['material_id'=>, 'qty'=>, 'price_incl'=>], ... ]
+ * Trả về mảng các match (shape từng phần tử giống om_match_order_for_receipt, thêm group_*),
+ * hoặc [] nếu không khớp đơn nào. CHỈ ĐỌC — việc đánh dấu do om_set_received() làm sau.
+ */
+function om_match_orders_for_receipt($supplier_id, array $receipt_lines)
+{
+    om_ensure_tables();
+    $sid = (int) $supplier_id;
+    if ($sid <= 0) return [];
+
+    // Bộ NVL + tổng tiền thực nhập của phiếu.
+    $rset = [];
+    $actualTotal = 0.0;
     foreach ($receipt_lines as $l) {
         $mid = (int) ($l['material_id'] ?? 0);
-        if ($mid > 0) $mids[] = $mid;
+        if ($mid <= 0) continue;
+        $rset[$mid] = true;
+        $actualTotal += (float) ($l['qty'] ?? 0) * (float) ($l['price_incl'] ?? 0);
     }
-    $order = om_find_matching_order($supplier_id, $mids);
-    if (!$order) return null;
+    if (empty($rset)) return [];
 
-    $orderMids = [];
-    foreach ($order['order_items'] as $it) $orderMids[] = (int) ($it['material_id'] ?? 0);
-    $priceMap = om_material_price_map($orderMids);
-    $expected = 0.0;
-    foreach ($order['order_items'] as $it) {
-        $mid = (int) ($it['material_id'] ?? 0);
-        $qty = (float) ($it['qty'] ?? 0);
-        $expected += $qty * ($priceMap[$mid] ?? 0.0);
+    $rows = db_fetch_array(
+        "SELECT id, supplier_id, supplier_name, order_items, note,
+                status, received, received_at, created_at
+         FROM material_purchase_orders
+         WHERE supplier_id = $sid AND hidden = 0 AND received = 0
+         ORDER BY created_at ASC, id ASC"
+    ) ?: [];
+
+    // Ứng viên: đơn không chứa NVL nào NGOÀI bộ NVL của phiếu (đơn có NVL lạ thì chắc chắn
+    // không phải đơn mà phiếu này giao).
+    $cands  = [];
+    $allMids = [];
+    foreach ($rows as $r) {
+        $items = json_decode((string) $r['order_items'], true);
+        if (!is_array($items) || empty($items)) continue;
+        $mset = [];
+        foreach ($items as $it) {
+            $mid = (int) ($it['material_id'] ?? 0);
+            if ($mid > 0) $mset[$mid] = true;
+        }
+        if (empty($mset)) continue;
+        $hasExtra = false;
+        foreach (array_keys($mset) as $mid) {
+            if (!isset($rset[$mid])) { $hasExtra = true; break; }
+        }
+        if ($hasExtra) continue;
+        $r['id']          = (int) $r['id'];
+        $r['order_items'] = $items;
+        $cands[] = ['row' => $r, 'mset' => $mset, 'expected' => 0.0];
+        foreach (array_keys($mset) as $mid) $allMids[] = $mid;
+    }
+    if (empty($cands)) return [];
+
+    // Giá dự kiến = giá NVL TRƯỚC khi phiếu này ghi đè (hàm được gọi trước ir_record_batch).
+    $priceMap = om_material_price_map($allMids);
+    foreach ($cands as &$c) {
+        $exp = 0.0;
+        foreach ($c['row']['order_items'] as $it) {
+            $mid = (int) ($it['material_id'] ?? 0);
+            $exp += (float) ($it['qty'] ?? 0) * ($priceMap[$mid] ?? 0.0);
+        }
+        $c['expected'] = round($exp, 2);
+    }
+    unset($c);
+
+    $pick = om_pick_order_cover($cands, array_keys($rset), $actualTotal);
+    if (empty($pick)) return [];
+
+    // Chia tiền thực nhập theo tỉ lệ dự kiến; phần dư dồn vào đơn cuối để Σ actual = tiền phiếu.
+    $totalExpected = 0.0;
+    foreach ($pick as $i) $totalExpected += $cands[$i]['expected'];
+    $totalExpected = round($totalExpected, 2);
+
+    $matches   = [];
+    $allocated = 0.0;
+    $k         = count($pick);
+    foreach ($pick as $n => $i) {
+        $c   = $cands[$i];
+        $exp = $c['expected'];
+        if ($n === $k - 1) {
+            $actual = round($actualTotal - $allocated, 2);
+        } else {
+            $actual = $totalExpected > 0
+                ? round($actualTotal * $exp / $totalExpected, 2)
+                : round($actualTotal / $k, 2);
+            $allocated += $actual;
+        }
+        $matches[] = [
+            'order_id'             => $c['row']['id'],
+            'supplier_name'        => $c['row']['supplier_name'],
+            'created_at'           => $c['row']['created_at'],
+            'item_count'           => count($c['row']['order_items']),
+            'expected_value'       => $exp,
+            'actual_value'         => $actual,
+            'diff'                 => round($actual - $exp, 2),
+            'diff_rate'            => $exp > 0 ? round((($actual - $exp) / $exp) * 100, 2) : 0.0,
+            'group_size'           => $k,
+            'group_expected_total' => $totalExpected,
+            'group_actual_total'   => round($actualTotal, 2),
+        ];
+    }
+    return $matches;
+}
+
+/**
+ * Chọn tổ hợp đơn phủ ĐÚNG bộ NVL của phiếu, theo 3 mức ưu tiên mô tả ở
+ * om_match_orders_for_receipt(). Trả về mảng index trong $cands (đã theo FIFO).
+ * Số đơn chờ của 1 NCC thường rất nhỏ nên duyệt bitmask; quá 14 đơn thì chỉ xét
+ * từng đơn lẻ + tổ hợp tất cả đơn để không nổ số tổ hợp.
+ */
+function om_pick_order_cover(array $cands, array $receipt_mids, $actualTotal)
+{
+    $n = count($cands);
+    $rkeys = array_values(array_unique(array_map('intval', $receipt_mids)));
+    sort($rkeys);
+
+    $masks = [];
+    if ($n <= 14) {
+        for ($mask = 1; $mask < (1 << $n); $mask++) $masks[] = $mask;
+    } else {
+        for ($i = 0; $i < $n; $i++) $masks[] = (1 << $i);
+        $masks[] = (1 << $n) - 1;
     }
 
-    $orderSet = array_flip($orderMids);
-    $actual = 0.0;
-    foreach ($receipt_lines as $l) {
-        $mid = (int) ($l['material_id'] ?? 0);
-        if (!isset($orderSet[$mid])) continue;
-        $actual += (float) ($l['qty'] ?? 0) * (float) ($l['price_incl'] ?? 0);
+    $covers = [];
+    foreach ($masks as $mask) {
+        $union = [];
+        $sum   = 0.0;
+        $idx   = [];
+        $sizes = 0;
+        for ($i = 0; $i < $n; $i++) {
+            if (!($mask & (1 << $i))) continue;
+            $idx[]  = $i;
+            $sum   += $cands[$i]['expected'];
+            $sizes += count($cands[$i]['mset']);
+            foreach (array_keys($cands[$i]['mset']) as $mid) $union[$mid] = true;
+        }
+        $ukeys = array_keys($union);
+        sort($ukeys);
+        if ($ukeys !== $rkeys) continue;   // phải phủ đúng bộ NVL của phiếu
+        $covers[] = [
+            'idx'     => $idx,
+            'sum'     => round($sum, 2),
+            'count'   => count($idx),
+            'overlap' => ($sizes !== count($ukeys)),
+        ];
+    }
+    if (empty($covers)) return [];
+
+    // Sắp: nhiều đơn trước, rồi FIFO (đơn có index nhỏ nhất). Tự so tay để không phụ thuộc
+    // tính ổn định của usort giữa các bản PHP.
+    $prefer = function ($list) {
+        usort($list, function ($a, $b) {
+            if ($a['count'] !== $b['count']) return $b['count'] <=> $a['count'];
+            return $a['idx'][0] <=> $b['idx'][0];
+        });
+        return $list[0]['idx'];
+    };
+
+    // (1) Tổng dự kiến khớp tiền phiếu.
+    $exact = [];
+    foreach ($covers as $c) {
+        if ((int) round($c['sum']) === (int) round($actualTotal)) $exact[] = $c;
+    }
+    if ($exact) return $prefer($exact);
+
+    // (2) Một đơn trùng đúng bộ NVL (hành vi cũ).
+    foreach ($covers as $c) {
+        if ($c['count'] === 1) return $c['idx'];
     }
 
-    return [
-        'order_id'       => $order['id'],
-        'supplier_name'  => $order['supplier_name'],
-        'created_at'     => $order['created_at'],
-        'item_count'     => count($order['order_items']),
-        'expected_value' => round($expected, 2),
-        'actual_value'   => round($actual, 2),
-        'diff'           => round($actual - $expected, 2),
-        'diff_rate'      => $expected > 0 ? round((($actual - $expected) / $expected) * 100, 2) : 0.0,
-    ];
+    // (3) Tổ hợp nhiều đơn không trùng NVL nhau.
+    $disjoint = [];
+    foreach ($covers as $c) {
+        if (!$c['overlap']) $disjoint[] = $c;
+    }
+    if ($disjoint) return $prefer($disjoint);
+
+    return [];
 }
