@@ -234,6 +234,7 @@ function admin_get_material_list()
 {
     // Bảo đảm cột phân loại tồn tại (auto-migrate, giống suppliers.address).
     admin_ensure_material_classification_column();
+    admin_ensure_material_label_name_column();
     // Bảo đảm mỗi material_information đều có 1 dòng material_purchase_prices
     // (material_information là bảng chính). Sau khi đồng bộ mới đọc danh sách.
     admin_sync_material_purchase_prices();
@@ -245,6 +246,7 @@ function admin_get_material_list()
             mi.id,
             mi.material_name,
             mi.common_material_name,
+            mi.label_name,
             mi.unit,
             mi.classification,
             mi.supplier_id,
@@ -279,6 +281,24 @@ function admin_ensure_material_classification_column()
                            AND COLUMN_NAME = 'classification' LIMIT 1");
     if (!$col) {
         db_query("ALTER TABLE material_information ADD COLUMN classification VARCHAR(50) DEFAULT NULL");
+    }
+}
+
+/**
+ * Thêm cột material_information.label_name ("Tên trên nhãn") nếu chưa có.
+ * Tên dùng để in lên nhãn sản phẩm (bảng thành phần) — có thể bỏ trống, khi trống thì
+ * nơi dùng sẽ lùi về common_material_name rồi material_name.
+ */
+function admin_ensure_material_label_name_column()
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    $existed = db_num_rows("SHOW COLUMNS FROM material_information LIKE 'label_name'") > 0;
+    if (!$existed) {
+        db_query("ALTER TABLE material_information ADD COLUMN label_name VARCHAR(255) DEFAULT NULL");
     }
 }
 
@@ -417,9 +437,12 @@ function admin_material_classification_options()
 
 function admin_update_material_field($material_id, $field, $value)
 {
-    $allow = ['material_name', 'common_material_name', 'unit', 'supplier_id', 'classification'];
+    $allow = ['material_name', 'common_material_name', 'label_name', 'unit', 'supplier_id', 'classification'];
     if (!in_array($field, $allow, true)) {
         return false;
+    }
+    if ($field === 'label_name') {
+        admin_ensure_material_label_name_column();
     }
     $mid = (int) $material_id;
     if ($field === 'supplier_id') {
@@ -907,11 +930,14 @@ function admin_create_material($data)
         return ['ok' => false, 'message' => 'Tên nguyên vật liệu không được trống.'];
     }
     admin_ensure_material_classification_column();
+    admin_ensure_material_label_name_column();
     $supplier_id    = (int) ($data['supplier_id'] ?? 0);
     $classification = (string) ($data['classification'] ?? '');
     $classification = in_array($classification, admin_material_classification_options(), true) ? $classification : null;
+    $label_name     = trim((string) ($data['label_name'] ?? ''));
     $row = [
         'material_name'  => $name,
+        'label_name'     => $label_name !== '' ? $label_name : null,
         'unit'           => trim((string) ($data['unit'] ?? '')),
         'classification' => $classification,
         'supplier_id'    => $supplier_id > 0 ? $supplier_id : null,

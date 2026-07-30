@@ -1210,6 +1210,41 @@ function ajax_file_frequencyAction()
 }
 
 /**
+ * AJAX: modal "Xem thành phần" — chuỗi thành phần in nhãn của các sản phẩm được chọn.
+ * POST product_ids[] (hoặc chuỗi id cách nhau dấu phẩy).
+ * regenerate=1 -> bỏ qua bản sửa tay, dựng lại theo công thức sản xuất.
+ */
+function ajax_label_ingredientsAction()
+{
+    header('Content-Type: application/json');
+    $ids = $_POST['product_ids'] ?? $_GET['product_ids'] ?? [];
+    if (!is_array($ids)) {
+        $ids = array_filter(array_map('trim', explode(',', (string) $ids)), 'strlen');
+    }
+    $force = !empty($_POST['regenerate']) || !empty($_GET['regenerate']);
+    echo json_encode(['success' => true, 'items' => pp_get_label_ingredients($ids, $force)]);
+    exit;
+}
+
+/** AJAX: lưu chuỗi thành phần user sửa tay (để trống = quay về dựng theo công thức). */
+function ajax_save_label_ingredientsAction()
+{
+    header('Content-Type: application/json');
+    $product_id = (int) ($_POST['product_id'] ?? 0);
+    if ($product_id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Thiếu product_id.']);
+        exit;
+    }
+    $text = (string) ($_POST['text'] ?? '');
+    pp_save_label_ingredients($product_id, $text);
+    // Trả lại dòng đã chuẩn hóa để client hiển thị đúng ngay (chuỗi lưu có thể đã được
+    // chỉnh hoa/thường, hoặc bị quy về NULL vì trùng bản dựng từ công thức).
+    $items = pp_get_label_ingredients([$product_id]);
+    echo json_encode(['success' => true, 'item' => $items[0] ?? null]);
+    exit;
+}
+
+/**
  * AJAX: Xem dữ liệu thật trong database để kiểm tra logic.
  * - 10 dòng/trang, có phân trang.
  * - Dòng "vừa bị tác động" (affected_id) được đẩy lên đầu.
@@ -1222,7 +1257,7 @@ function check_databaseAction()
     $allowed = [
         'products', 'product_categories', 'product_info_basic', 'pricing_policies',
         'bill_of_materials', 'product_files', 'files', 'material_information', 'suppliers',
-        'material_invoices'
+        'material_invoices', 'product_materials'
     ];
 
     $table = $_POST['table'] ?? 'products';

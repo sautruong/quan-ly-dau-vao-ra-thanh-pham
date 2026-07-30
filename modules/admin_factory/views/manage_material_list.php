@@ -261,6 +261,7 @@ $classifications = function_exists('admin_material_classification_options')
                     <tr>
                         <th class="col-name">Tên nguyên vật liệu</th>
                         <th class="col-name">Tên thường gọi</th>
+                        <th class="col-name">Tên trên nhãn</th>
                         <th class="col-unit is-center">Đơn vị</th>
                         <th class="col-classify">
                             <span class="th-flex">Phân loại
@@ -280,11 +281,12 @@ $classifications = function_exists('admin_material_classification_options')
                 </thead>
                 <tbody>
                 <?php if (empty($materials)): ?>
-                    <tr><td colspan="9" style="text-align:center; padding:16px;">Chưa có nguyên vật liệu</td></tr>
+                    <tr><td colspan="10" style="text-align:center; padding:16px;">Chưa có nguyên vật liệu</td></tr>
                 <?php else: foreach ($materials as $m):
                     $mid       = (int) $m['id'];
                     $name      = htmlspecialchars((string) ($m['material_name'] ?? ''), ENT_QUOTES, 'UTF-8');
                     $common    = htmlspecialchars((string) ($m['common_material_name'] ?? ''), ENT_QUOTES, 'UTF-8');
+                    $label     = htmlspecialchars((string) ($m['label_name'] ?? ''), ENT_QUOTES, 'UTF-8');
                     $unit      = htmlspecialchars((string) ($m['unit'] ?? ''), ENT_QUOTES, 'UTF-8');
                     $classify  = (string) ($m['classification'] ?? '');
                     $sup_id    = (int) ($m['supplier_id'] ?? 0);
@@ -299,6 +301,9 @@ $classifications = function_exists('admin_material_classification_options')
                         </td>
                         <td class="col-name">
                             <input type="text" data-field="common_material_name" value="<?php echo $common; ?>" placeholder="Tên thường gọi...">
+                        </td>
+                        <td class="col-name">
+                            <input type="text" data-field="label_name" value="<?php echo $label; ?>" placeholder="Tên in trên nhãn...">
                         </td>
                         <td class="col-unit is-center">
                             <input type="text" data-field="unit" value="<?php echo $unit; ?>">
@@ -352,6 +357,9 @@ $classifications = function_exists('admin_material_classification_options')
                 <div class="modal-body">
                     <label>Tên nguyên vật liệu</label>
                     <input type="text" name="material_name" required>
+
+                    <label>Tên trên nhãn</label>
+                    <input type="text" name="label_name" placeholder="Có thể bỏ trống">
 
                     <label>Đơn vị</label>
                     <input type="text" name="unit">

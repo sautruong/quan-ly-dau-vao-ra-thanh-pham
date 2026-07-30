@@ -809,8 +809,8 @@ function upload_product_imageAction()
 /**
  * AJAX: cập nhật 1 field cho 1 material.
  * Tham số POST: material_id, field, value
- * field hợp lệ: material_name, unit, supplier_id, purchase_price,
- *               purchase_price_includes_purchase_cost, selling_price
+ * field hợp lệ: material_name, common_material_name, label_name, unit, supplier_id,
+ *               purchase_price, purchase_price_includes_purchase_cost, selling_price
  */
 function update_material_fieldAction()
 {
@@ -828,6 +828,7 @@ function update_material_fieldAction()
     switch ($field) {
         case 'material_name':
         case 'common_material_name':
+        case 'label_name':
         case 'unit':
             admin_update_material_field($material_id, $field, trim((string) $value));
             break;

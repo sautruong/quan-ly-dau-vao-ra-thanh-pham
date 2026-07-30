@@ -628,6 +628,17 @@ button p {
     box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
 }
 
+/* Cụm nút thao tác của thanh tìm kiếm — dạt phải ổn định từ lúc mới tải trang,
+   không phụ thuộc nút nào (app_shell.js có thể dời nút Check database lên header). */
+.wp-search-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .btn-frequency {
     display: inline-flex;
     align-items: center;
@@ -724,6 +735,227 @@ tr.freq-item .freq-item-del:hover { color: #ef4444; }
 tr.freq-item .btn-edit-filename { opacity: 0; transition: opacity .12s, color .12s, background .12s; }
 tr.freq-item:hover .btn-edit-filename { opacity: 1; }
 
+/* ================================
+   MODAL "XEM THÀNH PHẦN" (#ingredients-modal)
+   Nút mở dùng tông tím-hồng để khác cụm "Tần suất" (xanh cyan).
+================================ */
+.btn-ingredients {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 10px;
+    border: 1.5px solid #b45309;
+    background: #fffbeb;
+    color: #b45309;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+    white-space: nowrap;
+}
+
+.btn-ingredients:hover {
+    background: #b45309;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(180, 83, 9, 0.25);
+}
+
+/* Ô tìm sản phẩm + dropdown gợi ý (điều khiển bằng mũi tên, Enter/Tab để chọn)
+   Lưu ý: phải chọn theo #ingredients-modal (id) mới thắng được
+   `.pp-modal input[type="text"]` trong modal.css — nếu chỉ dùng .ing-search thì
+   input ăn padding 8px 6px của modal.css và chữ chồng lên icon kính lúp. */
+.ing-picker { position: relative; }
+
+#ingredients-modal .ing-picker-icon {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: #9ca3af;
+    pointer-events: none;
+    z-index: 1;
+}
+
+#ingredients-modal .ing-search {
+    display: block;
+    flex: none;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px 9px 40px;
+    border: 1.5px solid #e5e7eb;
+    border-bottom: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 13.5px;
+    outline: none;
+    transition: 0.2s;
+}
+
+#ingredients-modal .ing-search:focus {
+    border-color: #b45309;
+    box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
+}
+
+.ing-suggest {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 40;
+    display: none;
+}
+
+.ing-suggest.is-open { display: block; }
+
+.ing-suggest-item {
+    padding: 8px 12px;
+    font-size: 13.5px;
+    color: #374151;
+    cursor: pointer;
+}
+
+.ing-suggest-item:hover,
+.ing-suggest-item.is-active { background: #fef3c7; }
+.ing-suggest-sub { color: #9ca3af; font-size: 12px; }
+.ing-suggest-empty { padding: 10px 12px; color: #9ca3af; font-style: italic; font-size: 13px; }
+
+.ing-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 14px; }
+
+.ing-table th,
+.ing-table td {
+    border: 1px solid #e5e7eb;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.ing-table th { background: #f9fafb; font-weight: 700; color: #374151; padding: 8px 10px; }
+.ing-table th.ing-col-name, .ing-table td.ing-cell-name { width: 260px; }
+.ing-empty { text-align: center; color: #9ca3af; font-style: italic; padding: 16px 0; }
+
+/* Ô tên sản phẩm: input readonly (để nút Xuất Excel dùng chung đọc đúng giá trị) */
+.ing-cell-name { position: relative; }
+
+/* Cũng phải chọn theo id để không bị `.pp-modal input[type="text"]` gắn gạch chân */
+#ingredients-modal .ing-pname {
+    display: block;
+    flex: none;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 20px 5px 4px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #111827;
+    cursor: default;
+}
+
+.ing-row-del {
+    position: absolute;
+    top: 6px;
+    right: 4px;
+    border: none;
+    background: none;
+    color: #9ca3af;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 3px;
+    opacity: 0;
+    transition: opacity .12s, color .12s;
+}
+
+.ing-row:hover .ing-row-del { opacity: 1; }
+.ing-row-del:hover { color: #ef4444; }
+
+/* Ô thành phần: sửa trực tiếp, hover mới hiện viền (giống bảng quản lý NVL) */
+.ing-cell-text { position: relative; }
+
+.ing-text {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 42px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    font: inherit;
+    line-height: 1.55;
+    color: #374151;
+    resize: vertical;
+    overflow: hidden;
+    transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+.ing-text:hover { border-color: #e5e7eb; background: #fff; }
+
+.ing-text:focus {
+    border-color: #b45309;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.12);
+}
+
+.ing-cell-text.is-saved-ok { background: #ecfdf5; transition: background-color .4s ease; }
+.ing-cell-text.is-saved-err { background: #fef2f2; transition: background-color .4s ease; }
+
+.ing-cell-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 2px;
+    min-height: 18px;
+}
+
+.ing-flag {
+    font-size: 11px;
+    color: #6b7280;
+    background: #f3f4f6;
+    border-radius: 999px;
+    padding: 2px 8px;
+    opacity: 0;
+    transition: opacity .12s;
+}
+
+.ing-flag.is-manual { color: #b45309; background: #fef3c7; }
+.ing-row:hover .ing-flag { opacity: 1; }
+
+/* Dòng đang dùng bản sửa tay: hiện SẴN nhãn + nút xoay (không cần hover) để user biết
+   dòng này đã bị "ghim", không tự cập nhật theo công thức nữa. */
+.ing-row.is-manual .ing-flag,
+.ing-row.is-manual .ing-regen { opacity: 1; }
+
+.ing-regen {
+    border: none;
+    background: none;
+    color: #9ca3af;
+    font-size: 12.5px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity .12s, color .12s, background .12s;
+}
+
+.ing-row:hover .ing-regen { opacity: 1; }
+.ing-regen:hover { color: #b45309; background: #fef3c7; }
+
+@media (max-width: 768px) {
+    .ing-table th.ing-col-name, .ing-table td.ing-cell-name { width: 120px; }
+    .ing-flag, .ing-regen, .ing-row-del { opacity: 1; }
+}
+
 /* Icon */
 .search-icon {
     position: absolute;
@@ -786,6 +1018,14 @@ tr.freq-item:hover .btn-edit-filename { opacity: 1; }
         flex-direction: column;
         align-items: stretch;
     }
+
+    /* Xếp dọc thì cụm nút trải hết chiều ngang, không còn "dạt phải" */
+    .wp-search-actions {
+        margin-left: 0;
+        justify-content: stretch;
+    }
+
+    .wp-search-actions > button { flex: 1; justify-content: center; }
 
     .search-box {
         width: 100%;

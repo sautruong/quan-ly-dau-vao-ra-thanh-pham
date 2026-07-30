@@ -521,7 +521,9 @@ function pp_search_products_for_detail($keyword)
     pp_ensure_product_common_name_column();
     global $conn;
     $keyword_safe = mysqli_real_escape_string($conn, trim((string) $keyword));
-    $sql = "SELECT id, COALESCE(NULLIF(common_product_name, ''), product_name) AS display_name
+    // product_name trả kèm để nơi nào cần ĐÚNG tên trên nhãn (modal "Xem thành phần")
+    // không phải gọi thêm 1 query nữa.
+    $sql = "SELECT id, product_name, COALESCE(NULLIF(common_product_name, ''), product_name) AS display_name
             FROM products
             WHERE product_name LIKE '%$keyword_safe%' OR common_product_name LIKE '%$keyword_safe%'
             ORDER BY display_name
@@ -1102,4 +1104,313 @@ function pp_get_file_frequency_flat($min_freq = 1, $group_key = null)
         return ((int) $b['freq'] <=> (int) $a['freq']) ?: strcmp($a['file_name'], $b['file_name']);
     });
     return $flat;
+}
+
+/* =====================================================================
+ *  "XEM THÀNH PHẦN" — chuỗi thành phần in trên nhãn sản phẩm
+ *  ---------------------------------------------------------------------
+ *  Nguồn: công thức 1 đơn vị sản phẩm (product_materials) + "Tên trên nhãn"
+ *  (material_information.label_name, nhập ở admin_factory/manage_material_list).
+ *  Quy tắc dựng chuỗi: xem pp_build_label_ingredients().
+ *  Kết quả user sửa tay được lưu vào products.label_ingredients; khi cột này
+ *  trống thì chuỗi luôn được dựng lại từ công thức (nút "Lấy theo công thức").
+ * =====================================================================*/
+
+/** Cột material_information.label_name ("Tên trên nhãn") — idempotent, giống bản ở adminModel. */
+function pp_ensure_material_label_name_column()
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    $existed = db_num_rows("SHOW COLUMNS FROM material_information LIKE 'label_name'") > 0;
+    if (!$existed) {
+        db_query("ALTER TABLE material_information ADD COLUMN label_name VARCHAR(255) DEFAULT NULL");
+    }
+}
+
+/** Cột products.label_ingredients — chuỗi thành phần user đã sửa/chốt tay (NULL = theo công thức). */
+function pp_ensure_label_ingredients_column()
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    $existed = db_num_rows("SHOW COLUMNS FROM products LIKE 'label_ingredients'") > 0;
+    if (!$existed) {
+        db_query("ALTER TABLE products ADD COLUMN label_ingredients TEXT DEFAULT NULL");
+    }
+}
+
+/**
+ * Hệ số quy đổi đơn vị về đơn vị nhỏ (g/ml) để so sánh "dùng nhiều / dùng ít" giữa các
+ * nguyên liệu khai báo khác đơn vị trong cùng 1 công thức. Đơn vị lạ coi như hệ số 1.
+ */
+function pp_label_unit_factor($unit)
+{
+    $u = mb_strtolower(trim((string) $unit), 'UTF-8');
+    $u = str_replace([' ', '.'], '', $u);
+    $big = ['kg', 'kgs', 'kilogram', 'kilo', 'l', 'lit', 'lít', 'liter', 'litre', 'lite'];
+    return in_array($u, $big, true) ? 1000.0 : 1.0;
+}
+
+/** ucfirst có dấu (mb) — chữ đầu của thành phần đầu tiên viết hoa như trên nhãn. */
+function pp_label_ucfirst($s)
+{
+    if ($s === '') return $s;
+    return mb_strtoupper(mb_substr($s, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($s, 1, null, 'UTF-8');
+}
+
+/**
+ * lcfirst có dấu (mb) — CHỈ hạ chữ cái đầu của thành phần, phần còn lại giữ nguyên
+ * y như user nhập ở "Tên trên nhãn" (mã phụ gia trong ngoặc kiểu "(INS 102)", tên
+ * riêng viết hoa giữa chuỗi... không bị đổi).
+ */
+function pp_label_lcfirst($s)
+{
+    if ($s === '') return $s;
+    return mb_strtolower(mb_substr($s, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($s, 1, null, 'UTF-8');
+}
+
+/**
+ * Chuẩn hóa chữ hoa/thường cho CẢ chuỗi thành phần (áp dụng cho bản dựng từ công thức
+ * LẪN bản user sửa tay, để nhãn luôn đúng quy ước):
+ * - Chỉ thành phần ĐẦU TIÊN (ngay sau "Thành phần: ") viết hoa chữ cái đầu.
+ * - Mọi thành phần sau dấu phẩy: hạ ĐÚNG 1 chữ cái đầu về chữ thường.
+ * - Chỉ đổi chữ cái đầu nên mã phụ gia trong ngoặc "(INS 110)" giữ nguyên như user nhập.
+ * Cắt thành phần theo dấu phẩy Ở NGOÀI NGOẶC — nếu cắt theo mọi dấu phẩy thì cụm đã gộp
+ * "chất bảo quản (INS 202, INS 211)" sẽ bị xé làm 2.
+ */
+function pp_label_normalize_case($text)
+{
+    $text = trim((string) $text);
+    if ($text === '') return '';
+
+    $has_prefix = (bool) preg_match('/^\s*Thành phần\s*:\s*(.*)$/us', $text, $m);
+    $body = $has_prefix ? $m[1] : $text;
+
+    $parts = [];
+    $buf   = '';
+    $depth = 0;
+    $len   = mb_strlen($body, 'UTF-8');
+    for ($i = 0; $i < $len; $i++) {
+        $ch = mb_substr($body, $i, 1, 'UTF-8');
+        if ($ch === '(') {
+            $depth++;
+        } elseif ($ch === ')') {
+            $depth = max(0, $depth - 1);
+        } elseif ($ch === ',' && $depth === 0) {
+            $parts[] = $buf;
+            $buf = '';
+            continue;
+        }
+        $buf .= $ch;
+    }
+    $parts[] = $buf;
+
+    $out = [];
+    foreach ($parts as $p) {
+        $p = trim($p);
+        if ($p === '') continue;
+        $out[] = empty($out) ? pp_label_ucfirst($p) : pp_label_lcfirst($p);
+    }
+    if (empty($out)) return '';
+
+    return ($has_prefix ? 'Thành phần: ' : '') . implode(', ', $out);
+}
+
+/** Phần trăm hiển thị: số nguyên khi tròn, còn lại 1 số lẻ (dấu phẩy thập phân kiểu VN). */
+function pp_label_format_percent($p)
+{
+    $r = round((float) $p, 1);
+    if (abs($r - round($r)) < 0.05) {
+        return (string) (int) round($r);
+    }
+    return str_replace('.', ',', rtrim(number_format($r, 1, '.', ''), '0'));
+}
+
+/**
+ * Gộp các thành phần TRÙNG THUỘC TÍNH CHỨC NĂNG: phần trước dấu ngoặc giống nhau thì
+ * viết 1 lần, nội dung trong ngoặc dồn lại cách nhau dấu phẩy, giữ vị trí lần xuất hiện
+ * đầu tiên. Ví dụ:
+ *   "chất bảo quản (INS 202)", "chất bảo quản (INS 211)"
+ *   -> "chất bảo quản (INS 202, INS 211)"
+ * Ngoặc chứa phần trăm (vd "Đường (78%)") KHÔNG gộp — đó là hàm lượng, không phải chức năng.
+ */
+function pp_label_merge_same_function(array $items)
+{
+    $slots     = [];
+    $by_prefix = [];
+    $by_plain  = [];
+    foreach ($items as $item) {
+        $item = trim($item);
+        if ($item === '') continue;
+        // Lấy prefix ngắn nhất + toàn bộ nội dung trong ngoặc CUỐI (cho phép ngoặc lồng,
+        // vd "chất chống đông vón (INS 341 (iii))").
+        if (preg_match('/^(.+?)\s*\((.*)\)$/u', $item, $m)) {
+            $prefix = trim($m[1]);
+            $inner  = trim($m[2]);
+            if ($inner !== '' && mb_strpos($inner, '%') === false) {
+                $key = mb_strtolower($prefix, 'UTF-8');
+                if (isset($by_prefix[$key])) {
+                    $i = $by_prefix[$key];
+                    if (!in_array($inner, $slots[$i]['parens'], true)) {
+                        $slots[$i]['parens'][] = $inner;
+                    }
+                    continue;
+                }
+                $by_prefix[$key] = count($slots);
+                $slots[] = ['prefix' => $prefix, 'parens' => [$inner]];
+                continue;
+            }
+        }
+        // Không có ngoặc chức năng -> giữ nguyên, chỉ chống trùng y nguyên.
+        $pk = mb_strtolower($item, 'UTF-8');
+        if (isset($by_plain[$pk])) continue;
+        $by_plain[$pk] = true;
+        $slots[] = ['plain' => $item];
+    }
+
+    $out = [];
+    foreach ($slots as $s) {
+        $out[] = isset($s['plain'])
+            ? $s['plain']
+            : $s['prefix'] . ' (' . implode(', ', $s['parens']) . ')';
+    }
+    return $out;
+}
+
+/**
+ * Dựng chuỗi "Thành phần: ..." từ công thức 1 đơn vị sản phẩm (product_materials).
+ * - Tên hiển thị: label_name ("Tên trên nhãn") -> common_material_name -> material_name.
+ * - Thứ tự: dùng nhiều viết trước, dùng ít viết sau (quy đổi kg/l về g/ml khi so sánh).
+ * - Nguyên liệu chiếm TRÊN 50% khối lượng thì ghi kèm phần trăm trong ngoặc.
+ * - Bao bì / nhãn (classification 'Bao bì trong' | 'Bao bì ngoài' | 'Nhãn') không phải
+ *   thành phần nên bị loại; NVL chưa phân loại vẫn tính (mặc định coi là nguyên liệu).
+ * - Gộp các thành phần cùng thuộc tính chức năng — xem pp_label_merge_same_function().
+ * - Chỉ chữ cái đầu tiên của cả chuỗi viết hoa; các thành phần sau dấu phẩy hạ về chữ
+ *   thường (chỉ chữ cái đầu, mã phụ gia trong ngoặc giữ nguyên như user nhập).
+ * Trả về '' khi sản phẩm chưa có công thức.
+ */
+function pp_build_label_ingredients($product_id)
+{
+    pp_ensure_material_label_name_column();
+    $pid = (int) $product_id;
+    if ($pid <= 0) return '';
+
+    $rows = db_fetch_array("
+        SELECT pm.quantity_required AS qty,
+               mi.material_name,
+               mi.common_material_name,
+               mi.label_name,
+               mi.unit,
+               mi.classification
+        FROM product_materials pm
+        JOIN material_information mi ON mi.id = pm.material_id
+        WHERE pm.product_id = $pid
+        ORDER BY pm.sort_order ASC, pm.id ASC
+    ") ?: [];
+
+    $skip = ['Bao bì trong', 'Bao bì ngoài', 'Nhãn'];
+    $list = [];
+    $total = 0.0;
+    foreach ($rows as $i => $r) {
+        if (in_array((string) ($r['classification'] ?? ''), $skip, true)) continue;
+        $name = trim((string) ($r['label_name'] ?? ''));
+        if ($name === '') $name = trim((string) ($r['common_material_name'] ?? ''));
+        if ($name === '') $name = trim((string) ($r['material_name'] ?? ''));
+        if ($name === '') continue;
+
+        $qty = (float) $r['qty'] * pp_label_unit_factor($r['unit'] ?? '');
+        $total += $qty;
+        $list[] = ['name' => $name, 'qty' => $qty, 'pos' => $i];
+    }
+    if (empty($list)) return '';
+
+    // Dùng nhiều trước; bằng nhau thì giữ thứ tự công thức (sort_order).
+    usort($list, function ($a, $b) {
+        if ($a['qty'] === $b['qty']) return $a['pos'] <=> $b['pos'];
+        return $b['qty'] <=> $a['qty'];
+    });
+
+    $items = [];
+    foreach ($list as $it) {
+        $percent = $total > 0 ? ($it['qty'] / $total * 100) : 0;
+        $items[] = $percent > 50
+            ? $it['name'] . ' (' . pp_label_format_percent($percent) . '%)'
+            : $it['name'];
+    }
+    $items = pp_label_merge_same_function($items);
+    if (empty($items)) return '';
+
+    // Chữ hoa/thường do pp_label_normalize_case() lo (dùng chung với bản sửa tay).
+    $text = pp_label_normalize_case('Thành phần: ' . implode(', ', $items));
+    if (!in_array(mb_substr($text, -1, 1, 'UTF-8'), ['.', '!', '?'], true)) {
+        $text .= '.';
+    }
+    return $text;
+}
+
+/**
+ * Dữ liệu cho bảng modal "Xem thành phần" của nhiều sản phẩm.
+ * Mỗi dòng: id, product_name, generated (dựng từ công thức), saved (bản sửa tay),
+ * text (bản để hiển thị = saved nếu có, ngược lại generated), is_saved.
+ * $force_generate = true -> bỏ qua bản sửa tay (nút "Lấy theo công thức sản xuất").
+ */
+function pp_get_label_ingredients($product_ids, $force_generate = false)
+{
+    pp_ensure_label_ingredients_column();
+    $ids = [];
+    foreach ((array) $product_ids as $id) {
+        $id = (int) $id;
+        if ($id > 0) $ids[$id] = $id;
+    }
+    if (empty($ids)) return [];
+
+    $in   = implode(',', $ids);
+    $rows = db_fetch_array("SELECT id, product_name, label_ingredients
+                            FROM products WHERE id IN ($in)") ?: [];
+    // Giữ đúng thứ tự user chọn.
+    $by_id = [];
+    foreach ($rows as $r) {
+        $by_id[(int) $r['id']] = $r;
+    }
+
+    $out = [];
+    foreach ($ids as $id) {
+        if (!isset($by_id[$id])) continue;
+        $r = $by_id[$id];
+        // Bản sửa tay cũng chạy qua chuẩn hóa hoa/thường: quy ước viết nhãn áp cho MỌI
+        // chuỗi hiển thị, không riêng bản dựng từ công thức (nhờ vậy các bản đã lưu từ
+        // trước cũng tự đúng, không cần migrate dữ liệu).
+        $saved     = pp_label_normalize_case((string) ($r['label_ingredients'] ?? ''));
+        $generated = pp_build_label_ingredients($id);
+        $use_saved = !$force_generate && trim($saved) !== '';
+        $out[] = [
+            'id'           => $id,
+            'product_name' => (string) $r['product_name'],
+            'generated'    => $generated,
+            'saved'        => $saved,
+            'text'         => $use_saved ? $saved : $generated,
+            'is_saved'     => $use_saved,
+        ];
+    }
+    return $out;
+}
+
+/**
+ * Lưu chuỗi thành phần user sửa tay. Chuỗi trống -> NULL, tức là quay về "luôn dựng lại
+ * theo công thức sản xuất" (đúng hành vi nút "Lấy theo công thức sản xuất").
+ * Lưu bản ĐÃ chuẩn hóa hoa/thường; và nếu sửa xong y hệt bản dựng từ công thức thì cũng
+ * lưu NULL — tránh "ghim" nhầm 1 bản tĩnh chỉ vì user bấm vào ô rồi rời ra.
+ */
+function pp_save_label_ingredients($product_id, $text)
+{
+    pp_ensure_label_ingredients_column();
+    $pid = (int) $product_id;
+    if ($pid <= 0) return false;
+    $text = pp_label_normalize_case($text);
+    if ($text !== '' && $text === pp_build_label_ingredients($pid)) {
+        $text = '';
+    }
+    db_update('products', ['label_ingredients' => $text === '' ? null : $text], "id = $pid");
+    return true;
 }

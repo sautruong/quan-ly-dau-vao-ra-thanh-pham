@@ -1827,29 +1827,42 @@
                 grp.style.display = '';
                 hdrRight.insertBefore(grp, hdrRight.firstChild);
             });
+        }
 
-            /* ---- 5c. MOBILE: gom action header cho gọn (Task R2-1, R2-5).
+        /* ---- 5c. "Check database" = ICON DÙNG CHUNG, đặt cạnh TRÁI chuông ----
+           Quy ước toàn dự án: nút Check database ở MỌI view chỉ còn 1 icon database
+           (tooltip "Database"), nằm ngay bên trái chuông thông báo. View cứ khai báo
+           nút .btn-check-db ở đâu cũng được (toolbar, .cdb-actions, .header-actions,
+           .detail-actions...), JS này gom lên header và bỏ phần nhãn chữ.
+           Nút trong modal (.pp-modal-overlay) không tính — đó là nội dung modal.
+           CHẠY NGOÀI if (hdrRight): app_shell.css ẩn sẵn .btn-check-db chưa gắn
+           .app-cdb-icon (chống nháy "hiện ở toolbar rồi mới nhảy lên header"), nên
+           trang không có header chung vẫn phải được gắn class để nút không mất hẳn. */
+        (function () {
+            var bellEl = document.getElementById('app-bell');
+            document.querySelectorAll('.btn-check-db').forEach(function (btn) {
+                if (btn.closest('.pp-modal-overlay') || btn.closest('.app-tools-menu')) return;
+                // Tooltip tự vẽ (data-app-tip) chứ không dùng title native: title bị trễ
+                // ~1s và mang kiểu của OS. Bỏ luôn title cũ để không hiện 2 tooltip.
+                btn.removeAttribute('title');
+                btn.setAttribute('data-app-tip', 'Database');
+                btn.setAttribute('aria-label', 'Database');
+                // Chỉ giữ icon: bỏ text node/nhãn, thiếu icon thì tự thêm.
+                var ico = btn.querySelector('i');
+                btn.innerHTML = '';
+                btn.appendChild(ico || Object.assign(document.createElement('i'), { className: 'fa-solid fa-database' }));
+                if (hdrRight) {
+                    hdrRight.insertBefore(btn, (bellEl && bellEl.parentNode === hdrRight) ? bellEl : null);
+                }
+                // Gắn class SAU khi đã dời + rút gọn: đây cũng là công tắc hiện nút (CSS).
+                btn.classList.add('app-cdb-icon');
+            });
+        })();
+
+        if (hdrRight) {
+            /* ---- 5d. MOBILE: gom action header cho gọn (Task R2-5).
                Chỉ đổi DOM chung; việc hiển thị (menu/dropdown) do CSS @media 768px quyết định,
                nên desktop không đổi. ---- */
-            var toolsMenuEl = document.getElementById('app-tools-menu');
-            var toolsWrapEl = document.getElementById('app-header-tools');
-
-            // (R2-1) Check Database -> thêm 1 mục trong menu tiện ích (proxy click), ẩn nút gốc (CSS).
-            var cdbBtn = hdrRight.querySelector('.btn-check-db');
-            if (cdbBtn && toolsMenuEl && toolsWrapEl) {
-                cdbBtn.classList.add('app-cdb-proxied');
-                var cdbItem = document.createElement('button');
-                cdbItem.type = 'button';
-                cdbItem.className = 'app-tools-item';
-                cdbItem.innerHTML = '<i class="fa-solid fa-database"></i> Check Database';
-                cdbItem.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    toolsWrapEl.classList.remove('is-open');
-                    setTimeout(function () { cdbBtn.click(); }, 0);
-                });
-                toolsMenuEl.appendChild(cdbItem);
-            }
-
             // (R2-5) Reset / In BC / Share KHSX -> gom sau 1 nút icon (dropdown).
             var actionsGrp = hdrRight.querySelector('.header-actions');
             if (actionsGrp) {

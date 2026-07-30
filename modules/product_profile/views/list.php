@@ -26,6 +26,10 @@
     <script src="<?php echo asset_ver('public/js/product_profile_dossier.js'); ?>" defer></script>
     <!-- Modal "Tần suất" (dùng chung với trang Chi tiết sản phẩm) -->
     <script src="<?php echo asset_ver('public/js/product_profile_frequency.js'); ?>" defer></script>
+    <!-- Modal "Xem thành phần" (thành phần in nhãn theo công thức sản xuất) -->
+    <script src="<?php echo asset_ver('public/js/product_profile_ingredients.js'); ?>" defer></script>
+    <!-- Xuất Excel dùng chung ([data-export-excel]) -->
+    <script src="<?php echo asset_ver('public/js/admin_factory/data_export_excel.js'); ?>" defer></script>
     <!-- Lightbox xem ảnh dùng chung (InvoiceViewer) -->
     <script src="<?php echo asset_ver('public/js/shared/invoice_dropzone.js'); ?>" defer></script>
     <!-- Đổi ảnh sản phẩm: chọn tệp / dán Ctrl+V / kéo-thả trên .img_product -->
@@ -67,17 +71,27 @@
                         <option value="confirmed">SP đã công bố dinh dưỡng</option>
                         <option value="standard">Bộ hồ sơ chuẩn</option>
                     </select>
-                    <!-- (6) Nút kiểm tra database -->
-                    <button type="button" class="btn-check-db" data-pp-open="#checkdb-modal"
-                        data-default-table="<?= htmlspecialchars(!empty($affected_table) ? $affected_table : 'products') ?>"
-                        data-affected-id="<?= (int) ($affected_id ?? 0) ?>"
-                        data-affected-table="<?= htmlspecialchars($affected_table ?? '') ?>">
-                        <i class="fa-solid fa-database"></i> Check database
-                    </button>
-                    <!-- Tần suất lặp lại file hồ sơ (toàn hệ thống, có phân trang) -->
-                    <button type="button" class="btn-frequency" id="btn-file-frequency" title="Xem tần suất lặp lại của file hồ sơ (toàn hệ thống)">
-                        <i class="fa-solid fa-chart-column"></i> Tần suất
-                    </button>
+                    <!-- Cụm nút thao tác: luôn dạt phải nhờ .wp-search-actions (margin-left:auto
+                         nằm ở CHÍNH CỤM, không nằm ở 1 nút cụ thể — trước đây dựa vào
+                         margin-left:auto của .btn-check-db nên khi app_shell.js dời nút đó lên
+                         header thì cả cụm nhảy sang trái sau vài giây). -->
+                    <div class="wp-search-actions">
+                        <!-- Thành phần in nhãn, dựng từ công thức sản xuất (nhiều SP 1 lượt) -->
+                        <button type="button" class="btn-ingredients" id="btn-label-ingredients" title="Xem thành phần in trên nhãn (theo công thức sản xuất)">
+                            <i class="fa-solid fa-flask"></i> Xem thành phần
+                        </button>
+                        <!-- (6) Nút kiểm tra database — app_shell.js gom thành icon cạnh trái chuông -->
+                        <button type="button" class="btn-check-db" data-pp-open="#checkdb-modal"
+                            data-default-table="<?= htmlspecialchars(!empty($affected_table) ? $affected_table : 'products') ?>"
+                            data-affected-id="<?= (int) ($affected_id ?? 0) ?>"
+                            data-affected-table="<?= htmlspecialchars($affected_table ?? '') ?>">
+                            <i class="fa-solid fa-database"></i> Check database
+                        </button>
+                        <!-- Tần suất lặp lại file hồ sơ (toàn hệ thống, có phân trang) -->
+                        <button type="button" class="btn-frequency" id="btn-file-frequency" title="Xem tần suất lặp lại của file hồ sơ (toàn hệ thống)">
+                            <i class="fa-solid fa-chart-column"></i> Tần suất
+                        </button>
+                    </div>
                 </div>
 
                 <?php if (!empty($form_error) && empty($open_add)): ?>
@@ -373,14 +387,55 @@
                 <div class="checkdb-toolbar">
                     <label>Bảng:</label>
                     <select class="checkdb-table-select">
-                        <option value="products">products (sản phẩm)</option>
+                        <option value="products">products (sản phẩm — cột label_ingredients)</option>
                         <option value="product_categories">product_categories (danh mục)</option>
                         <option value="product_files">product_files (file sản phẩm)</option>
+                        <option value="product_materials">product_materials (công thức 1 đơn vị)</option>
+                        <option value="material_information">material_information (NVL — cột label_name)</option>
                     </select>
                     <span class="checkdb-meta"></span>
                 </div>
                 <div class="checkdb-table-wrap"></div>
                 <div class="checkdb-pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODAL "XEM THÀNH PHẦN" — chuỗi thành phần in nhãn theo công thức SX
+         Chọn nhiều sản phẩm (mũi tên + Enter/Tab), sửa trực tiếp ô Thành phần,
+         xuất Excel bảng đang xem. Logic: public/js/product_profile_ingredients.js
+         ============================================================ -->
+    <div class="pp-modal-overlay" id="ingredients-modal">
+        <div class="pp-modal pp-modal--wide">
+            <div class="pp-modal-header">
+                <h3><i class="fa-solid fa-flask"></i> Thành phần in trên nhãn</h3>
+                <div class="pp-modal-header-actions">
+                    <button type="button" class="btn-download-freq" id="ing-export-excel"
+                        data-export-excel data-export-target="#ing-table" title="Xuất bảng đang xem ra Excel">
+                        <i class="fa-solid fa-file-excel"></i> Xuất Excel
+                    </button>
+                    <button type="button" class="pp-modal-close" aria-label="Đóng">&times;</button>
+                </div>
+            </div>
+            <div class="pp-modal-body">
+                <div class="ing-picker" id="ing-picker">
+                    <i class="fa-solid fa-magnifying-glass ing-picker-icon"></i>
+                    <input type="text" class="ing-search" id="ing-search" autocomplete="off"
+                        placeholder="Nhập tên sản phẩm..">
+                    <div class="ing-suggest" id="ing-suggest"></div>
+                </div>
+                <table class="ing-table" id="ing-table">
+                    <thead>
+                        <tr>
+                            <th class="ing-col-name">Tên sản phẩm</th>
+                            <th>Thành phần</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ing-tbody">
+                        <tr class="ing-empty-row"><td colspan="2" class="ing-empty">Chưa chọn sản phẩm nào.</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

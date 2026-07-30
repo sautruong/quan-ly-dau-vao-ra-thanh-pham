@@ -499,6 +499,50 @@ body.app-sidebar-collapsed .app-sb-group { position: relative; }
 .app-actions { display: contents; }
 .app-actions-btn { display: none; }
 
+/* ---- "Check database" dùng chung: CHỈ 1 ICON, đặt cạnh trái chuông ----
+   app_shell.js gom mọi nút .btn-check-db của view lên header và gắn .app-cdb-icon.
+   Đè hết style nút-có-nhãn mà từng view tự khai báo (viền tím, padding, chữ...)
+   để trông giống các icon header khác (chuông/lịch/todo).
+
+   Nút CHƯA được gắn .app-cdb-icon thì ẩn hẳn: nếu không, trang nặng sẽ vẽ nút
+   dạng-có-nhãn ở chỗ view khai báo rồi vài giây sau (DOMContentLoaded) mới nhảy lên
+   header — nháy rất rõ. Dùng `body ...:not()` để thắng luôn rule `.btn-check-db`
+   mà check_database.js chèn động vào <head> lúc chạy (cùng specificity nhưng sau). */
+body .btn-check-db:not(.app-cdb-icon) { display: none; }
+/* Không bó theo .app-header-right để trang không có header chung vẫn ra icon tử tế. */
+.btn-check-db.app-cdb-icon {
+    width: 42px; height: 42px; padding: 0; margin: 0; gap: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid transparent; border-radius: 50%;
+    background: transparent; color: var(--app-gray-700);
+    font-size: 18px; font-weight: 400; cursor: pointer;
+    box-shadow: none; transition: var(--app-trans);
+}
+.btn-check-db.app-cdb-icon:hover {
+    background: var(--app-gray-100); border-color: var(--app-gray-200);
+    color: var(--app-gray-700); box-shadow: none;
+}
+/* Cụm chứa nút cũ (đã bị JS lấy nút ra) không được chiếm chỗ/gap trên header */
+.app-header-right .cdb-actions:empty,
+.app-header-right .header-actions:empty { display: none; }
+
+/* Tooltip tự vẽ cho nút icon trên header (hiện ngay khi hover, không chờ ~1s và
+   không mang kiểu của OS như title native). Dùng chung: gắn data-app-tip="..." */
+[data-app-tip] { position: relative; }
+[data-app-tip]::after {
+    content: attr(data-app-tip);
+    position: absolute; top: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 9px; border-radius: 6px;
+    background: #111827; color: #fff;
+    font-size: 11.5px; font-weight: 600; line-height: 1.4;
+    white-space: nowrap; pointer-events: none;
+    opacity: 0; visibility: hidden; transition: opacity 0.15s ease;
+    z-index: 3100;
+}
+[data-app-tip]:hover::after,
+[data-app-tip]:focus-visible::after { opacity: 1; visibility: visible; }
+
 /* Thanh tab phụ dưới header (cụm 3 view Kế hoạch sản xuất) */
 .app-subtabs {
     display: flex;
@@ -1506,8 +1550,8 @@ body.app-sidebar-collapsed .app-sb-group { position: relative; }
         z-index: 3000;
     }
 
-    /* ---- R2-1: Check Database đã đưa vào menu tiện ích -> ẩn nút gốc trên header ---- */
-    .app-header-right .btn-check-db.app-cdb-proxied { display: none; }
+    /* Check database: đã là icon cạnh chuông (.app-cdb-icon) nên mobile giữ nguyên,
+       không còn proxy vào menu tiện ích. */
 
     /* ---- R2-5: Reset / In BC / Share KHSX gom sau 1 nút icon (.app-actions do JS tạo) ---- */
     .app-actions { position: relative; }
@@ -1623,6 +1667,7 @@ body.app-view-dark .app-user-dropdown {
    xám đậm (khác nền header) để luôn tương phản chắc chắn — không phụ thuộc đổi màu chữ. */
 body.app-view-dark .app-cal-btn:hover,
 body.app-view-dark .app-bell-btn:hover,
+body.app-view-dark .btn-check-db.app-cdb-icon:hover,
 body.app-view-dark .app-todo-btn:hover,
 body.app-view-dark .app-remind-btn:hover,
 body.app-view-dark .app-view-theme-btn:hover,
