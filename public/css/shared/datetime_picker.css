@@ -330,3 +330,38 @@ input.js-green-datetime.gdtp-bound {
     .gdtp-popover .gdtp-time { flex-basis: auto; }
     .gdtp-time-list { height: 132px; }
 }
+
+/* =====================================================================
+   MOBILE (≤768px) — quy ước chung cho ô "Ngày giờ ghi" của MỌI view nhập liệu
+   (file này được nạp bởi đúng 10 view có #record-datetime, nên đặt ở đây là
+   chỗ dùng chung chuẩn nhất — không phải chép vào từng css của view).
+   - Bỏ nhãn chữ "Ngày giờ ghi", chỉ để lại ô lịch.
+   - Ô lịch canh PHẢI và nằm TRÊN ô tìm kiếm.
+   Dùng :has(> #record-datetime) để "nặng" hơn các rule cũ theo view
+   (.wp-toolbar > .wp-date-picker …) mà không phải rải !important, đồng thời
+   không đụng tới các .wp-date-picker khác không phải ô ngày giờ ghi.
+   ===================================================================== */
+@media (max-width: 768px) {
+    .wp-date-picker:has(> #record-datetime) {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        width: 100%;
+        margin: 0 0 10px;
+        /* gap: 0 — nhãn đã ẩn, chỉ còn input gốc (1px, ẩn) + nút .gdtp-trigger +
+           popover. Giữ gap của view sẽ chèn thêm khoảng trắng SAU nút, đẩy nút
+           thụt vào ~10px nên nhìn không sát mép phải. */
+        gap: 0;
+        /* Bỏ padding ngang riêng của từng view (vd .wp-date-picker padding:0 10px)
+           để mọi view đều dừng đúng một mép phải như nhau. */
+        padding-left: 0;
+        padding-right: 0;
+    }
+    .wp-date-picker > label[for="record-datetime"] { display: none; }
+    .wp-date-picker > #record-datetime { width: auto; max-width: 100%; }
+
+    /* Ô ngày đứng SAU ô tìm kiếm trong cùng cha (các cha này đã xếp dọc ở
+       mobile) -> kéo lên trên bằng order, không phải đổi HTML của 10 view. */
+    .wp-search ~ .wp-date-picker,
+    .wp-search ~ .wp-date-col { order: -1; }
+}

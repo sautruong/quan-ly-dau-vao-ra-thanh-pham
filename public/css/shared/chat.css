@@ -204,6 +204,30 @@
 }
 .chat-msg-time { font-size: 10px; color: var(--chat-muted); margin: 2px 0 0 4px; }
 
+/* ===== Tài khoản hệ thống "đang soạn tin" =====
+   Bong bóng 3 chấm nhấp nháy hiện TRƯỚC mỗi câu trả lời, rồi nội dung chạy dần
+   từng dòng (xem chat.js::playBotReplies) thay vì đổ ra một lần. Trong lúc chạy
+   dòng, cụm nút gợi ý bị giấu để không lòi ra trước khi đọc xong nội dung. */
+.chat-typing { display: flex; align-items: center; gap: 4px; padding: 11px 14px; }
+.chat-typing span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--chat-muted, #6b7280); opacity: .45;
+    animation: chat-typing-dot 1.1s infinite ease-in-out;
+}
+.chat-typing span:nth-child(2) { animation-delay: .18s; }
+.chat-typing span:nth-child(3) { animation-delay: .36s; }
+@keyframes chat-typing-dot {
+    0%, 60%, 100% { transform: translateY(0);    opacity: .35; }
+    30%           { transform: translateY(-4px); opacity: .9; }
+}
+.chat-msg.is-revealing .chat-bot-opts,
+.chat-msg.is-revealing .chat-msg-time { opacity: 0; }
+.chat-msg .chat-bot-opts, .chat-msg .chat-msg-time { transition: opacity .25s ease; }
+/* Người dùng tắt hiệu ứng chuyển động ở hệ điều hành → không nhấp nháy nữa. */
+@media (prefers-reduced-motion: reduce) {
+    .chat-typing span { animation: none; }
+}
+
 /* Tin của tôi → căn phải, màu xanh */
 .chat-msg.is-me { flex-direction: row-reverse; }
 .chat-msg.is-me .chat-msg-col { align-items: flex-end; }
@@ -847,22 +871,49 @@
 .chat-bot-name-row .chat-modal-input { flex: 1; margin: 0; }
 .chat-bot-name-row .chat-send-btn { flex-shrink: 0; padding: 0 14px; border-radius: 10px; }
 
-.chat-bot-acl { max-height: 240px; overflow-y: auto; border: 1px solid var(--chat-line); border-radius: 10px; }
+/* Bảng phân quyền theo chủ đề. Số chủ đề tăng dần theo thời gian (nay đã 7) nên
+   bảng PHẢI cuộn ngang được, và cột "Người dùng" phải dính bên trái — cuộn tới
+   cột thứ 5, 6 mà không thấy đang tick cho ai thì rất dễ tick nhầm người. */
+.chat-bot-acl {
+    max-height: 260px; overflow: auto;
+    border: 1px solid var(--chat-line); border-radius: 10px;
+}
 .chat-bot-acl-row {
     display: flex; align-items: center; gap: 6px;
     padding: 7px 10px; border-bottom: 1px solid #f1f3f5;
     transition: background .2s ease;
+    min-width: max-content;          /* không bóp cột khi tràn -> sinh thanh cuộn ngang */
 }
 .chat-bot-acl-row:last-child { border-bottom: none; }
-.chat-bot-acl-row.is-head { background: #f8fafc; font-size: 11.5px; font-weight: 700; color: var(--chat-muted); }
+/* Cố ý KHÔNG sticky hàng tiêu đề: sticky-dọc (hàng) lồng sticky-ngang (ô "Người
+   dùng") làm nhãn chủ đề trượt qua bị lòi lên trên ô đó. Khối chỉ cao 260px với
+   vài người dùng nên ghim hàng tiêu đề gần như không có tác dụng gì. */
+.chat-bot-acl-row.is-head {
+    background: #f8fafc; font-size: 11.5px; font-weight: 700; color: var(--chat-muted);
+}
 .chat-bot-acl-row.is-saving { opacity: .6; }
 .chat-bot-acl-row.is-saved { background: #f0fdf4; }
-.chat-bot-acl-row .who { flex: 1; min-width: 0; font-size: 13px; display: flex; flex-direction: column; }
+.chat-bot-acl-row .who {
+    flex: 0 0 130px; width: 130px; min-width: 0; font-size: 13px;
+    display: flex; flex-direction: column;
+    position: sticky; left: 0; z-index: 1;
+    background: #fff; padding-right: 8px;
+    /* Viền + bóng đổ phải: dấu hiệu chuẩn của "cột ghim", để cột chủ đề đang
+       trượt qua bên dưới đọc ra là nằm SAU vách ngăn chứ không phải bị dính chữ. */
+    box-shadow: 6px 0 6px -6px rgba(0, 0, 0, .18);
+    border-right: 1px solid var(--chat-line);
+}
+/* Ô "Người dùng" của hàng tiêu đề phải nổi TRÊN các cột chủ đề trượt qua dưới nó
+   (z-index cao hơn hẳn + nền đục), nếu không nhãn chủ đề sẽ lòi ra đè lên chữ. */
+.chat-bot-acl-row.is-head .who  { background: #f8fafc; z-index: 3; }
+.chat-bot-acl-row.is-saved .who { background: #f0fdf4; }
+.chat-bot-acl-row .tp { overflow: hidden; }
 .chat-bot-acl-row .who b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-bot-acl-row .who .sub,
 .chat-bot-acl-row .who .tag { font-style: normal; font-size: 11px; color: var(--chat-muted); }
 .chat-bot-acl-row .who .tag { color: #b45309; font-weight: 600; }
-.chat-bot-acl-row .tp { width: 78px; flex-shrink: 0; text-align: center; }
+.chat-bot-acl-row .tp { width: 66px; flex-shrink: 0; text-align: center; }
+.chat-bot-acl-row.is-head .tp { white-space: normal; line-height: 1.25; font-size: 10.5px; }
 
 /* Checkbox tròn xanh lá — quy ước chung của hệ thống */
 .chat-bot-chk { display: inline-flex; cursor: pointer; }

@@ -450,10 +450,14 @@ body.app-sidebar-collapsed .app-sb-group { position: relative; }
 }
 .app-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .app-header-burger {
+    /* Bật lên là display:flex (mobile) — PHẢI có align/justify center, nếu không
+       icon bị dạt trái + kéo giãn theo chiều cao, nhìn lệch hẳn so với cụm icon
+       tròn 42px bên phải. Kích thước lấy đúng 42px để nằm cùng hàng cho đều. */
     display: none;
-    width: 40px; height: 40px;
-    border: 0; background: transparent; border-radius: 8px;
-    font-size: 20px; color: var(--app-gray-700); cursor: pointer;
+    align-items: center; justify-content: center;
+    width: 42px; height: 42px; flex: 0 0 42px;
+    border: 0; background: transparent; border-radius: 50%;
+    font-size: 20px; line-height: 1; color: var(--app-gray-700); cursor: pointer;
 }
 .app-header-burger:hover { background: var(--app-gray-100); color: var(--app-green); }
 .app-header-title {

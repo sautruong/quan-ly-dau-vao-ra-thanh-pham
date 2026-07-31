@@ -300,14 +300,18 @@
     }
     .history-table td:nth-child(1) { font-size: 15px !important; font-weight: 700 !important; }
 
-    /* Cụm "Thao tác" thành hàng nút ở đáy card */
+    /* Cụm "Thao tác" (Sửa / Xóa) thành hàng nút ở đáy card, CANH PHẢI —
+       ngón cái cầm điện thoại nằm ở mép phải, để nút thao tác bên đó bấm thuận
+       hơn, đồng thời tách khỏi phần chữ nội dung căn trái. */
     .history-table td.history-actions {
         display: flex !important;
         flex-wrap: wrap;
+        justify-content: flex-end;
         gap: 8px;
         margin-top: 8px !important;
         padding-top: 10px !important;
         border-top: 1px dashed var(--color-gray-200, #e5e7eb) !important;
+        text-align: right !important;
     }
 
     /* Phân trang: căn giữa, cho phép xuống dòng */

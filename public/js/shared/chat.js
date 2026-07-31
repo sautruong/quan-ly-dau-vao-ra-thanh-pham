@@ -541,6 +541,8 @@
         }
         // Cụm nút gợi ý do tài khoản hệ thống gửi kèm ("Có phải bạn hỏi về…").
         // Bấm 1 nút = gửi đúng câu đó kèm lựa chọn đã chốt (bot_pick) nên không phải đoán lại.
+        // o = {t:nhãn, k:chủ đề, e:loại thực thể(p/m/s/c), i:id, f/u:kỳ từ/đến}.
+        // 'p' là field đời cũ (chỉ product_id) — vẫn phát ra để tin nhắn cũ bấm lại được.
         function botOptionsHtml(m) {
             if (!m.bot_options || !m.bot_options.length) return '';
             var used = m.bot_used ? ' is-used' : '';
@@ -548,6 +550,8 @@
                 + m.bot_options.map(function (o) {
                     return '<button type="button" class="chat-bot-opt"'
                         + ' data-k="' + esc(o.k || '') + '" data-p="' + (parseInt(o.p, 10) || 0) + '"'
+                        + ' data-e="' + esc(o.e || '') + '" data-i="' + (parseInt(o.i, 10) || 0) + '"'
+                        + ' data-f="' + esc(o.f || '') + '" data-u="' + esc(o.u || '') + '"'
                         + (m.bot_used ? ' disabled' : '') + '>' + esc(o.t || '') + '</button>';
                 }).join('') + '</div>';
         }
@@ -879,18 +883,92 @@
 
         /* ============ gửi tin ============ */
         /* ============ tài khoản hệ thống (Safe King) ============ */
-        // Vẽ tin vừa gửi + (nếu có) các câu trả lời của hệ thống trong cùng 1 lượt.
+        /* Vẽ tin vừa gửi + (nếu có) các câu trả lời của hệ thống trong cùng 1 lượt.
+           Câu trả lời KHÔNG đổ ra một lần: mỗi tin lần lượt hiện "đang soạn tin…"
+           rồi chạy dần từng dòng, giống người thật đang gõ. Toàn bộ chỉ là hiệu
+           ứng phía client — tin đã nằm sẵn trong DB từ lúc máy chủ trả về. */
         function appendSentAndBot(res) {
-            var list = [];
-            if (res.message) list.push(res.message);
-            if (res.bot_replies && res.bot_replies.length) list = list.concat(res.bot_replies);
-            if (!list.length) return;
-            renderMessages(list, 'append');
-            newestId = list[list.length - 1].id;
+            if (res.message) {
+                renderMessages([res.message], 'append');
+                newestId = Math.max(newestId, parseInt(res.message.id, 10) || 0);
+            }
+            var bots = (res.bot_replies || []).filter(Boolean);
             renderSeen();
             scrollToBottom();
-            // Câu trả lời của hệ thống hiện ngay trước mắt → coi như đã xem, tránh badge ảo.
-            if (res.bot_replies && res.bot_replies.length) markCurrentRead();
+            if (!bots.length) return;
+
+            // Chốt newestId NGAY (không đợi diễn hoạt xong): vòng poll chạy song song,
+            // nếu để nguyên nó sẽ kéo lại đúng các tin này và vẽ trùng lần thứ hai.
+            newestId = Math.max(newestId, parseInt(bots[bots.length - 1].id, 10) || 0);
+            markCurrentRead();       // đang hiện trước mắt → coi như đã xem, tránh badge ảo
+            playBotReplies(bots, 0, current ? current.id : 0);
+        }
+
+        /* Lần lượt từng câu trả lời: chấm "đang soạn" -> vẽ bong bóng -> chạy dần dòng. */
+        function playBotReplies(list, idx, convId) {
+            if (!current || current.id !== convId) return;   // user đã chuyển hội thoại
+            if (idx >= list.length) { renderSeen(); return; }
+            var m = list[idx];
+            var stick = isAtBottom();
+
+            var typing = showTypingBubble(m);
+            if (stick) scrollToBottom();
+            // Tin càng dài "gõ" càng lâu, nhưng chặn trần để không ai phải chờ.
+            var think = Math.min(1500, 450 + (m.body || '').length * 5);
+            setTimeout(function () {
+                if (typing && typing.parentNode) typing.remove();
+                if (!current || current.id !== convId) return;
+                renderMessages([m], 'append');
+                var el = msgsBox.querySelector('.chat-msg[data-id="' + m.id + '"]');
+                revealBubbleLines(el, stick, function () {
+                    playBotReplies(list, idx + 1, convId);
+                });
+            }, think);
+        }
+
+        /** Bong bóng 3 chấm nhấp nháy của tài khoản hệ thống (không có data-id). */
+        function showTypingBubble(m) {
+            var d = document.createElement('div');
+            d.className = 'chat-msg chat-msg-typing';
+            d.innerHTML = msgAvatarHtml(m)
+                + '<div class="chat-msg-col"><div class="chat-bubble chat-typing">'
+                + '<span></span><span></span><span></span></div></div>';
+            msgsBox.appendChild(d);
+            return d;
+        }
+
+        /* Hiện dần nội dung theo TỪNG DÒNG (không phải từng ký tự): nội dung bot
+           là báo cáo nhiều dòng, gõ từng ký tự vừa lâu vừa làm vỡ các thẻ [b].
+           .chat-bubble dùng white-space:pre-wrap nên xuống dòng là ký tự '\n'
+           thật — cắt theo '\n' an toàn vì thẻ định dạng không bao giờ vắt dòng. */
+        function revealBubbleLines(msgEl, stick, done) {
+            var bubble = msgEl ? msgEl.querySelector('.chat-bubble') : null;
+            if (!bubble) { if (done) done(); return; }
+
+            var full = bubble.innerHTML;
+            var lines = full.split('\n');
+            if (lines.length < 2) {                       // 1 dòng: hiện luôn, khỏi giật
+                if (stick) scrollToBottom();
+                if (done) done();
+                return;
+            }
+            msgEl.classList.add('is-revealing');          // giấu cụm nút cho tới khi gõ xong
+            bubble.innerHTML = '';
+
+            var i = 0;
+            var step = Math.max(40, Math.min(150, Math.round(1100 / lines.length)));
+            var timer = setInterval(function () {
+                if (!msgEl.isConnected) { clearInterval(timer); return; }
+                i++;
+                bubble.innerHTML = lines.slice(0, i).join('\n');
+                if (stick) scrollToBottom();
+                if (i >= lines.length) {
+                    clearInterval(timer);
+                    msgEl.classList.remove('is-revealing');
+                    if (stick) scrollToBottom();
+                    if (done) done();
+                }
+            }, step);
         }
         // Bấm 1 nút gợi ý: gửi đúng nhãn nút làm tin nhắn + kèm lựa chọn đã chốt.
         function pickBotOption(btn) {
@@ -910,6 +988,10 @@
             fd.append('bot_pick', JSON.stringify({
                 k: btn.getAttribute('data-k') || '',
                 p: parseInt(btn.getAttribute('data-p'), 10) || 0,
+                e: btn.getAttribute('data-e') || '',
+                i: parseInt(btn.getAttribute('data-i'), 10) || 0,
+                f: btn.getAttribute('data-f') || '',
+                u: btn.getAttribute('data-u') || '',
                 src: src
             }));
             api('send', { method: 'POST', body: fd }).then(function (res) {

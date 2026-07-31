@@ -395,6 +395,10 @@ function get_customer_fullAction()
             'address'    => $c['address']    ?? '',
             'receiver'   => $c['receiver']   ?? '',
             'phone'      => $c['phone']      ?? '',
+            // Chỉ trả khi đúng dạng #rrggbb — giá trị này được gán thẳng vào style
+            // màu chữ ở client, lọc tại đây để không đẩy chuỗi lạ ra giao diện.
+            'secondary_color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($c['secondary_color'] ?? ''))
+                ? strtolower($c['secondary_color']) : '',
         ]
     ], JSON_UNESCAPED_UNICODE);
     exit;

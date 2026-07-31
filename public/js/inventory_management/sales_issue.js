@@ -1016,7 +1016,7 @@
                 <tr>
                     <td class="center">${i + 1}</td>
                     <td class="center">${escapeHtml(r.code)}</td>
-                    <td>${escapeHtml(r.name)}</td>
+                    <td class="pname">${escapeHtml(r.name)}</td>
                     <td class="center">${escapeHtml(r.unit)}</td>
                     <td class="num">${fmtNumber(r.qty)}</td>
                     <td class="num">${fmtNumber(r.price)}</td>
@@ -1049,13 +1049,13 @@
             <table class="pr-table">
                 <thead>
                     <tr>
-                        <th style="width:6%">STT</th>
-                        <th style="width:12%">Mã số</th>
-                        <th>Tên nhãn hiệu, quy cách, phẩm chất vật tư (sản phẩm, hàng hóa)</th>
-                        <th style="width:10%">Đơn vị tính</th>
-                        <th style="width:10%">Số lượng xuất</th>
-                        <th style="width:14%">Đơn giá</th>
-                        <th style="width:16%">Thành tiền</th>
+                        <th style="width:5%">STT</th>
+                        <th style="width:10%">Mã số</th>
+                        <th class="pname">Tên nhãn hiệu, quy cách, phẩm chất vật tư (sản phẩm, hàng hóa)</th>
+                        <th style="width:8%">Đơn vị tính</th>
+                        <th style="width:9%">Số lượng xuất</th>
+                        <th style="width:11%">Đơn giá</th>
+                        <th style="width:13%">Thành tiền</th>
                     </tr>
                 </thead>
                 <tbody>

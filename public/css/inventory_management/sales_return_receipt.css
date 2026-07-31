@@ -570,3 +570,50 @@
         left: 0;
     }
 }
+
+/* =====================================================================
+   MOBILE (≤768px) — khối chọn khách hàng gọn lại còn 3 dòng:
+     [ngày giờ ghi — canh phải]
+     [ô tìm khách hàng — full width, không nhãn]
+     [tên viết tắt — canh phải, chữ trần tô màu riêng của khách]
+   ===================================================================== */
+@media (max-width: 768px) {
+    /* Ngày giờ ghi lên TRÊN CÙNG (đứng trước cụm khách hàng trong toolbar).
+       Nhãn chữ + canh phải do quy ước dùng chung lo (shared/datetime_picker.css). */
+    .wp-return-toolbar { display: flex; flex-direction: column; }
+    .wp-return-toolbar .wp-date-picker { order: -1; width: 100%; }
+
+    /* Bỏ nhãn "Tên khách hàng:" — placeholder trong ô đã nói rõ nghĩa rồi */
+    .wp-customer > label[for="customer"] { display: none; }
+    .wp-customer { width: 100%; gap: 0; }
+    .wp-customer > input#customer { flex: 1 1 auto; width: 100%; max-width: none; }
+
+    /* Cụm khách hàng xếp dọc để ô tìm được trọn bề ngang */
+    .wp-customer-group { flex-direction: column; align-items: stretch; gap: 8px; }
+
+    /* Bỏ dấu nối "–" giữa tên và viết tắt (2 dòng riêng thì gạch nối vô nghĩa) */
+    .wp-customer-group .customer-acronym-sep { display: none; }
+
+    /* Tên viết tắt: canh phải, chữ trần — bỏ khung viền/nền/bóng đổ.
+       Màu chữ do JS gán theo customers.secondary_color (applyCustomerColor),
+       nên KHÔNG đặt color cứng ở đây để khỏi đè mất màu của khách. */
+    .wp-customer-group .wp-custom-acronym { width: 100%; justify-content: flex-end; }
+    .wp-customer-group .wp-custom-acronym input {
+        width: auto; max-width: 100%;
+        flex: 0 0 auto;
+        text-align: right;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        font-size: 16px;
+        font-weight: 800;
+    }
+    /* Chưa chọn khách: chữ gợi ý "viết tắt" phải mờ hẳn, nếu không nó đậm +
+       IN HOA y như tên viết tắt thật, nhìn tưởng đã chọn khách rồi. */
+    .wp-customer-group .wp-custom-acronym input::placeholder {
+        font-weight: 500;
+        text-transform: none;
+        color: var(--color-gray-400, #9ca3af);
+    }
+}

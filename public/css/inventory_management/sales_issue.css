@@ -817,6 +817,17 @@
     text-align: right;
     white-space: nowrap;
 }
+/* Cột "Tên nhãn hiệu…": tên hàng phải nằm TRỌN 1 dòng (phiếu in/chụp gửi khách
+   mà tên bị bẻ 2-3 dòng thì bảng cao vống lên, đọc rất xấu). Bảng để
+   table-layout mặc định (auto) nên cột này tự lấy đúng bề rộng nó cần, các cột
+   số bên phải co lại theo — vì vậy % của các cột kia chỉ là gợi ý, đã hạ bớt. */
+.print-sheet table.pr-table td.pname {
+    white-space: nowrap;
+    width: auto;
+}
+.print-sheet table.pr-table th.pname {
+    white-space: normal;   /* riêng tiêu đề dài thì vẫn cho xuống dòng */
+}
 .print-sheet table.pr-table td.center {
     text-align: center;
 }

@@ -8,6 +8,12 @@
 
     var ACT = '?mod=home&controllers=index&action=';
     var MAX_MAIN = 8;
+    /* Mobile: thanh menu cha chỉ giữ 3 nhóm, phần dư dồn hết vào ">>" (chỉ đổi
+       CÁCH HIỂN THỊ — không lưu ngược lên server, xem saveState bên dưới). */
+    var MAX_MAIN_MOBILE = 3;
+    var MOBILE_Q = window.matchMedia('(max-width: 768px)');
+    function isMobileNav() { return MOBILE_Q.matches; }
+    function maxMain() { return isMobileNav() ? MAX_MAIN_MOBILE : MAX_MAIN; }
 
     function postForm(action, params) {
         var body = new URLSearchParams();
@@ -71,11 +77,46 @@
                 .map(function (el) { return el.getAttribute('data-key'); });
         }
         function saveState() {
+            // Trên mobile thanh ngang bị ép còn 3 nhóm để hiển thị — lưu lại sẽ ghi đè
+            // mất bố cục desktop của chính user đó, nên tuyệt đối không gọi API ở đây.
+            if (isMobileNav()) return;
             postForm('menuOrderSave', { order: allKeys(), bar_count: nav.children.length });
         }
         function syncMoreVisibility() {
             moreWrap.style.display = moreList.children.length ? '' : 'none';
         }
+
+        /* ---- Giới hạn số nhóm trên thanh ngang theo khổ màn hình ----
+           Thứ tự "thật" (desktop) chụp lại ngay lúc tải trang để khi quay về
+           desktop (xoay ngang / đổi cỡ cửa sổ) dựng lại đúng như server trả về. */
+        var desktopBarKeys = Array.prototype.slice.call(nav.children).map(function (el) {
+            return el.getAttribute('data-key');
+        });
+        function itemByKey(key) {
+            var all = Array.prototype.slice.call(nav.children)
+                .concat(Array.prototype.slice.call(moreList.children));
+            for (var i = 0; i < all.length; i++) {
+                if (all[i].getAttribute('data-key') === key) return all[i];
+            }
+            return null;
+        }
+        function applyNavLimit() {
+            if (isMobileNav()) {
+                // Đẩy từ CUỐI thanh vào ĐẦU ">>" để giữ nguyên thứ tự tương đối.
+                while (nav.children.length > MAX_MAIN_MOBILE) {
+                    moreList.insertBefore(nav.children[nav.children.length - 1], moreList.firstChild);
+                }
+            } else {
+                desktopBarKeys.forEach(function (k) {
+                    var el = itemByKey(k);
+                    if (el) nav.appendChild(el);
+                });
+            }
+            syncMoreVisibility();
+        }
+        applyNavLimit();
+        if (MOBILE_Q.addEventListener) MOBILE_Q.addEventListener('change', applyNavLimit);
+        else if (MOBILE_Q.addListener) MOBILE_Q.addListener(applyNavLimit);
 
         /* ---- Đóng mọi dropdown menu cha (trừ 1 cái đang mở, nếu có) ---- */
         function closeAllNav(except) {
@@ -94,7 +135,7 @@
             var pin = e.target.closest('.home-nav-pin');
             if (pin) {
                 e.stopPropagation();
-                if (nav.children.length >= MAX_MAIN) { toastWarn('Thanh dấu trang đã full.'); return; }
+                if (nav.children.length >= maxMain()) { toastWarn('Thanh dấu trang đã full.'); return; }
                 var pinItem = pin.closest('.home-nav-item');
                 if (pinItem) {
                     nav.appendChild(pinItem);
@@ -143,7 +184,7 @@
             container.addEventListener('dragover', function (e) {
                 if (!dragEl) return;
                 // Kéo từ ngoài (">>" hoặc hàng chính) vào hàng chính khi đã đủ 8 -> chặn.
-                if (container === nav && dragEl.parentElement !== nav && nav.children.length >= MAX_MAIN) {
+                if (container === nav && dragEl.parentElement !== nav && nav.children.length >= maxMain()) {
                     if (!dragBlockedNotified) { dragBlockedNotified = true; toastWarn('Thanh dấu trang đã full.'); }
                     return;
                 }

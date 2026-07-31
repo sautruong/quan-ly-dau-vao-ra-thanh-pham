@@ -189,6 +189,16 @@
         $custDropdown.classList.add('active');
     }
 
+    /* Tô tên viết tắt theo màu thứ cấp của khách (customers.secondary_color) —
+       cùng quy ước nhận diện màu đang dùng ở card đơn hàng / phiếu soạn hàng.
+       Máy chủ đã lọc chỉ trả về chuỗi #rrggbb hợp lệ hoặc rỗng. */
+    function applyCustomerColor() {
+        if (!$custShort) return;
+        var c = (selectedCustomer && selectedCustomer.secondary_color) || '';
+        $custShort.style.color = c || '';
+        $custShort.style.borderColor = c || '';
+    }
+
     function hideCustomerDropdown() {
         $custDropdown.classList.remove('active');
         $custDropdown.innerHTML = '';
@@ -203,6 +213,7 @@
             selectedCustomer = res.data;
             $cust.value = selectedCustomer.name;
             $custShort.value = selectedCustomer.short_name || '';
+            applyCustomerColor();
             // Đồng bộ interpretation hiện có
             syncInterpretations();
             hideCustomerDropdown();
@@ -621,12 +632,14 @@
         if (window.JE && window.JE.loadTemplatesAsBlocks) window.JE.loadTemplatesAsBlocks();
         // Set customer
         selectedCustomer = {
-            id:         batch.customer_id,
-            name:       batch.customer_name,
-            short_name: batch.customer_short,
+            id:              batch.customer_id,
+            name:            batch.customer_name,
+            short_name:      batch.customer_short,
+            secondary_color: batch.customer_color || '',
         };
         $cust.value = batch.customer_name;
         $custShort.value = batch.customer_short || '';
+        applyCustomerColor();
         // Set datetime
         const localVal = mysqlToLocalValue(batch.created_at);
         if (localVal) $dateTime.value = localVal;
@@ -652,12 +665,14 @@
         editingBatch = batch;
         setMode('handle');
         selectedCustomer = {
-            id:         batch.customer_id,
-            name:       batch.customer_name,
-            short_name: batch.customer_short,
+            id:              batch.customer_id,
+            name:            batch.customer_name,
+            short_name:      batch.customer_short,
+            secondary_color: batch.customer_color || '',
         };
         $cust.value = batch.customer_name;
         $custShort.value = batch.customer_short || '';
+        applyCustomerColor();
         const localVal = mysqlToLocalValue(batch.created_at);
         if (localVal) $dateTime.value = localVal;
 

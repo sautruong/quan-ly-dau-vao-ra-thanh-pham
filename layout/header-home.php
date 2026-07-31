@@ -60,6 +60,12 @@ if (!function_exists('home_nav_render_item')) {
                 <i class="fa-solid fa-thumbtack"></i>
             </button>
             <div class="home-nav-drop">
+                <?php /* Tiêu đề chỉ hiện khi menu con bung dạng modal trên mobile (CSS ẩn ở desktop) —
+                         mở modal che hết màn hình thì phải nhắc lại đang ở nhóm nào. */ ?>
+                <div class="home-nav-drop-title">
+                    <span><?php echo $glabel; ?></span>
+                    <button type="button" class="home-nav-drop-close" aria-label="Đóng">&times;</button>
+                </div>
                 <?php foreach ($items as $v):
                     $label = htmlspecialchars((string) ($v['label'] ?? ''), ENT_QUOTES, 'UTF-8');
                     $url   = htmlspecialchars(home_nav_view_url($v), ENT_QUOTES, 'UTF-8');
@@ -118,6 +124,43 @@ foreach ($__hn_groups as $gkey => $items) {
         <?php if ($__hd_todo_visible): ?>
             <?php require __DIR__ . '/header-widgets/todo.php'; ?>
         <?php endif; ?>
+
+        <?php /* MOBILE: gom mọi icon tiện ích của header vào 1 nút, đặt ngay cạnh TRÁI chuông.
+                 Cố ý dùng lại đúng id/class .app-header-tools/.app-tools-* của header-app.php
+                 để app_shell.js (mục 3b) wire sẵn + app_shell.css lo phần ẩn/hiện theo breakpoint
+                 — không phải viết JS riêng cho trang chủ. Mỗi mục chỉ .click() vào nút thật đang ẩn. */ ?>
+        <div class="app-header-tools" id="app-header-tools">
+            <button type="button" class="app-tools-btn" id="app-tools-btn" aria-label="Tiện ích">
+                <i class="fa-solid fa-grip"></i>
+            </button>
+            <div class="app-tools-menu" id="app-tools-menu">
+                <button type="button" class="app-tools-item" data-tools-target="home-search-btn">
+                    <i class="fa-solid fa-magnifying-glass"></i> Tìm menu
+                </button>
+                <?php if ($__hd_cal_visible): ?>
+                    <button type="button" class="app-tools-item" data-tools-target="app-cal-btn">
+                        <i class="fa-solid fa-calendar-days"></i> Lịch
+                    </button>
+                <?php endif; ?>
+                <?php if ($__hd_todo_visible): ?>
+                    <button type="button" class="app-tools-item" data-tools-target="app-todo-btn">
+                        <i class="fa-solid fa-list-check"></i> Việc cần làm
+                    </button>
+                <?php endif; ?>
+                <?php if ($__hd_remind_visible): ?>
+                    <button type="button" class="app-tools-item" data-tools-target="app-remind-btn">
+                        <i class="fa-solid fa-thumbtack"></i> Điểm nhắc
+                    </button>
+                <?php endif; ?>
+                <button type="button" class="app-tools-item" data-tools-target="home-text-theme-btn">
+                    <i class="fa-solid fa-circle-half-stroke"></i> Sáng / Tối chữ
+                </button>
+                <button type="button" class="app-tools-item" data-tools-target="home-bgset-btn">
+                    <i class="fa-solid fa-image"></i> Cài đặt hình nền
+                </button>
+            </div>
+        </div>
+
         <?php require __DIR__ . '/header-widgets/bell.php'; ?>
         <?php if ($__hd_remind_visible): ?>
             <?php require __DIR__ . '/header-widgets/remind.php'; ?>

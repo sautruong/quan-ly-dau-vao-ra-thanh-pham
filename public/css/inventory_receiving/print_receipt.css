@@ -178,7 +178,8 @@
     letter-spacing: 1px;
     color: #142037;
     -webkit-text-stroke: 1px #1a2b4a;
-    text-shadow: 0 2px 4px rgba(24, 43, 71, .28), 0 1px 0 rgba(24, 43, 71, .4);
+    /* Không đổ bóng chữ tiêu đề: in ra giấy / chụp ảnh gửi khách thì bóng chỉ làm
+       nét chữ bị nhòe, không thêm được gì. */
 }
 .print-sheet .pr-date {
     text-align: center;

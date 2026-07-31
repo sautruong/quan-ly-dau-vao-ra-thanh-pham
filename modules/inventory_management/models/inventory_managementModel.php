@@ -689,7 +689,9 @@ function im_get_customer($customer_id)
 {
     $cid = (int) $customer_id;
     if ($cid <= 0) return null;
-    return db_fetch_row("SELECT id, name, short_name, address, receiver, phone
+    // secondary_color: dùng để tô màu nhận diện tên viết tắt của khách trên phiếu
+    // (cùng màu đang dùng ở card đơn hàng / phiếu soạn hàng).
+    return db_fetch_row("SELECT id, name, short_name, address, receiver, phone, secondary_color
                          FROM customers WHERE id = $cid LIMIT 1") ?: null;
 }
 
@@ -857,7 +859,7 @@ function im_get_sales_return_batch($group_key, $customer_id)
     $cid = (int) $customer_id;
     if ($cid <= 0 || $key === '') return null;
 
-    $cust = db_fetch_row("SELECT id, name, short_name FROM customers WHERE id = $cid LIMIT 1");
+    $cust = db_fetch_row("SELECT id, name, short_name, secondary_color FROM customers WHERE id = $cid LIMIT 1");
     if (!$cust) return null;
 
     $sql = "SELECT sr.id AS sales_return_id,
@@ -904,6 +906,9 @@ function im_get_sales_return_batch($group_key, $customer_id)
         'customer_id'    => (int) $cust['id'],
         'customer_name'  => $cust['name'],
         'customer_short' => $cust['short_name'] ?: $cust['name'],
+        // Màu nhận diện khách để tô tên viết tắt khi mở lại phiếu ở chế độ Sửa.
+        'customer_color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($cust['secondary_color'] ?? ''))
+            ? strtolower($cust['secondary_color']) : '',
         'items'          => $items,
     ];
 }

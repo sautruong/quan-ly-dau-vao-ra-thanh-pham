@@ -172,8 +172,15 @@ body.home-body { min-height: 100vh; }
     transition: opacity .16s ease, transform .16s ease, visibility .16s;
 }
 .home-nav-item.is-open .home-nav-drop { opacity: 1; visibility: visible; transform: translateY(0); }
-/* Hover mở dropdown menu con (chỉ hàng chính — ">>" dùng click, danh sách bên trong ">>" luôn hiện phẳng). */
-#home-nav > .home-nav-item:hover > .home-nav-drop { opacity: 1; visibility: visible; transform: translateY(0); }
+/* Hover mở dropdown menu con (chỉ hàng chính — ">>" dùng click, danh sách bên trong ">>" luôn hiện phẳng).
+   Bọc trong (hover:hover) để thiết bị cảm ứng KHÔNG dính rule này: selector có #id
+   nên "nặng" hơn .home-nav-item.is-open .home-nav-drop — nếu để nó áp trên mobile thì
+   trạng thái :hover dính lại sau cú chạm sẽ đè chết menu vừa mở bằng click. */
+@media (hover: hover) and (pointer: fine) {
+    #home-nav > .home-nav-item:hover > .home-nav-drop { opacity: 1; visibility: visible; transform: translateY(0); }
+}
+/* Tiêu đề nhóm — chỉ dùng khi menu con bung dạng modal ở mobile. */
+.home-nav-drop-title { display: none; }
 .home-nav-drop a {
     display: block;
     padding: 8px 10px;
@@ -337,4 +344,159 @@ body.home-body { min-height: 100vh; }
     .home-header { flex-wrap: wrap; gap: 10px; }
     .home-nav-wrap { order: 3; flex-basis: 100%; }
     .home-brand-text { display: none; }
+}
+
+/* =====================================================================
+   MOBILE (≤768px) — theo quy ước chung [[mobile-responsive-convention]]
+   - Hàng trên : logo trái  ·······  [tiện ích] [chuông] [avatar] phải.
+     Mọi icon tiện ích lẻ (tìm menu / lịch / việc / điểm nhắc / sáng-tối
+     chữ / cài đặt hình nền) gom vào nút .app-tools-btn — markup nằm ở
+     header-home.php, JS & phần ẩn/hiện theo breakpoint đã có sẵn trong
+     app_shell.js/app_shell.css (link TRƯỚC file này).
+   - Hàng dưới : thanh menu cha (JS giới hạn 3 nhóm, dư dồn vào ">>").
+   - Hình nền  : ảnh ngang bị cắt lấy khối chữ nhật DỌC chính giữa.
+   ===================================================================== */
+@media (max-width: 768px) {
+    .home-header {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+    }
+    .home-header-left { flex: 0 0 auto; }
+    .home-logo-ring { width: 42px; height: 42px; padding: 2px; }
+    /* Cụm phải bám sát mép phải, avatar ngoài cùng, chuông sát trái avatar,
+       nút tiện ích sát trái chuông (thứ tự DOM đã đúng, chỉ cần dồn về phải). */
+    .home-header-right { order: 2; margin-left: auto; flex: 0 0 auto; gap: 4px; }
+    .home-nav-wrap { order: 3; flex-basis: 100%; justify-content: flex-start; }
+    /* Avatar là phần tử ngoài cùng bên phải -> bỏ mũi tên xổ để nó nằm sát mép
+       (dropdown vẫn mở bằng cách bấm chính avatar). Chỉ scope trong header trang chủ. */
+    #home-header .app-user-caret { display: none; }
+    #home-header .app-user-btn { padding: 0; gap: 0; }
+
+    /* Ẩn icon lẻ nhưng GIỮ wrapper trong DOM (popup/modal của chúng vẫn phải
+       mở được khi bấm từ menu tiện ích) — cùng cách app_shell.css xử lý
+       lịch/việc/điểm nhắc: đưa wrapper ra khỏi luồng flex thay vì display:none. */
+    .home-header-right > .home-search,
+    .home-header-right > .home-bgset { position: absolute; }
+    .home-header-right > .home-search > .home-icon-btn,
+    .home-header-right > .home-bgset > .home-icon-btn,
+    .home-header-right > #home-text-theme-btn { display: none; }
+
+    /* Nút tiện ích ăn theo màu chữ trong suốt của header trang chủ */
+    #home-header .app-tools-btn {
+        width: 42px; height: 42px;
+        background: transparent; border-color: transparent;
+        color: var(--home-text); font-size: 17px;
+    }
+    #home-header .app-tools-btn:hover { color: var(--home-accent); background: transparent; }
+
+    /* Ô tìm menu mở dạng panel canh giữa màn hình (giống các dropdown khác) */
+    .home-search-pop,
+    .home-search.is-open .home-search-pop {
+        position: fixed;
+        top: 50%; left: 50%; right: auto; bottom: auto;
+        transform: translate(-50%, -50%) !important;
+        width: min(94vw, 400px); max-width: 94vw;
+        max-height: 85vh; overflow-y: auto;
+        z-index: 3000;
+    }
+
+    /* ---- Menu cha: 3 nhóm TRẢI ĐỀU hết bề ngang, không cuộn ----
+       (header_home.js đã dồn nhóm dư vào ">>", nên ở đây chắc chắn chỉ còn 3) */
+    .home-nav-wrap { width: 100%; gap: 4px; }
+    .home-nav { flex: 1; min-width: 0; display: flex; gap: 4px; overflow: visible; }
+    #home-nav > .home-nav-item { flex: 1 1 0; min-width: 0; }
+    #home-nav > .home-nav-item > .home-nav-btn {
+        width: 100%; justify-content: center;
+        padding: 9px 4px; font-size: 12.5px; cursor: pointer;
+    }
+    /* Tên nhóm dài thì thu gọn bằng "…", không đẩy vỡ hàng */
+    #home-nav > .home-nav-item > .home-nav-btn > span {
+        display: block; width: 100%; text-align: center;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #home-nav-more { flex: 0 0 auto; }
+    /* Kéo-thả / ghim không dùng được trên mobile (thanh đã bị khóa ở 3 nhóm) */
+    .home-nav-pin { display: none !important; }
+
+    /* ---- Menu cấp con bung dạng MODAL canh giữa màn hình ----
+       Dropdown neo dưới nút chỉ hợp với chuột: trên điện thoại nó tràn mép, lại
+       phải rê tay giữ hover. Bấm tab -> mở panel giữa màn hình + nền mờ. Nền mờ
+       vẽ bằng ::before của chính item đang mở nên KHÔNG cần thêm JS/markup. */
+    /* (mở-theo-hover đã bị chặn ngay từ gốc bằng @media (hover:hover) ở trên) */
+    #home-nav > .home-nav-item::after { content: none; }   /* bỏ cầu nối hover */
+
+    #home-nav > .home-nav-item.is-open::before {
+        content: '';
+        position: fixed; inset: 0;
+        background: rgba(15, 23, 42, .55);
+        z-index: 3400;
+    }
+    #home-nav > .home-nav-item > .home-nav-drop,
+    #home-nav > .home-nav-item.is-open > .home-nav-drop {
+        position: fixed;
+        top: 50%; left: 50%; right: auto;
+        transform: translate(-50%, -50%) !important;
+        width: min(92vw, 380px); max-width: 92vw;
+        max-height: 76vh; overflow-y: auto;
+        padding: 0 8px 8px;
+        border-radius: 16px;
+        z-index: 3500;
+    }
+    /* Chỉ modal của tab hàng chính mới có thanh tiêu đề; các nhóm nằm PHẲNG bên
+       trong ">>" thì không (sẽ thành một mớ thanh trắng + nút × giữa danh sách). */
+    #home-nav > .home-nav-item > .home-nav-drop > .home-nav-drop-title {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        position: sticky; top: 0; z-index: 1;
+        margin: 0 -8px 6px; padding: 12px 14px 10px;
+        background: #fff; border-bottom: 1px solid var(--app-gray-200, #e5e7eb);
+        border-radius: 16px 16px 0 0;
+        font-size: 14px; font-weight: 700; color: var(--app-navy, #222a35);
+    }
+    .home-nav-drop-close {
+        width: 30px; height: 30px; flex: 0 0 30px;
+        display: flex; align-items: center; justify-content: center;
+        border: 0; border-radius: 50%; background: var(--app-gray-100, #f3f4f6);
+        color: var(--app-gray-700, #374151); font-size: 20px; line-height: 1; cursor: pointer;
+    }
+    .home-nav-drop a { padding: 12px 12px; font-size: 14px; }
+
+    /* ">>" giữ kiểu danh sách phẳng nhưng cũng bung giữa màn hình cho đồng bộ */
+    .home-nav-more.is-open::before {
+        content: '';
+        position: fixed; inset: 0;
+        background: rgba(15, 23, 42, .55);
+        z-index: 3400;
+    }
+    .home-nav-more-list {
+        position: fixed;
+        top: 50%; left: 50%; right: auto;
+        transform: translate(-50%, -50%) !important;
+        width: min(92vw, 380px); max-width: 92vw;
+        max-height: 76vh; overflow-y: auto;
+        z-index: 3500;
+    }
+
+    /* BẮT BUỘC: khi ĐÓNG phải cắt hẳn khả năng nhận chạm.
+       Panel đóng chỉ mờ đi (opacity/visibility) nhưng vẫn nằm CHÍNH GIỮA màn hình
+       ở z-index 3500 — riêng ".home-nav-more-list .home-nav-drop" còn bị ép
+       visibility:visible (kiểu danh sách phẳng của ">>") nên nó vô hiệu hóa
+       visibility:hidden của cha, thành một tấm kính vô hình chặn mọi cú chạm
+       giữa màn hình. pointer-events là chốt chặn duy nhất ăn chắc ở đây. */
+    #home-nav > .home-nav-item > .home-nav-drop,
+    .home-nav-more-list { pointer-events: none; }
+    #home-nav > .home-nav-item.is-open > .home-nav-drop,
+    .home-nav-more.is-open .home-nav-more-list { pointer-events: auto; }
+
+    /* ---- Hình nền: cắt khối chữ nhật DỌC chính giữa ảnh ----
+       Ảnh nền bắt buộc nằm ngang (validate lúc upload) nên trên khung dọc của
+       điện thoại, cover + position 50% 50% = lấy đúng dải giữa ảnh, cắt đều 2 bên.
+       Chốt chiều cao theo 100lvh để ảnh không "nhảy"/hở đáy khi thanh URL của
+       trình duyệt ẩn-hiện lúc cuộn. */
+    #home-bg-layer { height: 100vh; height: 100lvh; }
+    .home-bg-img { background-position: 50% 50%; background-size: cover; }
+
+    #home-welcome-flash .hwf-line1 { font-size: 16px; letter-spacing: 4px; }
+    #home-welcome-flash .hwf-line2 { font-size: 26px; }
+    .home-welcome-empty { margin: 40px 16px 0; }
 }
