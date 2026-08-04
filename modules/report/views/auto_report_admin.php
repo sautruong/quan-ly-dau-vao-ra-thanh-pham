@@ -77,6 +77,7 @@ $users   = isset($users) && is_array($users) ? $users : [];
                     <label class="ar-field">
                         <span>Giờ gửi</span>
                         <input type="time" id="ar-f-time" value="17:00">
+                        <small>Mỗi ngày gửi 1 lần. <b>Đổi sang giờ khác là được gửi thêm lần nữa ngay trong hôm nay</b> — dùng khi cần gửi lại.</small>
                     </label>
                     <label class="ar-field">
                         <span>Cửa sổ chờ (phút)</span>

@@ -374,8 +374,20 @@ if (!function_exists('ar_ensure_tables')) {
             $data['delegated_at']      = $now;
             $data['responded_at']      = null;
         }
+
+        // ĐỔI GIỜ GỬI = mở khoá "mỗi ngày 1 lần" cho hôm nay.
+        // Chốt last_sent_date vốn để tránh gửi trùng khi lịch giữ nguyên; nhưng khi người dùng CHỦ
+        // ĐỘNG chỉnh sang giờ khác nghĩa là họ muốn có thêm một lần gửi nữa trong ngày (dùng để
+        // gửi lại ngay sau khi sửa nội dung/bố cục báo cáo, khỏi phải chờ sang hôm sau).
+        $timeChanged = ar_normalize_time($old['send_time'] ?? '') !== $time;
+        if ($timeChanged) {
+            $data['last_sent_date']       = null;
+            $data['last_sent_at']         = null;
+            $data['missed_notified_date'] = null;
+        }
+
         db_update('report_auto_send_configs', $data, 'id = ' . $id);
-        return ['ok' => true, 'id' => $id, 'is_new' => false,
+        return ['ok' => true, 'id' => $id, 'is_new' => false, 'time_changed' => $timeChanged,
                 'delegate_changed' => $delegateChanged, 'old_delegate_id' => $oldDelegate, 'delegate_id' => $delegate];
     }
 
@@ -519,7 +531,9 @@ if (!function_exists('ar_ensure_tables')) {
         db_update('report_auto_send_configs', ['missed_notified_date' => ar_today()], 'id = ' . (int) $cfgId);
     }
 
-    /** Ghi nhật ký 1 kết quả/lịch/ngày (INSERT IGNORE theo uq_config_date). */
+    /** Ghi nhật ký 1 kết quả/lịch/ngày. Giữ UNIQUE (config_id, send_date) nhưng GHI ĐÈ khi trong
+     *  ngày gửi lần nữa (đổi giờ gửi sẽ mở khoá cho gửi lại) — trước đây INSERT IGNORE nên lần gửi
+     *  thứ hai bị bỏ qua im lặng, nhật ký kẹt ở lần đầu. */
     function ar_log($cfgId, $status, $extra = [])
     {
         ar_ensure_tables();
@@ -536,13 +550,16 @@ if (!function_exists('ar_ensure_tables')) {
             'note'              => isset($extra['note']) ? mb_substr((string) $extra['note'], 0, 490, 'UTF-8') : null,
             'created_at'        => ar_now(),
         ];
-        // Không dùng db_insert (sẽ die khi trùng UNIQUE) — build INSERT IGNORE thủ công.
-        $keys = []; $vals = [];
+        // Không dùng db_insert (sẽ die khi trùng UNIQUE) — build câu lệnh thủ công.
+        $keys = []; $vals = []; $upd = [];
         foreach ($cols as $k => $v) {
             $keys[] = "`$k`";
-            $vals[] = ($v === null) ? 'NULL' : "'" . escape_string((string) $v) . "'";
+            $sql    = ($v === null) ? 'NULL' : "'" . escape_string((string) $v) . "'";
+            $vals[] = $sql;
+            if ($k !== 'config_id' && $k !== 'send_date') $upd[] = "`$k` = $sql";
         }
-        db_query("INSERT IGNORE INTO report_auto_send_log (" . implode(',', $keys) . ") VALUES (" . implode(',', $vals) . ")");
+        db_query("INSERT INTO report_auto_send_log (" . implode(',', $keys) . ") VALUES (" . implode(',', $vals) . ")"
+               . " ON DUPLICATE KEY UPDATE " . implode(', ', $upd));
     }
 
     /**
