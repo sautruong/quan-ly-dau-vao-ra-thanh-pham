@@ -23,6 +23,11 @@ $days = isset($days) && is_array($days) ? $days : [];
         .inventory-factory { width: 100% !important; }
         .pf-wrap { padding: 14px 18px; }
         .pf-board .ltp-card { cursor: default; }
+        /* Mobile: card ngày bị rút gọn còn tiêu đề (long_term_production_plan.css @media 768px)
+           -> bấm để mở modal xem danh sách, nên phải trả lại con trỏ "bấm được". */
+        @media (max-width: 768px) {
+            .pf-board .ltp-card { cursor: pointer; }
+        }
         .pf-empty-day { color: #aab1ba; font-size: 13px; padding: 6px 2px; }
         /* Forecast hiển thị kèm đơn vị nên không bó hẹp ô số lượng như bảng nhập */
         .pf-board .ltp-item-name { font-size: 12px; }
@@ -98,6 +103,9 @@ $days = isset($days) && is_array($days) ? $days : [];
         </div>
     </div>
 
+    <?php require LAYOUTPATH . DIRECTORY_SEPARATOR . 'day-plan-modal.php'; ?>
+
+    <script src="<?php echo asset_ver('public/js/shared/day_plan_modal.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

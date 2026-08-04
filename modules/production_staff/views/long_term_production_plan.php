@@ -282,22 +282,13 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
         </div>
     </div>
 
-    <!-- MOBILE: modal xem công việc + việc khác của 1 ngày (Task 7) -->
-    <div class="app-modal" id="ltp-day-modal" aria-hidden="true">
-        <div class="app-modal-overlay" data-ltp-day-close></div>
-        <div class="app-modal-box">
-            <div class="app-modal-head">
-                <h3 id="ltp-day-modal-title"></h3>
-                <button type="button" class="app-modal-close" data-ltp-day-close aria-label="Đóng">&times;</button>
-            </div>
-            <div class="app-modal-body" id="ltp-day-modal-body"></div>
-        </div>
-    </div>
+    <?php require LAYOUTPATH . DIRECTORY_SEPARATOR . 'day-plan-modal.php'; ?>
 
     <script>
         window.LTP_CONFIG = { baseUrl: '?mod=production_staff&controllers=production_staff&action=' };
     </script>
     <script src="<?php echo asset_ver('public/js/production_staff/long_term_production_plan.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/day_plan_modal.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

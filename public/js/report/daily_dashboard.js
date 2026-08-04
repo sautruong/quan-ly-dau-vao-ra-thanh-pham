@@ -2292,8 +2292,17 @@
     function forceDesktopLayout() {
         var meta = document.querySelector('meta[name="viewport"]');
         var prev = meta ? meta.getAttribute('content') : null;
+        // Trình duyệt di động tự kẹp tỉ lệ thu nhỏ tối thiểu (Chrome mặc định 0.25). Với máy 412px
+        // mà đòi khung 1920 thì cần tỉ lệ 0.21 < 0.25 -> có máy kẹp luôn LAYOUT viewport lại
+        // (~1648px) hoặc bỏ qua hẳn yêu cầu. Phải khai initial-scale vừa khít + minimum-scale rất
+        // nhỏ để trình duyệt không kẹp.
+        var deviceW = layoutViewportWidth() || 390;
+        var fit = Math.max(0.05, Math.min(1, deviceW / CAPTURE_DESKTOP_W));
+        if (meta) {
+            meta.setAttribute('content', 'width=' + CAPTURE_DESKTOP_W
+                + ', initial-scale=' + fit.toFixed(3) + ', minimum-scale=0.05, maximum-scale=5');
+        }
         document.documentElement.classList.add('dd2-capturing');
-        if (meta) meta.setAttribute('content', 'width=' + CAPTURE_DESKTOP_W);
         return function () {
             if (meta) meta.setAttribute('content', prev || 'width=device-width, initial-scale=1.0');
             document.documentElement.classList.remove('dd2-capturing');
@@ -2302,21 +2311,25 @@
         };
     }
 
-    /** Chờ trình duyệt thật sự bố trí lại theo viewport mới (tối đa ~1.6s).
-     *  Trả true nếu ăn; false nghĩa là trình duyệt bỏ qua thẻ meta -> phải dùng đường dự phòng.
-     *  ĐO documentElement.clientWidth (LAYOUT viewport — cái mà media query dùng), KHÔNG đo
-     *  window.innerWidth: trình duyệt khoá tỉ lệ thu nhỏ tối thiểu (Chrome 0.25) nên innerWidth
-     *  đứng yên ~1560 dù layout đã là 1920, đo nhầm là tưởng thất bại. */
+    /** ĐO documentElement.clientWidth (LAYOUT viewport — cái mà media query dùng), KHÔNG đo
+     *  window.innerWidth: đó là VISUAL viewport, bị tỉ lệ thu nhỏ tối thiểu ghim lại (~1560) nên
+     *  đo nhầm là tưởng ép viewport thất bại. */
     function layoutViewportWidth() {
         return document.documentElement.clientWidth || window.innerWidth || 0;
     }
 
+    /** Chờ trình duyệt bố trí lại (tối đa ~2s). KHÔNG đòi đúng 1920: chỉ cần vượt mốc 1200px là
+     *  dashboard đã về bố cục 3 cột của desktop; máy nào bị kẹp còn ~1650px thì ảnh hẹp hơn ảnh
+     *  mẫu chút nhưng vẫn ĐÚNG bố cục, hơn hẳn dải dọc dài thượt. Trả về bề rộng đo được (0 = hỏng)
+     *  để truyền đúng con số đó cho html2canvas thay vì đoán. */
+    var DESKTOP_LAYOUT_MIN_W = 1240; // > mốc 1200px mà dashboard chuyển sang xếp dọc
     async function waitDesktopViewport() {
-        for (var i = 0; i < 8; i++) {
-            if (layoutViewportWidth() >= CAPTURE_DESKTOP_W - 120) return true;
+        for (var i = 0; i < 10; i++) {
+            if (layoutViewportWidth() >= DESKTOP_LAYOUT_MIN_W) return layoutViewportWidth();
             await waitMs(200);
         }
-        return layoutViewportWidth() >= CAPTURE_DESKTOP_W - 120;
+        var w = layoutViewportWidth();
+        return w >= DESKTOP_LAYOUT_MIN_W ? w : 0;
     }
 
     function waitMs(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -2383,9 +2396,10 @@
         onStatus = onStatus || function () {};
         onStatus('Đang cố định bố cục ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
         var restore = forceDesktopLayout();
-        var blob, forced = false;
+        var blob, gotW = 0, forced = false;
         try {
-            forced = await waitDesktopViewport();
+            gotW = await waitDesktopViewport();
+            forced = gotW > 0;
             if (forced) {
                 // #wrapper có transition padding-left 0.22s (chừa chỗ sidebar) -> chờ bố cục
                 // đứng yên rồi mới đo, nếu không chiều cao từng hàng ghim vào bản clone sẽ lệch.
@@ -2393,7 +2407,9 @@
                 // Chart.js vẽ lại 2 biểu đồ theo cỡ mới.
                 await resizeChartsForCapture();
                 onStatus('Đang dựng ảnh…');
-                blob = await buildReportBlob(CAPTURE_DESKTOP_H, CAPTURE_DESKTOP_W);
+                // Truyền ĐÚNG bề rộng đo được, không truyền hằng số: máy nào bị trình duyệt kẹp
+                // xuống (vd 1650px) mà vẫn báo 1920 thì bản clone của html2canvas bố trí lệch.
+                blob = await buildReportBlob(CAPTURE_DESKTOP_H, gotW);
             } else {
                 // Trình duyệt không cho đổi layout viewport bằng thẻ meta -> chụp theo bố cục
                 // đang có, báo rõ thay vì trả ra ảnh bố cục hỏng.
@@ -2407,7 +2423,7 @@
         } finally {
             restore();
         }
-        return { blob: blob, forced: forced };
+        return { blob: blob, forced: forced, width: gotW };
     }
 
     /** Toast ngắn ở đáy màn hình (không phải modal — tự tắt, không cần bấm gì). */
@@ -2497,9 +2513,13 @@
                 writeToClipboard()
                     .then(function () {
                         finish();
+                        // Khi KHÔNG ép được bố cục desktop thì ghi rõ bề rộng đo được — con số này
+                        // là manh mối duy nhất để chẩn đoán từ xa trên máy thật của người dùng.
                         captureToast(result && result.forced === false
-                            ? 'Đã copy ảnh (bố cục màn hình hiện tại). Sang ứng dụng khác rồi dán.'
-                            : 'Đã copy ảnh báo cáo. Sang ứng dụng khác rồi dán (Ctrl+V / giữ để Paste).');
+                            ? 'Đã copy ảnh nhưng KHÔNG ép được bố cục desktop (khung đo được: '
+                                + layoutViewportWidth() + 'px). Báo lại con số này để xử lý.'
+                            : 'Đã copy ảnh báo cáo (khung ' + (result ? result.width : '?')
+                                + 'px). Sang ứng dụng khác rồi dán (Ctrl+V / giữ để Paste).');
                     })
                     .catch(function (err) {
                         // Ảnh vẫn có thể đã dựng xong — đừng bỏ phí, mở modal cho tải/chia sẻ.
