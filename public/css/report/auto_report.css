@@ -72,3 +72,94 @@
     .ar-field-row { grid-template-columns: 1fr; }
     .ar-recipient { max-width: 140px; }
 }
+
+/* =====================================================================
+   MOBILE (≤768px) — breakpoint chuẩn của dự án.
+   Bảng 6 cột không thể đọc trên phone -> chuyển thành CARD dọc có nhãn nhỏ,
+   mượn đúng pattern của .history-table (public/css/shared/history_filter.css)
+   để giao diện đồng nhất với 11 view nhập liệu.
+   ===================================================================== */
+@media (max-width: 768px) {
+    .ar-wrap { padding: 14px 12px 40px; }
+    .ar-title { font-size: 19px; }
+    .ar-sub { font-size: 13px; }
+    /* Nút "Thêm lịch" trải ngang cho dễ bấm bằng ngón cái */
+    .ar-head { gap: 12px; }
+    .ar-head > div { flex: 1 1 100%; }
+    #ar-add-btn { width: 100%; justify-content: center; }
+
+    /* ---- Bảng -> card ---- */
+    .ar-table-wrap { border: 0; background: transparent; box-shadow: none; border-radius: 0; overflow: visible; }
+    .ar-table thead { display: none; }
+    .ar-table, .ar-table tbody, .ar-table tr, .ar-table td { display: block; width: 100%; }
+    .ar-table tr {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+    }
+    .ar-table td {
+        padding: 3px 0;
+        border: 0;
+        font-size: 14px;
+        white-space: normal;
+    }
+    .ar-recipient { max-width: none; }
+
+    /* Nhãn nhỏ phía trên từng dòng (thứ tự cột: Lịch | Giờ | Uỷ quyền | Người nhận | Trạng thái) */
+    .ar-table td:nth-child(2)::before { content: "Giờ gửi"; }
+    .ar-table td:nth-child(3)::before { content: "Người uỷ quyền"; }
+    .ar-table td:nth-child(4)::before { content: "Người nhận"; }
+    .ar-table td:nth-child(5)::before { content: "Trạng thái"; }
+    .ar-table td:nth-child(2)::before,
+    .ar-table td:nth-child(3)::before,
+    .ar-table td:nth-child(4)::before,
+    .ar-table td:nth-child(5)::before {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        color: #9ca3af;
+        margin-bottom: 2px;
+    }
+    /* Cột 1 (tên lịch) làm tiêu đề card, không cần nhãn */
+    .ar-table td:nth-child(1) { font-size: 15.5px; margin-bottom: 4px; }
+
+    /* Hàng "chưa có lịch" giữ nguyên dạng 1 dòng, bỏ nhãn */
+    .ar-table tr.ar-empty-row { padding: 22px 14px; }
+    .ar-table tr.ar-empty-row td { text-align: center; padding: 0; }
+    .ar-table tr.ar-empty-row td::before { content: none; }
+
+    /* Cụm thao tác xuống đáy card, canh phải (ngón cái ở mép phải) */
+    .ar-table td.ar-col-act {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 10px;
+        border-top: 1px dashed #e5e7eb;
+        text-align: right;
+    }
+    .ar-mini { margin-left: 0; width: 38px; height: 38px; }
+
+    /* ---- Modal ---- */
+    .ar-modal { padding: 10px; align-items: flex-end; }
+    .ar-modal-box { width: 100%; max-height: 94dvh; border-radius: 16px 16px 12px 12px; }
+    .ar-modal-head { padding: 14px 16px; }
+    .ar-modal-body { padding: 16px; gap: 13px; }
+    .ar-modal-foot { padding: 12px 16px; }
+    .ar-modal-foot .ar-btn { flex: 1 1 auto; justify-content: center; }
+    .ar-field-row { grid-template-columns: 1fr; }
+    /* iOS phóng to trang khi focus input < 16px -> ép 16px cho mọi ô nhập */
+    .ar-field input[type="text"], .ar-field input[type="time"], .ar-field input[type="number"],
+    .ar-field select { font-size: 16px; }
+    .ar-radio-row { flex-wrap: wrap; gap: 10px 18px; }
+
+    /* Trang tự phục vụ */
+    .ar-mine-actions { flex-wrap: wrap; }
+    .ar-mine-actions .ar-btn { flex: 1 1 auto; justify-content: center; }
+}

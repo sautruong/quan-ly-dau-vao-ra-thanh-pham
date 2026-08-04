@@ -2359,6 +2359,40 @@
         await waitMs(250);
     }
 
+    /** Canvas có đang TRẮNG TRƠN không (mọi điểm ảnh đều trong suốt)? Quét thưa cho nhẹ. */
+    function isCanvasBlank(cv) {
+        try {
+            if (!cv || !cv.width || !cv.height) return true;
+            var data = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+            for (var i = 3; i < data.length; i += 4 * 17) {
+                if (data[i] !== 0) return false;
+            }
+            return true;
+        } catch (e) {
+            return false; // đọc không được (taint...) thì coi như có nội dung, đừng vẽ lại vô ích
+        }
+    }
+
+    /** Bảo đảm biểu đồ ĐÃ VẼ trước khi chụp.
+     *  Chart.js vẽ qua requestAnimationFrame, mà trình duyệt TREO rAF ở tab nền — luồng GỬI TỰ ĐỘNG
+     *  điều hướng sang dashboard rồi chụp, nếu tab đang chạy nền thì canvas còn trắng và ảnh gửi đi
+     *  bị MẤT biểu đồ. update('none') (không animation) khiến Chart.js gọi draw() ĐỒNG BỘ, không
+     *  phụ thuộc rAF -> vẽ được cả khi tab bị treo. */
+    async function ensureChartsDrawn() {
+        for (var attempt = 0; attempt < 3; attempt++) {
+            var blank = [];
+            Object.keys(charts).forEach(function (k) {
+                var c = charts[k];
+                if (c && c.canvas && isCanvasBlank(c.canvas)) blank.push(k);
+            });
+            if (!blank.length) return true;
+            console.warn('Biểu đồ chưa vẽ (' + blank.join(', ') + ') — ép vẽ lại lần ' + (attempt + 1));
+            await resizeChartsForCapture();
+            await waitMs(300);
+        }
+        return false;
+    }
+
     function showCaptureResult(blob, forcedDesktop) {
         captureBlob = blob;
         if (captureBlobUrl) URL.revokeObjectURL(captureBlobUrl);
@@ -2450,12 +2484,20 @@
             // việc này qua resizeChartsForCapture(), khung iframe trước đây bị bỏ sót.
             try {
                 var FW = frame.contentWindow;
-                if (FW && FW.Chart) {
-                    fdoc.querySelectorAll('canvas').forEach(function (cv) {
-                        var ch = typeof FW.Chart.getChart === 'function' ? FW.Chart.getChart(cv) : null;
-                        if (ch) { ch.resize(); ch.update('none'); }
-                    });
-                    await waitMs(500);
+                if (FW && FW.Chart && typeof FW.Chart.getChart === 'function') {
+                    for (var k = 0; k < 3; k++) {
+                        var chuaVe = false;
+                        fdoc.querySelectorAll('canvas').forEach(function (cv) {
+                            var ch = FW.Chart.getChart(cv);
+                            if (!ch) return;
+                            // update('none') -> Chart.js gọi draw() ĐỒNG BỘ (không qua rAF).
+                            ch.resize();
+                            ch.update('none');
+                            if (isCanvasBlank(cv)) chuaVe = true;
+                        });
+                        await waitMs(400);
+                        if (!chuaVe) break;
+                    }
                 }
             } catch (e) { console.warn('Không ép được Chart.js trong khung:', e); }
             onStatus('Đang dựng ảnh…');
@@ -2660,6 +2702,10 @@
                 await new Promise(function (r) { window.addEventListener('load', r, { once: true }); });
             }
             await new Promise(function (r) { setTimeout(r, settle); });
+
+            // Trang này thường được mở ở TAB NỀN (auto_report_poller điều hướng tới) nên biểu đồ
+            // có thể chưa vẽ xong -> phải ép vẽ trước khi chụp, nếu không ảnh gửi đi mất biểu đồ.
+            await ensureChartsDrawn();
 
             // Gửi tự động cũng phải ra ảnh bố cục desktop dù máy đang mở là phone.
             var blob;
