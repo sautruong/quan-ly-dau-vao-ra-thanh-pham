@@ -2440,7 +2440,24 @@
                 if (fdoc.querySelector('.dd2-content') && c && c.getBoundingClientRect().width > 100) break;
                 await waitMs(200);
             }
+            // Chờ font nạp xong: html2canvas tự đo chữ, font chưa sẵn sàng là số đo lệch -> chữ
+            // tràn/ mất. Máy chậm mới lộ, máy nhanh thì font đã có sẵn trong bộ đệm.
+            try { if (fdoc.fonts && fdoc.fonts.ready) await fdoc.fonts.ready; } catch (e) {}
             await waitMs(2200);
+            // ÉP Chart.js TRONG IFRAME đo lại — nếu nó vẽ lúc bố cục chưa đứng yên (máy chậm, hoặc
+            // #wrapper còn chạy transition padding-left chừa chỗ sidebar) thì canvas giữ cỡ cũ,
+            // biểu đồ trong ảnh bị CO LẠI so với thẻ và mốc giá trị rơi ra ngoài. Trang cha đã làm
+            // việc này qua resizeChartsForCapture(), khung iframe trước đây bị bỏ sót.
+            try {
+                var FW = frame.contentWindow;
+                if (FW && FW.Chart) {
+                    fdoc.querySelectorAll('canvas').forEach(function (cv) {
+                        var ch = typeof FW.Chart.getChart === 'function' ? FW.Chart.getChart(cv) : null;
+                        if (ch) { ch.resize(); ch.update('none'); }
+                    });
+                    await waitMs(500);
+                }
+            } catch (e) { console.warn('Không ép được Chart.js trong khung:', e); }
             onStatus('Đang dựng ảnh…');
             return await buildReportBlob(CAPTURE_DESKTOP_H, CAPTURE_DESKTOP_W, fdoc);
         } finally {

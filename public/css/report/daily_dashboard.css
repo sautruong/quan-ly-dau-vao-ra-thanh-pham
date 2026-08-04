@@ -711,9 +711,12 @@
     border-bottom: none;
 }
 
+/* minmax(0, 1fr) chứ KHÔNG phải 1fr: cột 1fr có chiều rộng tối thiểu ngầm = min-content, mà tên
+   NCC là nowrap nên cột không co được -> lưới tràn khỏi thẻ và cột "auto" (số tiền) bị đẩy ra
+   ngoài, mất hút. Đặt min = 0 thì tên tự cắt bằng dấu ... (đã khai ở .dd2-name-cell). */
 .dd2-import-row-top {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 8px;
     align-items: baseline;
 }
@@ -1368,10 +1371,14 @@
     transform: translateY(-2px);
 }
 
+/* flex-wrap: khi cột hẹp (bố cục desktop 3 cột) mà tên + số liệu không đủ chỗ thì XUỐNG DÒNG,
+   đừng bóp cụm tên lại. Trước đây cụm tên co xuống 47px trong khi chữ "PLHCM:" rộng 58px và
+   nowrap -> chữ tràn ra ngoài, ĐÈ LÊN cụm số liệu bên phải (thấy rõ trên cả màn hình lẫn ảnh chụp). */
 .dd2-branch-line1 {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 6px;
     min-width: 0;
 }
@@ -1381,6 +1388,7 @@
     align-items: center;
     gap: 6px;
     min-width: 0;
+    overflow: hidden;
 }
 
 .dd2-branch-stats-group {
@@ -1403,6 +1411,10 @@
     font-weight: 600;
     color: var(--dd2-accent, #1f2937);
     white-space: nowrap;
+    /* Chốt chặn cuối: hết chỗ thì cắt bằng dấu ... thay vì tràn đè sang cụm bên cạnh. */
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .dd2-branch-weight {
@@ -1512,11 +1524,18 @@
     white-space: nowrap;
 }
 
+/* Cột Quỹ nằm ở cột hẹp nhất của bố cục desktop. Số tiền và ngày đều flex:0 0 auto nên khi tổng
+   vượt bề rộng thẻ thì phần dư bị ĐẨY RA NGOÀI thẻ (mất ngày) còn diễn giải bị bóp về 0 (mất luôn
+   danh mục chi). min-width:0 cho phép hàng co đúng cách; overflow:hidden chặn phần dư tràn ra
+   ngoài thẻ. KHÔNG dùng flex-wrap ở đây: .dd2-fund-desc là flex:1 1 auto nên cỡ gốc của nó bằng
+   trọn câu -> bật wrap là hàng nào cũng tách 2 dòng dù đang vừa chỗ. */
 .dd2-fund-row {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 4px;
+    min-width: 0;
+    overflow: hidden;
     border-bottom: 1px solid #f0f1f3;
 }
 
