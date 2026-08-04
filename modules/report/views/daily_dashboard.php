@@ -2,7 +2,7 @@
 <?php
 $data = isset($data) && is_array($data) ? $data : [];
 
-$d_output   = $data['output']          ?? ['months' => [], 'current' => 0, 'current_label' => '', 'efficiency' => ['avg_per_cong' => 0, 'total_cong' => 0, 'max_setting' => 150, 'value' => 0], 'regulation' => ['state' => 'on_dinh', 'label' => 'Ổn định', 'a' => 0, 'b' => 0], 'key_products' => []];
+$d_output   = $data['output']          ?? ['months' => [], 'current' => 0, 'current_label' => '', 'efficiency' => ['avg_per_cong' => 0, 'total_cong' => 0, 'max_setting' => 150, 'value' => 0], 'regulation' => ['state' => 'on_dinh', 'label' => 'Ổn định', 'a' => 0, 'b' => 0, 'period' => 'month', 'period_note' => 'tháng này (đến hôm nay)'], 'key_products' => []];
 $d_imports  = $data['imports']         ?? ['summary' => ['count' => 0, 'inventory_value' => 0, 'purchase_cost' => 0, 'month_label' => ''], 'recent' => ['rows' => [], 'page' => 1, 'total_pages' => 1]];
 $d_exports  = $data['exports']         ?? ['summary' => ['value' => 0, 'quantity' => 0, 'month_label' => ''], 'series' => ['months' => [], 'current' => 0, 'current_ym' => ''], 'series_qty' => ['months' => [], 'current' => 0, 'current_ym' => ''], 'axis' => ['min' => 0, 'step' => 0], 'today_by_customer' => []];
 $d_prodDay  = $data['production_day']  ?? ['date' => date('Y-m-d'), 'label' => 'Sản xuất hôm nay', 'rows' => []];
@@ -696,16 +696,23 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                 <button type="button" class="app-modal-close" data-dd2-regulation-close aria-label="Đóng">&times;</button>
             </div>
             <div class="app-modal-body">
-                <p class="dd2-form-hint">Tương quan cung/cầu</p>
-                <p>a = sản lượng/xuất kho = <?php echo dd2_num($reg['output']); ?>/<?php echo dd2_num($reg['export_qty']); ?> = <b><?php echo number_format((float) $reg['a'], 2); ?></b> (1)</p>
+                <!-- Kỳ tính chỉ số a: tháng hiện tại (mặc định, khớp số trên thẻ ngoài trang) hoặc cửa sổ 30/60/90 ngày gần nhất -->
+                <div class="dd2-toggle-group" id="dd2-reg-period-group">
+                    <?php foreach (rp_dd_regulation_periods() as $pKey => $pInfo): ?>
+                        <button type="button" class="dd2-toggle-btn<?php echo $pKey === $reg['period'] ? ' active' : ''; ?>" data-dd2-reg-period="<?php echo dd2_esc($pKey); ?>"><?php echo dd2_esc($pInfo['label']); ?></button>
+                    <?php endforeach; ?>
+                </div>
+                <p class="dd2-form-hint">Tương quan cung/cầu — <span id="dd2-reg-period-note"><?php echo dd2_esc($reg['period_note']); ?></span></p>
+                <p>a = sản lượng/xuất kho = <span id="dd2-reg-output"><?php echo dd2_num($reg['output']); ?></span>/<span id="dd2-reg-export"><?php echo dd2_num($reg['export_qty']); ?></span> = <b id="dd2-reg-a"><?php echo number_format((float) $reg['a'], 2); ?></b> (1)</p>
                 <p class="dd2-form-hint">Hệ số sản phẩm chủ lực</p>
-                <p>b = Số sp chủ lực / tổng số sp chủ lực = <?php echo (int) $reg['key_below']; ?>/<?php echo (int) $reg['key_total']; ?> = <b><?php echo number_format((float) $reg['b'], 2); ?></b> (<?php echo number_format($reg['b'] * 100, 0); ?>%) (2)</p>
+                <p>b = Số sp chủ lực / tổng số sp chủ lực = <span id="dd2-reg-key-below"><?php echo (int) $reg['key_below']; ?></span>/<span id="dd2-reg-key-total"><?php echo (int) $reg['key_total']; ?></span> = <b id="dd2-reg-b"><?php echo number_format((float) $reg['b'], 2); ?></b> (<span id="dd2-reg-b-pct"><?php echo number_format($reg['b'] * 100, 0); ?></span>%) (2)</p>
                 <ul class="dd2-explain-list">
                     <li>Với a &lt; 9 và b &gt; 0.5 ⇒ <b>Cung yếu</b></li>
                     <li>a &gt; 9 và b &gt; 0.5 ⇒ <b>Vượt cầu</b></li>
                     <li>Còn lại ⇒ <b>Ổn định</b></li>
                 </ul>
-                <p>Từ (1) và (2) suy ra chỉ số điều tiết đang ở trạng thái <b class="dd2-state-<?php echo dd2_esc($reg['state']); ?>"><?php echo dd2_esc($reg['label']); ?></b>.</p>
+                <p>Từ (1) và (2) suy ra chỉ số điều tiết đang ở trạng thái <b id="dd2-reg-state" class="dd2-state-<?php echo dd2_esc($reg['state']); ?>"><?php echo dd2_esc($reg['label']); ?></b>.</p>
+                <p class="dd2-form-hint" id="dd2-reg-period-warn" hidden>Chỉ số "Điều tiết" hiển thị ngoài trang vẫn tính theo tháng này; kỳ 30/60/90 ngày không áp giá trị tạm đã thiết lập cho Sản lượng.</p>
             </div>
         </div>
     </div>
@@ -948,6 +955,28 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
             <div class="app-modal-body">
                 <p class="dd2-pci-sub" id="dd2-pci-sub"></p>
                 <div id="dd2-pci-body"><p class="dd2-empty">Đang tải...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: chụp báo cáo trên MOBILE — cố định bố cục desktop rồi mới chụp, xem trước ảnh
+         và Chia sẻ/Tải về/Sao chép (clipboard ảnh trên phone hay không dùng được). Desktop giữ
+         nguyên luồng cũ: bấm camera là copy thẳng vào clipboard, không mở modal này. -->
+    <div class="app-modal" id="dd2-capture-modal" aria-hidden="true">
+        <div class="app-modal-overlay" data-dd2-capture-close></div>
+        <div class="app-modal-box dd2-capture-box">
+            <div class="app-modal-head">
+                <h3>Chụp báo cáo</h3>
+                <button type="button" class="app-modal-close" data-dd2-capture-close aria-label="Đóng">&times;</button>
+            </div>
+            <div class="app-modal-body">
+                <p class="dd2-form-hint" id="dd2-capture-status">Đang chuẩn bị…</p>
+                <div class="dd2-capture-preview" id="dd2-capture-preview"></div>
+                <div class="dd2-capture-actions" id="dd2-capture-actions" hidden>
+                    <button type="button" class="dd2-btn-primary" id="dd2-capture-share" hidden><i class="fa-solid fa-share-nodes"></i> Chia sẻ</button>
+                    <button type="button" class="dd2-btn-primary" id="dd2-capture-download"><i class="fa-solid fa-download"></i> Tải ảnh</button>
+                    <button type="button" class="dd2-btn-ghost" id="dd2-capture-copy" hidden><i class="fa-solid fa-copy"></i> Sao chép</button>
+                </div>
             </div>
         </div>
     </div>

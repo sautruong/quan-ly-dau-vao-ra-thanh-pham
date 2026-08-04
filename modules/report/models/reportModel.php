@@ -1822,22 +1822,79 @@ function rp_dd_efficiency($current_output)
     return ['avg_per_cong' => $avg, 'total_cong' => $total_cong, 'max_setting' => $max, 'value' => $value];
 }
 
+/** Các kỳ tính chỉ số a của "Điều tiết" (option ở modal): tháng hiện tại (mặc định, giữ nguyên hành vi cũ)
+ *  hoặc cửa sổ 30/60/90 ngày gần nhất. key => [nhãn nút, ghi chú kỳ]. */
+function rp_dd_regulation_periods()
+{
+    return [
+        'month' => ['label' => 'Tháng này', 'note' => 'tháng này (đến hôm nay)'],
+        '30'    => ['label' => '30 ngày',   'note' => '30 ngày gần nhất'],
+        '60'    => ['label' => '60 ngày',   'note' => '60 ngày gần nhất'],
+        '90'    => ['label' => '90 ngày',   'note' => '90 ngày gần nhất'],
+    ];
+}
+
+/** Chuẩn hoá tham số kỳ nhận từ AJAX; giá trị lạ -> 'month'. */
+function rp_dd_regulation_period($period)
+{
+    $p = trim((string) $period);
+    return array_key_exists($p, rp_dd_regulation_periods()) ? $p : 'month';
+}
+
+/** Sản lượng sản xuất trong N ngày gần nhất — mirror nguồn của py_calc_output_qty() (sản xuất thành phẩm
+ *  + hàng bán trả lại "Thay bao bì") nhưng cắt theo cửa sổ ngày thay vì theo tháng. Cửa sổ nằm vắt qua
+ *  nhiều tháng nên KHÔNG áp "giá trị tạm" theo tháng (daily_dashboard_month_overrides). */
+function rp_dd_output_qty_last_days($days)
+{
+    $d  = max(1, (int) $days);
+    $pr = db_fetch_row(
+        "SELECT COALESCE(SUM(t.quantity), 0) AS q FROM finished_product_production_data t
+         WHERE t.created_at >= DATE_SUB(CURDATE(), INTERVAL $d DAY)"
+    );
+    $sr = db_fetch_row(
+        "SELECT COALESCE(SUM(t.quantity), 0) AS q FROM sales_returns t
+         WHERE t.handling_method = 'Thay bao bì' AND t.created_at >= DATE_SUB(CURDATE(), INTERVAL $d DAY)"
+    );
+    return (float) ($pr['q'] ?? 0) + (float) ($sr['q'] ?? 0);
+}
+
+/** Số lượng xuất kho trong N ngày gần nhất (cùng nguồn với nhánh tháng của rp_dd_regulation()). */
+function rp_dd_export_qty_last_days($days)
+{
+    $d   = max(1, (int) $days);
+    $row = db_fetch_row(
+        "SELECT COALESCE(SUM(quantity), 0) AS q FROM sales_warehouse_export_invoices
+         WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL $d DAY)"
+    );
+    return $row ? (float) $row['q'] : 0.0;
+}
+
 /**
  * Điều tiết cung/cầu:
- *  a = round(sản_xuất_tháng / xuất_kho_tháng * 10, 2)
- *  b = (số SP chủ lực dưới tồn tối thiểu) / (tổng số SP chủ lực đã cấu hình)
+ *  a = round(sản_xuất / xuất_kho * 10, 1) — cùng kỳ $period ('month' = tháng hiện tại đến hôm nay,
+ *      hoặc '30'/'60'/'90' = cửa sổ N ngày gần nhất, chọn ở modal "Chỉ số điều tiết")
+ *  b = (số SP chủ lực dưới tồn tối thiểu) / (tổng số SP chủ lực đã cấu hình) — tồn hiện tại, không theo kỳ
  *  cung yếu: a<9 && b>0.5 | vượt cầu: a>9 && b>0.5 | còn lại: ổn định.
  */
-function rp_dd_regulation()
+function rp_dd_regulation($period = 'month')
 {
-    $y = (int) date('Y');
-    $m = (int) date('n');
-    $output = rp_dd_output_value_for_month($y, $m);
-    $exportRow = db_fetch_row(
-        "SELECT COALESCE(SUM(quantity), 0) AS q FROM sales_warehouse_export_invoices
-         WHERE YEAR(created_at) = $y AND MONTH(created_at) = $m"
-    );
-    $exportQty = $exportRow ? (float) $exportRow['q'] : 0.0;
+    $period  = rp_dd_regulation_period($period);
+    $periods = rp_dd_regulation_periods();
+
+    if ($period === 'month') {
+        $y = (int) date('Y');
+        $m = (int) date('n');
+        $output    = rp_dd_output_value_for_month($y, $m);
+        $exportRow = db_fetch_row(
+            "SELECT COALESCE(SUM(quantity), 0) AS q FROM sales_warehouse_export_invoices
+             WHERE YEAR(created_at) = $y AND MONTH(created_at) = $m"
+        );
+        $exportQty = $exportRow ? (float) $exportRow['q'] : 0.0;
+    } else {
+        $days      = (int) $period;
+        $output    = rp_dd_output_qty_last_days($days);
+        $exportQty = rp_dd_export_qty_last_days($days);
+    }
     $a = $exportQty > 0 ? round($output / $exportQty * 10, 1) : 0.0;
 
     $keyProducts = rp_dd_key_products();
@@ -1855,6 +1912,7 @@ function rp_dd_regulation()
         'state' => $state, 'label' => $labels[$state], 'a' => $a, 'b' => $b,
         // Số thô để hiển thị giải thích công thức ở modal (click .dd2-regulation-value) — không đổi ý nghĩa 'a'/'b' đã có.
         'output' => $output, 'export_qty' => $exportQty, 'key_total' => $total, 'key_below' => $below,
+        'period' => $period, 'period_note' => $periods[$period]['note'],
     ];
 }
 

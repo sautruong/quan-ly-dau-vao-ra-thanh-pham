@@ -450,9 +450,12 @@
     /* Board 1 cột; mỗi ngày rút gọn còn phần tiêu đề (bấm mở modal) */
     .ltp-board { grid-template-columns: 1fr; gap: 8px; }
     .ltp-card { grid-column: 1 / -1 !important; cursor: pointer; }
-    .ltp-card-body,
-    .ltp-card-foot,
-    .ltp-card-actions { display: none; }
+    /* PHẢI scope vào .ltp-card (con trực tiếp): #ltp-day-modal hiển thị bản CLONE của
+       .ltp-card-body, nếu để selector class trần thì chính bản clone trong modal cũng bị
+       display:none -> bấm vào ngày mở modal ra nhưng trống. */
+    .ltp-card > .ltp-card-body,
+    .ltp-card > .ltp-card-foot,
+    .ltp-card .ltp-card-actions { display: none; }
     .ltp-card-head { margin-bottom: 0; }
     .ltp-day { margin-bottom: 0; }
 }

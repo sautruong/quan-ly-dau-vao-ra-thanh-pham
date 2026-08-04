@@ -454,6 +454,15 @@ function daily_dashboard_product_cost_breakdownAction()
     exit;
 }
 
+/** AJAX: tính lại chỉ số điều tiết theo kỳ chọn ở modal — POST period: 'month' | '30' | '60' | '90'. */
+function daily_dashboard_regulationAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $period = (string) ($_POST['period'] ?? 'month');
+    echo json_encode(['success' => true, 'data' => rp_dd_regulation($period)], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 /** AJAX: lưu cài đặt "Hiệu quả" (ngưỡng sản lượng tối đa/công + danh sách sản phẩm chủ lực). */
 function daily_dashboard_save_settingsAction()
 {

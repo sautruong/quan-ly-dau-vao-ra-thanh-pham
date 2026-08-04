@@ -1375,6 +1375,17 @@
         regEl.className = 'dd2-state-' + out.regulation.state;
         regEl.textContent = out.regulation.label + ' (' + Number(out.regulation.a).toFixed(1) + ')';
         renderOutputChart(out.months, out.current);
+        refreshRegulationAfterSettings(out.regulation);
+    }
+
+    /** Cài đặt SP chủ lực / giá trị tạm vừa đổi -> số liệu điều tiết đã cache theo kỳ hết hiệu lực. */
+    function refreshRegulationAfterSettings(reg) {
+        regPeriodCache = { month: reg };
+        var group = document.getElementById('dd2-reg-period-group');
+        var active = group && group.querySelector('.dd2-toggle-btn.active');
+        var period = active ? active.getAttribute('data-dd2-reg-period') : 'month';
+        if (period === 'month') renderRegulation(reg);
+        else selectRegulationPeriod(period);
     }
 
     /* ---------------- Modal: thiết lập giá trị tạm — Sản lượng ---------------- */
@@ -1631,6 +1642,74 @@
     var regulationModal = document.getElementById('dd2-regulation-modal');
     function openRegulationModal() { if (regulationModal) { regulationModal.classList.add('is-open'); regulationModal.setAttribute('aria-hidden', 'false'); } }
     function closeRegulationModal() { if (regulationModal) { regulationModal.classList.remove('is-open'); regulationModal.setAttribute('aria-hidden', 'true'); } }
+
+    /* Kỳ tính chỉ số a của modal Điều tiết: 'month' (mặc định, khớp thẻ ngoài trang) | '30' | '60' | '90' ngày.
+       Chỉ đổi nội dung TRONG modal — thẻ "Điều tiết" ngoài trang luôn giữ kỳ tháng này. */
+    var regPeriodCache = {};   // period -> data đã tải (mở lại modal không gọi API lần nữa)
+    var regPeriodBusy = false;
+
+    function renderRegulation(d) {
+        if (!d) return;
+        var noteEl = document.getElementById('dd2-reg-period-note');
+        if (noteEl) noteEl.textContent = d.period_note || '';
+        var outEl = document.getElementById('dd2-reg-output');
+        if (outEl) outEl.textContent = fmtNum(d.output);
+        var expEl = document.getElementById('dd2-reg-export');
+        if (expEl) expEl.textContent = fmtNum(d.export_qty);
+        var aEl = document.getElementById('dd2-reg-a');
+        if (aEl) aEl.textContent = (Number(d.a) || 0).toFixed(2);
+        // b không phụ thuộc kỳ, nhưng vẫn cập nhật để modal không lệch sau khi lưu lại cài đặt SP chủ lực.
+        var belowEl = document.getElementById('dd2-reg-key-below');
+        if (belowEl) belowEl.textContent = Number(d.key_below) || 0;
+        var totalEl = document.getElementById('dd2-reg-key-total');
+        if (totalEl) totalEl.textContent = Number(d.key_total) || 0;
+        var bEl = document.getElementById('dd2-reg-b');
+        if (bEl) bEl.textContent = (Number(d.b) || 0).toFixed(2);
+        var bPctEl = document.getElementById('dd2-reg-b-pct');
+        if (bPctEl) bPctEl.textContent = Math.round((Number(d.b) || 0) * 100);
+        var stEl = document.getElementById('dd2-reg-state');
+        if (stEl) { stEl.textContent = d.label || ''; stEl.className = 'dd2-state-' + (d.state || 'on_dinh'); }
+        var warnEl = document.getElementById('dd2-reg-period-warn');
+        if (warnEl) warnEl.hidden = (d.period || 'month') === 'month';
+    }
+
+    function selectRegulationPeriod(period) {
+        var group = document.getElementById('dd2-reg-period-group');
+        if (!group || regPeriodBusy) return;
+        group.querySelectorAll('[data-dd2-reg-period]').forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-dd2-reg-period') === period);
+        });
+        if (regPeriodCache[period]) { renderRegulation(regPeriodCache[period]); return; }
+
+        var aEl = document.getElementById('dd2-reg-a');
+        if (aEl) aEl.textContent = '...';
+        regPeriodBusy = true;
+        postForm('daily_dashboard_regulation', { period: period }).then(function (res) {
+            regPeriodBusy = false;
+            if (res && res.success && res.data) {
+                regPeriodCache[period] = res.data;
+                renderRegulation(res.data);
+            } else if (aEl) {
+                aEl.textContent = '—';
+            }
+        }).catch(function () {
+            regPeriodBusy = false;
+            if (aEl) aEl.textContent = '—';
+        });
+    }
+
+    function wireRegulationPeriods() {
+        var group = document.getElementById('dd2-reg-period-group');
+        if (!group) return;
+        // Kỳ mặc định đã render sẵn ở PHP view -> nạp vào cache để bấm qua lại không gọi API thừa.
+        var initial = group.querySelector('.dd2-toggle-btn.active');
+        var initialKey = initial ? initial.getAttribute('data-dd2-reg-period') : 'month';
+        if (INITIAL.output && INITIAL.output.regulation) regPeriodCache[initialKey] = INITIAL.output.regulation;
+        group.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-dd2-reg-period]');
+            if (btn) selectRegulationPeriod(btn.getAttribute('data-dd2-reg-period'));
+        });
+    }
 
     /* ---------------- Modal: nhân sự vắng hôm nay (nội dung đã render sẵn ở PHP view, chỉ toggle hiện/ẩn) ---------------- */
     var attendanceModal = document.getElementById('dd2-attendance-modal');
@@ -1946,6 +2025,7 @@
         var regulationValueEl = document.getElementById('dd2-regulation-value');
         if (regulationValueEl) regulationValueEl.addEventListener('click', openRegulationModal);
         document.querySelectorAll('[data-dd2-regulation-close]').forEach(function (el) { el.addEventListener('click', closeRegulationModal); });
+        wireRegulationPeriods();
 
         // Chấm công: click khối "Vắng" ở đầu trang xem danh sách đầy đủ
         var attendanceBtn = document.getElementById('dd2-attendance-btn');
@@ -2037,7 +2117,12 @@
 
     // Tạo ảnh PNG (Blob) của .dd2-content: chụp html2canvas rồi tự vẽ nền/bo góc/đổ bóng.
     // Tách riêng để DÙNG CHUNG cho nút "Chụp" (copy clipboard) và luồng GỬI TỰ ĐỘNG (POST lên server).
-    async function buildReportBlob() {
+    // viewportH/viewportW: cỡ viewport dùng cho bản CLONE của html2canvas — mặc định lấy
+    // window.innerHeight/innerWidth, nhưng luồng chụp ở MOBILE phải truyền đúng khung đã ghim
+    // (1920x1080). Bắt buộc vì window.inner* lúc đó là VISUAL viewport (trình duyệt khoá tỉ lệ
+    // thu nhỏ tối thiểu nên đứng ~1560) — để mặc định thì clone bố trí ở 1560, ảnh hẹp hơn thật
+    // và các cột tên hàng hóa bị cắt chữ.
+    async function buildReportBlob(viewportH, viewportW) {
         if (typeof window.html2canvas !== 'function') {
             throw new Error('Không nạp được html2canvas (kiểm tra mạng).');
         }
@@ -2072,7 +2157,8 @@
         var contentCanvas = await window.html2canvas(contentEl, {
             backgroundColor: '#ffffff', scale: scale, useCORS: true, logging: false,
             height: contentEl.offsetHeight + overflowH + pcExtra,
-            windowHeight: window.innerHeight + overflowH + pcExtra,
+            windowWidth: viewportW || window.innerWidth,
+            windowHeight: (viewportH || window.innerHeight) + overflowH + pcExtra,
             // Nút chụp giữ NGUYÊN (icon camera không mờ) trong ảnh — chỉ bỏ disabled trên bản clone.
             // Xem ghi chú cũ: KHÔNG đổi cấu trúc DOM nút này trong onclone (html2canvas render sai).
             onclone: function (clonedDoc) {
@@ -2105,6 +2191,23 @@
                 // dưới cùng không bị "trôi" giữa ảnh.
                 var cs = clonedDoc.querySelector('.dd2-sidebar');
                 if (cs) cs.style.height = 'auto';
+
+                // html2canvas KHÔNG clone <canvas> bằng cloneNode mà tạo canvas MỚI (chỉ chép
+                // bitmap) nên inline style width/height Chart.js đặt bị mất -> canvas lấy cỡ CSS
+                // mặc định = cỡ bitmap. Màn hình devicePixelRatio > 1 (phone, retina) có bitmap
+                // gấp đôi CSS nên biểu đồ trong ảnh bị phóng to và cắt mất phần bên phải.
+                // Ghim lại đúng cỡ CSS đo từ DOM thật (khớp theo thứ tự, clone giữ nguyên thứ tự DOM).
+                var liveCanvas = contentEl.querySelectorAll('canvas');
+                var cloneRoot = clonedDoc.querySelector('.dd2-content') || clonedDoc;
+                var cloneCanvas = cloneRoot.querySelectorAll('canvas');
+                liveCanvas.forEach(function (lc, i) {
+                    var cc = cloneCanvas[i];
+                    if (!cc) return;
+                    var rect = lc.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return;
+                    cc.style.width = rect.width + 'px';
+                    cc.style.height = rect.height + 'px';
+                });
             }
         });
 
@@ -2143,29 +2246,274 @@
         });
     }
 
+    /* ---------------- Chụp báo cáo trên MOBILE ----------------
+       Ở phone/tablet bố cục dashboard xếp dọc (media query ≤1200px) nên ảnh chụp khác hẳn bản
+       desktop. Luồng mobile: mở modal -> đổi tạm <meta name="viewport"> sang width=1440 (media
+       query tính theo LAYOUT VIEWPORT nên mọi rule desktop tự áp lại và Chart.js responsive vẽ
+       lại canvas đúng cỡ, khác hẳn cách phóng to ảnh mobile cho ra chart mờ) + class
+       .dd2-capturing ghim khung 900px -> chụp -> trả viewport về cũ -> xem trước ảnh và
+       Chia sẻ / Tải về / Sao chép (clipboard ảnh trên phone thường không dùng được). */
+    // 1920x1080 = khung cố định của ảnh báo cáo (giống cách phiếu in dùng khổ A4 cứng 210mm:
+    // ảnh ra như nhau ở mọi thiết bị). Ở bề rộng này không sản phẩm/hàng hóa nào bị cắt tên.
+    var CAPTURE_DESKTOP_W = 1920;
+    var CAPTURE_DESKTOP_H = 950;
+    var captureModal = document.getElementById('dd2-capture-modal');
+    var captureBlob = null;
+    var captureBlobUrl = '';
+
+    /** Bố cục dashboard đổi sang xếp dọc từ 1200px trở xuống — dưới mốc này mới cần ép desktop. */
+    function needsDesktopCapture() { return window.innerWidth <= 1200; }
+
+    function captureFileName() {
+        var d = new Date();
+        var p = function (n) { return (n < 10 ? '0' : '') + n; };
+        return 'bao-cao-' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '.png';
+    }
+
+    function openCaptureModal() { if (captureModal) { captureModal.classList.add('is-open'); captureModal.setAttribute('aria-hidden', 'false'); } }
+    function closeCaptureModal() {
+        if (captureModal) { captureModal.classList.remove('is-open'); captureModal.setAttribute('aria-hidden', 'true'); }
+        if (captureBlobUrl) { URL.revokeObjectURL(captureBlobUrl); captureBlobUrl = ''; }
+        captureBlob = null;
+        var prev = document.getElementById('dd2-capture-preview');
+        if (prev) prev.innerHTML = '';
+        var acts = document.getElementById('dd2-capture-actions');
+        if (acts) acts.hidden = true;
+    }
+
+    function setCaptureStatus(text, spinning) {
+        var el = document.getElementById('dd2-capture-status');
+        if (el) el.textContent = text;
+        var prev = document.getElementById('dd2-capture-preview');
+        if (prev && spinning) prev.innerHTML = '<div class="dd2-capture-spin"></div>';
+    }
+
+    /** Đổi tạm viewport + ghim khung về tỉ lệ desktop. Trả hàm khôi phục nguyên trạng. */
+    function forceDesktopLayout() {
+        var meta = document.querySelector('meta[name="viewport"]');
+        var prev = meta ? meta.getAttribute('content') : null;
+        document.documentElement.classList.add('dd2-capturing');
+        if (meta) meta.setAttribute('content', 'width=' + CAPTURE_DESKTOP_W);
+        return function () {
+            if (meta) meta.setAttribute('content', prev || 'width=device-width, initial-scale=1.0');
+            document.documentElement.classList.remove('dd2-capturing');
+            // Chart.js bám ResizeObserver, nhưng bắn thêm resize cho chắc khi trả về bố cục mobile.
+            window.dispatchEvent(new Event('resize'));
+        };
+    }
+
+    /** Chờ trình duyệt thật sự bố trí lại theo viewport mới (tối đa ~1.6s).
+     *  Trả true nếu ăn; false nghĩa là trình duyệt bỏ qua thẻ meta -> phải dùng đường dự phòng.
+     *  ĐO documentElement.clientWidth (LAYOUT viewport — cái mà media query dùng), KHÔNG đo
+     *  window.innerWidth: trình duyệt khoá tỉ lệ thu nhỏ tối thiểu (Chrome 0.25) nên innerWidth
+     *  đứng yên ~1560 dù layout đã là 1920, đo nhầm là tưởng thất bại. */
+    function layoutViewportWidth() {
+        return document.documentElement.clientWidth || window.innerWidth || 0;
+    }
+
+    async function waitDesktopViewport() {
+        for (var i = 0; i < 8; i++) {
+            if (layoutViewportWidth() >= CAPTURE_DESKTOP_W - 120) return true;
+            await waitMs(200);
+        }
+        return layoutViewportWidth() >= CAPTURE_DESKTOP_W - 120;
+    }
+
+    function waitMs(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    /** Sau khi đổi viewport phải ép Chart.js đo lại: ResizeObserver của nó chạy trễ/nhảy bước nên
+     *  canvas dễ bị giữ cỡ cũ -> chart phóng to và bị cắt mép trong ảnh chụp. */
+    async function resizeChartsForCapture() {
+        Object.keys(charts).forEach(function (k) {
+            var c = charts[k];
+            if (c && typeof c.resize === 'function') { c.resize(); c.update('none'); }
+        });
+        await waitMs(250);
+    }
+
+    function showCaptureResult(blob, forcedDesktop) {
+        captureBlob = blob;
+        if (captureBlobUrl) URL.revokeObjectURL(captureBlobUrl);
+        captureBlobUrl = URL.createObjectURL(blob);
+
+        var prev = document.getElementById('dd2-capture-preview');
+        if (prev) prev.innerHTML = '<img src="' + captureBlobUrl + '" alt="Ảnh báo cáo">';
+        setCaptureStatus(forcedDesktop === false
+            ? 'Trình duyệt này không đổi được bố cục — ảnh theo bố cục màn hình hiện tại. Chọn cách gửi đi:'
+            : 'Ảnh đã chụp theo bố cục desktop ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '. Chọn cách gửi đi:', false);
+
+        var file = null;
+        try { file = new File([blob], captureFileName(), { type: 'image/png' }); } catch (e) { file = null; }
+        var canShare = !!(file && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share);
+        var canCopy = !!(navigator.clipboard && typeof window.ClipboardItem === 'function');
+
+        var acts = document.getElementById('dd2-capture-actions');
+        if (acts) acts.hidden = false;
+        var shareBtn = document.getElementById('dd2-capture-share');
+        if (shareBtn) {
+            shareBtn.hidden = !canShare;
+            shareBtn.onclick = function () {
+                navigator.share({ files: [file], title: 'Báo cáo sản xuất' }).catch(function () {});
+            };
+        }
+        var dlBtn = document.getElementById('dd2-capture-download');
+        if (dlBtn) {
+            dlBtn.onclick = function () {
+                var a = document.createElement('a');
+                a.href = captureBlobUrl;
+                a.download = captureFileName();
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+        }
+        var copyBtn = document.getElementById('dd2-capture-copy');
+        if (copyBtn) {
+            copyBtn.hidden = !canCopy;
+            copyBtn.onclick = function () {
+                navigator.clipboard.write([new window.ClipboardItem({ 'image/png': captureBlob })])
+                    .then(function () { setCaptureStatus('Đã copy ảnh vào clipboard.', false); })
+                    .catch(function () { setCaptureStatus('Trình duyệt không cho copy ảnh — hãy dùng "Tải ảnh".', false); });
+            };
+        }
+    }
+
+    /** Chụp theo KHUNG CỐ ĐỊNH desktop. Không đụng gì tới modal — trả {blob, forced}. */
+    async function captureDesktopFramedBlob(onStatus) {
+        onStatus = onStatus || function () {};
+        onStatus('Đang cố định bố cục ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
+        var restore = forceDesktopLayout();
+        var blob, forced = false;
+        try {
+            forced = await waitDesktopViewport();
+            if (forced) {
+                // #wrapper có transition padding-left 0.22s (chừa chỗ sidebar) -> chờ bố cục
+                // đứng yên rồi mới đo, nếu không chiều cao từng hàng ghim vào bản clone sẽ lệch.
+                await waitMs(400);
+                // Chart.js vẽ lại 2 biểu đồ theo cỡ mới.
+                await resizeChartsForCapture();
+                onStatus('Đang dựng ảnh…');
+                blob = await buildReportBlob(CAPTURE_DESKTOP_H, CAPTURE_DESKTOP_W);
+            } else {
+                // Trình duyệt không cho đổi layout viewport bằng thẻ meta -> chụp theo bố cục
+                // đang có, báo rõ thay vì trả ra ảnh bố cục hỏng.
+                console.warn('Không ép được viewport desktop (clientWidth =', layoutViewportWidth(), ')');
+                restore();
+                restore = function () {};
+                await waitMs(300);
+                onStatus('Đang dựng ảnh…');
+                blob = await buildReportBlob();
+            }
+        } finally {
+            restore();
+        }
+        return { blob: blob, forced: forced };
+    }
+
+    /** Toast ngắn ở đáy màn hình (không phải modal — tự tắt, không cần bấm gì). */
+    function captureToast(text, isError) {
+        var el = document.createElement('div');
+        el.className = 'dd2-capture-toast' + (isError ? ' is-error' : '');
+        el.textContent = text;
+        document.body.appendChild(el);
+        setTimeout(function () { el.classList.add('is-out'); }, 3200);
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 3700);
+    }
+
+    /** Mở modal xem trước — CHỈ dùng khi clipboard không dùng được, để không mất công chụp. */
+    function captureFallbackToModal(blob, forced, reason) {
+        openCaptureModal();
+        showCaptureResult(blob, forced);
+        if (reason) {
+            var el = document.getElementById('dd2-capture-status');
+            if (el) el.textContent = reason + ' Dùng nút bên dưới để gửi ảnh:';
+        }
+    }
+
     function wireCaptureButton() {
         var btn = document.getElementById('dd2-capture-btn');
         if (!btn) return;
-        btn.addEventListener('click', async function () {
+        document.querySelectorAll('[data-dd2-capture-close]').forEach(function (el) { el.addEventListener('click', closeCaptureModal); });
+
+        // KHÔNG để handler này là async: Safari/iOS huỷ quyền ghi clipboard nếu navigator.clipboard.write
+        // được gọi SAU một lần await. Cách hợp lệ: gọi write ngay trong cử chỉ chạm và truyền PROMISE
+        // của blob vào ClipboardItem (đặc tả cho phép), ảnh dựng xong lúc nào clipboard nhận lúc đó.
+        btn.addEventListener('click', function () {
             if (typeof window.html2canvas !== 'function') {
                 alert('Không nạp được html2canvas. Kiểm tra mạng rồi thử lại.');
                 return;
             }
-            if (!navigator.clipboard || typeof window.ClipboardItem !== 'function') {
-                alert('Trình duyệt không hỗ trợ copy ảnh vào clipboard.');
+            if (btn.disabled) return;
+            var canCopy = !!(navigator.clipboard && typeof window.ClipboardItem === 'function');
+
+            // ----- DESKTOP: giữ nguyên luồng cũ (copy clipboard + alert) -----
+            if (!needsDesktopCapture()) {
+                if (!canCopy) { alert('Trình duyệt không hỗ trợ copy ảnh vào clipboard.'); return; }
+                btn.disabled = true;
+                buildReportBlob()
+                    .then(function (blob) { return navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]); })
+                    .then(function () { alert('Đã copy ảnh báo cáo vào clipboard.\nBấm Ctrl+V để dán vào ứng dụng bạn muốn.'); })
+                    .catch(function (err) {
+                        console.error('Capture report error:', err);
+                        alert('Không thể chụp báo cáo: ' + (err && err.message ? err.message : err));
+                    })
+                    .then(function () { btn.disabled = false; });
                 return;
             }
-            // CHỈ dùng thuộc tính disabled (CSS :disabled có sẵn) làm dấu hiệu "đang xử lý".
+
+            // ----- MOBILE: chụp theo khung desktop rồi copy THẲNG vào clipboard, KHÔNG mở modal -----
             btn.disabled = true;
-            try {
-                var blob = await buildReportBlob();
-                await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
-                alert('Đã copy ảnh báo cáo vào clipboard.\nBấm Ctrl+V để dán vào ứng dụng bạn muốn.');
-            } catch (err) {
-                console.error('Capture report error:', err);
-                alert('Không thể chụp báo cáo: ' + (err && err.message ? err.message : err));
-            } finally {
+            var overlay = autoOverlay('Đang chụp báo cáo…');
+            // autoOverlay() dựng 3 con: [0] vòng xoay, [1] dòng chữ, [2] <style> -> phải lấy children[1],
+            // lastElementChild sẽ trúng thẻ <style>.
+            var setOverlayText = function (t) {
+                var box = overlay.children[1];
+                if (box) box.textContent = t;
+            };
+            var result = null;
+            var shot = captureDesktopFramedBlob(setOverlayText).then(function (r) { result = r; return r.blob; });
+            var finish = function () {
+                if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 btn.disabled = false;
+            };
+            var failed = function (err) {
+                console.error('Capture report error:', err);
+                finish();
+                captureToast('Không chụp được: ' + (err && err.message ? err.message : err), true);
+            };
+
+            // clipboard.write / new ClipboardItem có thể NÉM LỖI ĐỒNG BỘ (vd tài liệu không có
+            // focus) chứ không phải trả promise bị reject -> phải bọc try/catch, nếu không overlay
+            // sẽ treo và không nhánh nào chạy tiếp.
+            var writeToClipboard = function () {
+                try {
+                    return navigator.clipboard.write([new window.ClipboardItem({ 'image/png': shot })]);
+                } catch (e) {
+                    return Promise.reject(e);
+                }
+            };
+
+            if (canCopy) {
+                writeToClipboard()
+                    .then(function () {
+                        finish();
+                        captureToast(result && result.forced === false
+                            ? 'Đã copy ảnh (bố cục màn hình hiện tại). Sang ứng dụng khác rồi dán.'
+                            : 'Đã copy ảnh báo cáo. Sang ứng dụng khác rồi dán (Ctrl+V / giữ để Paste).');
+                    })
+                    .catch(function (err) {
+                        // Ảnh vẫn có thể đã dựng xong — đừng bỏ phí, mở modal cho tải/chia sẻ.
+                        console.warn('Clipboard write không thành công:', err);
+                        shot.then(function (blob) {
+                            finish();
+                            captureFallbackToModal(blob, result && result.forced, 'Trình duyệt không cho copy ảnh vào bộ nhớ tạm.');
+                        }).catch(failed);
+                    });
+            } else {
+                shot.then(function (blob) {
+                    finish();
+                    captureFallbackToModal(blob, result && result.forced, 'Trình duyệt không hỗ trợ copy ảnh vào bộ nhớ tạm.');
+                }).catch(failed);
             }
         });
     }
@@ -2205,7 +2553,27 @@
             }
             await new Promise(function (r) { setTimeout(r, settle); });
 
-            var blob = await buildReportBlob();
+            // Gửi tự động cũng phải ra ảnh bố cục desktop dù máy đang mở là phone.
+            var blob;
+            if (needsDesktopCapture()) {
+                var restoreVp = forceDesktopLayout();
+                try {
+                    if (await waitDesktopViewport()) {
+                        await waitMs(400);
+                        await resizeChartsForCapture();
+                        blob = await buildReportBlob(CAPTURE_DESKTOP_H, CAPTURE_DESKTOP_W);
+                    } else {
+                        restoreVp();
+                        restoreVp = function () {};
+                        await waitMs(300);
+                        blob = await buildReportBlob();
+                    }
+                } finally {
+                    restoreVp();
+                }
+            } else {
+                blob = await buildReportBlob();
+            }
             var fd = new FormData();
             fd.append('config_id', String(cfgId));
             fd.append('image', blob, 'bao-cao.png');

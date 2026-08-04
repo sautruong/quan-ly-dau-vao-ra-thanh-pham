@@ -1335,8 +1335,11 @@ input:focus {
         margin-bottom: 10px;
     }
 
-    /* Product-item: flex column + canh giữa */
-    .product-item {
+    /* Product-item: flex column + canh giữa.
+       LOẠI TRỪ .of-prod: dòng sản phẩm kiểu mới (tên | leader chấm | tồn quy đổi) mang CẢ 2 class
+       .of-prod.product-item, nếu để rule cũ này áp vào thì trên phone nó bị xếp dọc + canh giữa,
+       khác hẳn view "Tồn kho thành phẩm" (chỉ có .of-prod) — xem khối @media 768px cuối file. */
+    .product-item:not(.of-prod) {
         flex-direction: column;
         flex-wrap: nowrap;
         align-items: center;

@@ -42,6 +42,13 @@
     flex: 0 0 auto;
 }
 
+.dd2-hdr-logo-link {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    line-height: 0;
+}
+
 .dd2-hdr-logo {
     width: 25px;
     height: 25px;
@@ -2755,9 +2762,153 @@
     .dd2-card { width: 100%; border-radius: 16px; }
     /* Chart tràn mép (negative margin) dễ gây lệch trên màn nhỏ -> gọn lại */
     .dd2-col-export .dd2-chart-box { width: 100%; margin: 0; }
-    /* Thanh icon dọc -> cuộn ngang khi chật */
-    .dd2-sidebar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     /* "Theo dõi tồn kho": 3 mục/dòng chỉ đủ chỗ trên desktop; ở phone giữ 2 mục/dòng
        (6 mục -> 3 dòng) để pin + tên không bị bóp. */
     .dd2-sw-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    /* ---- HEADER 2 DÒNG ----
+       Dòng 1: logo (về trang chủ) --- chuông + chat + avatar dạt phải.
+       Dòng 2: cụm tiện ích (tìm kiếm/sáng-tối/lịch/nhắc/việc) chiếm trọn bề ngang, canh giữa.
+       Làm bằng flex-wrap + order thay vì đổi markup, nên desktop giữ nguyên 1 dòng như cũ. */
+    .dd2-app-header {
+        flex-wrap: wrap;
+        row-gap: 8px;
+        padding: 8px 12px;
+        border-radius: 22px;
+    }
+    /* max-width là thứ QUYẾT ĐỊNH giữ được 3 khối trên 1 dòng: container đang flex-wrap nên khi
+       chật trình duyệt XUỐNG DÒNG chứ không co item lại (flex-shrink chỉ tác dụng trong phạm vi
+       một dòng đã chia xong) -> không chặn bề rộng cụm logo thì avatar bị đẩy xuống dòng riêng.
+       165px = chỗ dành cho chat + chuông + avatar + các khoảng cách. */
+    .dd2-hdr-brand   { order: 1; flex: 1 1 auto; min-width: 0; max-width: calc(100% - 165px); }
+    .dd2-hdr-actions { order: 2; flex: 0 0 auto; }
+    .dd2-hdr-avatar  { order: 3; flex: 0 0 auto; margin-left: 8px; }
+    .dd2-hdr-middle  { order: 4; flex: 1 0 100%; margin: 0; justify-content: center; }
+    /* Tên thương hiệu dài không được đẩy avatar rớt xuống dòng riêng. Chữ đang white-space:nowrap
+       nên bề rộng tối thiểu của nó = trọn câu; phải min-width:0 + overflow:hidden thì flex mới co
+       được (đặt trên CẢ .dd2-hdr-brand lẫn chính thẻ chữ vì nó là flex item lồng nhau). */
+    .dd2-hdr-brand-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+    /* Bút sửa tên chỉ hiện khi hover -> vô dụng trên cảm ứng, ẩn đi lấy chỗ (desktop giữ nguyên) */
+    .dd2-hdr-brand-edit { display: none; }
+    /* Thu nhỏ 3 nút tròn để dòng 1 đủ chỗ cho cả tên thương hiệu (chat/chuông 42->36,
+       avatar 55->40 nhờ bỏ padding phải vốn chừa cho tên user đã bị ẩn ở header này). */
+    .dd2-hdr-actions .app-bell-btn,
+    .dd2-hdr-actions .app-chat-dock-btn { width: 36px; height: 36px; }
+    .dd2-hdr-avatar .app-user-btn { padding: 3px; }
+    .dd2-hdr-avatar .app-avatar { width: 34px; height: 34px; }
+
+    /* ---- SIDEBAR ICON CỦA VIEW: 2 dòng, KHÔNG cuộn ----
+       Dòng 1 = khối 1 (4 icon) trải hết bề ngang.
+       Dòng 2 = khối 2 (3 icon) dạt trái + khối 3 (2 icon) dạt phải. */
+    .dd2-sidebar {
+        flex-wrap: wrap;
+        overflow: visible;
+        gap: 8px;
+    }
+    .dd2-sb-group { flex: 0 0 auto; }
+    .dd2-sb-group:first-child {
+        flex: 1 0 100%;
+        justify-content: space-between;
+    }
+    /* .dd2-sb-group-bottom đã có margin-left:auto (media 1200px) -> tự dạt phải trên dòng 2 */
+}
+
+/* =====================================================================
+   CHỤP BÁO CÁO TRÊN MOBILE — ảnh phải giống bản desktop
+   Nguyên tắc mượn từ phiếu in (#print-sheet khổ A4 cứng 210mm nên chụp ở máy nào
+   cũng ra ảnh như nhau): ép trang về KHUNG CỐ ĐỊNH 1920x950 rồi mới chụp.
+   JS đổi tạm <meta name="viewport"> sang width=1920 -> MỌI media query ở trên
+   ngừng khớp (bố cục desktop tự áp lại + Chart.js vẽ lại đúng cỡ, không phóng
+   to ảnh mờ). Nhưng layout viewport ở phone lúc đó rất CAO (1920 × tỉ lệ màn),
+   mà .dd2-row cao theo % của khung -> các hàng bị KÉO DÀI. Class .dd2-capturing
+   (JS gắn vào <html>) ghim chiều cao khung đúng 950px (chiều cao vùng hiển thị thật của trình duyệt trên màn 1080p).
+   ===================================================================== */
+html.dd2-capturing,
+html.dd2-capturing body,
+html.dd2-capturing #wrapper {
+    height: 950px;
+    min-height: 0;
+    max-height: 950px;
+    overflow: hidden;
+}
+
+/* Modal chụp (chỉ mobile) */
+.dd2-capture-box {
+    width: 560px;
+}
+
+.dd2-capture-preview {
+    max-height: 46vh;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f3f4f6;
+    margin-bottom: 12px;
+    min-height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dd2-capture-preview:empty {
+    border-style: dashed;
+}
+
+.dd2-capture-preview img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.dd2-capture-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.dd2-capture-actions button {
+    flex: 1 1 auto;
+    padding: 9px 12px;
+}
+
+/* Toast báo "đã copy" sau khi chụp trên mobile (thay cho modal) */
+.dd2-capture-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 2147483001;
+    max-width: 88vw;
+    padding: 12px 18px;
+    border-radius: 12px;
+    background: #10331b;
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.45;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+    transition: opacity .35s ease, transform .35s ease;
+}
+
+.dd2-capture-toast.is-error {
+    background: #7f1d1d;
+}
+
+.dd2-capture-toast.is-out {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+}
+
+.dd2-capture-spin {
+    width: 34px;
+    height: 34px;
+    margin: 18px auto;
+    border: 4px solid #e5e7eb;
+    border-top-color: #0a741c;
+    border-radius: 50%;
+    animation: dd2CaptureSpin 0.9s linear infinite;
+}
+
+@keyframes dd2CaptureSpin {
+    to { transform: rotate(360deg); }
 }

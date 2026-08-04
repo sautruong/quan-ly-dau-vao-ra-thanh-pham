@@ -35,7 +35,11 @@ if (!isset($page_title) || $page_title === '') {
      Không đổi behavior của header-widgets/*.php, chỉ đổi cách gom nhóm — xem [[daily-dashboard-report]]. -->
 <header class="app-header dd2-app-header">
     <div class="dd2-hdr-brand">
-        <img src="public/images/logo/logo_vat_png.png" class="dd2-hdr-logo" alt="logo">
+        <!-- Chỉ bọc LOGO bằng link về trang chủ (không bọc cả cụm): chữ bên cạnh là contenteditable
+             sửa-tại-chỗ, bọc chung sẽ biến mỗi lần bấm sửa tên thành một cú điều hướng. -->
+        <a href="<?php echo function_exists('nav_url') ? nav_url('home', 'index', 'index') : '?mod=home&controllers=index&action=index'; ?>" class="dd2-hdr-logo-link" title="Về trang chủ">
+            <img src="public/images/logo/logo_vat_png.png" class="dd2-hdr-logo" alt="logo">
+        </a>
         <span class="dd2-hdr-brand-text" id="dd2-hdr-brand-text" data-setting="daily_dashboard.logo_caption"><?php echo htmlspecialchars(function_exists('rp_dd_get_logo_caption') ? rp_dd_get_logo_caption() : 'VUA AN TOÀN', ENT_QUOTES, 'UTF-8'); ?></span>
         <i class="fa-solid fa-pen dd2-hdr-brand-edit" id="dd2-hdr-brand-edit" title="Sửa tên"></i>
     </div>
