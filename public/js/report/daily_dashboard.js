@@ -1378,9 +1378,12 @@
         refreshRegulationAfterSettings(out.regulation);
     }
 
-    /** Cài đặt SP chủ lực / giá trị tạm vừa đổi -> số liệu điều tiết đã cache theo kỳ hết hiệu lực. */
+    /** Cài đặt SP chủ lực / giá trị tạm vừa đổi -> số liệu điều tiết đã cache theo kỳ hết hiệu lực.
+     *  Phải gắn theo ĐÚNG reg.period, không gán cứng 'month': kỳ đang chọn được lưu ở app_settings
+     *  nên rp_dd_output_block() có thể trả về số liệu của kỳ 30/60/90. */
     function refreshRegulationAfterSettings(reg) {
-        regPeriodCache = { month: reg };
+        regPeriodCache = {};
+        if (reg && reg.period) regPeriodCache[reg.period] = reg;
         var group = document.getElementById('dd2-reg-period-group');
         var active = group && group.querySelector('.dd2-toggle-btn.active');
         var period = active ? active.getAttribute('data-dd2-reg-period') : 'month';
@@ -1671,6 +1674,15 @@
         if (stEl) { stEl.textContent = d.label || ''; stEl.className = 'dd2-state-' + (d.state || 'on_dinh'); }
         var warnEl = document.getElementById('dd2-reg-period-warn');
         if (warnEl) warnEl.hidden = (d.period || 'month') === 'month';
+
+        // ÁP DỤNG LUÔN ra thẻ "Điều tiết" ngoài trang (kỳ chọn đã được lưu ở app_settings nên
+        // tải lại trang vẫn giữ, ảnh chụp báo cáo cũng theo kỳ này).
+        var cardEl = document.getElementById('dd2-regulation-value');
+        if (cardEl) {
+            cardEl.className = 'dd2-state-' + (d.state || 'on_dinh');
+            cardEl.textContent = (d.label || '') + ' (' + (Number(d.a) || 0).toFixed(1) + ')';
+            cardEl.title = 'Kỳ tính: ' + (d.period_note || '') + ' — bấm để đổi';
+        }
     }
 
     function selectRegulationPeriod(period) {
@@ -2122,11 +2134,14 @@
     // (1920x1080). Bắt buộc vì window.inner* lúc đó là VISUAL viewport (trình duyệt khoá tỉ lệ
     // thu nhỏ tối thiểu nên đứng ~1560) — để mặc định thì clone bố trí ở 1560, ảnh hẹp hơn thật
     // và các cột tên hàng hóa bị cắt chữ.
-    async function buildReportBlob(viewportH, viewportW) {
+    async function buildReportBlob(viewportH, viewportW, srcDoc) {
         if (typeof window.html2canvas !== 'function') {
             throw new Error('Không nạp được html2canvas (kiểm tra mạng).');
         }
-        var contentEl = document.querySelector('.dd2-content');
+        // srcDoc: tài liệu nguồn — mặc định là trang hiện tại, luồng chụp mobile truyền vào
+        // document CỦA IFRAME khung cứng 1920x950 (xem captureViaFrame).
+        var doc = srcDoc || document;
+        var contentEl = doc.querySelector('.dd2-content');
         if (!contentEl) throw new Error('Không tìm thấy nội dung báo cáo.');
 
         var scale = 2;
@@ -2135,7 +2150,7 @@
         // vùng chụp, còn bản CLONE của html2canvas thì mở khóa overflow + ghim chiều cao từng hàng
         // bằng px đo được từ DOM thật (nếu để calc(50%) trong clone cao hơn, các hàng sẽ giãn theo
         // và lệch bố cục). Nhờ overflow:visible trên clone, ảnh cũng KHÔNG dính thanh cuộn vật lý.
-        var mainEl = document.querySelector('.dd2-main');
+        var mainEl = doc.querySelector('.dd2-main');
         var overflowH = mainEl ? Math.max(0, mainEl.scrollHeight - mainEl.clientHeight) : 0;
         var rowHeights = [];
         if (mainEl) {
@@ -2149,7 +2164,7 @@
         var scrollBoxes = ['.dd2-pc-wrap', '.dd2-sw-cols'];
         var pcExtra = 0;
         scrollBoxes.forEach(function (sel) {
-            var el = document.querySelector(sel);
+            var el = doc.querySelector(sel);
             if (el) pcExtra = Math.max(pcExtra, el.scrollHeight - el.clientHeight);
         });
 
@@ -2391,39 +2406,95 @@
         }
     }
 
-    /** Chụp theo KHUNG CỐ ĐỊNH desktop. Không đụng gì tới modal — trả {blob, forced}. */
+    /** CÁCH CHẮC ĂN NHẤT: nạp lại chính trang này vào một IFRAME có bề rộng CỨNG 1920x950 rồi chụp
+     *  nội dung trong đó. Viewport của iframe CHÍNH LÀ kích thước iframe nên media query desktop
+     *  chắc chắn kích hoạt và Chart.js vẽ canvas đúng cỡ desktop — không phụ thuộc chút nào vào
+     *  việc thiết bị có chịu đổi thẻ <meta viewport> hay không (đã gặp máy thật bỏ qua hoàn toàn:
+     *  đo được vẫn 384px). Đúng tinh thần #print-sheet khổ A4 cứng của phiếu in. */
+    async function captureViaFrame(onStatus) {
+        onStatus('Đang dựng khung ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
+        var frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.setAttribute('tabindex', '-1');
+        // Đặt ngoài màn hình chứ KHÔNG dùng display:none/visibility:hidden — phải được bố trí thật
+        // thì Chart.js mới đo được kích thước và vẽ biểu đồ.
+        frame.style.cssText = 'position:fixed;top:0;left:-' + (CAPTURE_DESKTOP_W + 100) + 'px;'
+            + 'width:' + CAPTURE_DESKTOP_W + 'px;height:' + CAPTURE_DESKTOP_H + 'px;'
+            + 'border:0;opacity:0;pointer-events:none;z-index:-1;';
+        // URL sạch của chính view này. KHÔNG kéo theo query hiện tại: ?auto_send= sẽ khiến trang
+        // trong iframe tự chụp-gửi rồi điều hướng, thành vòng lặp.
+        frame.src = '?mod=report&controllers=report&action=daily_dashboard&dd2frame=1';
+        document.body.appendChild(frame);
+        try {
+            await new Promise(function (resolve, reject) {
+                var timer = setTimeout(function () { reject(new Error('khung tải quá lâu')); }, 45000);
+                frame.addEventListener('load', function () { clearTimeout(timer); resolve(); }, { once: true });
+                frame.addEventListener('error', function () { clearTimeout(timer); reject(new Error('khung lỗi')); }, { once: true });
+            });
+            var fdoc = frame.contentDocument;
+            if (!fdoc) throw new Error('không đọc được nội dung khung');
+            onStatus('Đang vẽ biểu đồ…');
+            // Chờ nội dung + 2 biểu đồ vẽ xong (chart có animation).
+            for (var i = 0; i < 40; i++) {
+                var c = fdoc.querySelector('#dd2-chart-output');
+                if (fdoc.querySelector('.dd2-content') && c && c.getBoundingClientRect().width > 100) break;
+                await waitMs(200);
+            }
+            await waitMs(2200);
+            onStatus('Đang dựng ảnh…');
+            return await buildReportBlob(CAPTURE_DESKTOP_H, CAPTURE_DESKTOP_W, fdoc);
+        } finally {
+            if (frame.parentNode) frame.parentNode.removeChild(frame);
+        }
+    }
+
+    /** Chụp theo KHUNG CỐ ĐỊNH desktop — trả {blob, forced, width, via}.
+     *  Thử lần lượt: (1) ép viewport tại chỗ (nhanh, không phải nạp lại trang) ->
+     *  (2) iframe khung cứng (chắc ăn, chậm hơn) -> (3) đành chụp bố cục hiện tại.
+     *  Có thể ép chọn cách bằng ?dd2capture=viewport|frame|inline để hỗ trợ từ xa. */
     async function captureDesktopFramedBlob(onStatus) {
         onStatus = onStatus || function () {};
-        onStatus('Đang cố định bố cục ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
-        var restore = forceDesktopLayout();
-        var blob, gotW = 0, forced = false;
-        try {
-            gotW = await waitDesktopViewport();
-            forced = gotW > 0;
-            if (forced) {
-                // #wrapper có transition padding-left 0.22s (chừa chỗ sidebar) -> chờ bố cục
-                // đứng yên rồi mới đo, nếu không chiều cao từng hàng ghim vào bản clone sẽ lệch.
-                await waitMs(400);
-                // Chart.js vẽ lại 2 biểu đồ theo cỡ mới.
-                await resizeChartsForCapture();
-                onStatus('Đang dựng ảnh…');
-                // Truyền ĐÚNG bề rộng đo được, không truyền hằng số: máy nào bị trình duyệt kẹp
-                // xuống (vd 1650px) mà vẫn báo 1920 thì bản clone của html2canvas bố trí lệch.
-                blob = await buildReportBlob(CAPTURE_DESKTOP_H, gotW);
-            } else {
-                // Trình duyệt không cho đổi layout viewport bằng thẻ meta -> chụp theo bố cục
-                // đang có, báo rõ thay vì trả ra ảnh bố cục hỏng.
-                console.warn('Không ép được viewport desktop (clientWidth =', layoutViewportWidth(), ')');
-                restore();
-                restore = function () {};
-                await waitMs(300);
-                onStatus('Đang dựng ảnh…');
-                blob = await buildReportBlob();
+        var mode = '';
+        try { mode = new URLSearchParams(location.search).get('dd2capture') || ''; } catch (e) { mode = ''; }
+
+        // (1) Ép viewport tại chỗ
+        if (mode !== 'frame' && mode !== 'inline') {
+            onStatus('Đang cố định bố cục ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
+            var restore = forceDesktopLayout();
+            var gotW = await waitDesktopViewport();
+            if (gotW) {
+                try {
+                    // #wrapper có transition padding-left 0.22s (chừa chỗ sidebar) -> chờ bố cục
+                    // đứng yên rồi mới đo, nếu không chiều cao từng hàng ghim vào clone sẽ lệch.
+                    await waitMs(400);
+                    await resizeChartsForCapture();
+                    onStatus('Đang dựng ảnh…');
+                    // Truyền ĐÚNG bề rộng đo được, không truyền hằng số.
+                    var b1 = await buildReportBlob(CAPTURE_DESKTOP_H, gotW);
+                    return { blob: b1, forced: true, width: gotW, via: 'viewport' };
+                } finally {
+                    restore();
+                }
             }
-        } finally {
             restore();
+            console.warn('Thiết bị bỏ qua thẻ viewport (đo được ' + layoutViewportWidth() + 'px) -> chuyển sang khung iframe');
         }
-        return { blob: blob, forced: forced, width: gotW };
+
+        // (2) Iframe khung cứng
+        if (mode !== 'inline') {
+            try {
+                var b2 = await captureViaFrame(onStatus);
+                return { blob: b2, forced: true, width: CAPTURE_DESKTOP_W, via: 'iframe' };
+            } catch (err) {
+                console.warn('Chụp qua khung iframe không thành công:', err);
+            }
+        }
+
+        // (3) Cùng đường: chụp bố cục đang có, báo rõ thay vì trả ảnh bố cục hỏng.
+        await waitMs(200);
+        onStatus('Đang dựng ảnh…');
+        var b3 = await buildReportBlob();
+        return { blob: b3, forced: false, width: layoutViewportWidth(), via: 'inline' };
     }
 
     /** Toast ngắn ở đáy màn hình (không phải modal — tự tắt, không cần bấm gì). */
@@ -2513,13 +2584,13 @@
                 writeToClipboard()
                     .then(function () {
                         finish();
-                        // Khi KHÔNG ép được bố cục desktop thì ghi rõ bề rộng đo được — con số này
-                        // là manh mối duy nhất để chẩn đoán từ xa trên máy thật của người dùng.
+                        // Ghi kèm bề rộng khung + cách đã dùng (viewport/iframe/inline) — manh mối
+                        // để chẩn đoán từ xa trên máy thật của người dùng.
                         captureToast(result && result.forced === false
-                            ? 'Đã copy ảnh nhưng KHÔNG ép được bố cục desktop (khung đo được: '
-                                + layoutViewportWidth() + 'px). Báo lại con số này để xử lý.'
-                            : 'Đã copy ảnh báo cáo (khung ' + (result ? result.width : '?')
-                                + 'px). Sang ứng dụng khác rồi dán (Ctrl+V / giữ để Paste).');
+                            ? 'Đã copy ảnh nhưng KHÔNG dựng được bố cục desktop (khung ' + result.width
+                                + 'px). Báo lại giúp tôi dòng này.'
+                            : 'Đã copy ảnh báo cáo (khung ' + (result ? result.width : '?') + 'px, cách: '
+                                + (result ? result.via : '?') + '). Sang ứng dụng khác rồi dán.');
                     })
                     .catch(function (err) {
                         // Ảnh vẫn có thể đã dựng xong — đừng bỏ phí, mở modal cho tải/chia sẻ.

@@ -454,11 +454,13 @@ function daily_dashboard_product_cost_breakdownAction()
     exit;
 }
 
-/** AJAX: tính lại chỉ số điều tiết theo kỳ chọn ở modal — POST period: 'month' | '30' | '60' | '90'. */
+/** AJAX: tính lại chỉ số điều tiết theo kỳ chọn ở modal — POST period: 'month' | '30' | '60' | '90'.
+ *  Chọn kỳ là ÁP DỤNG LUÔN cho cả trang nên lưu lại app_settings (trừ khi POST save=0). */
 function daily_dashboard_regulationAction()
 {
     header('Content-Type: application/json; charset=utf-8');
     $period = (string) ($_POST['period'] ?? 'month');
+    if ((string) ($_POST['save'] ?? '1') !== '0') rp_dd_save_regulation_period($period);
     echo json_encode(['success' => true, 'data' => rp_dd_regulation($period)], JSON_UNESCAPED_UNICODE);
     exit;
 }

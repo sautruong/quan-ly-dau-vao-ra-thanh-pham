@@ -227,7 +227,7 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                             <div class="dd2-chart-box"><canvas id="dd2-chart-output"></canvas></div>
                             <div class="dd2-output-stats-line">
                                 <span class="dd2-stat-inline">Hiệu quả: <b id="dd2-efficiency-value"><?php echo number_format((float) $eff['value'], 1); ?></b></span>
-                                <span class="dd2-stat-inline">Điều tiết: <b id="dd2-regulation-value" class="dd2-state-<?php echo dd2_esc($reg['state']); ?>"><?php echo dd2_esc($reg['label']); ?> (<?php echo number_format((float) $reg['a'], 1); ?>)</b></span>
+                                <span class="dd2-stat-inline">Điều tiết: <b id="dd2-regulation-value" class="dd2-state-<?php echo dd2_esc($reg['state']); ?>" title="Kỳ tính: <?php echo dd2_esc($reg['period_note']); ?> — bấm để đổi"><?php echo dd2_esc($reg['label']); ?> (<?php echo number_format((float) $reg['a'], 1); ?>)</b></span>
                             </div>
                         </div>
 
@@ -698,8 +698,13 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
             <div class="app-modal-body">
                 <!-- Kỳ tính chỉ số a: tháng hiện tại (mặc định, khớp số trên thẻ ngoài trang) hoặc cửa sổ 30/60/90 ngày gần nhất -->
                 <div class="dd2-toggle-group" id="dd2-reg-period-group">
-                    <?php foreach (rp_dd_regulation_periods() as $pKey => $pInfo): ?>
-                        <button type="button" class="dd2-toggle-btn<?php echo $pKey === $reg['period'] ? ' active' : ''; ?>" data-dd2-reg-period="<?php echo dd2_esc($pKey); ?>"><?php echo dd2_esc($pInfo['label']); ?></button>
+                    <?php foreach (rp_dd_regulation_periods() as $pKey => $pInfo):
+                        // PHẢI ép chuỗi 2 vế: khoá mảng '30'/'60'/'90' được PHP tự chuyển thành SỐ
+                        // NGUYÊN nên so sánh nghiêm ngặt với chuỗi '90' luôn sai -> không nút nào
+                        // được active, JS tưởng kỳ mặc định là 'month' và gán nhầm cache.
+                        $pActive = (string) $pKey === (string) $reg['period'];
+                    ?>
+                        <button type="button" class="dd2-toggle-btn<?php echo $pActive ? ' active' : ''; ?>" data-dd2-reg-period="<?php echo dd2_esc($pKey); ?>"><?php echo dd2_esc($pInfo['label']); ?></button>
                     <?php endforeach; ?>
                 </div>
                 <p class="dd2-form-hint">Tương quan cung/cầu — <span id="dd2-reg-period-note"><?php echo dd2_esc($reg['period_note']); ?></span></p>
@@ -712,7 +717,7 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                     <li>Còn lại ⇒ <b>Ổn định</b></li>
                 </ul>
                 <p>Từ (1) và (2) suy ra chỉ số điều tiết đang ở trạng thái <b id="dd2-reg-state" class="dd2-state-<?php echo dd2_esc($reg['state']); ?>"><?php echo dd2_esc($reg['label']); ?></b>.</p>
-                <p class="dd2-form-hint" id="dd2-reg-period-warn" hidden>Chỉ số "Điều tiết" hiển thị ngoài trang vẫn tính theo tháng này; kỳ 30/60/90 ngày không áp giá trị tạm đã thiết lập cho Sản lượng.</p>
+                <p class="dd2-form-hint" id="dd2-reg-period-warn" hidden>Kỳ đang chọn được áp dụng luôn cho thẻ "Điều tiết" ngoài trang (và cho ảnh chụp báo cáo), giữ nguyên sau khi tải lại. Riêng kỳ 30/60/90 ngày không áp giá trị tạm đã thiết lập cho Sản lượng vì cửa sổ vắt qua nhiều tháng.</p>
             </div>
         </div>
     </div>

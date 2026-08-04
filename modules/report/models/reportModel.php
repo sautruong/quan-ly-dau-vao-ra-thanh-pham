@@ -1841,6 +1841,26 @@ function rp_dd_regulation_period($period)
     return array_key_exists($p, rp_dd_regulation_periods()) ? $p : 'month';
 }
 
+/** Kỳ đang chọn (lưu ở app_settings) — chọn ở modal là ÁP DỤNG LUÔN cho thẻ "Điều tiết" ngoài
+ *  trang và cho ảnh báo cáo, giữ nguyên sau khi tải lại. Cùng kiểu cài đặt chung của dashboard
+ *  (max_output_per_worker, logo_caption, fund_opening_balance...). */
+function rp_dd_get_regulation_period()
+{
+    rp_dd_ensure_tables();
+    $row = db_fetch_row("SELECT setting_value FROM app_settings WHERE setting_key = 'daily_dashboard.regulation_period' LIMIT 1");
+    return rp_dd_regulation_period($row ? (string) $row['setting_value'] : 'month');
+}
+
+function rp_dd_save_regulation_period($period)
+{
+    rp_dd_ensure_tables();
+    $v = escape_string(rp_dd_regulation_period($period));
+    $exists = db_num_rows("SELECT 1 FROM app_settings WHERE setting_key = 'daily_dashboard.regulation_period'") > 0;
+    if ($exists) db_update('app_settings', ['setting_value' => $v], "setting_key = 'daily_dashboard.regulation_period'");
+    else db_insert('app_settings', ['setting_key' => 'daily_dashboard.regulation_period', 'setting_value' => $v]);
+    return true;
+}
+
 /** Sản lượng sản xuất trong N ngày gần nhất — mirror nguồn của py_calc_output_qty() (sản xuất thành phẩm
  *  + hàng bán trả lại "Thay bao bì") nhưng cắt theo cửa sổ ngày thay vì theo tháng. Cửa sổ nằm vắt qua
  *  nhiều tháng nên KHÔNG áp "giá trị tạm" theo tháng (daily_dashboard_month_overrides). */
@@ -1872,13 +1892,14 @@ function rp_dd_export_qty_last_days($days)
 /**
  * Điều tiết cung/cầu:
  *  a = round(sản_xuất / xuất_kho * 10, 1) — cùng kỳ $period ('month' = tháng hiện tại đến hôm nay,
- *      hoặc '30'/'60'/'90' = cửa sổ N ngày gần nhất, chọn ở modal "Chỉ số điều tiết")
+ *      hoặc '30'/'60'/'90' = cửa sổ N ngày gần nhất, chọn ở modal "Chỉ số điều tiết").
+ *      $period = null -> lấy kỳ đang lưu trong app_settings (mặc định cho cả trang).
  *  b = (số SP chủ lực dưới tồn tối thiểu) / (tổng số SP chủ lực đã cấu hình) — tồn hiện tại, không theo kỳ
  *  cung yếu: a<9 && b>0.5 | vượt cầu: a>9 && b>0.5 | còn lại: ổn định.
  */
-function rp_dd_regulation($period = 'month')
+function rp_dd_regulation($period = null)
 {
-    $period  = rp_dd_regulation_period($period);
+    $period  = $period === null ? rp_dd_get_regulation_period() : rp_dd_regulation_period($period);
     $periods = rp_dd_regulation_periods();
 
     if ($period === 'month') {
