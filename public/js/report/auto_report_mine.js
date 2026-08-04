@@ -29,6 +29,11 @@
         if (c.delegation_status === 'declined') return '<span class="ar-badge ar-badge-off">Đã từ chối</span>';
         return '<span class="ar-badge ar-badge-wait">Chờ bạn xác nhận</span>';
     }
+    /** Dòng nhỏ: hôm nay lịch đã chạy chưa / vì sao chưa (xem ar_decorate phía PHP). */
+    function runNote(c) {
+        if (!c.run_text) return '';
+        return '<div class="ar-run ar-run-' + esc(c.run_state || '') + '">' + esc(c.run_text) + '</div>';
+    }
     function actionsHtml(c) {
         if (c.delegation_status === 'pending') {
             return '<button type="button" class="ar-btn ar-btn-primary ar-sm" data-accept="' + c.id + '">Nhận</button> '
@@ -51,7 +56,7 @@
                 + '<td><b>' + esc(c.title) + '</b></td>'
                 + '<td class="ar-time">' + esc(c.send_time_hm) + '</td>'
                 + '<td class="ar-recipient">' + esc(c.recipient_text) + '</td>'
-                + '<td>' + statusBadge(c) + '</td>'
+                + '<td>' + statusBadge(c) + runNote(c) + '</td>'
                 + '<td class="ar-col-act ar-mine-actions">' + actionsHtml(c) + '</td>'
                 + '</tr>';
         }).join('');

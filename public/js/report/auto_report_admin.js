@@ -32,6 +32,12 @@
         if (st === 'declined')  return '<span class="ar-badge ar-badge-off">Đã từ chối</span>';
         return '<span class="ar-badge ar-badge-wait">Chờ xác nhận</span>';
     }
+    /** Dòng nhỏ dưới huy hiệu: HÔM NAY lịch này đã chạy chưa và vì sao chưa.
+     *  Trước đây không hiện ra đâu cả nên "tới giờ mà không gửi" là không có manh mối nào để soi. */
+    function runNote(cfg) {
+        if (!cfg.run_text) return '';
+        return '<div class="ar-run ar-run-' + esc(cfg.run_state || '') + '">' + esc(cfg.run_text) + '</div>';
+    }
     function renderTable() {
         if (!configs.length) {
             tbody.innerHTML = '<tr class="ar-empty-row"><td colspan="6">Chưa có lịch nào. Bấm "Thêm lịch" để tạo.</td></tr>';
@@ -44,7 +50,7 @@
                 + '<td class="ar-time">' + esc(c.send_time_hm) + '</td>'
                 + '<td>' + esc(c.delegate_name) + '</td>'
                 + '<td class="ar-recipient">' + esc(c.recipient_text) + '</td>'
-                + '<td>' + statusBadge(c) + '</td>'
+                + '<td>' + statusBadge(c) + runNote(c) + '</td>'
                 + '<td class="ar-col-act">'
                 + '<button type="button" class="ar-mini" data-edit="' + c.id + '" title="Sửa"><i class="fa-solid fa-pen"></i></button>'
                 + '<button type="button" class="ar-mini" data-pause="' + c.id + '" data-to="' + (paused ? 0 : 1) + '" title="' + (paused ? 'Bật lại' : 'Tạm ngưng') + '">'

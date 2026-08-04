@@ -31,6 +31,13 @@
 .ar-badge-off { background: #fee2e2; color: #b91c1c; }
 .ar-badge-paused { background: #e2e8f0; color: #475569; }
 
+/* Dòng nhỏ dưới huy hiệu: hôm nay lịch đã chạy chưa / vì sao chưa */
+.ar-run { margin-top: 5px; font-size: 12px; line-height: 1.4; color: #64748b; max-width: 230px; }
+.ar-run-sent { color: #15803d; font-weight: 600; }
+.ar-run-missed { color: #b91c1c; }
+.ar-run-window { color: #a16207; font-weight: 600; }
+.ar-run-not_accepted { color: #b45309; }
+
 .ar-mini { border: 1px solid #e2e8f0; background: #fff; color: #475569; width: 34px; height: 34px; border-radius: 9px;
     cursor: pointer; margin-left: 5px; transition: .15s; }
 .ar-mini:hover { background: #f1f5f9; color: #0f172a; }

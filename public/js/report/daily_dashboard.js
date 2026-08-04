@@ -2338,13 +2338,20 @@
      *  mẫu chút nhưng vẫn ĐÚNG bố cục, hơn hẳn dải dọc dài thượt. Trả về bề rộng đo được (0 = hỏng)
      *  để truyền đúng con số đó cho html2canvas thay vì đoán. */
     var DESKTOP_LAYOUT_MIN_W = 1240; // > mốc 1200px mà dashboard chuyển sang xếp dọc
-    async function waitDesktopViewport() {
+    /** $beforeW: bề rộng ĐO TRƯỚC khi đổi thẻ viewport. Phải đòi viewport THỰC SỰ NỞ RA, không chỉ
+     *  ">= 1240": trên máy tính thẻ viewport vốn không có tác dụng, cửa sổ 1600 sẵn đã qua ngưỡng nên
+     *  hàm tưởng ép thành công -> chụp tại chỗ ở 1600 thay vì dựng khung cứng 1920 (ảnh gửi tự động
+     *  vì thế rộng hẹp tuỳ máy người uỷ quyền). */
+    async function waitDesktopViewport(beforeW) {
+        var ok = function () {
+            var w = layoutViewportWidth();
+            return (w >= DESKTOP_LAYOUT_MIN_W && w > (beforeW || 0) + 50) ? w : 0;
+        };
         for (var i = 0; i < 10; i++) {
-            if (layoutViewportWidth() >= DESKTOP_LAYOUT_MIN_W) return layoutViewportWidth();
+            if (ok()) return ok();
             await waitMs(200);
         }
-        var w = layoutViewportWidth();
-        return w >= DESKTOP_LAYOUT_MIN_W ? w : 0;
+        return ok();
     }
 
     function waitMs(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -2519,8 +2526,9 @@
         // (1) Ép viewport tại chỗ
         if (mode !== 'frame' && mode !== 'inline') {
             onStatus('Đang cố định bố cục ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
+            var truocW = layoutViewportWidth();
             var restore = forceDesktopLayout();
-            var gotW = await waitDesktopViewport();
+            var gotW = await waitDesktopViewport(truocW);
             if (gotW) {
                 try {
                     // #wrapper có transition padding-left 0.22s (chừa chỗ sidebar) -> chờ bố cục
@@ -2707,26 +2715,16 @@
             // có thể chưa vẽ xong -> phải ép vẽ trước khi chụp, nếu không ảnh gửi đi mất biểu đồ.
             await ensureChartsDrawn();
 
-            // Gửi tự động cũng phải ra ảnh bố cục desktop dù máy đang mở là phone.
+            // Ảnh gửi tự động phải GIỐNG NHAU bất kể máy của người uỷ quyền rộng bao nhiêu — trước
+            // đây chụp theo đúng bề rộng cửa sổ họ đang mở nên cùng một báo cáo lúc rộng lúc hẹp,
+            // máy hẹp thì các cột bị chật và chữ bị cắt. Cửa sổ đã đủ rộng thì chụp thẳng cho nhanh,
+            // chưa đủ thì dựng khung cố định (ép viewport, không được thì iframe 1920x950).
             var blob;
-            if (needsDesktopCapture()) {
-                var restoreVp = forceDesktopLayout();
-                try {
-                    if (await waitDesktopViewport()) {
-                        await waitMs(400);
-                        await resizeChartsForCapture();
-                        blob = await buildReportBlob(CAPTURE_DESKTOP_H, CAPTURE_DESKTOP_W);
-                    } else {
-                        restoreVp();
-                        restoreVp = function () {};
-                        await waitMs(300);
-                        blob = await buildReportBlob();
-                    }
-                } finally {
-                    restoreVp();
-                }
-            } else {
+            if (layoutViewportWidth() >= CAPTURE_DESKTOP_W) {
+                await resizeChartsForCapture();
                 blob = await buildReportBlob();
+            } else {
+                blob = (await captureDesktopFramedBlob(function () {})).blob;
             }
             var fd = new FormData();
             fd.append('config_id', String(cfgId));

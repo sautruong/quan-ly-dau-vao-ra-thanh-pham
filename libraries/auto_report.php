@@ -240,6 +240,34 @@ if (!function_exists('ar_ensure_tables')) {
         $st = $cfg['delegation_status'] ?? 'pending';
         $cfg['status_text'] = $st === 'accepted' ? 'Đã nhận uỷ quyền'
                             : ($st === 'declined' ? 'Đã từ chối' : 'Chờ xác nhận');
+
+        // Tình trạng CHẠY HÔM NAY — trước đây hoàn toàn không hiện ra đâu cả nên khi "tới giờ mà
+        // không gửi" thì không có cách nào biết vì sao. Mỗi lịch chỉ gửi 1 lần/ngày (chốt
+        // last_sent_date), đây là lý do hay gặp nhất.
+        $today  = ar_today();
+        $nowSec = time();
+        list($start, $end) = ar_window_bounds($cfg);
+        if ((string) ($cfg['last_sent_date'] ?? '') === $today) {
+            $cfg['run_state'] = 'sent';
+            $at = (string) ($cfg['last_sent_at'] ?? '');
+            $cfg['run_text']  = 'Đã gửi hôm nay' . ($at ? ' lúc ' . substr($at, 11, 5) : '') . ' — mai mới gửi tiếp';
+        } elseif (!empty($cfg['is_paused'])) {
+            $cfg['run_state'] = 'paused';
+            $cfg['run_text']  = 'Đang tạm ngưng nên bỏ qua hôm nay';
+        } elseif ($st !== 'accepted') {
+            $cfg['run_state'] = 'not_accepted';
+            $cfg['run_text']  = 'Người uỷ quyền chưa bấm "Nhận" nên lịch chưa chạy';
+        } elseif ($nowSec < $start) {
+            $cfg['run_state'] = 'waiting';
+            $cfg['run_text']  = 'Chưa tới giờ (còn ' . max(1, (int) ceil(($start - $nowSec) / 60)) . ' phút)';
+        } elseif ($nowSec <= $end) {
+            $cfg['run_state'] = 'window';
+            $cfg['run_text']  = 'Đang trong cửa sổ chờ — cần người uỷ quyền MỞ APP để gửi (còn '
+                              . max(1, (int) ceil(($end - $nowSec) / 60)) . ' phút)';
+        } else {
+            $cfg['run_state'] = 'missed';
+            $cfg['run_text']  = 'Đã lỡ hôm nay (quá cửa sổ chờ ' . (int) $cfg['window_minutes'] . ' phút)';
+        }
         return $cfg;
     }
 
