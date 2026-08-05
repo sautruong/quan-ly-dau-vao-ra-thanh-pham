@@ -1951,3 +1951,56 @@ input:focus {
 .ofh-badge.skipped { background: #fee2e2; color: #b91c1c; }
 .ofh-pickup { font-size: 11px; color: var(--color-gray-500); margin-top: 3px; }
 .ofh-edit { color: var(--color-blue) !important; }
+
+/* =====================================================================
+   CUON DOC CHO TRANG (5/8/2026)
+   ---------------------------------------------------------------------
+   VAN DE: global.css dat `html, body { height:100%; overflow:hidden }` va
+   `body { display:flex; align-items:center }`. Voi cac view dung .content
+   thi khoi do tu cuon ben trong nen khong ai thay van de; nhung view nay
+   dung .of-page va o dong 1454 da doi #wrapper thanh `display:block;
+   overflow:visible` -> noi dung dai hon man hinh bi CAT CUT, khong co
+   thanh cuon o bat ky cap nao.
+   ---------------------------------------------------------------------
+   CACH VA: tra lai quyen cuon cho CHINH TRANG (khong dung vung cuon long
+   nhau). Chi anh huong 3 view sell_factory vi file css nay chi duoc nap boi
+   order_factory / order_history / production_forecast.
+   ===================================================================== */
+html,
+body {
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* align-items:center cua global.css se ghim wrapper vao giua truc doc va
+       chan no cao len khi noi dung dai -> phai tra ve dau truc. */
+    align-items: flex-start;
+}
+
+#wrapper {
+    height: auto;
+    min-height: 100%;
+}
+
+/* Thoang hon khi cuon len (yeu cau user) + cho khoang tho o day trang de dong
+   cuoi khong dinh sat mep khi cuon het. */
+.of-page {
+    padding-top: 22px;
+    padding-bottom: 64px;
+}
+
+/* Sidebar/header cua app-shell dung position:fixed nen khong bi anh huong boi
+   viec trang cuon; rieng thanh tab dinh lai cho de doi tab khi da cuon sau. */
+.of-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #fff;
+    padding-top: 4px;
+}
+
+/* Man hinh nho: bo sticky de khong an mat phan noi dung von da chat. */
+@media (max-width: 768px) {
+    .of-tabs { position: static; }
+    .of-page { padding-top: 14px; }
+}
