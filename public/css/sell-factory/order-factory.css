@@ -1969,17 +1969,28 @@ input:focus {
 html,
 body {
     height: auto;
-    min-height: 100%;
+    min-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
     /* align-items:center cua global.css se ghim wrapper vao giua truc doc va
        chan no cao len khi noi dung dai -> phai tra ve dau truc. */
     align-items: flex-start;
+    /* global.css dat body mau DEN (chi #wrapper mau trang). Khi wrapper khong con
+       phu het chieu cao thi mang den lo ra o day trang -> ep trang luon cho chac,
+       khoi phu thuoc vao viec wrapper co cao du hay khong. */
+    background-color: #fff;
 }
 
+/*
+  min-height PHAI la 100vh, KHONG duoc la 100%.
+  100% tinh theo chieu cao cua body, ma body vua doi sang height:auto -> phan tram
+  khong giai duoc -> tra ve auto -> wrapper chi cao bang noi dung. Trang ngan
+  (production_forecast, order_history) se lo mang DEN cua body o duoi.
+  vh tinh theo viewport nen khong phu thuoc chieu cao cha.
+*/
 #wrapper {
     height: auto;
-    min-height: 100%;
+    min-height: 100vh;
 }
 
 /* Thoang hon khi cuon len (yeu cau user) + cho khoang tho o day trang de dong
