@@ -363,10 +363,17 @@ if (!function_exists('fgi_render_product')) {
              * desktop kèm !important, phạm vi trong .fgi-force-desktop. Media query mobile vẫn
              * khớp (viewport không đổi) nhưng bị !important đè, nên lưới bung lại 4 cột.
              *
-             * ĐÃ THỬ IFRAME VÀ BỎ: dựng iframe rồi document.write kèm các thẻ <link> của trang —
+             * ĐÃ THỬ IFRAME VÀ BỎ: dựng iframe rồi document.write kèm các thẻ link CSS của trang —
              * href là đường dẫn TƯƠNG ĐỐI ('public/css/...') nên trong iframe about:blank không
-             * giải ra được, ảnh chụp ra TRẦN TRỤI không có CSS nào. Muốn cứu thì phải thêm <base>
-             * và chờ từng stylesheet onload; phức tạp hơn hẳn mà chẳng được gì thêm so với cách này.
+             * giải ra được, ảnh chụp ra TRẦN TRỤI không có CSS nào. Muốn cứu thì phải thêm thẻ
+             * base-href và chờ từng stylesheet onload; phức tạp hơn hẳn mà chẳng được gì thêm.
+             *
+             * ⚠️ TUYỆT ĐỐI KHÔNG viết chuỗi "thẻ base" dạng có dấu ngoặc nhọn trong file view —
+             * kể cả trong comment. nav_inject_base_tag() (libraries/nav.php) quét CẢ TRANG bằng
+             * một preg_match tìm thẻ base để biết "trang đã có base chưa"; thấy chuỗi đó là
+             * nó BỎ QUA việc chèn. Hậu quả: dưới URL gọn /report/..., mọi đường dẫn tương đối
+             * giải thành /report/public/css/... -> 404 -> TOÀN BỘ trang mất sạch CSS.
+             * (Đã dính thật 5/8/2026, đúng vì một dòng chú thích.)
              *
              * Màn hình đã đủ rộng thì chụp thẳng như cũ.
              */
