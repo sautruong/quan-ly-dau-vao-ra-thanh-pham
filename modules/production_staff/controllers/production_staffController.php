@@ -728,3 +728,214 @@ function save_planAction()
     echo json_encode(['success' => true]);
     exit;
 }
+
+/* =====================================================================================
+ *  XUẤT KẾ HOẠCH SẢN XUẤT ĐỊNH KỲ (nút "Cài đặt" trên board long_term_production_plan)
+ *
+ *  User chốt 5/8/2026: hẹn giờ (vd 16:50 hằng ngày, bỏ chủ nhật) → tự chuyển KHSX NGÀY MAI
+ *  sang "Kế hoạch sản xuất hằng ngày" + chụp ảnh gửi chat, người gửi là Safe King.
+ *
+ *  Nghiệp vụ nằm trong libraries/plan_auto_export.php (prefix pae_*). Bốn action dưới đây chỉ
+ *  là cửa HTTP. Nút "XUẤT KH" thủ công trên từng card GIỮ NGUYÊN (user chốt) — tự động chỉ là
+ *  thêm một đường, không thay thế, để lỡ giờ vẫn còn cách làm tay.
+ * ===================================================================================== */
+
+/** Nạp thư viện + tạo bảng (idempotent). */
+function pae_boot()
+{
+    require_once __DIR__ . '/../../../libraries/plan_auto_export.php';
+    pae_ensure_tables();
+}
+
+/** JSON: cấu hình hiện tại + danh sách người nhận / nhóm cho modal Cài đặt. */
+function plan_auto_export_configAction()
+{
+    permission_require_admin(true);
+    pae_boot();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $cfg = pae_config();
+    // Người thực hiện quyết định danh sách NHÓM chọn được (chỉ nhóm người đó là thành viên).
+    $delegate = (int) ($_GET['delegate_user_id'] ?? ($cfg['delegate_user_id'] ?? 0));
+
+    echo json_encode([
+        'ok'     => true,
+        'config' => $cfg,
+        'users'  => ar_active_users(),
+        'groups' => $delegate > 0 ? ar_groups_for_user($delegate) : [],
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: lưu cấu hình lịch. */
+function plan_auto_export_saveAction()
+{
+    permission_require_admin(true);
+    pae_boot();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $user = permission_current_user();
+    $uid  = $user ? (int) $user['id'] : 0;
+
+    $in = [
+        'is_active'                 => !empty($_POST['is_active']),
+        'send_time'                 => $_POST['send_time'] ?? '',
+        'skip_sunday'               => !empty($_POST['skip_sunday']),
+        'delegate_user_id'          => (int) ($_POST['delegate_user_id'] ?? 0),
+        'window_minutes'            => (int) ($_POST['window_minutes'] ?? 30),
+        'recipient_type'            => $_POST['recipient_type'] ?? 'users',
+        'recipient_user_ids'        => $_POST['recipient_user_ids'] ?? '[]',
+        'recipient_conversation_id' => (int) ($_POST['recipient_conversation_id'] ?? 0),
+        'caption'                   => $_POST['caption'] ?? '',
+    ];
+
+    // Nhóm nhận phải là nhóm mà NGƯỜI THỰC HIỆN thật sự tham gia — không tin id client gửi lên.
+    if ($in['recipient_type'] === 'group'
+        && !ar_group_ok_for_user($in['recipient_conversation_id'], $in['delegate_user_id'])) {
+        echo json_encode(['ok' => false, 'message' => 'Người thực hiện không thuộc nhóm chat đã chọn.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $res = pae_save($in, $uid);
+    echo json_encode(!empty($res['ok'])
+        ? ['ok' => true, 'config' => pae_config()]
+        : ['ok' => false, 'message' => $res['error']], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * JSON: poller hỏi "tới giờ chưa". Ai online gọi cũng được — nhân tiện chạy quét lịch bị lỡ.
+ * KHÔNG gate admin: người thực hiện có thể là nhân viên thường.
+ */
+function plan_auto_export_due_checkAction()
+{
+    pae_boot();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $user = permission_current_user();
+    $uid  = $user ? (int) $user['id'] : 0;
+    if ($uid <= 0) { echo json_encode(['ok' => false]); exit; }
+
+    pae_run_missed_sweep();
+    $due = pae_due_for_user($uid);
+    echo json_encode([
+        'ok'  => true,
+        'due' => $due ? [
+            'id'        => (int) $due['id'],
+            'settle_ms' => (int) $due['settle_ms'],
+            'plan_date' => pae_target_date(),
+        ] : null,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * JSON multipart: trình duyệt người thực hiện gửi ảnh vừa chụp lên.
+ * Làm 2 việc theo đúng thứ tự: (1) CHUYỂN kế hoạch ngày mai, (2) gửi ảnh vào chat.
+ *
+ * VÌ SAO CHUYỂN TRƯỚC RỒI MỚI GỬI: chuyển kế hoạch mới là việc nghiệp vụ bắt buộc (đội nhà máy
+ * sáng mai phải có kế hoạch để làm); gửi ảnh chỉ là thông báo. Gửi ảnh hỏng thì vẫn phải chốt
+ * "đã chạy" cho phần chuyển, nếu không quét-lỡ sẽ báo admin rằng kế hoạch chưa chuyển — sai sự thật.
+ */
+function plan_auto_export_runAction()
+{
+    pae_boot();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $user = permission_current_user();
+    $uid  = $user ? (int) $user['id'] : 0;
+    if ($uid <= 0) { echo json_encode(['ok' => false, 'message' => 'Chưa đăng nhập.'], JSON_UNESCAPED_UNICODE); exit; }
+
+    $cfg = pae_config();
+    if (!$cfg || (int) $cfg['delegate_user_id'] !== $uid) {
+        echo json_encode(['ok' => false, 'message' => 'Bạn không phải người thực hiện của lịch này.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if ((string) ($cfg['last_run_date'] ?? '') === date('Y-m-d')) {
+        echo json_encode(['ok' => true, 'already' => true]); // đã chạy hôm nay → client quay lại
+        exit;
+    }
+
+    $cid      = (int) $cfg['id'];
+    $planDate = pae_target_date();
+
+    // (1) Chuyển kế hoạch — phần bắt buộc.
+    $exp = pae_export_plan_date($planDate);
+    if (empty($exp['ok'])) {
+        // Ngày mai không có sản phẩm nào: KHÔNG phải lỗi hệ thống, nhưng admin cần biết vì
+        // sáng mai đội nhà máy sẽ không có kế hoạch. Chốt đã chạy để không nhắc lại cả buổi tối.
+        pae_mark_run($cid);
+        pae_log($cid, 'failed', [
+            'actor_user_id' => $uid,
+            'plan_date'     => $planDate,
+            'note'          => $exp['error'] ?? 'Không có sản phẩm để xuất.',
+        ]);
+        notify_admins(
+            'Kế hoạch sản xuất ngày mai đang trống',
+            ($exp['error'] ?? '') . ' Lịch tự động đã chạy nhưng không có gì để chuyển.',
+            'production_staff/long_term_production_plan',
+            'general'
+        );
+        echo json_encode(['ok' => false, 'message' => $exp['error'] ?? 'Không có sản phẩm để xuất.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // Chốt "đã chạy" NGAY sau khi chuyển xong — phần gửi ảnh phía dưới hỏng cũng không làm
+    // quét-lỡ báo nhầm là kế hoạch chưa được chuyển.
+    pae_mark_run($cid);
+
+    // (2) Gửi ảnh vào chat (tuỳ chọn — thiếu ảnh vẫn coi như chạy xong phần chính).
+    if (empty($_FILES['image']) || ($_FILES['image']['error'] ?? 1) !== UPLOAD_ERR_OK) {
+        pae_log($cid, 'exported', [
+            'actor_user_id' => $uid, 'plan_date' => $planDate, 'item_count' => (int) $exp['item_count'],
+            'note' => 'Đã chuyển kế hoạch, không kèm ảnh.',
+        ]);
+        echo json_encode(['ok' => true, 'exported' => true, 'sent' => false,
+                          'item_count' => (int) $exp['item_count']], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    require_once __DIR__ . '/../../../libraries/chat.php';
+    $file = chat_store_upload($_FILES['image']);
+    if (empty($file['ok'])) {
+        pae_log($cid, 'exported', [
+            'actor_user_id' => $uid, 'plan_date' => $planDate, 'item_count' => (int) $exp['item_count'],
+            'note' => 'Đã chuyển kế hoạch; lưu ảnh thất bại: ' . ($file['reason'] ?? ''),
+        ]);
+        echo json_encode(['ok' => true, 'exported' => true, 'sent' => false,
+                          'message' => 'Đã chuyển kế hoạch nhưng không lưu được ảnh.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $res = pae_send_to_recipients($cfg, $file, '');
+    if (!empty($res['ok'])) {
+        pae_log($cid, 'sent', [
+            'actor_user_id'     => $uid,
+            'plan_date'         => $planDate,
+            'item_count'        => (int) $exp['item_count'],
+            'recipient_summary' => $res['recipient_summary'] ?? '',
+            'message_ids'       => $res['message_ids'] ?? [],
+            'attachment_file'   => $file['file_name'],
+        ]);
+        echo json_encode(['ok' => true, 'exported' => true, 'sent' => true,
+                          'item_count' => (int) $exp['item_count'],
+                          'recipient_summary' => $res['recipient_summary'] ?? ''], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    pae_log($cid, 'exported', [
+        'actor_user_id' => $uid, 'plan_date' => $planDate, 'item_count' => (int) $exp['item_count'],
+        'attachment_file' => $file['file_name'],
+        'note' => 'Đã chuyển kế hoạch; gửi chat thất bại: ' . ($res['error'] ?? ''),
+    ]);
+    notify_admins(
+        'Gửi ảnh kế hoạch sản xuất thất bại',
+        'Kế hoạch ngày ' . date('d/m/Y', strtotime($planDate)) . ' ĐÃ được chuyển sang "Kế hoạch sản xuất hằng ngày", '
+        . 'nhưng không gửi được vào chat: ' . ($res['error'] ?? 'lỗi gửi'),
+        'production_staff/long_term_production_plan',
+        'general'
+    );
+    echo json_encode(['ok' => true, 'exported' => true, 'sent' => false,
+                      'message' => $res['error'] ?? 'Lỗi gửi chat.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}

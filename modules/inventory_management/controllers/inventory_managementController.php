@@ -95,10 +95,12 @@ function remove_day_productAction()
 {
     header('Content-Type: application/json');
     $source = ($_POST['source'] ?? '') === 'investment_products' ? 'investment_products' : 'dashboard';
-    permission_require_can_edit('inventory_management', 'inventory_management', $source);
 
     $pid  = (int) ($_POST['product_id'] ?? 0);
     $date = trim((string) ($_POST['date'] ?? ''));
+    // Chốt chặn ĐẶT SAU khi đọc $date (5/8/2026): chế độ "chỉ sửa trong ngày" cần biết bản ghi
+    // thuộc ngày nào mới quyết được. Với các quyền khác, hàm này xử sự y hệt bản cũ.
+    permission_require_can_edit_on_date('inventory_management', 'inventory_management', $source, $date);
     if ($pid <= 0) {
         echo json_encode(['success' => false, 'message' => 'Thiếu sản phẩm.']);
         exit;
@@ -151,7 +153,12 @@ function record_stockAction()
     $created_at  = trim((string) ($_POST['created_at'] ?? ''));
     $ca          = $created_at !== '' ? $created_at : null;
     $type_import = im_normalize_type_import($_POST['type_import'] ?? 'fg_receipt_production');
-    permission_require_can_edit('inventory_management', 'inventory_management', $type_import === 'other_receipt' ? 'other_receipt' : 'dashboard');
+    // Ghi mới: ngày của bản ghi = created_at người dùng chọn (rỗng = hôm nay).
+    permission_require_can_edit_on_date(
+        'inventory_management', 'inventory_management',
+        $type_import === 'other_receipt' ? 'other_receipt' : 'dashboard',
+        $created_at
+    );
 
     if (empty($items)) {
         echo json_encode(['success' => false, 'message' => 'Chưa có sản phẩm nào để ghi.']);
@@ -266,7 +273,12 @@ function edit_batch_stockAction()
     $ca          = $created_at !== '' ? $created_at : null;
     $type_import = trim((string) ($_POST['type_import'] ?? ''));
     $scope       = $type_import !== '' ? im_normalize_type_import($type_import) : null;
-    permission_require_can_edit('inventory_management', 'inventory_management', $scope === 'other_receipt' ? 'other_receipt' : 'dashboard');
+    // Sửa: xét theo created_at của phiếu đang sửa.
+    permission_require_can_edit_on_date(
+        'inventory_management', 'inventory_management',
+        $scope === 'other_receipt' ? 'other_receipt' : 'dashboard',
+        $created_at
+    );
 
     if (empty($items)) {
         echo json_encode(['success' => false, 'message' => 'Không có dữ liệu để cập nhật.']);
@@ -323,7 +335,13 @@ function delete_batch_stockAction()
     $group_key   = trim((string) ($_POST['group_key'] ?? ''));
     $type_import = trim((string) ($_POST['type_import'] ?? ''));
     $scope       = $type_import !== '' ? im_normalize_type_import($type_import) : null;
-    permission_require_can_edit('inventory_management', 'inventory_management', $scope === 'other_receipt' ? 'other_receipt' : 'dashboard');
+    // Xoá phiếu: group_key CHÍNH LÀ created_at dạng 'Y-m-d H:i:s' (xem
+    // im_get_other_receipt_import_ids) nên dùng thẳng làm ngày của bản ghi.
+    permission_require_can_edit_on_date(
+        'inventory_management', 'inventory_management',
+        $scope === 'other_receipt' ? 'other_receipt' : 'dashboard',
+        $group_key
+    );
 
     if ($group_key === '') {
         echo json_encode(['success' => false, 'message' => 'Thiếu group_key.']);

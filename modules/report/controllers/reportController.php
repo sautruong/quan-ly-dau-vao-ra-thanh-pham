@@ -889,6 +889,15 @@ function auto_report_due_checkAction()
     $uid  = $user ? (int) $user['id'] : 0;
     if ($uid <= 0) { echo json_encode(['ok' => false]); exit; }
     ar_run_missed_sweep();
+    /*
+      ĐI NHỜ nhịp poll này (5/8/2026): nhắc "chưa nhập sản lượng sản xuất hôm nay" thuần server
+      (chỉ đọc DB rồi tạo thông báo), không cần trình duyệt riêng như luồng chụp ảnh — nên dựng
+      poller thứ hai chỉ để chạy vài câu SELECT là phí. Endpoint này đã được
+      public/js/shared/auto_report_poller.js gọi đều cho MỌI user đang đăng nhập.
+      Hàm tự thoát sớm khi chưa tới giờ / đã nhắc hôm nay.
+    */
+    require_once __DIR__ . '/../../../libraries/production_reminder.php';
+    prm_run_sweep();
     echo json_encode(['ok' => true, 'due' => ar_due_for_user($uid)], JSON_UNESCAPED_UNICODE);
     exit;
 }

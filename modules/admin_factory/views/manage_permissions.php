@@ -12,6 +12,7 @@ $all_group_labels     = isset($all_group_labels) && is_array($all_group_labels) 
 $classifications      = isset($classifications) && is_array($classifications) ? $classifications : [];
 $deputies             = isset($deputies) && is_array($deputies) ? $deputies : [];
 $view_only_capable_ids = isset($view_only_capable_ids) && is_array($view_only_capable_ids) ? array_map('intval', $view_only_capable_ids) : [];
+$edit_today_capable_ids = isset($edit_today_capable_ids) && is_array($edit_today_capable_ids) ? array_map('intval', $edit_today_capable_ids) : [];
 $cur_admin_name  = trim((string) ($current_admin['fullname'] ?? '')) ?: (string) ($current_admin['username'] ?? '');
 $cur_admin_uname = (string) ($current_admin['username'] ?? '');
 ?>
@@ -104,6 +105,54 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
             transform: translate(-50%, -50%);
         }
         .view-item .view-only-toggle input:disabled { cursor: not-allowed; opacity: .45; }
+        /* "Sửa trong ngày" — màu XANH LÁ để phân biệt ngay với "Chỉ xem" (vàng): hai ô nằm sát
+           nhau trên cùng một dòng, cùng màu thì rất dễ tick nhầm ô. Bỏ margin-left:auto vì ô
+           "Chỉ xem" đã đẩy cụm sang phải rồi; để cả hai auto sẽ tách rời hai đầu dòng. */
+        .view-item .edit-today-toggle { margin-left: 10px; color: #096926; }
+        .view-item .edit-today-toggle input { border-color: #096926; }
+        .view-item .edit-today-toggle input:checked { background: #096926; }
+        /* Nút chuông mở modal nhắc nhở — cấu hình toàn hệ thống, không theo user. */
+        .prm-gear {
+            margin-left: 8px; border: 0; background: none; cursor: pointer;
+            color: #b8860b; font-size: 14px; padding: 2px 4px; line-height: 1;
+        }
+        .prm-gear:hover { color: #8a5a00; }
+
+        /* ----- Modal nhắc nhở nhập sản lượng ----- */
+        .prm-mask {
+            position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 9998;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .prm-box {
+            background: #fff; border-radius: 10px; width: min(540px, 100%);
+            max-height: 88vh; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,.25);
+        }
+        .prm-head {
+            display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+            border-bottom: 1px solid #e1e5ea; font-weight: 700; font-size: 15px;
+        }
+        .prm-head .prm-x { margin-left: auto; cursor: pointer; font-size: 22px; color: #888; line-height: 1; }
+        .prm-body { padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .prm-note {
+            margin: 0; padding: 10px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.5;
+            background: #f2f7f3; border: 1px solid #cfe3d4; color: #2c4a33;
+        }
+        .prm-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+        .prm-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+        .prm-field > span { font-weight: 600; }
+        .prm-field input[type="time"], .prm-field input[type="text"], .prm-field select {
+            padding: 8px 10px; border: 1px solid #c2c8d0; border-radius: 6px; font-size: 13px; font-family: inherit;
+        }
+        .prm-field select[multiple] { min-height: 116px; }
+        .prm-rtype { display: flex; gap: 16px; font-size: 12.5px; }
+        .prm-foot {
+            display: flex; align-items: center; gap: 10px; padding: 12px 18px;
+            border-top: 1px solid #e1e5ea;
+        }
+        .prm-msg { flex: 1; font-size: 12.5px; color: #555; }
+        .prm-sub { display: none; flex-direction: column; gap: 10px; padding-left: 24px; }
+        .prm-sub.on { display: flex; }
         .empty-state { color: #888; padding: 40px; text-align: center; }
         .toast {
             position: fixed; right: 16px; bottom: 16px; background: #333; color: #fff;
@@ -309,6 +358,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                                     $vid   = (int) $v['id'];
                                     $label = htmlspecialchars((string) $v['label'], ENT_QUOTES, 'UTF-8');
                                     $can_view_only = in_array($vid, $view_only_capable_ids, true);
+                                    $can_edit_today = in_array($vid, $edit_today_capable_ids, true);
                                 ?>
                                     <div class="view-item">
                                         <input type="checkbox" class="view-check" id="v<?php echo $vid; ?>" value="<?php echo $vid; ?>">
@@ -317,6 +367,29 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                                         <label class="view-only-toggle">
                                             <input type="checkbox" class="view-only-check" data-view="<?php echo $vid; ?>"> Chỉ xem
                                         </label>
+                                        <?php endif; ?>
+                                        <?php if ($can_edit_today): ?>
+                                        <?php /*
+                                          "Cho phép chỉnh sửa trong ngày" (5/8/2026) — CỬA HẸP mở ra từ "Chỉ xem":
+                                          tick CẢ HAI = nhập/sửa được dữ liệu của hôm nay, các ngày trước chỉ xem.
+                                          Ô này chỉ bật được khi "Chỉ xem" đang bật (JS ràng buộc, backend cũng
+                                          ép lại trong permission_set_user_views) — tick một mình nó vô nghĩa vì
+                                          không "Chỉ xem" thì user vốn đã sửa được mọi ngày.
+                                        */ ?>
+                                        <label class="view-only-toggle edit-today-toggle"
+                                               title="Chỉ dùng kèm &quot;Chỉ xem&quot;: cho nhập và sửa dữ liệu của NGÀY HÔM NAY, các ngày trước chỉ xem">
+                                            <input type="checkbox" class="edit-today-check" data-view="<?php echo $vid; ?>" disabled>
+                                            Sửa trong ngày
+                                        </label>
+                                        <?php /*
+                                          Nhắc nhở nhập sản lượng — cấu hình TOÀN HỆ THỐNG (giờ nhắc,
+                                          chuông/chat), không phải quyền của riêng user đang chọn. Vì vậy
+                                          nút này nằm ngoài mọi checkbox và KHÔNG bị disable theo user.
+                                        */ ?>
+                                        <button type="button" class="prm-gear" id="btn-prm-setting"
+                                                title="Cài đặt nhắc nhở: đến giờ mà chưa ai nhập sản lượng thì đẩy chuông / nhắn chat">
+                                            <i class="fa-solid fa-bell"></i>
+                                        </button>
                                         <?php endif; ?>
                                     </div>
                                 <?php endforeach; ?>
@@ -465,6 +538,169 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
 
     <div id="toast" class="toast"></div>
 
+    <?php /*
+      MODAL NHẮC NHỞ NHẬP SẢN LƯỢNG (YC2b, 5/8/2026).
+      Cấu hình TOÀN HỆ THỐNG — độc lập hoàn toàn với user đang được phân quyền ở trên.
+      Hai đường nhắc là 2 ô tick ĐỘC LẬP (user chốt): bật cả hai cùng lúc được.
+    */ ?>
+    <div class="prm-mask" id="prm-mask" style="display:none;">
+        <div class="prm-box">
+            <div class="prm-head">
+                <i class="fa-solid fa-bell" style="color:#b8860b"></i>
+                <span>Nhắc nhở nhập sản lượng sản xuất</span>
+                <span class="prm-x" id="prm-close">&times;</span>
+            </div>
+            <div class="prm-body">
+                <p class="prm-note">
+                    Đến giờ đã hẹn, nếu <strong>chưa có ai nhập sản lượng</strong> trong ngày
+                    (view “Nhập sản lượng sản xuất”), hệ thống sẽ nhắc. Mỗi ngày nhắc đúng một lần.
+                    <span id="prm-today-state"></span>
+                </p>
+
+                <label class="prm-row"><input type="checkbox" id="prm-active"> <strong>Bật nhắc nhở</strong></label>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <label class="prm-field"><span>Giờ nhắc</span>
+                        <input type="time" id="prm-time" step="60" value="17:00">
+                    </label>
+                    <label class="prm-row" style="align-self:end;padding-bottom:8px;">
+                        <input type="checkbox" id="prm-skip-sunday" checked> <span>Không nhắc chủ nhật</span>
+                    </label>
+                </div>
+
+                <label class="prm-row"><input type="checkbox" id="prm-bell" checked> <span>Đẩy chuông cho admin</span></label>
+
+                <label class="prm-row"><input type="checkbox" id="prm-chat"> <span>Nhắn vào chat (Safe King gửi)</span></label>
+                <div class="prm-sub" id="prm-chat-sub">
+                    <div class="prm-rtype">
+                        <label><input type="radio" name="prm-rtype" value="users" checked> Người dùng</label>
+                        <label><input type="radio" name="prm-rtype" value="group"> Nhóm chat</label>
+                    </div>
+                    <select id="prm-users" multiple></select>
+                    <select id="prm-group" style="display:none;"></select>
+                </div>
+
+                <label class="prm-field"><span>Câu nhắc (để trống dùng mặc định)</span>
+                    <input type="text" id="prm-message" maxlength="480" placeholder="Hôm nay chưa thấy ai nhập sản lượng…">
+                </label>
+            </div>
+            <div class="prm-foot">
+                <span class="prm-msg" id="prm-msg"></span>
+                <button type="button" class="btn btn-save" id="prm-save">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    /* Nhắc nhở nhập sản lượng — độc lập với phần phân quyền phía trên, nên đóng gói riêng. */
+    (function () {
+        var AJAX = '<?php echo $ajax_base; ?>';
+        var mask = document.getElementById('prm-mask');
+        var open = document.getElementById('btn-prm-setting');
+        if (!mask || !open) return;   /* view "Nhập sản lượng sản xuất" không có trong danh mục */
+
+        var elActive = document.getElementById('prm-active');
+        var elTime   = document.getElementById('prm-time');
+        var elSunday = document.getElementById('prm-skip-sunday');
+        var elBell   = document.getElementById('prm-bell');
+        var elChat   = document.getElementById('prm-chat');
+        var elSub    = document.getElementById('prm-chat-sub');
+        var elUsers  = document.getElementById('prm-users');
+        var elGroup  = document.getElementById('prm-group');
+        var elMsgIn  = document.getElementById('prm-message');
+        var elState  = document.getElementById('prm-today-state');
+        var elMsg    = document.getElementById('prm-msg');
+        var elSave   = document.getElementById('prm-save');
+
+        function rtype() {
+            var r = mask.querySelector('input[name="prm-rtype"]:checked');
+            return r ? r.value : 'users';
+        }
+        function applyRtype() {
+            var g = rtype() === 'group';
+            elUsers.style.display = g ? 'none' : '';
+            elGroup.style.display = g ? '' : 'none';
+        }
+        function applyChat() { elSub.classList.toggle('on', elChat.checked); }
+
+        mask.querySelectorAll('input[name="prm-rtype"]').forEach(function (r) {
+            r.addEventListener('change', applyRtype);
+        });
+        elChat.addEventListener('change', applyChat);
+
+        function fill(sel, list, picked) {
+            sel.innerHTML = '';
+            (list || []).forEach(function (o) {
+                var op = document.createElement('option');
+                op.value = String(o.id);
+                op.textContent = o.name + (o.member_count ? ' (' + o.member_count + ' người)' : '');
+                if (picked && picked.indexOf(String(o.id)) !== -1) op.selected = true;
+                sel.appendChild(op);
+            });
+        }
+
+        var loaded = false;
+        function load() {
+            fetch(AJAX + 'production_reminder_config', { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (!res || !res.ok) return;
+                    var c = res.config;
+                    elState.textContent = res.has_today
+                        ? ' Hôm nay ĐÃ có dữ liệu sản lượng.'
+                        : ' Hôm nay CHƯA có dữ liệu sản lượng.';
+                    var uids = [];
+                    if (c) {
+                        try { uids = (JSON.parse(c.chat_recipient_user_ids || '[]') || []).map(String); } catch (e) { uids = []; }
+                    }
+                    fill(elUsers, res.users, uids);
+                    fill(elGroup, res.groups, c ? [String(c.chat_recipient_conversation_id)] : []);
+                    if (!loaded && c) {
+                        elActive.checked = !!Number(c.is_active);
+                        elTime.value     = String(c.remind_time || '17:00:00').slice(0, 5);
+                        elSunday.checked = !!Number(c.skip_sunday);
+                        elBell.checked   = !!Number(c.notify_bell);
+                        elChat.checked   = !!Number(c.notify_chat);
+                        elMsgIn.value    = c.message || '';
+                        var rt = c.chat_recipient_type === 'group' ? 'group' : 'users';
+                        var rr = mask.querySelector('input[name="prm-rtype"][value="' + rt + '"]');
+                        if (rr) rr.checked = true;
+                    }
+                    loaded = true;
+                    applyRtype(); applyChat();
+                });
+        }
+
+        open.addEventListener('click', function () { mask.style.display = 'flex'; load(); });
+        document.getElementById('prm-close').addEventListener('click', function () { mask.style.display = 'none'; });
+        mask.addEventListener('click', function (e) { if (e.target === mask) mask.style.display = 'none'; });
+
+        elSave.addEventListener('click', function () {
+            var uids = Array.prototype.slice.call(elUsers.selectedOptions || []).map(function (o) { return Number(o.value); });
+            var fd = new FormData();
+            fd.append('is_active',   elActive.checked ? 1 : '');
+            fd.append('remind_time', elTime.value);
+            fd.append('skip_sunday', elSunday.checked ? 1 : '');
+            fd.append('notify_bell', elBell.checked ? 1 : '');
+            fd.append('notify_chat', elChat.checked ? 1 : '');
+            fd.append('chat_recipient_type', rtype());
+            fd.append('chat_recipient_user_ids', JSON.stringify(uids));
+            fd.append('chat_recipient_conversation_id', elGroup.value || 0);
+            fd.append('message', elMsgIn.value || '');
+
+            elSave.disabled = true; elMsg.textContent = 'Đang lưu...';
+            fetch(AJAX + 'production_reminder_save', { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    elSave.disabled = false;
+                    elMsg.textContent = (res && res.ok) ? 'Đã lưu.' : ((res && res.message) || 'Lưu thất bại.');
+                    if (res && res.ok) setTimeout(function () { elMsg.textContent = ''; }, 2500);
+                })
+                .catch(function () { elSave.disabled = false; elMsg.textContent = 'Lỗi mạng.'; });
+        });
+    })();
+    </script>
+
     <!-- ===== Combobox tìm-kiếm dùng chung (thay select) ===== -->
     <script>
     (function () {
@@ -582,6 +818,8 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
         var viewChecks     = Array.prototype.slice.call(document.querySelectorAll('.view-check'));
         var groupChecks    = Array.prototype.slice.call(document.querySelectorAll('.group-check'));
         var viewOnlyChecks = Array.prototype.slice.call(document.querySelectorAll('.view-only-check'));
+        /* "Sửa trong ngày" (5/8/2026) — chỉ bật được KHI "Chỉ xem" đang bật. */
+        var editTodayChecks = Array.prototype.slice.call(document.querySelectorAll('.edit-today-check'));
 
         function showToast(msg, isErr) {
             var t = document.getElementById('toast');
@@ -595,6 +833,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
         function setAllChecks(on) {
             viewChecks.forEach(function (c) { c.checked = on; });
             viewOnlyChecks.forEach(function (c) { c.checked = false; });
+            editTodayChecks.forEach(function (c) { c.checked = false; });
             syncGroupChecks();
         }
 
@@ -602,14 +841,31 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
         function viewOnlyCheckFor(viewId) {
             return viewOnlyChecks.filter(function (c) { return c.dataset.view === String(viewId); })[0];
         }
+        function editTodayCheckFor(viewId) {
+            return editTodayChecks.filter(function (c) { return c.dataset.view === String(viewId); })[0];
+        }
         function syncViewOnlyAvailability() {
             viewChecks.forEach(function (c) {
                 var voc = viewOnlyCheckFor(c.value);
-                if (!voc) return;
-                if (!c.checked) { voc.checked = false; }
-                voc.disabled = !c.checked;
+                var etc = editTodayCheckFor(c.value);
+                if (voc) {
+                    if (!c.checked) { voc.checked = false; }
+                    voc.disabled = !c.checked;
+                }
+                /* Bỏ tick "Chỉ xem" (hoặc bỏ cấp view) là cờ "sửa trong ngày" mất nghĩa ngay —
+                   tắt luôn để admin không lưu ra trạng thái mà backend sẽ âm thầm bỏ qua. */
+                if (etc) {
+                    var allow = c.checked && voc && voc.checked;
+                    if (!allow) { etc.checked = false; }
+                    etc.disabled = !allow;
+                }
             });
         }
+
+        /* Bật/tắt "Chỉ xem" phải kéo theo trạng thái của ô "Sửa trong ngày" cùng dòng. */
+        viewOnlyChecks.forEach(function (c) {
+            c.addEventListener('change', syncViewOnlyAvailability);
+        });
 
         /* Đồng bộ checkbox "chọn cả nhóm" theo các view con. */
         function syncGroupChecks() {
@@ -647,13 +903,16 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
             adminOnlyCard.style.display = isDep ? '' : 'none';
         }
 
-        function applyViewIds(ids, viewOnlyIds) {
+        function applyViewIds(ids, viewOnlyIds, editTodayIds) {
             var set = {};
             (ids || []).forEach(function (id) { set[String(id)] = true; });
             viewChecks.forEach(function (c) { c.checked = !!set[c.value]; });
             var voSet = {};
             (viewOnlyIds || []).forEach(function (id) { voSet[String(id)] = true; });
             viewOnlyChecks.forEach(function (c) { c.checked = !!voSet[c.dataset.view]; });
+            var etSet = {};
+            (editTodayIds || []).forEach(function (id) { etSet[String(id)] = true; });
+            editTodayChecks.forEach(function (c) { c.checked = !!etSet[c.dataset.view]; });
             syncGroupChecks();
             syncViewOnlyAvailability();
             baseline = checkedSet(); dirty = false;   // chỉ so theo các view hiển thị (phạm vi)
@@ -705,7 +964,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                 .then(function (r) { return r.json(); })
                 .then(function (res) {
                     if (!res || !res.ok) { showToast((res && res.message) || 'Không tải được quyền', true); return; }
-                    applyViewIds(res.view_ids || [], res.view_only_ids || []);
+                    applyViewIds(res.view_ids || [], res.view_only_ids || [], res.edit_today_ids || []);
                     permArea.classList.remove('disabled-area');
                     btnSave.disabled = false;
                     syncable = true;
@@ -727,6 +986,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
             fd.append('user_id', uid);
             viewChecks.forEach(function (c) { if (c.checked) fd.append('view_ids[]', c.value); });
             viewOnlyChecks.forEach(function (c) { if (c.checked && !c.disabled) fd.append('view_only_ids[]', c.dataset.view); });
+            editTodayChecks.forEach(function (c) { if (c.checked && !c.disabled) fd.append('edit_today_ids[]', c.dataset.view); });
 
             btnSave.disabled = true;
             fetch(AJAX_BASE + 'user_views_save', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -754,7 +1014,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                     var remote = {};
                     (res.view_ids || []).forEach(function (id) { if (visibleIds[String(id)]) remote[String(id)] = true; });
                     if (setsDiffer(remote, baseline)) {
-                        applyViewIds(res.view_ids || [], res.view_only_ids || []);
+                        applyViewIds(res.view_ids || [], res.view_only_ids || [], res.edit_today_ids || []);
                         showToast('Đã đồng bộ thay đổi phân quyền từ người khác');
                     }
                 })

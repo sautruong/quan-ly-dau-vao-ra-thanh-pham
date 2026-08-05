@@ -231,12 +231,13 @@ function permission_filter_menu_groups($groups)
  * (Xóa hết rồi insert lại — đơn giản & nhất quán.)
  * $view_only_ids: tập con của $view_ids được gán can_edit = 0 (chỉ xem).
  */
-function permission_set_user_views($user_id, array $view_ids, array $view_only_ids = [])
+function permission_set_user_views($user_id, array $view_ids, array $view_only_ids = [], array $edit_today_ids = [])
 {
     $uid = (int) $user_id;
     if ($uid <= 0) {
         return false;
     }
+    permission_ensure_edit_today_column();
     db_delete('tbl_user_views', "user_id = {$uid}");
 
     // Lọc về int hợp lệ & loại trùng.
@@ -244,15 +245,42 @@ function permission_set_user_views($user_id, array $view_ids, array $view_only_i
         array_map('intval', $view_ids),
         static fn($v) => $v > 0
     )));
-    $view_only_set = array_flip(array_map('intval', $view_only_ids));
+    $view_only_set  = array_flip(array_map('intval', $view_only_ids));
+    $edit_today_set = array_flip(array_map('intval', $edit_today_ids));
     foreach ($ids as $vid) {
+        $only = isset($view_only_set[$vid]);
         db_insert('tbl_user_views', [
             'user_id'  => $uid,
             'view_id'  => $vid,
-            'can_edit' => isset($view_only_set[$vid]) ? 0 : 1,
+            'can_edit' => $only ? 0 : 1,
+            // "Sửa trong ngày" chỉ có nghĩa KHI ĐANG chỉ-xem: nó là cửa hẹp mở ra từ trạng thái
+            // khoá, không phải một mức quyền song song. Tick nó mà không tick "Chỉ xem" thì user
+            // vốn đã sửa được mọi ngày — lưu cờ này vào chỉ tạo hiểu nhầm lúc đọc lại dữ liệu.
+            'can_edit_today' => ($only && isset($edit_today_set[$vid])) ? 1 : 0,
         ]);
     }
     return true;
+}
+
+/**
+ * Cột `can_edit_today` (bổ sung 5/8/2026) — tạo nếu chưa có, chạy 1 lần/request.
+ *
+ * Dự án không có hệ migration tự động cho phần helper này; các bảng phân quyền vốn được tạo/vá
+ * tại chỗ. Giữ đúng lối đó để cài đặt trên máy mới không phải nhớ chạy SQL tay.
+ */
+function permission_ensure_edit_today_column()
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    if (db_num_rows("SHOW TABLES LIKE 'tbl_user_views'") <= 0) {
+        return;
+    }
+    if (db_num_rows("SHOW COLUMNS FROM tbl_user_views LIKE 'can_edit_today'") <= 0) {
+        db_query("ALTER TABLE tbl_user_views ADD COLUMN can_edit_today TINYINT(1) NOT NULL DEFAULT 0");
+    }
 }
 
 /* =====================================================================
@@ -340,6 +368,129 @@ function permission_require_can_edit($module, $controller, $action, $response_ke
     if (permission_user_can_edit($module, $controller, $action)) {
         return true;
     }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([$response_key => false, 'message' => 'Bạn chỉ có quyền xem, không thể ghi/sửa dữ liệu.']);
+    exit;
+}
+
+/* =====================================================================
+ *  "CHỈ SỬA TRONG NGÀY" (bổ sung 5/8/2026)
+ *
+ *  User chốt: "tích đồng thời Chỉ xem VÀ Cho phép chỉnh sửa trong ngày là chỉ được nhập và sửa
+ *  trong ngày hôm đó — nghĩa là ngày hiện tại; còn các ngày lịch sử trước đó chỉ xem, không sửa."
+ *
+ *  Vì vậy đây KHÔNG phải mức quyền thứ ba, mà là một CỬA HẸP mở ra từ trạng thái "chỉ xem":
+ *      can_edit = 0 và can_edit_today = 1  →  ghi/sửa được, nhưng chỉ trên dữ liệu của HÔM NAY.
+ * ===================================================================== */
+
+/**
+ * Danh mục view hỗ trợ "chỉ sửa trong ngày".
+ *
+ * HẸP CÓ CHỦ Ý — hiện chỉ "Nhập sản lượng sản xuất" (inventory_management/dashboard), là view mà
+ * user yêu cầu uỷ quyền cho nhân viên nhập. Chỉ thêm view vào đây SAU KHI đường ghi của nó đã
+ * thật sự gọi permission_require_can_edit_on_date() với đúng ngày của bản ghi — bày ô tick ra mà
+ * backend không chặn theo ngày là hứa suông, admin tưởng đã khoá lịch sử trong khi chưa khoá gì.
+ */
+function permission_edit_today_capable_keys()
+{
+    return [
+        ['module' => 'inventory_management', 'controller' => 'inventory_management', 'action' => 'dashboard'],
+    ];
+}
+
+/** view_id tương ứng danh mục trên, lọc theo view thực có trong DB. */
+function permission_edit_today_capable_ids()
+{
+    $ids = [];
+    foreach (permission_edit_today_capable_keys() as $k) {
+        $v = permission_find_view($k['module'], $k['controller'], $k['action']);
+        if ($v) {
+            $ids[] = (int) $v['id'];
+        }
+    }
+    return $ids;
+}
+
+/** Các view_id user này đang được bật cờ "sửa trong ngày" (để màn Phân quyền tick lại đúng). */
+function permission_user_edit_today_ids($user_id)
+{
+    $uid = (int) $user_id;
+    if ($uid <= 0) {
+        return [];
+    }
+    permission_ensure_edit_today_column();
+    $rows = db_fetch_array(
+        "SELECT view_id FROM tbl_user_views WHERE user_id = {$uid} AND can_edit_today = 1"
+    ) ?: [];
+    return array_map(static fn($r) => (int) $r['view_id'], $rows);
+}
+
+/** User này có đang ở chế độ "chỉ xem, nhưng được sửa dữ liệu trong ngày" không. */
+function permission_user_can_edit_today($module, $controller, $action, $user = null)
+{
+    if ($user === null) {
+        $user = permission_current_user();
+    }
+    if (permission_is_admin($user)) {
+        return false; // admin sửa được mọi ngày — không rơi vào chế độ hẹp này
+    }
+    $uid = (int) ($user['id'] ?? 0);
+    if ($uid <= 0) {
+        return false;
+    }
+    $view = permission_find_view($module, $controller, $action);
+    if (!$view) {
+        return false;
+    }
+    permission_ensure_edit_today_column();
+    $vid = (int) $view['id'];
+    $row = db_fetch_row(
+        "SELECT can_edit, can_edit_today FROM tbl_user_views
+          WHERE user_id = {$uid} AND view_id = {$vid} LIMIT 1"
+    );
+    if (!$row) {
+        return false;
+    }
+    return (int) $row['can_edit'] === 0 && (int) $row['can_edit_today'] === 1;
+}
+
+/**
+ * Chốt chặn GHI có xét NGÀY của bản ghi. Dùng thay permission_require_can_edit() ở những action
+ * thao tác trên dữ liệu gắn với một ngày cụ thể.
+ *
+ * $record_date: 'Y-m-d' (hoặc chuỗi datetime bất kỳ strtotime đọc được). Null/rỗng = coi như
+ * hôm nay (tạo mới không kèm ngày).
+ *
+ * Thứ tự xét — đọc kỹ trước khi sửa:
+ *   1. Sửa được mọi ngày (admin / chưa bị giới hạn)  → cho qua.
+ *   2. Không sửa được VÀ không có cửa "trong ngày"    → chặn như cũ.
+ *   3. Có cửa "trong ngày": ngày bản ghi = hôm nay    → cho qua; khác hôm nay → chặn kèm câu
+ *      giải thích ĐÚNG lý do (không dùng chung câu "chỉ có quyền xem", vì họ vẫn ghi được hôm nay
+ *      — báo sai lý do là người dùng đi hỏi admin cấp thêm quyền một cách vô ích).
+ */
+function permission_require_can_edit_on_date(
+    $module, $controller, $action, $record_date = null, $response_key = 'success'
+) {
+    if (permission_user_can_edit($module, $controller, $action)) {
+        return true;
+    }
+
+    if (permission_user_can_edit_today($module, $controller, $action)) {
+        $d = trim((string) $record_date);
+        $day = ($d === '') ? date('Y-m-d') : date('Y-m-d', strtotime($d));
+        if ($day === date('Y-m-d')) {
+            return true;
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            $response_key => false,
+            'message'     => 'Bạn chỉ được nhập/sửa dữ liệu của ngày hôm nay ('
+                             . date('d/m/Y') . '). Dữ liệu ngày '
+                             . date('d/m/Y', strtotime($day)) . ' chỉ xem được.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode([$response_key => false, 'message' => 'Bạn chỉ có quyền xem, không thể ghi/sửa dữ liệu.']);
     exit;

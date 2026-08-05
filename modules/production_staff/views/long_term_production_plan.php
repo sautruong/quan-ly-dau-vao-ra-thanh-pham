@@ -103,6 +103,20 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
                         title="Xem nhanh tồn 1 thành phẩm">Xem tồn thành phẩm</button>
                 <button type="button" class="ltp-btn ltp-btn-add-day" id="ltp-add-day-first" title="Thêm 1 ngày vào đầu board">+ Thêm đầu</button>
                 <button type="button" class="ltp-btn ltp-btn-add-day" id="ltp-add-day" title="Thêm 1 ngày vào cuối board">+ Thêm cuối</button>
+                <?php
+                /*
+                  Nút "Cài đặt" — hẹn giờ tự xuất kế hoạch NGÀY MAI + chụp gửi chat (Safe King gửi).
+                  CHỈ ADMIN thấy: đây là cấu hình toàn hệ thống, không phải tuỳ chọn cá nhân.
+                  Backend cũng gate bằng permission_require_admin() nên ẩn ở đây chỉ để gọn mắt.
+                  Đặt CẠNH PHẢI "+ Thêm cuối" đúng chỗ user chỉ định.
+                */
+                if (permission_is_admin()):
+                ?>
+                <button type="button" class="ltp-btn ltp-btn-setting" id="ltp-auto-setting"
+                        title="Cài đặt giờ xuất kế hoạch định kỳ">
+                    <i class="fa-solid fa-gear"></i> Cài đặt
+                </button>
+                <?php endif; ?>
             </div>
             <div class="ltp-board" id="ltp-board">
                 <?php $ltp_cur_week = null; foreach ($days as $d):
@@ -284,10 +298,86 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
 
     <?php require LAYOUTPATH . DIRECTORY_SEPARATOR . 'day-plan-modal.php'; ?>
 
+    <?php
+    /*
+      MODAL CÀI ĐẶT — hẹn giờ xuất kế hoạch định kỳ. Chỉ dựng cho admin (nút mở cũng chỉ admin
+      thấy). Dùng lại đúng bộ class .ltp-modal-* của 2 modal sẵn có trong trang để khỏi đẻ thêm
+      một hệ style hộp thoại thứ hai.
+    */
+    if (permission_is_admin()):
+    ?>
+    <div class="ltp-modal" id="ltp-modal-auto" style="display:none;">
+        <div class="ltp-modal-box ltp-auto-box">
+            <div class="ltp-modal-head">
+                <h3>Cài đặt xuất kế hoạch định kỳ</h3>
+                <span class="ltp-modal-close" data-close="ltp-modal-auto">&times;</span>
+            </div>
+            <div class="ltp-modal-body ltp-auto-body">
+                <p class="ltp-auto-hint">
+                    Đến giờ đã hẹn, hệ thống tự chuyển <strong>kế hoạch của ngày mai</strong> sang
+                    “Kế hoạch sản xuất hằng ngày” và gửi ảnh kế hoạch đó vào chat dưới tên
+                    <strong>Safe King</strong>. Nút “XUẤT KH” trên từng card vẫn dùng bình thường.
+                </p>
+
+                <label class="ltp-auto-row ltp-auto-switch">
+                    <input type="checkbox" id="pae-active"> <span>Bật xuất tự động</span>
+                </label>
+
+                <div class="ltp-auto-grid">
+                    <label class="ltp-auto-field">
+                        <span>Giờ chạy</span>
+                        <input type="time" id="pae-time" step="60" value="16:50">
+                    </label>
+                    <label class="ltp-auto-field">
+                        <span>Cửa sổ chờ (phút)</span>
+                        <input type="number" id="pae-window" min="5" max="240" value="30">
+                    </label>
+                </div>
+
+                <label class="ltp-auto-row">
+                    <input type="checkbox" id="pae-skip-sunday" checked> <span>Không chạy chủ nhật</span>
+                </label>
+
+                <label class="ltp-auto-field">
+                    <span>Người thực hiện</span>
+                    <select id="pae-delegate"></select>
+                    <small>
+                        Việc chụp ảnh chạy trong trình duyệt của người này — họ phải đang mở ứng dụng
+                        lúc tới giờ. Quá cửa sổ chờ mà không ai online, hệ thống báo chuông cho admin.
+                    </small>
+                </label>
+
+                <div class="ltp-auto-field">
+                    <span>Gửi đến</span>
+                    <div class="ltp-auto-rtype">
+                        <label><input type="radio" name="pae-rtype" value="users" checked> Người dùng</label>
+                        <label><input type="radio" name="pae-rtype" value="group"> Nhóm chat</label>
+                    </div>
+                    <select id="pae-users" multiple size="6"></select>
+                    <select id="pae-group" style="display:none;"></select>
+                </div>
+
+                <label class="ltp-auto-field">
+                    <span>Lời nhắn kèm ảnh (để trống dùng mặc định)</span>
+                    <input type="text" id="pae-caption" maxlength="480"
+                           placeholder="Kế hoạch sản xuất ngày mai…">
+                </label>
+
+                <p class="ltp-auto-state" id="pae-state"></p>
+            </div>
+            <div class="ltp-modal-foot">
+                <span class="ltp-auto-msg" id="pae-msg"></span>
+                <button type="button" class="ltp-btn ltp-btn-primary" id="pae-save">Lưu cài đặt</button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <script>
         window.LTP_CONFIG = { baseUrl: '?mod=production_staff&controllers=production_staff&action=' };
     </script>
     <script src="<?php echo asset_ver('public/js/production_staff/long_term_production_plan.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/production_staff/plan_auto_export.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/day_plan_modal.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>

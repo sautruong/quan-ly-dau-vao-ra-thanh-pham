@@ -227,6 +227,8 @@ function manage_permissionsAction()
         'classifications'        => $is_admin ? admin_get_user_classifications() : [],
         'deputies'               => $is_admin ? permission_deputy_list() : [],
         'view_only_capable_ids'  => permission_view_only_capable_ids(),
+        // View hỗ trợ "chỉ sửa trong ngày" (5/8/2026) — hiện chỉ Nhập sản lượng sản xuất.
+        'edit_today_capable_ids' => permission_edit_today_capable_ids(),
     ]);
 }
 
@@ -566,10 +568,76 @@ function user_views_getAction()
         "SELECT view_id FROM tbl_user_views WHERE user_id = {$uid} AND can_edit = 0"
     ) ?: []);
     echo json_encode([
-        'ok'            => true,
-        'view_ids'      => permission_granted_view_ids($uid),
-        'view_only_ids' => $view_only_ids,
+        'ok'             => true,
+        'view_ids'       => permission_granted_view_ids($uid),
+        'view_only_ids'  => $view_only_ids,
+        'edit_today_ids' => permission_user_edit_today_ids($uid),
     ]);
+    exit;
+}
+
+/* =====================================================================================
+ *  NHẮC NHỞ NHẬP SẢN LƯỢNG SẢN XUẤT (nút bánh răng cạnh view "Nhập sản lượng sản xuất")
+ *
+ *  Nghiệp vụ ở libraries/production_reminder.php (prefix prm_*). Việc QUÉT chạy đi nhờ trong
+ *  endpoint poll của auto_report — xem chú thích ở reportController::auto_report_due_checkAction.
+ * ===================================================================================== */
+
+function prm_boot()
+{
+    require_once __DIR__ . '/../../../libraries/production_reminder.php';
+    prm_ensure_tables();
+}
+
+/** JSON: cấu hình nhắc nhở hiện tại + danh sách người/nhóm nhận. */
+function production_reminder_configAction()
+{
+    permission_require_admin(true);
+    prm_boot();
+    require_once __DIR__ . '/../../../libraries/auto_report.php';
+    header('Content-Type: application/json; charset=utf-8');
+
+    $me  = permission_current_user();
+    $uid = $me ? (int) $me['id'] : 0;
+
+    echo json_encode([
+        'ok'     => true,
+        'config' => prm_config(),
+        'users'  => ar_active_users(),
+        // Nhóm chat: chỉ nhóm mà CHÍNH ADMIN đang cấu hình là thành viên — admin không nên gán
+        // lời nhắc vào nhóm mình không thấy được để kiểm chứng là nó có tới nơi hay không.
+        'groups' => $uid > 0 ? ar_groups_for_user($uid) : [],
+        // Cho admin biết ngay hôm nay đã có sản lượng chưa (đỡ phải mở view khác để đối chiếu).
+        'has_today' => prm_has_production_on(),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: lưu cấu hình nhắc nhở. */
+function production_reminder_saveAction()
+{
+    permission_require_admin(true);
+    prm_boot();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $me  = permission_current_user();
+    $uid = $me ? (int) $me['id'] : 0;
+
+    $res = prm_save([
+        'is_active'                      => !empty($_POST['is_active']),
+        'remind_time'                    => $_POST['remind_time'] ?? '',
+        'skip_sunday'                    => !empty($_POST['skip_sunday']),
+        'notify_bell'                    => !empty($_POST['notify_bell']),
+        'notify_chat'                    => !empty($_POST['notify_chat']),
+        'chat_recipient_type'            => $_POST['chat_recipient_type'] ?? 'users',
+        'chat_recipient_user_ids'        => $_POST['chat_recipient_user_ids'] ?? '[]',
+        'chat_recipient_conversation_id' => (int) ($_POST['chat_recipient_conversation_id'] ?? 0),
+        'message'                        => $_POST['message'] ?? '',
+    ], $uid);
+
+    echo json_encode(!empty($res['ok'])
+        ? ['ok' => true, 'config' => prm_config()]
+        : ['ok' => false, 'message' => $res['error']], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -591,11 +659,19 @@ function user_views_saveAction()
     if (!is_array($view_only_ids)) {
         $view_only_ids = [];
     }
-    $view_ids      = array_map('intval', $view_ids);
-    $view_only_ids = array_map('intval', $view_only_ids);
+    // "Sửa trong ngày" (5/8/2026) — tập con của view_only_ids; permission_set_user_views() còn
+    // ép lại điều kiện đó lần nữa nên client gửi lệch cũng không lưu ra trạng thái vô nghĩa.
+    $edit_today_ids = $_POST['edit_today_ids'] ?? [];
+    if (!is_array($edit_today_ids)) {
+        $edit_today_ids = [];
+    }
+
+    $view_ids       = array_map('intval', $view_ids);
+    $view_only_ids  = array_map('intval', $view_only_ids);
+    $edit_today_ids = array_map('intval', $edit_today_ids);
 
     if (permission_is_admin($me)) {
-        permission_set_user_views($uid, $view_ids, $view_only_ids);
+        permission_set_user_views($uid, $view_ids, $view_only_ids, $edit_today_ids);
         echo json_encode(['ok' => true, 'count' => count($view_ids)]);
         exit;
     }
@@ -625,7 +701,18 @@ function user_views_saveAction()
     ) ?: []);
     $keep_view_only_out_of_scope = array_values(array_filter($existing_view_only, static fn($v) => !isset($scope_set[$v])));
     $final_view_only = array_values(array_unique(array_merge($keep_view_only_out_of_scope, $submitted_view_only_in_scope)));
-    permission_set_user_views($uid, $final, $final_view_only);
+
+    // "Sửa trong ngày": cùng luật giữ-ngoài-phạm-vi như "Chỉ xem" — admin phó lưu 1 phát mà xoá
+    // mất cờ do admin trưởng đặt ở nhóm khác thì đúng là lỗi đã tránh được ở phần Chỉ xem.
+    $submitted_edit_today_in_scope = array_values(array_filter(
+        $edit_today_ids,
+        static fn($v) => isset($scope_set[$v]) && in_array($v, $submitted_in_scope, true)
+    ));
+    $existing_edit_today = permission_user_edit_today_ids($uid);
+    $keep_edit_today_out_of_scope = array_values(array_filter($existing_edit_today, static fn($v) => !isset($scope_set[$v])));
+    $final_edit_today = array_values(array_unique(array_merge($keep_edit_today_out_of_scope, $submitted_edit_today_in_scope)));
+
+    permission_set_user_views($uid, $final, $final_view_only, $final_edit_today);
 
     // Đẩy chuông cho admin trưởng tại thời điểm lưu.
     $target = admin_get_user_by_id($uid);

@@ -459,3 +459,69 @@
     .ltp-card-head { margin-bottom: 0; }
     .ltp-day { margin-bottom: 0; }
 }
+
+/* =====================================================================================
+   CAI DAT XUAT KE HOACH DINH KY (nut #ltp-auto-setting + modal #ltp-modal-auto + toast)
+   Bam theo bo bien mau va bo class .ltp-modal-* co san phia tren file nay.
+   ===================================================================================== */
+
+.ltp-btn-setting { display: inline-flex; align-items: center; gap: 6px; }
+
+.ltp-auto-box { max-width: 560px; width: 100%; }
+.ltp-auto-body { display: flex; flex-direction: column; gap: 12px; max-height: 68vh; overflow-y: auto; }
+
+.ltp-auto-hint {
+    margin: 0; padding: 10px 12px; border-radius: 8px;
+    background: rgba(76, 175, 80, .10); border: 1px solid rgba(76, 175, 80, .30);
+    font-size: 12.5px; line-height: 1.5;
+}
+
+.ltp-auto-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.ltp-auto-switch { font-weight: 600; }
+
+.ltp-auto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.ltp-auto-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.ltp-auto-field > span { font-weight: 600; }
+.ltp-auto-field small { font-size: 11.5px; opacity: .75; line-height: 1.45; }
+.ltp-auto-field input[type="time"],
+.ltp-auto-field input[type="number"],
+.ltp-auto-field input[type="text"],
+.ltp-auto-field select {
+    width: 100%; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .06);
+    color: inherit; font-size: 13px; font-family: inherit;
+}
+.ltp-auto-field select[multiple] { padding: 4px; }
+
+.ltp-auto-rtype { display: flex; gap: 16px; font-size: 12.5px; }
+.ltp-auto-rtype label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+
+.ltp-auto-state { margin: 0; font-size: 12px; opacity: .8; font-style: italic; }
+.ltp-auto-msg { flex: 1; font-size: 12.5px; opacity: .9; }
+.ltp-modal-foot { display: flex; align-items: center; gap: 10px; }
+
+/* Thong bao noi goc phai duoi — dem nguoc truoc khi chup + ket qua sau khi chay. */
+.pae-toast {
+    position: fixed; right: 18px; bottom: 18px; z-index: 9999;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 10px;
+    background: #16281c; color: #e8f5e9;
+    border: 1px solid rgba(76, 175, 80, .45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+    font-size: 13px; max-width: min(90vw, 420px);
+}
+.pae-toast-cancel {
+    padding: 5px 12px; border-radius: 7px; cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, .25);
+    background: transparent; color: inherit; font-size: 12.5px; font-weight: 600;
+}
+.pae-toast-cancel:hover { background: rgba(255, 255, 255, .10); }
+
+@media (max-width: 768px) {
+    .ltp-auto-grid { grid-template-columns: 1fr; }
+    .ltp-auto-box { max-width: none; }
+    /* iOS tu phong to trang khi focus o nhap co font < 16px. */
+    .ltp-auto-field input, .ltp-auto-field select { font-size: 16px; }
+    .pae-toast { left: 12px; right: 12px; bottom: 12px; max-width: none; }
+}
