@@ -306,7 +306,12 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
     */
     if (permission_is_admin()):
     ?>
-    <div class="ltp-modal" id="ltp-modal-auto" style="display:none;">
+    <?php /*
+      Lớp phủ ĐÚNG TÊN là .ltp-modal-mask (hiện bằng cách thêm class .open), giống 2 modal phía
+      trên. Bản đầu dùng .ltp-modal + bật/tắt style.display — class đó KHÔNG tồn tại trong CSS
+      nên hộp không có lớp phủ, rơi thẳng vào luồng trang và bóp bề ngang board.
+    */ ?>
+    <div class="ltp-modal-mask" id="ltp-modal-auto">
         <div class="ltp-modal-box ltp-auto-box">
             <div class="ltp-modal-head">
                 <h3>Cài đặt xuất kế hoạch định kỳ</h3>

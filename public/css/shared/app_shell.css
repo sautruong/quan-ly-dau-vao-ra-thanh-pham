@@ -1558,7 +1558,15 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
        không còn proxy vào menu tiện ích. */
 
     /* ---- R2-5: Reset / In BC / Share KHSX gom sau 1 nút icon (.app-actions do JS tạo) ---- */
-    .app-actions { position: relative; }
+    /*
+      PHẢI đè `display` ở đây. Ngoài media query .app-actions là `display: contents` (để desktop
+      giữ nguyên các nút inline như chưa hề bọc thêm div). `display: contents` KHÔNG SINH HỘP →
+      `position: relative` bên dưới vô hiệu → `.header-actions` (position:absolute) neo vào tổ
+      tiên có position khác, rơi ra ngoài vùng nhìn thấy. Triệu chứng: bấm "..." trên mobile thấy
+      như không có gì xảy ra (class .is-open có được gắn, menu vẫn ở đâu đó ngoài màn hình).
+      Sửa 5/8/2026 sau khi user báo ở plan_for_staff.
+    */
+    .app-actions { display: inline-flex; align-items: center; position: relative; }
     .app-actions-btn {
         display: flex; align-items: center; justify-content: center;
         width: 42px; height: 42px; border: 1px solid transparent; border-radius: 50%;

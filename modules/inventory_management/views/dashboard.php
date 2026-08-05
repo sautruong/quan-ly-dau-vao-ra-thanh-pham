@@ -74,6 +74,15 @@
                     <input type="text" id="search-product" name="search-product" placeholder="Tìm kiếm sản phẩm..." autocomplete="off">
                     <ul class="search-dropdown" id="search-dropdown"></ul>
                 </div>
+                <?php /*
+                  Nạp lại danh sách sản phẩm theo KHSX hôm nay (user chốt 5/8/2026). Danh sách này
+                  vốn đã được nạp sẵn lúc mở trang; nút để lấy lại khi kế hoạch đổi giữa chừng
+                  hoặc lỡ xoá bớt dòng — CHỈ THÊM dòng còn thiếu, không đụng dòng đang gõ dở.
+                */ ?>
+                <button type="button" class="btn-plan-products" id="btn-plan-products"
+                        title="Nạp danh sách sản phẩm theo kế hoạch sản xuất hôm nay">
+                    <i class="fa-solid fa-clipboard-list"></i> DSSP theo kế hoạch
+                </button>
                 <!-- Input ngày giờ ghi -->
                 <div class="wp-date-picker">
                     <label for="record-datetime">Ngày giờ ghi</label>

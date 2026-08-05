@@ -353,6 +353,76 @@ if (!function_exists('fgi_render_product')) {
                 document.body.appendChild(a); a.click(); a.remove();
                 fgiToast('Trình duyệt không hỗ trợ copy ảnh — đã tải file PNG về máy.');
             }
+            /* Bề rộng KHUNG CỨNG khi chụp từ máy hẹp — đủ cho bố cục 4 cột của .of-inventory. */
+            var FGI_SHOT_W = 1400;
+
+            /**
+             * Chụp $el ra canvas với BỐ CỤC DESKTOP, kể cả khi đang mở trên điện thoại.
+             *
+             * VÌ SAO PHẢI DÙNG IFRAME: bố cục nhiều cột của .of-inventory do @media quyết định,
+             * mà media query bám VIEWPORT chứ không bám bề rộng phần tử — ép width cho thẻ bọc
+             * không hề gỡ được rule mobile, ảnh vẫn ra 1 cột dài thượt. Iframe rộng cố định
+             * 1400px thì bên trong nó media query tự đánh giá theo 1400 và bố cục bung đúng 4 cột.
+             *
+             * Màn hình đã đủ rộng thì chụp thẳng như cũ — nhanh hơn và đã chạy ổn định lâu nay.
+             */
+            function fgiRenderCanvas($el) {
+                var opts = { scale: 2, backgroundColor: '#ffffff', useCORS: true };
+                if (window.innerWidth >= FGI_SHOT_W) return html2canvas($el, opts);
+
+                return new Promise(function (resolve, reject) {
+                    var iframe = document.createElement('iframe');
+                    // Đặt ngoài vùng nhìn thấy thay vì display:none / visibility:hidden —
+                    // phần tử bị ẩn hẳn thì html2canvas đo ra kích thước 0.
+                    iframe.setAttribute('aria-hidden', 'true');
+                    iframe.style.cssText = 'position:fixed;left:-10000px;top:0;border:0;'
+                                         + 'width:' + FGI_SHOT_W + 'px;height:100px;';
+                    document.body.appendChild(iframe);
+
+                    var cleanup = function () { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); };
+
+                    try {
+                        var d = iframe.contentDocument;
+                        // Bê nguyên <link>/<style> của trang sang để ảnh giống hệt bản desktop.
+                        var head = '';
+                        document.querySelectorAll('link[rel="stylesheet"], style').forEach(function (n) {
+                            head += n.outerHTML;
+                        });
+                        d.open();
+                        d.write('<!DOCTYPE html><html><head><meta charset="utf-8">' + head
+                              + '</head><body style="margin:0;background:#fff;width:' + FGI_SHOT_W + 'px">'
+                              + '<div id="fgi-shot">' + $el.outerHTML + '</div></body></html>');
+                        d.close();
+                    } catch (e) { cleanup(); reject(e); return; }
+
+                    // Chờ CSS tải xong rồi mới đo — chụp sớm thì bố cục còn trần trụi.
+                    var waited = 0;
+                    (function ready() {
+                        var d = iframe.contentDocument;
+                        var target = d && d.getElementById('fgi-shot');
+                        var loaded = d && d.readyState === 'complete';
+                        if ((!loaded || !target || target.offsetHeight < 40) && waited < 4000) {
+                            waited += 120;
+                            setTimeout(ready, 120);
+                            return;
+                        }
+                        if (!target) { cleanup(); reject(new Error('Không dựng được khung chụp.')); return; }
+
+                        iframe.style.height = (target.offsetHeight + 40) + 'px';
+                        html2canvas(target, {
+                            scale: 2,
+                            backgroundColor: '#ffffff',
+                            useCORS: true,
+                            // BẮT BUỘC khai theo khung: thiếu thì html2canvas lấy bề rộng cửa sổ
+                            // THẬT (điện thoại) để tính lại bố cục và ảnh lại co về 1 cột.
+                            windowWidth: FGI_SHOT_W,
+                            width: FGI_SHOT_W,
+                        }).then(function (canvas) { cleanup(); resolve(canvas); })
+                          .catch(function (err) { cleanup(); reject(err); });
+                    })();
+                });
+            }
+
             var $captureBtn = document.getElementById('of-capture-btn');
             if ($captureBtn) $captureBtn.addEventListener('click', function () {
                 if (typeof html2canvas !== 'function') { alert('Không tải được thư viện chụp ảnh.'); return; }
@@ -383,7 +453,7 @@ if (!function_exists('fgi_render_product')) {
                     anchor.remove();
                 }
 
-                html2canvas(wrap, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function (canvas) {
+                fgiRenderCanvas(wrap).then(function (canvas) {
                     restore();
                     canvas.toBlob(function (blob) {
                         if (!blob) { fgiFallbackDownload(canvas); finish(); return; }

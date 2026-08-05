@@ -140,18 +140,21 @@
                 });
         });
 
+        /* Hiện/ẩn bằng class .open — .ltp-modal-mask mặc định display:none, .open đổi thành
+           flex và canh giữa. Bật/tắt style.display sẽ đè lên display:flex của .open và làm
+           hộp mất luôn phần canh giữa. */
         function openModal() {
-            modal.style.display = '';
+            modal.classList.add('open');
             load(null);
         }
-        function closeModal() { modal.style.display = 'none'; elMsg.textContent = ''; }
+        function closeModal() { modal.classList.remove('open'); elMsg.textContent = ''; }
 
         openBtn.addEventListener('click', openModal);
         modal.addEventListener('click', function (e) {
             if (e.target === modal || (e.target.dataset && e.target.dataset.close === 'ltp-modal-auto')) closeModal();
         });
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && modal.style.display !== 'none') closeModal();
+            if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
         });
 
         elSave.addEventListener('click', function () {

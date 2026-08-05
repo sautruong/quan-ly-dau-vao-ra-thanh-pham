@@ -86,6 +86,37 @@ function dashboardAction()
 }
 
 /**
+ * AJAX: danh sách sản phẩm theo KẾ HOẠCH SẢN XUẤT HÔM NAY — nút "DSSP theo kế hoạch"
+ * cạnh ô tìm kiếm ở view dashboard (user chốt 5/8/2026).
+ *
+ * Cùng nguồn với lúc mở trang (im_get_plans_for_inventory) nên bấm nút = quay về đúng danh sách
+ * ban đầu. Có nút này vì kế hoạch có thể ĐỔI sau khi trang đã mở (bên Kế hoạch sản xuất hằng
+ * ngày sửa/xuất KH mới), hoặc người dùng lỡ xoá bớt dòng và muốn lấy lại mà không phải F5 —
+ * F5 sẽ mất luôn những dòng đã gõ dở.
+ */
+function plan_products_for_inventoryAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+
+    $plan_date = date('d/m/Y');
+    $items = [];
+    foreach (im_get_plans_for_inventory() as $p) {
+        $pid = (int) $p['product_id'];
+        $items[] = [
+            'plan_id'       => (int) $p['plan_id'],
+            'product_id'    => $pid,
+            'product_name'  => $p['product_name'],
+            'quantity'      => (int) $p['quantity'],
+            'plan_date'     => $plan_date,
+            'current_stock' => im_get_current_stock($pid),
+        ];
+    }
+
+    echo json_encode(['success' => true, 'data' => $items], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
  * Nút × trên card sản phẩm (dashboard + investment_products): "Xóa hẳn dữ liệu ngày đó".
  * Xóa phiếu nhập thành phẩm (fg_receipt_production) của (product, ngày), trừ lại tồn kho,
  * xóa dòng sản lượng của ngày, và đánh dấu "đã gỡ" để cả 2 trang không nạp lại.

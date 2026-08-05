@@ -692,6 +692,53 @@
         // TASK 1: KHÔNG auto-load danh sách thành phẩm theo kế hoạch nữa —
         // để user tự tìm và chọn ở ô tìm kiếm. (Trước đây gọi reloadInitialPlans()).
         renderHistory(INITIAL.history || []);
+
+        wirePlanProductsButton();
+    }
+
+    /**
+     * Nút "DSSP theo kế hoạch" — nạp lại danh sách sản phẩm theo KHSX hôm nay.
+     *
+     * CHỈ THÊM DÒNG CÒN THIẾU, không xoá và không đụng dòng đang có: người dùng bấm nút này
+     * thường là vì kế hoạch vừa đổi hoặc lỡ xoá mất một dòng — dựng lại từ đầu sẽ thổi bay số
+     * lượng họ đang gõ dở ở các dòng khác. Muốn bỏ dòng thừa thì đã có nút × trên từng dòng.
+     */
+    function wirePlanProductsButton() {
+        const $btn = document.getElementById('btn-plan-products');
+        if (!$btn) return;
+
+        $btn.addEventListener('click', () => {
+            $btn.disabled = true;
+            postForm('plan_products_for_inventory', {}).then(res => {
+                $btn.disabled = false;
+                if (!res || !res.success || !Array.isArray(res.data)) {
+                    alert((res && res.message) || 'Không lấy được kế hoạch hôm nay.');
+                    return;
+                }
+                if (!res.data.length) {
+                    alert('Kế hoạch sản xuất hôm nay chưa có sản phẩm nào.');
+                    return;
+                }
+
+                // Dòng đã có trên màn hình -> bỏ qua, tránh nhân đôi sản phẩm.
+                const existing = {};
+                document.querySelectorAll('#list-product .product-item').forEach($li => {
+                    existing[String($li.getAttribute('data-product-id'))] = true;
+                });
+
+                let added = 0;
+                res.data.forEach(p => {
+                    if (existing[String(p.product_id)]) return;
+                    addProductItem(p);
+                    added++;
+                });
+
+                if (added === 0) alert('Danh sách đã có đủ sản phẩm của kế hoạch hôm nay.');
+            }).catch(() => {
+                $btn.disabled = false;
+                alert('Lỗi kết nối khi lấy kế hoạch.');
+            });
+        });
     }
 
     init();

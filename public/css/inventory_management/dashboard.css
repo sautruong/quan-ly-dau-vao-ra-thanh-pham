@@ -1028,3 +1028,35 @@ label {
    ============================================ */
 .wp-search input { background-color: var(--color-gray-100); }
 .wp-search input:focus { background-color: var(--color-gray-50); }
+/* =====================================================================
+   NUT "DSSP theo ke hoach" (view dashboard) — 5/8/2026
+   .wp-toolbar dung justify-content: space-between. Truoc day chi co 2 con
+   (o tim kiem | chon ngay) nen dep; them nut thanh con thu 3 la 3 phan tu bi
+   DAN DEU va o chon ngay bi keo vao giua. margin-right:auto tren nut = day moi
+   thu PHIA SAU no sang phai -> [tim kiem][nut] ben trai, [ngay ghi] ben phai.
+   ===================================================================== */
+.btn-plan-products {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-right: auto;
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border: 1px solid var(--color-gray-300, #cfd6dd);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--color-gray-700, #33475b);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-plan-products:hover { border-color: #096926; color: #096926; }
+.btn-plan-products:disabled { opacity: .55; cursor: not-allowed; }
+.btn-plan-products i { font-size: 13px; }
+
+@media (max-width: 768px) {
+    /* Toolbar xuong hang doc o mobile -> bo margin-right:auto (khong con nghia)
+       va cho nut trai ngang cho de bam. */
+    .btn-plan-products { margin-right: 0; width: 100%; justify-content: center; }
+}
