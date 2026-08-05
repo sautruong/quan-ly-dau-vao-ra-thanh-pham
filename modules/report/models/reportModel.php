@@ -1866,14 +1866,19 @@ function rp_dd_save_regulation_period($period)
  *  nhiều tháng nên KHÔNG áp "giá trị tạm" theo tháng (daily_dashboard_month_overrides). */
 function rp_dd_output_qty_last_days($days)
 {
-    $d  = max(1, (int) $days);
+    $d = max(1, (int) $days);
+    // Loại hàng mẫu y như nhánh tháng (py_calc_output_qty) — nếu không, kỳ tháng và kỳ 30/60/90
+    // ngày sẽ tính theo 2 luật khác nhau, chỉ số điều tiết so kiểu gì cũng lệch.
+    $noSample = function_exists('py_exclude_sample_sql') ? py_exclude_sample_sql('p') : '';
     $pr = db_fetch_row(
         "SELECT COALESCE(SUM(t.quantity), 0) AS q FROM finished_product_production_data t
-         WHERE t.created_at >= DATE_SUB(CURDATE(), INTERVAL $d DAY)"
+         LEFT JOIN products p ON p.id = t.product_id
+         WHERE t.created_at >= DATE_SUB(CURDATE(), INTERVAL $d DAY) $noSample"
     );
     $sr = db_fetch_row(
         "SELECT COALESCE(SUM(t.quantity), 0) AS q FROM sales_returns t
-         WHERE t.handling_method = 'Thay bao bì' AND t.created_at >= DATE_SUB(CURDATE(), INTERVAL $d DAY)"
+         LEFT JOIN products p ON p.id = t.product_id
+         WHERE t.handling_method = 'Thay bao bì' AND t.created_at >= DATE_SUB(CURDATE(), INTERVAL $d DAY) $noSample"
     );
     return (float) ($pr['q'] ?? 0) + (float) ($sr['q'] ?? 0);
 }

@@ -582,19 +582,40 @@ function py_calc_attendance($employee_id, $year, $month, $marks_map = null)
  *  sản xuất") sang finished_product_production_data (ghi lúc "Nhập thành phẩm sản xuất" — nhập kho vật lý
  *  thật) để khớp đúng số ở modal/card "Sản lượng" trên daily_dashboard — 2 nguồn từng lệch nhau vì
  *  production_receipts ghi SL lúc costing, có thể trùng/thiếu so với SL nhập kho thật. */
+/** Từ khoá nhận biết HÀNG MẪU trong tên sản phẩm. Hàng mẫu (gửi khách dùng thử) KHÔNG tính vào
+ *  sản lượng: không vào danh sách, không cộng vào tổng. VD "Siro Ổi Safe King Mẫu 100ML",
+ *  "Bột Sữa Royal VAT mẫu 100gr", "Lục Trà Hoa Nhài Mẫu 100Gr". */
+function py_sample_keyword() { return 'mẫu'; }
+
+/** Điều kiện SQL loại hàng mẫu. Xét CẢ product_name lẫn common_product_name (tên thường gọi) vì
+ *  chỗ hiển thị dùng COALESCE(common, name) — hễ một trong hai có chữ "mẫu" là loại.
+ *  COALESCE(...,'') bắt buộc: LEFT JOIN không khớp sẽ cho NULL, mà `NULL NOT LIKE` ra NULL nên
+ *  dòng đó bị loại oan. LOWER() để không phân biệt hoa/thường ("Mẫu", "mẫu", "MẪU"). */
+function py_exclude_sample_sql($alias = 'p')
+{
+    $kw = escape_string(py_sample_keyword());
+    return " AND LOWER(COALESCE($alias.product_name, '')) NOT LIKE '%$kw%'"
+         . " AND LOWER(COALESCE($alias.common_product_name, '')) NOT LIKE '%$kw%'";
+}
+
 function py_calc_output_qty($year, $month, $only_new = false)
 {
     $y = (int) $year;
     $m = (int) $month;
-    $join_new = $only_new ? "INNER JOIN products p ON p.id = t.product_id AND p.is_new_product = 1" : "";
+    // Luôn JOIN products để lọc hàng mẫu. LEFT JOIN (không phải INNER) để dòng sản xuất nào không
+    // tra được sản phẩm vẫn được tính như trước, tránh làm tụt sản lượng ngoài ý muốn.
+    $join_new = $only_new
+        ? "INNER JOIN products p ON p.id = t.product_id AND p.is_new_product = 1"
+        : "LEFT JOIN products p ON p.id = t.product_id";
+    $no_sample = py_exclude_sample_sql('p');
 
     $pr = db_fetch_row(
         "SELECT COALESCE(SUM(t.quantity), 0) AS q FROM finished_product_production_data t $join_new
-         WHERE YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m"
+         WHERE YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m $no_sample"
     );
     $sr = db_fetch_row(
         "SELECT COALESCE(SUM(t.quantity), 0) AS q FROM sales_returns t $join_new
-         WHERE t.handling_method = 'Thay bao bì' AND YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m"
+         WHERE t.handling_method = 'Thay bao bì' AND YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m $no_sample"
     );
     return (float) ($pr['q'] ?? 0) + (float) ($sr['q'] ?? 0);
 }
@@ -613,19 +634,22 @@ function py_calc_u($i)
 }
 
 /** Sản lượng tháng, chi tiết theo từng sản phẩm (finished_product_production_data + sales_returns
- *  "Thay bao bì"). $only_new lọc riêng sản phẩm mới. Mirror nguồn với py_calc_output_qty(). */
+ *  "Thay bao bì"). $only_new lọc riêng sản phẩm mới. Mirror nguồn VÀ luật loại hàng mẫu với
+ *  py_calc_output_qty() — 2 hàm này phải luôn cùng luật, nếu không tổng ở thẻ sẽ lệch danh sách
+ *  trong modal. */
 function py_calc_output_by_product($year, $month, $only_new = false)
 {
     $y = (int) $year;
     $m = (int) $month;
-    $new_cond = $only_new ? "AND p.is_new_product = 1" : "";
+    $new_cond  = $only_new ? "AND p.is_new_product = 1" : "";
+    $no_sample = py_exclude_sample_sql('p');
 
     $rows = db_fetch_array(
         "SELECT p.id AS product_id, p.product_name, p.common_product_name,
                 COALESCE(SUM(t.quantity), 0) AS qty
          FROM finished_product_production_data t
          INNER JOIN products p ON p.id = t.product_id
-         WHERE YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m $new_cond
+         WHERE YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m $new_cond $no_sample
          GROUP BY p.id, p.product_name, p.common_product_name"
     ) ?: [];
     $return_rows = db_fetch_array(
@@ -633,7 +657,7 @@ function py_calc_output_by_product($year, $month, $only_new = false)
                 COALESCE(SUM(t.quantity), 0) AS qty
          FROM sales_returns t
          INNER JOIN products p ON p.id = t.product_id
-         WHERE t.handling_method = 'Thay bao bì' AND YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m $new_cond
+         WHERE t.handling_method = 'Thay bao bì' AND YEAR(t.created_at) = $y AND MONTH(t.created_at) = $m $new_cond $no_sample
          GROUP BY p.id, p.product_name, p.common_product_name"
     ) ?: [];
 
