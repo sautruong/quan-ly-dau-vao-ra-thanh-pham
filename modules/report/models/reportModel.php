@@ -1810,6 +1810,103 @@ function rp_dd_total_cong($year, $month)
     return $total;
 }
 
+/**
+ * Tổng công của CỬA SỔ $days ngày gần nhất (tính cả hôm nay).
+ *
+ * Bản theo tháng ở trên chỉ chạy được cho 1 (năm, tháng) vì py_month_days/py_timesheet_marks
+ * đều nhận (y, m). Cửa sổ 30/60/90 ngày VẮT QUA nhiều tháng, nên phải đi từng tháng mà cửa sổ
+ * chạm tới rồi chỉ cộng những ngày NẰM TRONG cửa sổ — cộng trọn tháng là đội công lên rất nhiều.
+ *
+ * Giữ nguyên quy ước của bản theo tháng: chỉ tính nhân viên (job_title 'nhan_vien'), chỉ ngày đã
+ * qua hoặc hôm nay, 'x' = 1 công, 'half' = 0.5 công.
+ */
+function rp_dd_total_cong_last_days($days)
+{
+    if (!function_exists('py_employees_for_branch') || !function_exists('py_normalize_job_title')
+        || !function_exists('py_month_days') || !function_exists('py_timesheet_marks')
+        || !function_exists('py_calc_effective_mark')) return 0.0;
+
+    $n = (int) $days;
+    if ($n <= 0) return 0.0;
+
+    $employees = py_employees_for_branch();
+    $ids = [];
+    foreach ($employees as $e) {
+        if (py_normalize_job_title($e['job_title'] ?? '') === 'nhan_vien') $ids[] = (int) $e['id'];
+    }
+    if (!$ids) return 0.0;
+
+    // Cửa sổ [from, today] — cùng quy ước "N ngày gần nhất" của rp_dd_output_qty_last_days.
+    $today = date('Y-m-d');
+    $from  = date('Y-m-d', strtotime('-' . ($n - 1) . ' day'));
+
+    // Các (năm, tháng) mà cửa sổ chạm tới.
+    $months = [];
+    $cur = strtotime(date('Y-m-01', strtotime($from)));
+    $end = strtotime(date('Y-m-01', strtotime($today)));
+    while ($cur <= $end) {
+        $months[] = [(int) date('Y', $cur), (int) date('n', $cur)];
+        $cur = strtotime('+1 month', $cur);
+    }
+
+    $total = 0.0;
+    foreach ($months as [$y, $m]) {
+        $mdays = array_filter(py_month_days($y, $m), function ($d) use ($from, $today) {
+            if (!($d['is_past'] || $d['is_today'])) return false;
+            return $d['date'] >= $from && $d['date'] <= $today;   // 'Y-m-d' so chuỗi được
+        });
+        if (!$mdays) continue;
+        $marksMap = py_timesheet_marks($ids, $y, $m);
+        foreach ($ids as $eid) {
+            $empMarks = $marksMap[$eid] ?? [];
+            foreach ($mdays as $day) {
+                $stored = $empMarks[$day['date']]['mark'] ?? null;
+                $mark = py_calc_effective_mark($day['is_sunday'], $stored);
+                if ($mark === 'x') $total += 1;
+                elseif ($mark === 'half') $total += 0.5;
+            }
+        }
+    }
+    return $total;
+}
+
+/**
+ * Hiệu quả theo KỲ CHỌN ở modal (user chốt 5/8/2026: bổ sung Tháng này / 30 / 60 / 90 ngày cho
+ * giống ô "Điều tiết" bên cạnh). Dùng CHUNG danh mục kỳ với điều tiết để 2 ô không lệch nhãn.
+ *
+ * Trả cùng shape với rp_dd_efficiency() + 'period' và 'period_note' để view/JS hiện chú thích kỳ.
+ */
+function rp_dd_efficiency_period($period = 'month')
+{
+    $p       = rp_dd_regulation_period($period);   // chuẩn hoá; giá trị lạ -> 'month'
+    $periods = rp_dd_regulation_periods();
+
+    if ($p === 'month') {
+        $y = (int) date('Y');
+        $m = (int) date('n');
+        $output     = rp_dd_output_value_for_month($y, $m);
+        $total_cong = rp_dd_total_cong($y, $m);
+    } else {
+        $days       = (int) $p;
+        $output     = rp_dd_output_qty_last_days($days);
+        $total_cong = rp_dd_total_cong_last_days($days);
+    }
+
+    $avg   = $total_cong > 0 ? round($output / $total_cong) : 0.0;
+    $max   = rp_dd_get_max_output_setting();
+    $value = $max > 0 ? round($avg / $max * 10, 1) : 0.0;
+
+    return [
+        'avg_per_cong' => $avg,
+        'total_cong'   => $total_cong,
+        'max_setting'  => $max,
+        'value'        => $value,
+        'output'       => $output,
+        'period'       => $p,
+        'period_note'  => $periods[$p]['note'] ?? '',
+    ];
+}
+
 /** Hiệu quả = round(round(sản_lượng_tháng/tổng_công) / ngưỡng_cài_đặt * 10, 2). */
 function rp_dd_efficiency($current_output)
 {

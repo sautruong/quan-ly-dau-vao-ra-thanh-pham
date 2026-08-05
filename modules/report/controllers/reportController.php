@@ -465,6 +465,21 @@ function daily_dashboard_regulationAction()
     exit;
 }
 
+/**
+ * AJAX: tính lại chỉ số HIỆU QUẢ theo kỳ chọn ở modal — POST period: 'month' | '30' | '60' | '90'.
+ *
+ * KHÁC "Điều tiết": kỳ ở đây KHÔNG lưu vào app_settings và KHÔNG áp cho thẻ ngoài trang. Thẻ
+ * "Hiệu quả" ngoài trang luôn là tháng này — đổi kỳ chỉ để xem thử trong modal, tránh việc một
+ * người mở modal chọn 90 ngày rồi cả nhà máy thấy con số khác mà không biết vì sao.
+ */
+function daily_dashboard_efficiencyAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $period = (string) ($_POST['period'] ?? 'month');
+    echo json_encode(['success' => true, 'data' => rp_dd_efficiency_period($period)], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 /** AJAX: lưu cài đặt "Hiệu quả" (ngưỡng sản lượng tối đa/công + danh sách sản phẩm chủ lực). */
 function daily_dashboard_save_settingsAction()
 {

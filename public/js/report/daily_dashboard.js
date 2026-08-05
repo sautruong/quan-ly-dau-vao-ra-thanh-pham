@@ -1723,6 +1723,62 @@
         });
     }
 
+    /* Kỳ tính của modal HIỆU QUẢ (bổ sung 5/8/2026) — cùng bộ nút với Điều tiết.
+       KHÁC Điều tiết ở 2 điểm, cố ý:
+         · KHÔNG áp ra thẻ ngoài trang (thẻ "Hiệu quả" luôn là tháng này);
+         · KHÔNG lưu app_settings — người này xem 90 ngày không làm người khác thấy số lạ. */
+    var effPeriodCache = {};
+    var effPeriodBusy = false;
+
+    function renderEfficiency(d) {
+        if (!d) return;
+        var set = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+        set('dd2-eff-period-note', d.period_note || '');
+        set('dd2-eff-output', fmtNum(d.output));
+        set('dd2-eff-o2',     fmtNum(d.output));
+        set('dd2-eff-cong',   fmtNum(d.total_cong));
+        set('dd2-eff-c2',     fmtNum(d.total_cong));
+        set('dd2-eff-avg',    fmtNum(d.avg_per_cong));
+        set('dd2-eff-a2',     fmtNum(d.avg_per_cong));
+        set('dd2-eff-max',    fmtNum(d.max_setting));
+        set('dd2-eff-m2',     fmtNum(d.max_setting));
+        set('dd2-eff-val',    (Number(d.value) || 0).toFixed(2));
+    }
+
+    function selectEfficiencyPeriod(period) {
+        var group = document.getElementById('dd2-eff-period-group');
+        if (!group || effPeriodBusy) return;
+        group.querySelectorAll('[data-dd2-eff-period]').forEach(function (b) {
+            b.classList.toggle('active', b.getAttribute('data-dd2-eff-period') === period);
+        });
+        if (effPeriodCache[period]) { renderEfficiency(effPeriodCache[period]); return; }
+
+        var vEl = document.getElementById('dd2-eff-val');
+        if (vEl) vEl.textContent = '...';
+        effPeriodBusy = true;
+        postForm('daily_dashboard_efficiency', { period: period }).then(function (res) {
+            effPeriodBusy = false;
+            if (res && res.success && res.data) {
+                effPeriodCache[period] = res.data;
+                renderEfficiency(res.data);
+            } else if (vEl) {
+                vEl.textContent = '—';
+            }
+        }).catch(function () {
+            effPeriodBusy = false;
+            if (vEl) vEl.textContent = '—';
+        });
+    }
+
+    function wireEfficiencyPeriods() {
+        var group = document.getElementById('dd2-eff-period-group');
+        if (!group) return;
+        group.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-dd2-eff-period]');
+            if (btn) selectEfficiencyPeriod(btn.getAttribute('data-dd2-eff-period'));
+        });
+    }
+
     /* ---------------- Modal: nhân sự vắng hôm nay (nội dung đã render sẵn ở PHP view, chỉ toggle hiện/ẩn) ---------------- */
     var attendanceModal = document.getElementById('dd2-attendance-modal');
     function openAttendanceModal() { if (attendanceModal) { attendanceModal.classList.add('is-open'); attendanceModal.setAttribute('aria-hidden', 'false'); } }
@@ -2038,6 +2094,7 @@
         if (regulationValueEl) regulationValueEl.addEventListener('click', openRegulationModal);
         document.querySelectorAll('[data-dd2-regulation-close]').forEach(function (el) { el.addEventListener('click', closeRegulationModal); });
         wireRegulationPeriods();
+        wireEfficiencyPeriods();
 
         // Chấm công: click khối "Vắng" ở đầu trang xem danh sách đầy đủ
         var attendanceBtn = document.getElementById('dd2-attendance-btn');

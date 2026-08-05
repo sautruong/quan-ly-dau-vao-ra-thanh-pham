@@ -676,12 +676,28 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                 <button type="button" class="app-modal-close" data-dd2-efficiency-close aria-label="Đóng">&times;</button>
             </div>
             <div class="app-modal-body">
+                <?php /*
+                  Kỳ tính (bổ sung 5/8/2026, user chốt: "giống với điều tiết bên cạnh").
+                  Dùng CHUNG rp_dd_regulation_periods() để 2 ô không bao giờ lệch nhãn/kỳ.
+                  Khác điều tiết: kỳ ở đây KHÔNG lưu và KHÔNG áp cho thẻ ngoài trang — xem chú
+                  thích ở daily_dashboard_efficiencyAction.
+                */ ?>
+                <div class="dd2-toggle-group" id="dd2-eff-period-group">
+                    <?php foreach (rp_dd_regulation_periods() as $pKey => $pInfo):
+                        // Ép chuỗi 2 vế: khoá '30'/'60'/'90' bị PHP chuyển thành int, so sánh
+                        // nghiêm ngặt với chuỗi sẽ luôn sai (đúng bẫy đã dính ở modal điều tiết).
+                        $pActive = (string) $pKey === 'month';
+                    ?>
+                        <button type="button" class="dd2-toggle-btn<?php echo $pActive ? ' active' : ''; ?>" data-dd2-eff-period="<?php echo dd2_esc($pKey); ?>"><?php echo dd2_esc($pInfo['label']); ?></button>
+                    <?php endforeach; ?>
+                </div>
+                <p class="dd2-form-hint">Kỳ tính: <span id="dd2-eff-period-note">tháng này (đến hôm nay)</span> — đổi kỳ chỉ xem trong bảng này, thẻ “Hiệu quả” ngoài trang vẫn tính theo tháng.</p>
                 <ul class="dd2-explain-list">
-                    <li>Sản lượng tháng (đến hiện tại): <b><?php echo dd2_num($d_output['current']); ?></b></li>
-                    <li>Tổng công đã chấm trong tháng: <b><?php echo dd2_num($eff['total_cong']); ?></b></li>
-                    <li>→ Sản lượng bình quân / công = làm tròn(<?php echo dd2_num($d_output['current']); ?> ÷ <?php echo dd2_num($eff['total_cong']); ?>) = <b><?php echo dd2_num($eff['avg_per_cong']); ?></b></li>
-                    <li>Ngưỡng cài đặt (sản lượng tối đa 1 ngày / 1 công): <b><?php echo dd2_num($eff['max_setting']); ?></b></li>
-                    <li>→ Hiệu quả = làm tròn(<?php echo dd2_num($eff['avg_per_cong']); ?> ÷ <?php echo dd2_num($eff['max_setting']); ?> × 10, 2) = <b><?php echo number_format((float) $eff['value'], 2); ?></b></li>
+                    <li>Sản lượng trong kỳ: <b id="dd2-eff-output"><?php echo dd2_num($d_output['current']); ?></b></li>
+                    <li>Tổng công đã chấm trong kỳ: <b id="dd2-eff-cong"><?php echo dd2_num($eff['total_cong']); ?></b></li>
+                    <li>→ Sản lượng bình quân / công = làm tròn(<span id="dd2-eff-o2"><?php echo dd2_num($d_output['current']); ?></span> ÷ <span id="dd2-eff-c2"><?php echo dd2_num($eff['total_cong']); ?></span>) = <b id="dd2-eff-avg"><?php echo dd2_num($eff['avg_per_cong']); ?></b></li>
+                    <li>Ngưỡng cài đặt (sản lượng tối đa 1 ngày / 1 công): <b id="dd2-eff-max"><?php echo dd2_num($eff['max_setting']); ?></b></li>
+                    <li>→ Hiệu quả = làm tròn(<span id="dd2-eff-a2"><?php echo dd2_num($eff['avg_per_cong']); ?></span> ÷ <span id="dd2-eff-m2"><?php echo dd2_num($eff['max_setting']); ?></span> × 10, 2) = <b id="dd2-eff-val"><?php echo number_format((float) $eff['value'], 2); ?></b></li>
                 </ul>
             </div>
         </div>

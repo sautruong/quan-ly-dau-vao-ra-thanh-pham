@@ -107,7 +107,13 @@ function remove_day_productAction()
     }
     if ($date === '') $date = date('Y-m-d');
 
-    echo json_encode(im_remove_day_product($pid, $date), JSON_UNESCAPED_UNICODE);
+    $res_rdp = im_remove_day_product($pid, $date);
+    // Gỡ 1 sản phẩm khỏi ngày → giá vốn của ngày đó phải dựng lại (bớt đi sản phẩm này).
+    // Chỉ chạy cho nguồn 'dashboard'; bên investment_products người dùng đang thao tác tay.
+    if ($source === 'dashboard') {
+        iac_after_production_change('fg_receipt_production', [$date]);
+    }
+    echo json_encode($res_rdp, JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -196,12 +202,41 @@ function record_stockAction()
         je_insert_pairs('other_receipt', $first_si_id, je_entries_from_payload([], $resolved), $ca);
     }
 
+    // GHI GIÁ VỐN TỰ ĐỘNG (YC3, 5/8/2026) — chỉ với luồng sản lượng, và chỉ khi admin đã bật.
+    // Đặt SAU khi đã ghi xong sản lượng: hàm dựng lại giá vốn từ chính sản lượng vừa ghi.
+    iac_after_production_change($type_import, [$created_at]);
+
     echo json_encode([
         'success' => true,
         'count'   => $count,
         'history' => im_get_recent_batches(im_history_limit($type_import), $type_import),
     ]);
     exit;
+}
+
+/**
+ * Móc GHI GIÁ VỐN TỰ ĐỘNG cho các đường ghi/sửa/xoá của view "Nhập sản lượng sản xuất".
+ *
+ * Gom vào một chỗ để 3 đường (ghi / sửa / xoá) không lệch nhau. Thoát sớm khi:
+ *   · không phải luồng sản lượng (other_receipt, hàng bán trả lại… có luồng giá vốn riêng)
+ *   · admin chưa bật tự động → nút "Ghi" bên investment_products vẫn dùng tay như cũ
+ *
+ * $dates nhận NHIỀU ngày vì sửa phiếu có thể DỜI sang ngày khác: phải tính lại cả ngày cũ lẫn
+ * ngày mới, nếu không giá vốn ngày cũ còn trỏ vào sản lượng đã chuyển đi.
+ */
+function iac_after_production_change($type_import, array $dates)
+{
+    if (im_normalize_type_import($type_import) !== 'fg_receipt_production') return;
+    require_once __DIR__ . '/../../../libraries/investment_auto_cost.php';
+    if (!iac_is_on()) return;
+
+    // Ngày rỗng = hôm nay (đúng quy ước của im_record_import khi created_at không được gửi).
+    $norm = [];
+    foreach ($dates as $d) {
+        $d = trim((string) $d);
+        $norm[] = ($d === '') ? date('Y-m-d') : $d;
+    }
+    iac_sync_dates($norm);
 }
 
 /**
@@ -287,6 +322,23 @@ function edit_batch_stockAction()
 
     $count       = 0;
     $import_ids  = [];
+
+    // NGÀY CŨ của các dòng sắp sửa — phải đọc TRƯỚC vòng lặp, vì im_update_import_item() cho
+    // phép dời created_at sang ngày khác; đọc sau thì chỉ còn thấy ngày mới và giá vốn của ngày
+    // cũ nằm lại mồ côi (YC3, 5/8/2026).
+    $old_dates = [];
+    $iid_list  = [];
+    foreach ($items as $it) {
+        $iid = (int) ($it['import_id'] ?? 0);
+        if ($iid > 0) $iid_list[] = $iid;
+    }
+    if ($iid_list) {
+        $rows_old = db_fetch_array(
+            "SELECT DISTINCT DATE(created_at) AS d FROM stock_imports WHERE id IN (" . implode(',', $iid_list) . ")"
+        ) ?: [];
+        foreach ($rows_old as $ro) $old_dates[] = (string) $ro['d'];
+    }
+
     foreach ($items as $it) {
         $iid    = (int) ($it['import_id'] ?? 0);
         $pid    = (int) ($it['product_id'] ?? 0);
@@ -318,6 +370,9 @@ function edit_batch_stockAction()
         ];
         im_sync_other_receipt_transactions($import_ids, $ca, $je);
     }
+
+    // Tính lại giá vốn cho CẢ ngày cũ lẫn ngày mới (sửa có thể dời ngày).
+    iac_after_production_change($scope ?: 'fg_receipt_production', array_merge($old_dates, [$created_at]));
 
     echo json_encode([
         'success' => true,
@@ -355,11 +410,77 @@ function delete_batch_stockAction()
     }
 
     $removed = im_delete_batch($group_key, $scope);
+    // Xoá cả phiếu sản lượng → dựng lại giá vốn của ngày đó từ phần sản lượng CÒN LẠI
+    // (ngày có thể còn phiếu khác). Không còn gì thì iac_sync_date chỉ xoá batch giá vốn cũ.
+    iac_after_production_change($scope ?: 'fg_receipt_production', [$group_key]);
+
     echo json_encode([
         'success' => true,
         'removed' => $removed,
         'history' => im_get_recent_batches(im_history_limit($scope), $scope),
     ]);
+    exit;
+}
+
+/* =====================================================================================
+ *  CÀI ĐẶT GHI GIÁ VỐN TỰ ĐỘNG (nút "Cài đặt" cạnh trái "Lịch sử" ở investment_products)
+ * ===================================================================================== */
+
+/** JSON: cấu hình hiện tại + số SP chưa khai công thức (để admin thấy ngay khi mở modal). */
+function investment_auto_cost_configAction()
+{
+    permission_require_admin(true);
+    require_once __DIR__ . '/../../../libraries/investment_auto_cost.php';
+    iac_ensure_tables();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $no_bom = db_fetch_array(
+        "SELECT p.id, p.product_name
+           FROM products p
+           LEFT JOIN product_materials pm ON pm.product_id = p.id AND pm.material_id > 0
+          GROUP BY p.id, p.product_name
+         HAVING COUNT(pm.id) = 0
+          ORDER BY p.product_name ASC
+          LIMIT 50"
+    ) ?: [];
+
+    echo json_encode([
+        'ok'     => true,
+        'config' => iac_config(),
+        'no_bom' => array_map(static fn($r) => (string) $r['product_name'], $no_bom),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: lưu cấu hình. Bật lên thì đồng bộ luôn giá vốn của ngày đang xem cho khỏi phải chờ. */
+function investment_auto_cost_saveAction()
+{
+    permission_require_admin(true);
+    require_once __DIR__ . '/../../../libraries/investment_auto_cost.php';
+    header('Content-Type: application/json; charset=utf-8');
+
+    $me  = permission_current_user();
+    $uid = $me ? (int) $me['id'] : 0;
+
+    $res = iac_save([
+        'is_active'   => !empty($_POST['is_active']),
+        'warn_no_bom' => !empty($_POST['warn_no_bom']),
+    ], $uid);
+
+    if (empty($res['ok'])) {
+        echo json_encode(['ok' => false, 'message' => $res['error']], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // Vừa BẬT + có chỉ định ngày → dựng lại giá vốn ngày đó ngay, để admin thấy kết quả liền
+    // thay vì phải đợi lần ghi sản lượng kế tiếp.
+    $synced = null;
+    if (!empty($_POST['is_active']) && !empty($_POST['sync_date'])) {
+        $r = iac_sync_date($_POST['sync_date'], $uid);
+        $synced = (int) ($r['items'] ?? 0);
+    }
+
+    echo json_encode(['ok' => true, 'config' => iac_config(), 'synced' => $synced], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
