@@ -12,6 +12,15 @@
         document.documentElement.classList.add('dd2-capturing');
     }
 
+    /*
+      TRANG NÀY ĐANG ĐƯỢC MỞ ĐỂ CHỤP (không phải để người xem).
+      ?auto_send=<id> : luồng gửi báo cáo tự động — tab thường chạy NỀN.
+      ?dd2frame=1     : bản nạp trong iframe khung cứng 1920x950.
+      Cả hai đều là môi trường requestAnimationFrame KHÔNG đáng tin, nên chart phải vẽ đồng bộ.
+      Xem ghi chú dài ở options của renderOutputChart.
+    */
+    var IS_CAPTURE_PAGE = /[?&](auto_send|dd2frame)=/.test(location.search);
+
     var CFG = window.REPORT_CFG || { baseUrl: '?mod=report&controllers=report&action=' };
     var INITIAL = window.DD2_INITIAL || { output: { months: [] }, exports: { series: { months: [], current: 0 } }, production_day: { date: '', rows: [] } };
     var currentCustomerId = 0;
@@ -1108,6 +1117,22 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 resizeDelay: 100,
+                /*
+                  TẮT ANIMATION Ở TRANG CHỤP (vá 6/8/2026 — biểu đồ cột TRẮNG TRƠN trong ảnh).
+                  ------------------------------------------------------------------------------
+                  GỐC RỄ: Chart.js 4.4.4 chỉ vẽ ĐỒNG BỘ khi hàng đợi animation RỖNG:
+                      render(){ ... bt.has(this) ? bt.start(this) : (this.draw(), ...) }
+                  Hàng đợi chỉ được rút trong Animator._update(), mà _update chạy bằng
+                  requestAnimationFrame. Trang chụp luôn ở TAB NỀN (auto_report_poller điều hướng
+                  tới) hoặc trong iframe -> rAF bị treo -> animation sinh ra ngay lúc new Chart()
+                  KHÔNG BAO GIỜ cạn -> bt.has() true VĨNH VIỄN -> mọi update('none') sau đó chỉ
+                  gọi bt.start() chứ KHÔNG vẽ, và resize() cũng bị hoãn vào _resizeBeforeDraw.
+                  Canvas nằm trắng, html2canvas chép đúng cái trắng đó.
+                  Biểu đồ "Xuất kho" không dính vì nó có sẵn animation:false (xem renderExportChart)
+                  -> đó chính là lý do CHỈ MỘT trong hai chart bị trắng.
+                  Chỉ tắt ở trang chụp, trang xem bình thường vẫn giữ nguyên hiệu ứng.
+                */
+                animation: IS_CAPTURE_PAGE ? false : Chart.defaults.animation,
                 // Chừa chỗ phía trên cho badge giá trị cột max (vẽ tay, cao ~40px kể cả đuôi tam
                 // giác) — không có khoảng này, cột cao gần sát đỉnh canvas sẽ làm badge bị cắt/ẩn
                 // mất phần trên do vẽ ra ngoài vùng canvas.
@@ -2466,7 +2491,18 @@
     async function resizeChartsForCapture() {
         Object.keys(charts).forEach(function (k) {
             var c = charts[k];
-            if (c && typeof c.resize === 'function') { c.resize(); c.update('none'); }
+            if (!c || typeof c.resize !== 'function') return;
+            /*
+              stop() TRƯỚC — đây mới là thứ gỡ được kẹt (vá 6/8/2026).
+              Chart.js 4.4.4: chart.stop() -> Animator.stop() -> cancel toàn bộ item rồi items=[].
+              Sau đó bt.has() = false, nên render() (được update() gọi ở cuối) rơi vào nhánh
+              this.draw() ĐỒNG BỘ thay vì lại giao cho requestAnimationFrame.
+              Không có stop() thì ở tab nền/iframe, resize() chỉ ghi vào _resizeBeforeDraw và
+              update('none') chỉ gọi bt.start() — cả hai đều KHÔNG vẽ, ép mấy lượt cũng vô ích.
+            */
+            if (typeof c.stop === 'function') c.stop();
+            c.resize();
+            c.update('none');
         });
         await waitMs(250);
     }
@@ -2488,8 +2524,10 @@
     /** Bảo đảm biểu đồ ĐÃ VẼ trước khi chụp.
      *  Chart.js vẽ qua requestAnimationFrame, mà trình duyệt TREO rAF ở tab nền — luồng GỬI TỰ ĐỘNG
      *  điều hướng sang dashboard rồi chụp, nếu tab đang chạy nền thì canvas còn trắng và ảnh gửi đi
-     *  bị MẤT biểu đồ. update('none') (không animation) khiến Chart.js gọi draw() ĐỒNG BỘ, không
-     *  phụ thuộc rAF -> vẽ được cả khi tab bị treo. */
+     *  bị MẤT biểu đồ.
+     *  ĐÍNH CHÍNH 6/8/2026: update('none') MỘT MÌNH KHÔNG vẽ đồng bộ. Chart.js 4.4.4 chỉ gọi
+     *  this.draw() ngay khi hàng đợi animation RỖNG (render(): bt.has(this) ? bt.start(this) :
+     *  this.draw()). Phải chart.stop() trước để dọn hàng đợi — resizeChartsForCapture() lo việc đó. */
     async function ensureChartsDrawn() {
         for (var attempt = 0; attempt < 3; attempt++) {
             var blank = [];
@@ -2602,7 +2640,11 @@
                         fdoc.querySelectorAll('canvas').forEach(function (cv) {
                             var ch = FW.Chart.getChart(cv);
                             if (!ch) return;
-                            // update('none') -> Chart.js gọi draw() ĐỒNG BỘ (không qua rAF).
+                            // stop() TRƯỚC rồi mới update('none') — chỉ khi hàng đợi animation RỖNG
+                            // thì Chart.js mới vẽ đồng bộ; xem ghi chú ở resizeChartsForCapture().
+                            // (Ghi chú cũ ở đây SAI: update('none') một mình KHÔNG vẽ đồng bộ nếu
+                            // animator còn giữ chart, và trong iframe/tab nền thì nó giữ mãi mãi.)
+                            if (typeof ch.stop === 'function') ch.stop();
                             ch.resize();
                             ch.update('none');
                             if (isCanvasBlank(cv)) chuaVe = true;
@@ -2647,8 +2689,11 @@
                       forceDesktopLayout() đổi bề rộng viewport. Đổi bề rộng làm Chart.js resize
                       -> canvas bị đặt lại width/height (thao tác này XOÁ TRẮNG canvas) rồi vẽ lại
                       qua rAF — mà tab đang chạy NỀN thì rAF bị treo, canvas nằm trắng luôn.
-                      Kết quả kiểm lúc đầu vì thế đã cũ. ensureChartsDrawn() lặp tối đa 3 lượt,
-                      mỗi lượt update('none') để Chart.js vẽ ĐỒNG BỘ, không phụ thuộc rAF.
+                      Kết quả kiểm lúc đầu vì thế đã cũ. ensureChartsDrawn() lặp tối đa 3 lượt.
+                      6/8/2026: bản vá 5/8 KHÔNG đủ — mỗi lượt chỉ update('none') mà không stop()
+                      trước thì animator vẫn giữ chart nên Chart.js không hề vẽ. Nay
+                      resizeChartsForCapture() gọi stop() trước, và chart cột cũng tắt hẳn
+                      animation ở trang chụp (IS_CAPTURE_PAGE).
                     */
                     await ensureChartsDrawn();
                     onStatus('Đang dựng ảnh…');
