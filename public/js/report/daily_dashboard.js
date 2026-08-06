@@ -1,6 +1,17 @@
 (function () {
     'use strict';
 
+    /*
+      TRANG ĐANG CHẠY TRONG KHUNG CHỤP (iframe 1920x950, xem captureViaFrame).
+      Gắn .dd2-capturing NGAY từ đầu để trang trong khung dùng ĐÚNG bố cục lúc chụp — quan trọng
+      nhất là bỏ 352px chừa chỗ sidebar (sidebar position:fixed, không có trong ảnh). Không có
+      dòng này thì nhánh iframe vẫn ra .dd2-content 1558px y như trước khi vá.
+      Đặt ở ĐẦU file, trước mọi lần dựng chart, để Chart.js đo đúng bề rộng cuối cùng ngay lượt đầu.
+    */
+    if (/[?&]dd2frame=1/.test(location.search)) {
+        document.documentElement.classList.add('dd2-capturing');
+    }
+
     var CFG = window.REPORT_CFG || { baseUrl: '?mod=report&controllers=report&action=' };
     var INITIAL = window.DD2_INITIAL || { output: { months: [] }, exports: { series: { months: [], current: 0 } }, production_day: { date: '', rows: [] } };
     var currentCustomerId = 0;
@@ -1078,7 +1089,17 @@
                         backgroundColor: barColors,
                         borderRadius: 20,
                         borderSkipped: false,
-                        barThickness: 39,
+                        /*
+                          maxBarThickness thay cho barThickness (vá 6/8/2026).
+                          barThickness: 39 là PX CỨNG cho 8 cột = 312px bề rộng cột thuần. Khi vùng
+                          vẽ hẹp hơn ~345px, Chart.js vẫn giữ 39px nên cột đầu/cuối THÒ RA khỏi
+                          chartArea và bị mép canvas + .dd2-chart-box{overflow:hidden} xén — đúng
+                          triệu chứng "cột cuối mất một nửa".
+                          maxBarThickness = trần: rộng thì vẫn 39px như cũ, hẹp thì tự co lại vừa ô.
+                        */
+                        maxBarThickness: 39,
+                        categoryPercentage: 0.9,
+                        barPercentage: 0.9,
                         order: 2
                     }
                 ]
@@ -2249,10 +2270,25 @@
                 var b = clonedDoc.getElementById('dd2-capture-btn');
                 if (b) b.disabled = false;
 
+                /*
+                  PHẢI GỠ CẢ max-height, không chỉ height (vá 6/8/2026 — user báo "background xám
+                  nhẹ dashboard không phủ hết xuống dưới").
+                  Lúc chụp, CSS đặt html/body/#wrapper { height:950px; max-height:950px }. Trước đây
+                  onclone chỉ đặt style.height='auto' — mà `max-height` vẫn còn 950px nên khung clone
+                  bị KẸP ở 950px, trong khi vùng chụp cao tới offsetHeight + overflowH + pcExtra.
+                  Phần dư đó nằm NGOÀI hộp .dd2-content nên không được tô nền #eff1f3f0 -> đáy ảnh
+                  trắng trơn. Gỡ max-height thì hộp nở đúng chiều cao thật và nền phủ trọn.
+                */
+                [clonedDoc.documentElement, clonedDoc.body].forEach(function (el) {
+                    if (!el) return;
+                    el.style.height = 'auto';
+                    el.style.maxHeight = 'none';
+                    el.style.overflow = 'visible';
+                });
                 var cw = clonedDoc.getElementById('wrapper');
-                if (cw) { cw.style.height = 'auto'; cw.style.overflow = 'visible'; }
+                if (cw) { cw.style.height = 'auto'; cw.style.maxHeight = 'none'; cw.style.overflow = 'visible'; }
                 var cc = clonedDoc.querySelector('.dd2-content');
-                if (cc) { cc.style.height = 'auto'; cc.style.overflow = 'visible'; }
+                if (cc) { cc.style.height = 'auto'; cc.style.maxHeight = 'none'; cc.style.overflow = 'visible'; }
                 var cm = clonedDoc.querySelector('.dd2-main');
                 if (cm) {
                     cm.style.height = 'auto';

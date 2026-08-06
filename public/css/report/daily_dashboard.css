@@ -2851,6 +2851,40 @@ html.dd2-capturing #wrapper {
     overflow: hidden;
 }
 
+/* =====================================================================
+   TRA LAI 352px CHO VUNG NOI DUNG KHI CHUP (va 6/8/2026)
+   ---------------------------------------------------------------------
+   GOC RE cua gan het loi "anh chup bi chat / tran / cat":
+   app_shell.css:73-76 dat `body.app-has-sidebar #wrapper { padding-left:
+   calc(328px + 24px) !important }` de chua cho .app-sidebar. Nhung sidebar la
+   position:fixed va vung chup la `.dd2-content` -> SIDEBAR KHONG HE CO TRONG ANH,
+   ma cho trong cua no VAN bi chua.
+   Hau qua do duoc: khung chup 1920 nhung .dd2-content chi con
+        1920 - 352 (sidebar) - 10 (padding-right global.css) = 1558px
+   (khop chinh xac anh that: 3308/2 - 96 le = 1558). Bo cuc von tune cho
+   1600-1920 nen o 1558 thi: so tien tran khoi the, ten NCC bi an, cot cuoi bieu do
+   bi xen, chan khoi lech phai...
+   ---------------------------------------------------------------------
+   Dat o DAY (khong phai trong onclone) de CHINH TRANG SONG cung rong ra ->
+   Chart.js resize theo dung be rong that truoc khi chup, khoi canh canvas mot cо
+   con the mot cо.
+   Do dac hon rule co !important cua app_shell nen thang duoc du nap truoc hay sau.
+   ===================================================================== */
+html.dd2-capturing body.app-has-sidebar #wrapper,
+html.dd2-capturing body.app-has-sidebar.app-sidebar-collapsed #wrapper {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    /* app_shell.css:75 co transition padding-left .22s — do ngay se trung be rong
+       giua chung animation, canvas lay cо sai. Tat han trong luc chup. */
+    transition: none !important;
+}
+
+/* Sidebar + hieu ung cua no khong duoc anh huong toi bo cuc anh. */
+html.dd2-capturing .app-sidebar {
+    display: none !important;
+    transition: none !important;
+}
+
 /* Modal chụp (chỉ mobile) */
 .dd2-capture-box {
     width: 560px;
