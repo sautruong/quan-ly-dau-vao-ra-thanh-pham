@@ -21,6 +21,16 @@
     */
     var IS_CAPTURE_PAGE = /[?&](auto_send|dd2frame)=/.test(location.search);
 
+    /*
+      Tắt animation TOÀN CỤC trên trang chụp — lưới an toàn cho MỌI biểu đồ thêm về sau.
+      Hiện chỉ chart cột được miễn dịch bằng tay ở renderOutputChart; chart nào thêm sau này mà
+      quên khai `animation` sẽ dính lại đúng cái bẫy bt.has() (canvas trắng ở tab nền).
+      Chỉ chạm Chart.defaults khi ĐANG chụp, nên trang xem bình thường không đổi gì.
+    */
+    if (IS_CAPTURE_PAGE && window.Chart && window.Chart.defaults) {
+        window.Chart.defaults.animation = false;
+    }
+
     var CFG = window.REPORT_CFG || { baseUrl: '?mod=report&controllers=report&action=' };
     var INITIAL = window.DD2_INITIAL || { output: { months: [] }, exports: { series: { months: [], current: 0 } }, production_day: { date: '', rows: [] } };
     var currentCustomerId = 0;
@@ -2676,6 +2686,7 @@
             var truocW = layoutViewportWidth();
             var restore = forceDesktopLayout();
             var gotW = await waitDesktopViewport(truocW);
+            var veDuoc = false, b1 = null;
             if (gotW) {
                 try {
                     // #wrapper có transition padding-left 0.22s (chừa chỗ sidebar) -> chờ bố cục
@@ -2695,17 +2706,28 @@
                       resizeChartsForCapture() gọi stop() trước, và chart cột cũng tắt hẳn
                       animation ở trang chụp (IS_CAPTURE_PAGE).
                     */
-                    await ensureChartsDrawn();
-                    onStatus('Đang dựng ảnh…');
-                    // Truyền ĐÚNG bề rộng đo được, không truyền hằng số.
-                    var b1 = await buildReportBlob(CAPTURE_DESKTOP_H, gotW);
-                    return { blob: b1, forced: true, width: gotW, via: 'viewport' };
+                    veDuoc = await ensureChartsDrawn();
+                    if (veDuoc) {
+                        onStatus('Đang dựng ảnh…');
+                        // Truyền ĐÚNG bề rộng đo được, không truyền hằng số.
+                        b1 = await buildReportBlob(CAPTURE_DESKTOP_H, gotW);
+                    }
                 } finally {
                     restore();
                 }
+                if (veDuoc && b1) return { blob: b1, forced: true, width: gotW, via: 'viewport' };
+                /*
+                  ensureChartsDrawn() vốn TRẢ VỀ true/false nhưng cả 3 chỗ gọi đều vứt kết quả ->
+                  biểu đồ trắng vẫn được chụp và GỬI ĐI im lặng (đúng thứ người dùng gặp).
+                  Nay biết chắc còn trắng thì BỎ nhánh này, rơi xuống nhánh (2) iframe: đó là bản
+                  nạp trang MỚI với ?dd2frame=1 nên chart tắt animation ngay từ new Chart()
+                  (IS_CAPTURE_PAGE) — còn cơ hội cứu, hơn là chụp bừa.
+                */
+                console.warn('Biểu đồ vẫn trắng sau 3 lượt ép vẽ -> bỏ nhánh viewport, chuyển sang khung iframe');
+            } else {
+                restore();
+                console.warn('Thiết bị bỏ qua thẻ viewport (đo được ' + layoutViewportWidth() + 'px) -> chuyển sang khung iframe');
             }
-            restore();
-            console.warn('Thiết bị bỏ qua thẻ viewport (đo được ' + layoutViewportWidth() + 'px) -> chuyển sang khung iframe');
         }
 
         // (2) Iframe khung cứng
