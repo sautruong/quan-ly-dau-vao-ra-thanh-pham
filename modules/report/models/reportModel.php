@@ -1876,9 +1876,31 @@ function rp_dd_total_cong_last_days($days)
  *
  * Trả cùng shape với rp_dd_efficiency() + 'period' và 'period_note' để view/JS hiện chú thích kỳ.
  */
-function rp_dd_efficiency_period($period = 'month')
+/** Kỳ Hiệu quả đang chọn (lưu app_settings) — giống Điều tiết: chọn ở modal là ÁP CHO CẢ TRANG. */
+function rp_dd_get_efficiency_period()
 {
-    $p       = rp_dd_regulation_period($period);   // chuẩn hoá; giá trị lạ -> 'month'
+    rp_dd_ensure_tables();
+    $row = db_fetch_row("SELECT setting_value FROM app_settings WHERE setting_key = 'daily_dashboard.efficiency_period' LIMIT 1");
+    return rp_dd_regulation_period($row ? (string) $row['setting_value'] : 'month');
+}
+
+function rp_dd_save_efficiency_period($period)
+{
+    rp_dd_ensure_tables();
+    $v = escape_string(rp_dd_regulation_period($period));
+    $exists = db_num_rows("SELECT 1 FROM app_settings WHERE setting_key = 'daily_dashboard.efficiency_period'") > 0;
+    if ($exists) db_update('app_settings', ['setting_value' => $v], "setting_key = 'daily_dashboard.efficiency_period'");
+    else db_insert('app_settings', ['setting_key' => 'daily_dashboard.efficiency_period', 'setting_value' => $v]);
+    return true;
+}
+
+/**
+ * $period = null -> lấy kỳ ĐÃ LƯU (dùng khi dựng trang / ảnh chụp báo cáo).
+ * Truyền kỳ cụ thể -> tính theo kỳ đó (modal đang xem thử).
+ */
+function rp_dd_efficiency_period($period = null)
+{
+    $p       = $period === null ? rp_dd_get_efficiency_period() : rp_dd_regulation_period($period);
     $periods = rp_dd_regulation_periods();
 
     if ($p === 'month') {
@@ -2058,7 +2080,10 @@ function rp_dd_output_block()
         'months'          => $series['months'],
         'current'         => $series['current'],
         'current_label'   => strtolower(rp_dd_month_short((int) date('n'))) . ', ' . date('Y'),
-        'efficiency'      => rp_dd_efficiency($series['current']),
+        // Dùng bản CÓ KỲ (kỳ đã lưu) — user chốt 5/8/2026: đổi kỳ ở modal phải áp luôn ra thẻ
+        // ngoài trang và vào ảnh chụp báo cáo, giống hệt "Điều tiết".
+        // rp_dd_efficiency() cũ giữ nguyên cho chỗ khác còn gọi, KHÔNG xoá.
+        'efficiency'      => rp_dd_efficiency_period(null),
         'regulation'      => rp_dd_regulation(),
         'key_products'    => rp_dd_key_products(),
         'override_months' => $overrideMonths,

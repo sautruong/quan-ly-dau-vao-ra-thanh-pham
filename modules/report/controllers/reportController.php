@@ -468,14 +468,16 @@ function daily_dashboard_regulationAction()
 /**
  * AJAX: tính lại chỉ số HIỆU QUẢ theo kỳ chọn ở modal — POST period: 'month' | '30' | '60' | '90'.
  *
- * KHÁC "Điều tiết": kỳ ở đây KHÔNG lưu vào app_settings và KHÔNG áp cho thẻ ngoài trang. Thẻ
- * "Hiệu quả" ngoài trang luôn là tháng này — đổi kỳ chỉ để xem thử trong modal, tránh việc một
- * người mở modal chọn 90 ngày rồi cả nhà máy thấy con số khác mà không biết vì sao.
+ * GIỐNG "Điều tiết": chọn kỳ là ÁP DỤNG LUÔN cho thẻ "Hiệu quả" ngoài trang (và cho ảnh chụp
+ * báo cáo), nên lưu lại app_settings — trừ khi POST save=0.
+ * (Bản đầu 5/8 cố ý KHÔNG áp ra ngoài; user chốt lại ngay trong ngày là phải áp, cho đồng bộ
+ * với ô Điều tiết bên cạnh.)
  */
 function daily_dashboard_efficiencyAction()
 {
     header('Content-Type: application/json; charset=utf-8');
     $period = (string) ($_POST['period'] ?? 'month');
+    if ((string) ($_POST['save'] ?? '1') !== '0') rp_dd_save_efficiency_period($period);
     echo json_encode(['success' => true, 'data' => rp_dd_efficiency_period($period)], JSON_UNESCAPED_UNICODE);
     exit;
 }

@@ -1723,10 +1723,9 @@
         });
     }
 
-    /* Kỳ tính của modal HIỆU QUẢ (bổ sung 5/8/2026) — cùng bộ nút với Điều tiết.
-       KHÁC Điều tiết ở 2 điểm, cố ý:
-         · KHÔNG áp ra thẻ ngoài trang (thẻ "Hiệu quả" luôn là tháng này);
-         · KHÔNG lưu app_settings — người này xem 90 ngày không làm người khác thấy số lạ. */
+    /* Kỳ tính của modal HIỆU QUẢ — cùng bộ nút VÀ cùng hành vi với Điều tiết:
+       chọn kỳ là ÁP DỤNG LUÔN cho thẻ ngoài trang + lưu app_settings (tải lại vẫn giữ, ảnh chụp
+       báo cáo cũng theo kỳ này). User chốt 5/8/2026 sau khi thấy bản đầu chỉ đổi trong modal. */
     var effPeriodCache = {};
     var effPeriodBusy = false;
 
@@ -1743,6 +1742,14 @@
         set('dd2-eff-max',    fmtNum(d.max_setting));
         set('dd2-eff-m2',     fmtNum(d.max_setting));
         set('dd2-eff-val',    (Number(d.value) || 0).toFixed(2));
+
+        // ÁP RA THẺ "Hiệu quả" NGOÀI TRANG. Thẻ hiện 1 chữ số thập phân (khớp bản PHP render
+        // lúc mở trang), còn trong modal để 2 chữ số cho thấy rõ phép làm tròn.
+        var card = document.getElementById('dd2-efficiency-value');
+        if (card) {
+            card.textContent = (Number(d.value) || 0).toFixed(1);
+            card.title = 'Kỳ tính: ' + (d.period_note || '') + ' — bấm để đổi';
+        }
     }
 
     function selectEfficiencyPeriod(period) {
@@ -1773,6 +1780,11 @@
     function wireEfficiencyPeriods() {
         var group = document.getElementById('dd2-eff-period-group');
         if (!group) return;
+        // Kỳ đã lưu được PHP render sẵn (nút .active) -> nạp vào cache để bấm qua lại khỏi gọi
+        // API thừa, giống hệt wireRegulationPeriods().
+        var initial = group.querySelector('.dd2-toggle-btn.active');
+        var initialKey = initial ? initial.getAttribute('data-dd2-eff-period') : 'month';
+        if (INITIAL.output && INITIAL.output.efficiency) effPeriodCache[initialKey] = INITIAL.output.efficiency;
         group.addEventListener('click', function (e) {
             var btn = e.target.closest('[data-dd2-eff-period]');
             if (btn) selectEfficiencyPeriod(btn.getAttribute('data-dd2-eff-period'));
@@ -2592,6 +2604,17 @@
                     // đứng yên rồi mới đo, nếu không chiều cao từng hàng ghim vào clone sẽ lệch.
                     await waitMs(400);
                     await resizeChartsForCapture();
+                    /*
+                      KIỂM LẠI NGAY TRƯỚC KHI CHỤP (vá 5/8/2026 — user báo ảnh gửi tự động có số
+                      và chân khối nhưng vùng biểu đồ TRẮNG TRƠN).
+                      runAutoSend() có gọi ensureChartsDrawn(), nhưng đó là TRƯỚC khi
+                      forceDesktopLayout() đổi bề rộng viewport. Đổi bề rộng làm Chart.js resize
+                      -> canvas bị đặt lại width/height (thao tác này XOÁ TRẮNG canvas) rồi vẽ lại
+                      qua rAF — mà tab đang chạy NỀN thì rAF bị treo, canvas nằm trắng luôn.
+                      Kết quả kiểm lúc đầu vì thế đã cũ. ensureChartsDrawn() lặp tối đa 3 lượt,
+                      mỗi lượt update('none') để Chart.js vẽ ĐỒNG BỘ, không phụ thuộc rAF.
+                    */
+                    await ensureChartsDrawn();
                     onStatus('Đang dựng ảnh…');
                     // Truyền ĐÚNG bề rộng đo được, không truyền hằng số.
                     var b1 = await buildReportBlob(CAPTURE_DESKTOP_H, gotW);
@@ -2616,6 +2639,9 @@
 
         // (3) Cùng đường: chụp bố cục đang có, báo rõ thay vì trả ảnh bố cục hỏng.
         await waitMs(200);
+        // Cùng lý do với nhánh (1): đường này cũng phải tự bảo đảm biểu đồ đã vẽ, vì nó có thể
+        // chạy sau khi nhánh (1) đã đổi rồi khôi phục bố cục (mỗi lần đổi là canvas trắng lại).
+        await ensureChartsDrawn();
         onStatus('Đang dựng ảnh…');
         var b3 = await buildReportBlob();
         return { blob: b3, forced: false, width: layoutViewportWidth(), via: 'inline' };
