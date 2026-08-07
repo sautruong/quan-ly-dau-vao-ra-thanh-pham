@@ -115,10 +115,6 @@
         });
         cell.setAttribute('data-files', JSON.stringify(list));
 
-        // Tích xanh phải cập nhật ở ĐÂY nữa, không chỉ lúc PHP render lần đầu.
-        var chk = cell.querySelector('.co-inv-check');
-        if (chk) chk.classList.toggle('is-on', list.length > 0);
-
         var openBtn = cell.querySelector('.co-inv-open');
         if (openBtn) {
             openBtn.hidden = list.length === 0;

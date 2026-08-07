@@ -167,9 +167,8 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
                                     data-inv-type="<?php echo co_esc($inv_type); ?>"
                                     data-id="<?php echo (int) $r['id']; ?>"
                                     data-files="<?php echo co_esc(json_encode($canDelJson, JSON_UNESCAPED_UNICODE)); ?>">
-                                    <span class="co-inv-check<?php echo $files ? ' is-on' : ''; ?>" title="Đã có hóa đơn">
-                                        <i class="fa-solid fa-circle-check"></i>
-                                    </span>
+                                    <?php /* Không còn tích xanh ở đây: nút "Hóa đơn (N)" bên phải đã nói rõ
+                                             đơn nào đã có hóa đơn rồi, thêm dấu nữa là thừa. */ ?>
                                     <span class="co-drop" title="Bấm vào đây rồi Ctrl+V để dán ảnh, hoặc kéo tệp thả vào">
                                         <button type="button" class="co-pick" title="Chọn tệp từ máy">
                                             <i class="fa-solid fa-folder-open"></i>

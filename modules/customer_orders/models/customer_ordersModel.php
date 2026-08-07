@@ -479,7 +479,25 @@ function co_date_label($created_at)
         return ['label' => 'Hôm nay', 'date' => $date, 'cls' => 'co-d-today'];
     }
     if ($lech === 1) return ['label' => 'Hôm qua', 'date' => $date, 'cls' => 'co-d-yesterday'];
-    return ['label' => $lech . ' ngày trước', 'date' => $date, 'cls' => ''];
+    if ($lech < 7)   return ['label' => $lech . ' ngày trước', 'date' => $date, 'cls' => ''];
+
+    // Dưới 1 tháng thì đếm theo TUẦN cho dễ hình dung hơn là "23 ngày trước".
+    if ($lech < 30) {
+        $tuan = (int) floor($lech / 7);
+        return ['label' => $tuan === 1 ? 'Tuần trước' : $tuan . ' tuần trước', 'date' => $date, 'cls' => ''];
+    }
+
+    /* Từ 1 tháng trở lên đếm theo THÁNG THẬT (chênh lệch năm*12 + tháng) chứ không chia
+       cho 30: chia 30 thì 31/01 so với 01/03 ra "1 tháng trước" trong khi thực tế đã sang
+       tháng thứ 2, và độ lệch tích lũy càng lâu càng sai. */
+    $thang = ((int) date('Y') - (int) date('Y', $ts)) * 12 + ((int) date('n') - (int) date('n', $ts));
+    if ($thang < 1) $thang = 1;                       // phòng trường hợp lệch ngày sát mốc
+
+    if ($thang < 12) {
+        return ['label' => $thang === 1 ? 'Tháng trước' : $thang . ' tháng trước', 'date' => $date, 'cls' => ''];
+    }
+    $nam = (int) floor($thang / 12);
+    return ['label' => $nam === 1 ? 'Năm trước' : $nam . ' năm trước', 'date' => $date, 'cls' => ''];
 }
 
 /** Danh sách khách hàng cho bộ lọc của admin. */

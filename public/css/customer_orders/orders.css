@@ -18,6 +18,93 @@
 }
 .co-notice i { color: #f59e0b; margin-right: 6px; }
 
+/* =============================== BỘ LỌC ===============================
+   Không có nút LỌC — đổi ô nào là gửi ngay ô đó. Vì thế các ô phải trông
+   "bấm được", đều nhau và không ô nào chiếm hết hàng như select native mặc
+   định (ô Khách hàng vốn giãn theo tên khách dài nhất).
+   ===================================================================== */
+.co-filter {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.co-filter .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.co-filter .filter-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: .2px;
+}
+
+/* Ô ngày + ô chọn: cùng chiều cao, cùng bo góc, cùng hiệu ứng focus. */
+.co-filter input[type="date"],
+.co-filter select {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    background: #fff;
+    font-size: 13.5px;
+    color: #111827;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.co-filter input[type="date"] { cursor: text; }
+
+.co-filter input[type="date"]:hover,
+.co-filter select:hover { border-color: #9ca3af; }
+
+.co-filter input[type="date"]:focus,
+.co-filter select:focus {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .15);
+}
+
+/* Bỏ mũi tên mặc định của trình duyệt, tự vẽ mũi tên nhỏ cho đồng bộ mọi máy. */
+.co-filter select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1.4 0 6 4.6 10.6 0 12 1.4 6 7.4 0 1.4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    text-overflow: ellipsis;
+}
+
+/* Ghim bề rộng để hàng lọc không nhảy loạn theo độ dài dữ liệu. */
+.co-filter input[type="date"] { width: 165px; }
+.co-filter #co-inv { width: 175px; }
+.co-filter #co-per { width: 92px; }
+.co-filter #co-cus { width: 260px; }          /* tên khách dài thì cắt bằng ellipsis */
+
+/* Nút Check database đứng cùng hàng với các ô lọc. */
+.co-filter .btn-check-db {
+    height: 38px;
+    margin-left: auto;
+    align-self: flex-end;
+}
+
+@media (max-width: 768px) {
+    .co-filter { gap: 10px; }
+    .co-filter input[type="date"],
+    .co-filter #co-inv,
+    .co-filter #co-per,
+    .co-filter #co-cus { width: 100%; }
+    .co-filter .filter-field { flex: 1 1 46%; }
+    .co-filter .btn-check-db { margin-left: 0; width: 100%; }
+}
+
 /* ----------------------------- Bảng ----------------------------- */
 .co-table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: #fff; }
 .co-table th,
@@ -60,10 +147,6 @@
     /* Ô này KHÔNG được kích hoạt modal chi tiết của dòng (JS chặn), nên đổi lại con trỏ. */
     cursor: default;
 }
-
-/* Tích xanh cạnh TRÁI trong ô — hiện khi đơn đã có ít nhất 1 hóa đơn. */
-.co-inv-check { flex: 0 0 auto; width: 16px; color: transparent; font-size: 15px; line-height: 1; }
-.co-inv-check.is-on { color: #16a34a; }
 
 /* Vùng nét đứt: bấm vào (ngoài nút) để "bật" ô cho Ctrl+V, và là chỗ thả tệp kéo từ folder. */
 .co-drop {
