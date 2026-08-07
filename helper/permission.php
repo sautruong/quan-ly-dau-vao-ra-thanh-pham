@@ -139,8 +139,34 @@ function permission_granted_view_ids($user_id)
 }
 
 /** Toàn bộ danh mục view (active), đã gom nhóm theo group_label, giữ thứ tự sort. */
+/**
+ * Đăng ký các view mà MODULE KHÔNG TỰ BOOTSTRAP ĐƯỢC.
+ *
+ * Vòng luẩn quẩn: co_ensure_view_registered() chỉ chạy khi ai đó mở /customer_orders/orders,
+ * mà muốn mở thì phải thấy link trong sidebar — link chỉ hiện khi view đã có trong tbl_views.
+ * Kết quả: view không bao giờ xuất hiện, kể cả ở màn Phân quyền.
+ * Vì thế phải ghi từ ĐÂY — nơi chạy mỗi khi dựng menu / mở màn phân quyền.
+ *
+ * INSERT IGNORE dựa vào UNIQUE KEY uq_view (module, controller, action) nên chạy lại vô hại.
+ * Cột `controller` PHẢI bằng đúng tiền tố tên file <controller>Controller.php, sai một chữ là
+ * permission_find_view() trả null -> guard FAIL-OPEN (ai cũng vào được) + header mất tiêu đề.
+ */
+function permission_ensure_static_views()
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    if (db_num_rows("SHOW TABLES LIKE 'tbl_views'") <= 0) return;
+
+    db_query(
+        "INSERT IGNORE INTO tbl_views (module, controller, action, label, group_label, sort, is_active)
+         VALUES ('customer_orders', 'customer_orders', 'orders', 'Đơn hàng', 'QUẢN LÝ ĐƠN HÀNG', 150, 1)"
+    );
+}
+
 function permission_all_views_grouped()
 {
+    permission_ensure_static_views();
     $rows = db_fetch_array(
         "SELECT * FROM tbl_views WHERE is_active = 1 ORDER BY sort, id"
     );
@@ -157,6 +183,7 @@ function permission_all_views_grouped()
  */
 function permission_menu_for_user($user)
 {
+    permission_ensure_static_views();
     if (permission_is_admin($user)) {
         return permission_all_views_grouped();
     }
