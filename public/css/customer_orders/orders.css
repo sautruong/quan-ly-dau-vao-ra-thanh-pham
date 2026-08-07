@@ -1,0 +1,176 @@
+/* =====================================================================================
+   QUẢN LÝ ĐƠN HÀNG — view "Đơn hàng" (/customer_orders/orders)
+   Bản dành cho khách của /admin_factory/sales_orders: ít cột hơn, mỗi dòng bấm được để
+   xem chi tiết, và ô Hóa đơn cho khách tự tải lên.
+   ===================================================================================== */
+
+.co-notice {
+    margin: 24px auto;
+    max-width: 620px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 10px;
+    padding: 18px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #4b5563;
+}
+.co-notice i { color: #f59e0b; margin-right: 6px; }
+
+/* ----------------------------- Bảng ----------------------------- */
+.co-table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: #fff; }
+.co-table th,
+.co-table td { border: 1px solid #e5e7eb; padding: 8px 10px; vertical-align: middle; }
+.co-table thead th {
+    background: #f0f3f7; font-weight: 600; text-align: center;
+    position: sticky; top: 0; z-index: 2;
+}
+.co-table td.num { text-align: right; white-space: nowrap; }
+.co-table td.co-date { text-align: center; white-space: nowrap; }
+.co-empty-row td { text-align: center; color: #888; padding: 26px 6px; font-style: italic; }
+
+/* Cả dòng bấm được -> phải thấy rõ là bấm được. */
+.co-table tbody tr.co-row { cursor: pointer; transition: background .12s ease; }
+.co-table tbody tr.co-row:hover { background: #f0fdf4; }
+.co-table tbody tr.co-row.is-hidden { display: none; }   /* phân trang client-side */
+
+/* ------------------------- Ô "Hóa đơn" ------------------------- */
+.co-inv-cell {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    /* Ô này KHÔNG được kích hoạt modal chi tiết của dòng (JS chặn), nên đổi lại con trỏ. */
+    cursor: default;
+}
+
+/* Tích xanh cạnh TRÁI trong ô — hiện khi đơn đã có ít nhất 1 hóa đơn. */
+.co-inv-check { flex: 0 0 auto; width: 16px; color: transparent; font-size: 15px; line-height: 1; }
+.co-inv-check.is-on { color: #16a34a; }
+
+.co-inv-thumbs { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.co-thumb {
+    width: 34px; height: 34px; border-radius: 6px; overflow: hidden;
+    border: 1px solid #d1d5db; cursor: zoom-in; background: #f9fafb;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.co-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.co-thumb:hover { border-color: #16a34a; }
+
+.co-inv-add {
+    width: 30px; height: 30px; border-radius: 50%; border: 1px dashed #c2c8d0;
+    background: #fff; color: #6b7280; cursor: pointer; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.co-inv-add:hover { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+/* Kéo tệp từ folder máy tính thả vào ô. */
+.co-inv-cell.is-drag { outline: 2px dashed #16a34a; outline-offset: -2px; background: #f0fdf4; }
+.co-inv-cell.is-busy { opacity: .55; pointer-events: none; }
+
+/* --------------------- Chân bảng + phân trang --------------------- */
+.co-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-top: 12px;
+}
+.co-totals { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13.5px; color: #4b5563; }
+.co-totals b { color: #111827; }
+.co-pagination { display: flex; gap: 4px; flex-wrap: wrap; }
+.co-pagination button {
+    min-width: 32px; padding: 5px 10px; border: 1px solid #c2c8d0; background: #fff;
+    border-radius: 4px; cursor: pointer; font-size: 13px;
+}
+.co-pagination button:hover:not([disabled]) { background: #eef2f7; }
+.co-pagination button.active { background: #096926; color: #fff; border-color: #096926; }
+.co-pagination button[disabled] { opacity: .4; cursor: not-allowed; }
+
+/* ----------------------------- Modal ----------------------------- */
+.co-modal { position: fixed; inset: 0; z-index: 3000; display: none; }
+.co-modal.is-open { display: block; }
+.co-modal-overlay { position: absolute; inset: 0; background: rgba(17, 24, 39, .45); }
+.co-modal-box {
+    position: relative; margin: 7vh auto 0; width: min(760px, 94vw);
+    background: #fff; border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .25);
+    max-height: 86vh; display: flex; flex-direction: column; overflow: hidden;
+}
+.co-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid #f0f2f5;
+}
+.co-modal-head h3 { margin: 0; font-size: 16px; font-weight: 700; color: #096926; }
+.co-modal-close { border: 0; background: transparent; font-size: 24px; line-height: 1; color: #9ca3af; cursor: pointer; }
+.co-modal-close:hover { color: #111827; }
+.co-modal-body { padding: 16px 18px; overflow-y: auto; }
+
+.co-detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.co-detail-table th,
+.co-detail-table td { border: 1px solid #e5e7eb; padding: 7px 9px; }
+.co-detail-table thead th { background: #f0f3f7; font-weight: 600; text-align: center; }
+.co-detail-table td:nth-child(3),
+.co-detail-table td:nth-child(4),
+.co-detail-table td:nth-child(5) { text-align: right; white-space: nowrap; }
+.co-detail-table td:nth-child(2) { text-align: center; }
+.co-detail-table tfoot td { background: #f9fafb; font-weight: 700; }
+
+/* --------------------------- Lightbox --------------------------- */
+.co-viewer { position: fixed; inset: 0; z-index: 3200; display: none; background: rgba(0, 0, 0, .9); }
+.co-viewer.is-open { display: flex; flex-direction: column; }
+.co-viewer-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; color: #fff; font-size: 13px; gap: 12px; flex-wrap: wrap;
+}
+.co-viewer-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.co-viewer-tools button {
+    width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .25);
+    background: rgba(255, 255, 255, .1); color: #fff; cursor: pointer; font-size: 14px;
+}
+.co-viewer-tools button:hover { background: rgba(255, 255, 255, .25); }
+.co-viewer-tools button[hidden] { display: none; }
+.co-viewer-stage {
+    flex: 1 1 auto; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    cursor: grab; touch-action: none;
+}
+.co-viewer-stage.is-panning { cursor: grabbing; }
+#co-viewer-img {
+    max-width: 92vw; max-height: 82vh; user-select: none;
+    transition: transform .08s linear; transform-origin: center center;
+}
+
+/* ------------------------ Modal share chat ------------------------ */
+.co-share-box { width: min(440px, 94vw); }
+.co-share-filter,
+.co-share-note {
+    width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 13.5px; outline: none; margin-bottom: 10px; box-sizing: border-box;
+}
+.co-share-filter:focus,
+.co-share-note:focus { border-color: #16a34a; }
+.co-share-list {
+    max-height: 44vh; overflow-y: auto; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 4px; margin-bottom: 10px;
+}
+.co-share-empty { padding: 14px; text-align: center; font-size: 13px; color: #6b7280; font-style: italic; }
+.co-share-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    border-radius: 8px; cursor: pointer; font-size: 13.5px;
+}
+.co-share-row:hover { background: #f0fdf4; }
+.co-share-row input { accent-color: #16a34a; }
+.co-share-ava { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.co-share-ava-x {
+    display: flex; align-items: center; justify-content: center;
+    background: #dcfce7; color: #15803d; font-weight: 700; font-size: 13px;
+}
+.co-share-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#co-share-status { font-size: 12.5px; color: #6b7280; }
+.co-share-send {
+    background: #16a34a; color: #fff; border: 0; border-radius: 8px;
+    padding: 9px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.co-share-send:hover:not(:disabled) { background: #15803d; }
+.co-share-send:disabled { opacity: .6; cursor: default; }
+
+/* ------------------------------ Mobile ------------------------------ */
+@media (max-width: 768px) {
+    .co-table { font-size: 12.5px; }
+    .co-table th, .co-table td { padding: 6px; }
+    .co-foot { flex-direction: column; align-items: stretch; }
+    .co-viewer-tools button { width: 32px; height: 32px; }
+}

@@ -47,6 +47,7 @@ function app_sidebar_group_icon($label)
         'KẾ TOÁN - NHÀ MÁY'       => 'fa-calculator',
         'QUẢN TRỊ HỆ THỐNG'       => 'fa-user-shield',
         'ĐƠN ĐẶT HÀNG'            => 'fa-clipboard-check',
+        'QUẢN LÝ ĐƠN HÀNG'        => 'fa-file-invoice',
         'VĂN PHÒNG'               => 'fa-briefcase',
         'LƯƠNG'                   => 'fa-money-check-dollar',
         'Tiện ích'                => 'fa-toolbox',

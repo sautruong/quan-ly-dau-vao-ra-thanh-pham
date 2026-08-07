@@ -105,6 +105,9 @@ function cdb_allowed_tables()
         'production_plans', 'pre_production_notes', 'additional_tasks', 'product_info_basic',
         // production_formula (Công thức sản xuất)
         'product_recipe_notes', 'product_batch_recipes', 'product_batch_recipe_items', 'material_images',
+        // customer_orders (Quản lý đơn hàng) — 'sales_warehouse_export_invoices', 'stock_exports',
+        // 'customers' đã có ở trên; chỉ thiếu 2 bảng này.
+        'sales_orders', 'warehouse_receipt_invoices',
     ];
 }
 

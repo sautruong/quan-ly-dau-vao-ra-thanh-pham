@@ -25,6 +25,30 @@ function wri_valid_types()
     return ['purchase_invoice', 'sales_invoice', 'sales_export_invoice'];
 }
 
+/**
+ * Thêm 2 cột NGUỒN TẢI LÊN (1 lần / request).
+ *   uploaded_by   : id tài khoản đã tải file lên (0 = không rõ / dữ liệu cũ).
+ *   upload_source : 'factory' (nhà máy tải từ Đơn bán hàng) | 'customer' (khách tự tải).
+ *
+ * VÌ SAO CẦN: bảng gốc chỉ có 5 cột, KHÔNG lưu bất kỳ dấu vết nào về người/nguồn tải, nên
+ * luật "khách không xoá được hóa đơn do nhà máy tải lên" không thể suy ra từ dữ liệu cũ.
+ * DEFAULT 'factory' khiến TOÀN BỘ hóa đơn đã có tự động thành "nhà máy tải" -> khách không
+ * xoá được, khỏi phải backfill. 4 chỗ ghi sẵn có không truyền gì nên cũng tự động 'factory'.
+ */
+function wri_ensure_source_columns()
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    if (!db_fetch_row("SHOW COLUMNS FROM warehouse_receipt_invoices LIKE 'uploaded_by'")) {
+        db_query("ALTER TABLE warehouse_receipt_invoices ADD uploaded_by INT(11) NOT NULL DEFAULT 0");
+    }
+    if (!db_fetch_row("SHOW COLUMNS FROM warehouse_receipt_invoices LIKE 'upload_source'")) {
+        db_query("ALTER TABLE warehouse_receipt_invoices ADD upload_source VARCHAR(20) NOT NULL DEFAULT 'factory'");
+        db_query("ALTER TABLE warehouse_receipt_invoices ADD INDEX idx_wri_src (upload_source)");
+    }
+}
+
 /** Thư mục lưu file vật lý (tuyệt đối) cho 1 type; tự tạo nếu chưa có. */
 function wri_storage_dir($type)
 {
@@ -69,12 +93,15 @@ function wri_normalize_files($files)
  * $files: mảng $_FILES['files'] (đã hoặc chưa chuẩn hóa đều nhận được).
  * Trả: ['ok'=>bool, 'saved'=>[{id,file_url,created_at}], 'errors'=>[...]].
  */
-function wri_save_uploaded_files($wr_id, $type, $files)
+function wri_save_uploaded_files($wr_id, $type, $files, $uploaded_by = 0, $upload_source = 'factory')
 {
     $wr_id = (int) $wr_id;
     if ($wr_id <= 0 || !in_array($type, wri_valid_types(), true)) {
         return ['ok' => false, 'saved' => [], 'errors' => ['Tham số không hợp lệ.']];
     }
+    wri_ensure_source_columns();
+    $uploaded_by   = (int) $uploaded_by;
+    $upload_source = $upload_source === 'customer' ? 'customer' : 'factory';
 
     $allowed = explode(',', WRI_ALLOWED_EXT);
     $abs_dir = wri_storage_dir($type);
@@ -110,11 +137,13 @@ function wri_save_uploaded_files($wr_id, $type, $files)
 
         $file_url = $rel_web . '/' . $filename;
         $id = (int) db_insert('warehouse_receipt_invoices', [
-            'wr_id'    => $wr_id,
-            'type'     => $type,
-            'file_url' => $file_url,
+            'wr_id'         => $wr_id,
+            'type'          => $type,
+            'file_url'      => $file_url,
+            'uploaded_by'   => $uploaded_by,
+            'upload_source' => $upload_source,
         ]);
-        $saved[] = ['id' => $id, 'file_url' => $file_url];
+        $saved[] = ['id' => $id, 'file_url' => $file_url, 'upload_source' => $upload_source];
     }
 
     return ['ok' => empty($errors) || !empty($saved), 'saved' => $saved, 'errors' => $errors];
@@ -125,9 +154,10 @@ function wri_list($wr_id, $type)
 {
     $wr_id = (int) $wr_id;
     if ($wr_id <= 0 || !in_array($type, wri_valid_types(), true)) return [];
+    wri_ensure_source_columns();
     $t = escape_string($type);
     return db_fetch_array(
-        "SELECT id, wr_id, type, file_url, created_at
+        "SELECT id, wr_id, type, file_url, created_at, uploaded_by, upload_source
          FROM warehouse_receipt_invoices
          WHERE wr_id = $wr_id AND type = '$t'
          ORDER BY id ASC"
@@ -139,8 +169,9 @@ function wri_get($id)
 {
     $id = (int) $id;
     if ($id <= 0) return null;
+    wri_ensure_source_columns();
     return db_fetch_row(
-        "SELECT id, wr_id, type, file_url, created_at
+        "SELECT id, wr_id, type, file_url, created_at, uploaded_by, upload_source
          FROM warehouse_receipt_invoices WHERE id = $id LIMIT 1"
     ) ?: null;
 }
