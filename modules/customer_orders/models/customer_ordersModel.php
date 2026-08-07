@@ -393,9 +393,94 @@ function co_share_invoice_to_chat($invoice_id, array $target_ids, $note = '')
     return ['ok' => true, 'sent' => $sent];
 }
 
+/**
+ * DIỄN GIẢI ngắn cho từng đơn: "Bột sữa Royal's 100, Hồng Trà Bá Tước 100, ...".
+ * Tên hàng lấy theo TÊN THƯỜNG GỌI (common_product_name) khi có.
+ *
+ * Gom TẤT CẢ đơn trong 1 truy vấn duy nhất rồi tự chia rổ — nếu gọi co_order_lines() cho
+ * từng dòng thì 1 trang 100 đơn là 100 truy vấn.
+ *
+ * @return array [ "customerId|created_at" => ['text' => string, 'more' => int] ]
+ */
+function co_order_summaries(array $rows, $max_items = 3)
+{
+    if (empty($rows)) return [];
+
+    $cids = $dates = [];
+    foreach ($rows as $r) {
+        $cid = (int) ($r['customer_id'] ?? 0);
+        $ca  = (string) ($r['created_at'] ?? '');
+        if ($cid > 0) $cids[$cid] = true;
+        if ($ca !== '') $dates["'" . escape_string($ca) . "'"] = true;
+    }
+    if (empty($cids) || empty($dates)) return [];
+
+    // Lọc thô theo 2 tập rồi chia rổ chính xác theo CẶP (customer_id, created_at) ở PHP —
+    // rẻ hơn nhiều so với dựng mệnh đề OR cho từng cặp.
+    $rowsItems = db_fetch_array(
+        "SELECT s.customer_id, s.created_at, s.quantity,
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name,
+                         NULLIF(mi.common_material_name, ''), mi.material_name) AS name
+         FROM stock_exports s
+         LEFT JOIN products p ON p.id = s.product_id
+         LEFT JOIN material_information mi ON mi.id = s.material_id
+         WHERE s.type_export = 'sales_issue'
+           AND s.customer_id IN (" . implode(',', array_keys($cids)) . ")
+           AND s.created_at IN (" . implode(',', array_keys($dates)) . ")
+         ORDER BY s.id ASC"
+    ) ?: [];
+
+    $gom = [];
+    foreach ($rowsItems as $it) {
+        $key = (int) $it['customer_id'] . '|' . (string) $it['created_at'];
+        $ten = trim((string) ($it['name'] ?? ''));
+        if ($ten === '') continue;
+        $sl = (float) $it['quantity'];
+        $gom[$key][] = $ten . ' ' . rtrim(rtrim(number_format($sl, 2, '.', ''), '0'), '.');
+    }
+
+    $out = [];
+    foreach ($gom as $key => $ds) {
+        $out[$key] = [
+            'text' => implode(', ', array_slice($ds, 0, $max_items)),
+            'more' => max(0, count($ds) - $max_items),
+            'full' => implode(', ', $ds),
+        ];
+    }
+    return $out;
+}
+
 /* =====================================================================
  *  TIỆN ÍCH HIỂN THỊ
  * =====================================================================*/
+
+/**
+ * Nhãn ngày kiểu tương đối: "Vừa xong, 07/08/2026" / "Hôm nay, ..." / "Hôm qua, ..." /
+ * "2 ngày trước, ...". Trả ['label', 'date', 'cls'].
+ *   cls: co-d-now / co-d-today  -> xanh lá
+ *        co-d-yesterday         -> nâu
+ *        ''                     -> đen bình thường
+ */
+function co_date_label($created_at)
+{
+    $ts = strtotime((string) $created_at);
+    if (!$ts) return ['label' => '', 'date' => '', 'cls' => ''];
+
+    $date = date('d/m/Y', $ts);
+    // So sánh theo NGÀY (không theo 24 giờ trôi qua): 23h50 hôm qua so với 00h10 hôm nay vẫn
+    // phải là "Hôm qua", chứ không phải "Vừa xong".
+    $ngayDon = strtotime(date('Y-m-d', $ts));
+    $homNay  = strtotime(date('Y-m-d'));
+    $lech    = (int) round(($homNay - $ngayDon) / 86400);
+
+    if ($lech <= 0) {
+        // Trong vòng 1 giờ thì coi là vừa ghi xong.
+        if (time() - $ts <= 3600) return ['label' => 'Vừa xong', 'date' => $date, 'cls' => 'co-d-now'];
+        return ['label' => 'Hôm nay', 'date' => $date, 'cls' => 'co-d-today'];
+    }
+    if ($lech === 1) return ['label' => 'Hôm qua', 'date' => $date, 'cls' => 'co-d-yesterday'];
+    return ['label' => $lech . ' ngày trước', 'date' => $date, 'cls' => ''];
+}
 
 /** Danh sách khách hàng cho bộ lọc của admin. */
 function co_customer_list()

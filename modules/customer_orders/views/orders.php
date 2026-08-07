@@ -51,21 +51,21 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
             <?php else: ?>
 
             <div class="data-actions" data-sticky-top>
-                <form class="data-filter" method="get">
+                <form class="data-filter co-filter" method="get" id="co-filter-form">
                     <input type="hidden" name="mod" value="customer_orders">
                     <input type="hidden" name="controllers" value="customer_orders">
                     <input type="hidden" name="action" value="orders">
                     <div class="filter-field">
                         <label for="co-from">Từ ngày</label>
-                        <input type="date" id="co-from" name="from" value="<?php echo co_esc($from); ?>">
+                        <input type="date" id="co-from" name="from" class="co-auto" value="<?php echo co_esc($from); ?>">
                     </div>
                     <div class="filter-field">
                         <label for="co-to">Đến ngày</label>
-                        <input type="date" id="co-to" name="to" value="<?php echo co_esc($to); ?>">
+                        <input type="date" id="co-to" name="to" class="co-auto" value="<?php echo co_esc($to); ?>">
                     </div>
                     <div class="filter-field">
                         <label for="co-inv">Hóa đơn</label>
-                        <select id="co-inv" name="inv">
+                        <select id="co-inv" name="inv" class="co-auto">
                             <option value="">Tất cả</option>
                             <option value="has"  <?php echo $inv_filter === 'has'  ? 'selected' : ''; ?>>Đã tải hóa đơn</option>
                             <option value="none" <?php echo $inv_filter === 'none' ? 'selected' : ''; ?>>Chưa tải hóa đơn</option>
@@ -74,7 +74,7 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
                     <?php if ($is_admin): ?>
                     <div class="filter-field">
                         <label for="co-cus">Khách hàng</label>
-                        <select id="co-cus" name="customer_id">
+                        <select id="co-cus" name="customer_id" class="co-auto">
                             <option value="0">Tất cả khách hàng</option>
                             <?php foreach ($customers as $c): ?>
                                 <option value="<?php echo (int) $c['id']; ?>" <?php echo (int) $c['id'] === $cur_cid ? 'selected' : ''; ?>>
@@ -86,13 +86,13 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
                     <?php endif; ?>
                     <div class="filter-field">
                         <label for="co-per">Số dòng</label>
-                        <select id="co-per" name="per">
+                        <select id="co-per" name="per" class="co-auto">
                             <?php foreach ([10, 25, 50, 100] as $n): ?>
                                 <option value="<?php echo $n; ?>" <?php echo $n === $per_page ? 'selected' : ''; ?>><?php echo $n; ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="submit" class="btn-filter">LỌC</button>
+                    <?php /* Không có nút LỌC: mọi ô lọc tự gửi biểu mẫu ngay khi đổi (co-auto). */ ?>
                     <button type="button" class="btn-check-db"
                             data-tables="sales_orders,sales_warehouse_export_invoices,warehouse_receipt_invoices,stock_exports,customers">
                         <i class="fa-solid fa-database"></i> Check database
@@ -105,6 +105,7 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
                     <thead>
                         <tr>
                             <th>Ngày</th>
+                            <th>Diễn giải</th>
                             <th>Giá trị hàng hóa</th>
                             <th>Khối lượng</th>
                             <th>Hóa đơn</th>
@@ -114,51 +115,71 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
                         <?php
                         $tot_value = 0.0;
                         $tot_weight = 0.0;
+                        $summaries = isset($summaries) && is_array($summaries) ? $summaries : [];
                         if (empty($rows)): ?>
-                            <tr class="co-empty-row"><td colspan="4">Chưa có đơn hàng nào.</td></tr>
+                            <tr class="co-empty-row"><td colspan="5">Chưa có đơn hàng nào.</td></tr>
                         <?php else: foreach ($rows as $r):
                             $tot_value  += (float) $r['value'];
                             $tot_weight += (float) ($r['weight_kg'] ?? 0);
                             $inv_type = ($r['inv_type'] ?? '') === 'sales_export_invoice'
                                       ? 'sales_export_invoice' : 'sales_invoice';
                             $files = $inv_map[$inv_type][(int) $r['id']] ?? [];
-                            $ts    = strtotime((string) ($r['created_at'] ?? ''));
-                            $date  = $ts ? date('d/m/Y', $ts) : '';
+                            $d     = co_date_label((string) ($r['created_at'] ?? ''));
+                            $sum   = $summaries[(int) ($r['customer_id'] ?? 0) . '|' . (string) ($r['created_at'] ?? '')] ?? null;
                         ?>
                             <tr class="co-row"
                                 data-inv-type="<?php echo co_esc($inv_type); ?>"
                                 data-id="<?php echo (int) $r['id']; ?>"
                                 data-created-at="<?php echo co_esc((string) ($r['created_at'] ?? '')); ?>"
-                                data-date="<?php echo co_esc($date); ?>"
+                                data-date="<?php echo co_esc($d['date']); ?>"
                                 data-customer="<?php echo co_esc((string) ($r['customer_name'] ?? '')); ?>">
-                                <td class="co-date"><?php echo co_esc($date); ?></td>
-                                <td class="num"><?php echo co_money($r['value']); ?></td>
-                                <td class="num"><?php echo co_weight($r['weight_kg'] ?? 0); ?></td>
+                                <td class="co-date">
+                                    <span class="co-date-rel <?php echo co_esc($d['cls']); ?>"><?php echo co_esc($d['label']); ?></span><span class="co-date-sep">,</span>
+                                    <span class="co-date-abs"><?php echo co_esc($d['date']); ?></span>
+                                </td>
+                                <td class="co-desc" title="<?php echo co_esc($sum['full'] ?? ''); ?>">
+                                    <?php if ($sum): ?>
+                                        <span class="co-desc-text"><?php echo co_esc($sum['text']); ?></span><?php if ($sum['more'] > 0): ?><span class="co-desc-more">, +<?php echo (int) $sum['more']; ?> mặt hàng</span><?php endif; ?>
+                                    <?php else: ?>
+                                        <span class="co-desc-empty">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="center"><?php echo co_money($r['value']); ?></td>
+                                <td class="center"><?php echo co_weight($r['weight_kg'] ?? 0); ?></td>
+
+                                <?php
+                                /* Ô HÓA ĐƠN — thiết kế: [tích xanh] [ô nét đứt chứa nút Chọn tệp] [nút Hóa đơn].
+                                   Ảnh KHÔNG hiện ở ô; bấm nút "Hóa đơn" mới mở khối ảnh.
+                                   Vùng nét đứt: bấm vào (ngoài nút) = "bật" ô để dán Ctrl+V, và cũng là
+                                   vùng thả tệp kéo từ folder. Bấm ĐÚNG nút mới mở hộp chọn tệp. */
+                                $canDelJson = [];
+                                foreach ($files as $f) {
+                                    $laCuaToi = $f['upload_source'] === 'customer' && (int) $f['uploaded_by'] === $me_id;
+                                    $canDelJson[] = [
+                                        'id'   => (int) $f['id'],
+                                        'src'  => (string) $f['file_url'],
+                                        'del'  => ($is_admin || $laCuaToi) ? 1 : 0,
+                                        'src2' => (string) $f['upload_source'],
+                                    ];
+                                }
+                                ?>
                                 <td class="co-inv-cell"
                                     data-inv-type="<?php echo co_esc($inv_type); ?>"
-                                    data-id="<?php echo (int) $r['id']; ?>">
-                                    <?php
-                                    /* Tích xanh cạnh TRÁI trong ô khi đơn ĐÃ có hóa đơn. Cả PHP (lần
-                                       render đầu) và JS (sau khi tải/xóa) đều phải cập nhật dấu này. */
-                                    ?>
+                                    data-id="<?php echo (int) $r['id']; ?>"
+                                    data-files="<?php echo co_esc(json_encode($canDelJson, JSON_UNESCAPED_UNICODE)); ?>">
                                     <span class="co-inv-check<?php echo $files ? ' is-on' : ''; ?>" title="Đã có hóa đơn">
                                         <i class="fa-solid fa-circle-check"></i>
                                     </span>
-                                    <span class="co-inv-thumbs">
-                                        <?php foreach ($files as $f):
-                                            $laCuaToi = $f['upload_source'] === 'customer' && (int) $f['uploaded_by'] === $me_id;
-                                            $xoaDuoc  = $is_admin || $laCuaToi;
-                                        ?>
-                                            <span class="co-thumb" data-inv-id="<?php echo (int) $f['id']; ?>"
-                                                  data-src="<?php echo co_esc($f['file_url']); ?>"
-                                                  data-can-delete="<?php echo $xoaDuoc ? '1' : '0'; ?>"
-                                                  title="<?php echo $f['upload_source'] === 'customer' ? 'Bạn tải lên' : 'Nhà máy tải lên'; ?>">
-                                                <img src="<?php echo co_esc($f['file_url']); ?>" alt="Hóa đơn" loading="lazy">
-                                            </span>
-                                        <?php endforeach; ?>
+                                    <span class="co-drop" title="Bấm vào đây rồi Ctrl+V để dán ảnh, hoặc kéo tệp thả vào">
+                                        <button type="button" class="co-pick" title="Chọn tệp từ máy">
+                                            <i class="fa-solid fa-folder-open"></i>
+                                        </button>
+                                        <span class="co-drop-hint">Ctrl+V / kéo thả</span>
                                     </span>
-                                    <button type="button" class="co-inv-add" title="Thêm hóa đơn (chọn tệp, kéo thả hoặc Ctrl+V)">
-                                        <i class="fa-solid fa-plus"></i>
+                                    <button type="button" class="co-inv-open"<?php echo $files ? '' : ' hidden'; ?>
+                                            title="Xem hóa đơn đã tải">
+                                        <i class="fa-solid fa-file-invoice"></i> Hóa đơn
+                                        <span class="co-inv-n"><?php echo count($files); ?></span>
                                     </button>
                                     <input type="file" class="co-inv-file" accept="image/*,application/pdf" multiple hidden>
                                 </td>
@@ -199,6 +220,21 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
                     <tbody id="co-detail-body"><tr><td colspan="5">Đang tải…</td></tr></tbody>
                     <tfoot id="co-detail-foot"></tfoot>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal danh sách hóa đơn của 1 đơn (bấm nút "Hóa đơn" trong ô) -->
+    <div class="co-modal" id="co-files-modal" aria-hidden="true">
+        <div class="co-modal-overlay" data-co-close></div>
+        <div class="co-modal-box co-files-box">
+            <div class="co-modal-head">
+                <h3 id="co-files-title">Hóa đơn</h3>
+                <button type="button" class="co-modal-close" data-co-close aria-label="Đóng">&times;</button>
+            </div>
+            <div class="co-modal-body">
+                <div class="co-files-grid" id="co-files-grid"></div>
+                <p class="co-files-hint">Bấm vào một ảnh để phóng to, xoay, tải xuống hoặc gửi qua chat.</p>
             </div>
         </div>
     </div>

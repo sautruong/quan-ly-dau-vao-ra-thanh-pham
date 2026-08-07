@@ -94,23 +94,39 @@
        2) Ô HÓA ĐƠN — chọn tệp / kéo thả / Ctrl+V
        ================================================================================= */
 
-    /** Vẽ lại ruột 1 ô hóa đơn từ danh sách file server trả về. */
+    /** Danh sách file của 1 ô, đọc từ data-files (PHP ghi sẵn, JS cập nhật sau mỗi lần đổi). */
+    function cellFiles(cell) {
+        try { return JSON.parse(cell.getAttribute('data-files') || '[]'); } catch (e) { return []; }
+    }
+
+    /**
+     * Cập nhật 1 ô hóa đơn sau khi tải/xóa.
+     * Ảnh KHÔNG hiện ở ô nữa — ô chỉ giữ tích xanh, vùng thả nét đứt và nút "Hóa đơn N".
+     */
     function renderCell(cell, files) {
-        var canDel, html = '';
-        (files || []).forEach(function (f) {
+        var list = (files || []).map(function (f) {
             var laCuaToi = String(f.upload_source) === 'customer' && parseInt(f.uploaded_by, 10) === parseInt(CFG.me, 10);
-            canDel = CFG.isAdmin || laCuaToi;
-            html += '<span class="co-thumb" data-inv-id="' + parseInt(f.id, 10) + '"'
-                  + ' data-src="' + esc(f.file_url) + '"'
-                  + ' data-can-delete="' + (canDel ? '1' : '0') + '"'
-                  + ' title="' + (String(f.upload_source) === 'customer' ? 'Bạn tải lên' : 'Nhà máy tải lên') + '">'
-                  + '<img src="' + esc(f.file_url) + '" alt="Hóa đơn" loading="lazy"></span>';
+            return {
+                id: parseInt(f.id, 10),
+                src: f.file_url,
+                del: (CFG.isAdmin || laCuaToi) ? 1 : 0,
+                src2: String(f.upload_source || 'factory')
+            };
         });
-        var thumbs = cell.querySelector('.co-inv-thumbs');
-        if (thumbs) thumbs.innerHTML = html;
+        cell.setAttribute('data-files', JSON.stringify(list));
+
         // Tích xanh phải cập nhật ở ĐÂY nữa, không chỉ lúc PHP render lần đầu.
         var chk = cell.querySelector('.co-inv-check');
-        if (chk) chk.classList.toggle('is-on', !!(files && files.length));
+        if (chk) chk.classList.toggle('is-on', list.length > 0);
+
+        var openBtn = cell.querySelector('.co-inv-open');
+        if (openBtn) {
+            openBtn.hidden = list.length === 0;
+            var n = openBtn.querySelector('.co-inv-n');
+            if (n) n.textContent = list.length;
+        }
+        // Modal ảnh đang mở đúng ô này thì vẽ lại luôn cho khớp.
+        if (filesCell === cell) renderFilesModal(cell);
     }
 
     function uploadTo(cell, fileList) {
@@ -134,13 +150,12 @@
             .then(function () { cell.classList.remove('is-busy'); });
     }
 
-    // Nút "+" -> mở hộp chọn tệp.
+    /* --- Chọn tệp: CHỈ khi bấm đúng nút, không phải bấm cả vùng nét đứt --- */
     document.addEventListener('click', function (e) {
-        var btn = e.target.closest('.co-inv-add');
+        var btn = e.target.closest('.co-pick');
         if (!btn) return;
         e.stopPropagation();                       // không mở modal chi tiết của dòng
-        var cell = btn.closest('.co-inv-cell');
-        var inp  = cell && cell.querySelector('.co-inv-file');
+        var inp = btn.closest('.co-inv-cell').querySelector('.co-inv-file');
         if (inp) inp.click();
     });
     document.addEventListener('change', function (e) {
@@ -150,40 +165,98 @@
         inp.value = '';                            // chọn lại đúng tệp đó vẫn kích hoạt change
     });
 
-    // Kéo tệp từ folder máy tính thả vào ô.
-    ['dragenter', 'dragover'].forEach(function (ev) {
-        document.addEventListener(ev, function (e) {
-            var cell = e.target.closest && e.target.closest('.co-inv-cell');
-            if (!cell) return;
-            e.preventDefault();
-            cell.classList.add('is-drag');
-        });
-    });
-    ['dragleave', 'drop'].forEach(function (ev) {
-        document.addEventListener(ev, function (e) {
-            var cell = e.target.closest && e.target.closest('.co-inv-cell');
-            if (!cell) return;
-            if (ev === 'drop') { e.preventDefault(); uploadTo(cell, e.dataTransfer && e.dataTransfer.files); }
-            cell.classList.remove('is-drag');
-        });
+    /* --- "Bật" ô để dán: bấm vào vùng nét đứt (ngoài nút Chọn tệp) ---
+       Trình duyệt không gắn sự kiện paste vào một ô cụ thể được, nên phải tự nhớ ô đang bật.
+       Dùng CLICK chứ không dùng rê chuột: rê chuột thì người dùng không hề biết mình đang dán
+       vào đâu, còn bấm thì có viền sáng báo rõ "chỗ này đang ăn Ctrl+V". */
+    var cellDangBat = null;
+    function batCell(cell) {
+        if (cellDangBat === cell) return;
+        if (cellDangBat) cellDangBat.classList.remove('is-armed');
+        cellDangBat = cell;
+        if (cell) cell.classList.add('is-armed');
+    }
+    document.addEventListener('click', function (e) {
+        var drop = e.target.closest('.co-drop');
+        if (drop) {
+            if (e.target.closest('.co-pick')) return;   // nút Chọn tệp có việc riêng
+            e.stopPropagation();
+            batCell(drop.closest('.co-inv-cell'));
+            return;
+        }
+        // Bấm ra ngoài -> tắt, để Ctrl+V không rơi nhầm vào ô cũ.
+        if (!e.target.closest('.co-inv-cell')) batCell(null);
     });
 
-    /* Ctrl+V dán ảnh: dán vào ô đang được trỏ chuột/vừa bấm. Trình duyệt không gắn sự kiện
-       paste vào ô cụ thể nên phải tự nhớ ô "đang nhắm". */
-    var cellDangNham = null;
-    document.addEventListener('mouseover', function (e) {
-        var cell = e.target.closest && e.target.closest('.co-inv-cell');
-        if (cell) cellDangNham = cell;
-    });
     document.addEventListener('paste', function (e) {
-        if (!cellDangNham || !e.clipboardData) return;
+        if (!cellDangBat || !e.clipboardData) return;
         var files = [];
         Array.prototype.forEach.call(e.clipboardData.items || [], function (it) {
             if (it.kind === 'file') { var f = it.getAsFile(); if (f) files.push(f); }
         });
         if (!files.length) return;
         e.preventDefault();
-        uploadTo(cellDangNham, files);
+        uploadTo(cellDangBat, files);
+    });
+
+    /* --- Kéo tệp từ folder máy tính thả vào vùng nét đứt --- */
+    ['dragenter', 'dragover'].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+            var drop = e.target.closest && e.target.closest('.co-drop');
+            if (!drop) return;
+            e.preventDefault();
+            drop.closest('.co-inv-cell').classList.add('is-drag');
+        });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+        document.addEventListener(ev, function (e) {
+            var drop = e.target.closest && e.target.closest('.co-drop');
+            if (!drop) return;
+            var cell = drop.closest('.co-inv-cell');
+            if (ev === 'drop') { e.preventDefault(); uploadTo(cell, e.dataTransfer && e.dataTransfer.files); }
+            cell.classList.remove('is-drag');
+        });
+    });
+
+    /* =================================================================================
+       2b) MODAL DANH SÁCH HÓA ĐƠN — bấm nút "Hóa đơn" trong ô
+       ================================================================================= */
+    var filesModal = $('#co-files-modal');
+    var filesCell  = null;
+
+    function renderFilesModal(cell) {
+        var list = cellFiles(cell);
+        var grid = $('#co-files-grid');
+        if (!grid) return;
+        if (!list.length) {
+            grid.innerHTML = '<div class="co-files-empty">Đơn này chưa có hóa đơn nào.</div>';
+            return;
+        }
+        grid.innerHTML = list.map(function (f) {
+            return '<span class="co-file-item" data-inv-id="' + f.id + '" data-src="' + esc(f.src) + '"'
+                 + ' title="' + (f.src2 === 'customer' ? 'Bạn tải lên' : 'Nhà máy tải lên') + '">'
+                 + '<img src="' + esc(f.src) + '" alt="Hóa đơn" loading="lazy">'
+                 + '<em class="co-file-src">' + (f.src2 === 'customer' ? 'Bạn' : 'Nhà máy') + '</em>'
+                 + '</span>';
+        }).join('');
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.co-inv-open');
+        if (!btn) return;
+        e.stopPropagation();
+        filesCell = btn.closest('.co-inv-cell');
+        $('#co-files-title').textContent = 'Hóa đơn (' + cellFiles(filesCell).length + ')';
+        renderFilesModal(filesCell);
+        filesModal.classList.add('is-open');
+        filesModal.setAttribute('aria-hidden', 'false');
+    });
+
+    // Bấm 1 ảnh trong modal -> mở lightbox.
+    document.addEventListener('click', function (e) {
+        var it = e.target.closest('.co-file-item');
+        if (!it || !filesCell) return;
+        openViewer(filesCell, parseInt(it.getAttribute('data-inv-id'), 10));
     });
 
     /* =================================================================================
@@ -214,13 +287,10 @@
         if (delBtn) delBtn.hidden = !it.canDelete;
     }
 
+    /** Ảnh không còn nằm trong ô nữa -> đọc thẳng từ data-files của ô. */
     function readCell(cell) {
-        return $all('.co-thumb', cell).map(function (t) {
-            return {
-                id: parseInt(t.getAttribute('data-inv-id'), 10),
-                src: t.getAttribute('data-src'),
-                canDelete: t.getAttribute('data-can-delete') === '1'
-            };
+        return cellFiles(cell).map(function (f) {
+            return { id: f.id, src: f.src, canDelete: f.del === 1 };
         });
     }
 
@@ -240,11 +310,14 @@
         vCell = null;
     }
 
-    document.addEventListener('click', function (e) {
-        var th = e.target.closest('.co-thumb');
-        if (!th) return;
-        e.stopPropagation();
-        openViewer(th.closest('.co-inv-cell'), parseInt(th.getAttribute('data-inv-id'), 10));
+    /* =================================================================================
+       0) BỘ LỌC TỰ CHẠY — không có nút LỌC, đổi ô nào là gửi ngay ô đó.
+       ================================================================================= */
+    document.addEventListener('change', function (e) {
+        var el = e.target.closest('.co-auto');
+        if (!el) return;
+        var f = document.getElementById('co-filter-form');
+        if (f) f.submit();
     });
 
     // Lăn chuột phóng to / thu nhỏ. passive:false vì có preventDefault (chặn cuộn trang).

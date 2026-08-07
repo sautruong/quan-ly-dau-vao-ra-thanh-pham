@@ -87,6 +87,7 @@ function ordersAction()
     load_view('orders', [
         'rows'        => $rows,
         'inv_map'     => $inv_map,
+        'summaries'   => co_order_summaries($rows),
         'from'        => $from,
         'to'          => $to,
         'inv_filter'  => $invf,

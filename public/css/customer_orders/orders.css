@@ -27,7 +27,26 @@
     position: sticky; top: 0; z-index: 2;
 }
 .co-table td.num { text-align: right; white-space: nowrap; }
-.co-table td.co-date { text-align: center; white-space: nowrap; }
+.co-table td.center { text-align: center; white-space: nowrap; }
+.co-table td.co-date { white-space: nowrap; }
+
+/* --------------------- Cột Ngày (kiểu tương đối) --------------------- */
+.co-date-rel { font-weight: 600; }
+.co-date-rel.co-d-now,
+.co-date-rel.co-d-today { color: #16a34a; }          /* Vừa xong / Hôm nay — xanh lá */
+.co-date-rel.co-d-yesterday { color: #92400e; }      /* Hôm qua — nâu */
+.co-date-sep { color: #9ca3af; margin-right: 3px; }
+.co-date-abs { color: #4b5563; }
+
+/* ------------------------- Cột Diễn giải ------------------------- */
+.co-desc {
+    max-width: 380px;
+    /* Dài quá thì cắt bằng "…" — tên đầy đủ vẫn đọc được qua thuộc tính title. */
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: #374151;
+}
+.co-desc-more { color: #9ca3af; font-style: italic; }
+.co-desc-empty { color: #d1d5db; }
 .co-empty-row td { text-align: center; color: #888; padding: 26px 6px; font-style: italic; }
 
 /* Cả dòng bấm được -> phải thấy rõ là bấm được. */
@@ -46,24 +65,66 @@
 .co-inv-check { flex: 0 0 auto; width: 16px; color: transparent; font-size: 15px; line-height: 1; }
 .co-inv-check.is-on { color: #16a34a; }
 
-.co-inv-thumbs { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.co-thumb {
-    width: 34px; height: 34px; border-radius: 6px; overflow: hidden;
-    border: 1px solid #d1d5db; cursor: zoom-in; background: #f9fafb;
-    display: inline-flex; align-items: center; justify-content: center;
+/* Vùng nét đứt: bấm vào (ngoài nút) để "bật" ô cho Ctrl+V, và là chỗ thả tệp kéo từ folder. */
+.co-drop {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1.5px dashed #c2c8d0; border-radius: 8px;
+    padding: 4px 8px; cursor: copy; background: #fff;
+    transition: border-color .15s, background .15s, box-shadow .15s;
 }
-.co-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.co-thumb:hover { border-color: #16a34a; }
+.co-drop:hover { border-color: #16a34a; background: #f7fdf9; }
+.co-drop-hint { font-size: 11px; color: #9ca3af; white-space: nowrap; }
 
-.co-inv-add {
-    width: 30px; height: 30px; border-radius: 50%; border: 1px dashed #c2c8d0;
-    background: #fff; color: #6b7280; cursor: pointer; flex: 0 0 auto;
+/* Nút Chọn tệp — CHỈ nút này mở hộp chọn tệp, bấm vùng nét đứt thì không. */
+.co-pick {
+    width: 26px; height: 26px; border-radius: 6px; border: 1px solid #d1d5db;
+    background: #f9fafb; color: #4b5563; cursor: pointer; flex: 0 0 auto;
     display: inline-flex; align-items: center; justify-content: center; font-size: 12px;
 }
-.co-inv-add:hover { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
-/* Kéo tệp từ folder máy tính thả vào ô. */
-.co-inv-cell.is-drag { outline: 2px dashed #16a34a; outline-offset: -2px; background: #f0fdf4; }
+.co-pick:hover { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+
+/* Ô đang "bật" — báo rõ chỗ này đang ăn Ctrl+V. */
+.co-inv-cell.is-armed .co-drop {
+    border-color: #16a34a; border-style: solid; background: #f0fdf4;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .15);
+}
+.co-inv-cell.is-armed .co-drop-hint { color: #16a34a; font-weight: 600; }
+.co-inv-cell.is-drag .co-drop {
+    border-color: #16a34a; background: #dcfce7;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .22);
+}
 .co-inv-cell.is-busy { opacity: .55; pointer-events: none; }
+
+/* Nút mở khối ảnh hóa đơn — chỉ hiện khi đã có ít nhất 1 hóa đơn. */
+.co-inv-open {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid #bbf7d0; background: #f0fdf4; color: #15803d;
+    border-radius: 8px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.co-inv-open:hover { background: #dcfce7; border-color: #16a34a; }
+.co-inv-open[hidden] { display: none; }
+.co-inv-n {
+    background: #16a34a; color: #fff; border-radius: 999px;
+    min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* ------------------ Khối ảnh hóa đơn trong modal ------------------ */
+.co-files-box { width: min(680px, 94vw); }
+.co-files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.co-file-item {
+    position: relative; display: block; border: 1px solid #e5e7eb; border-radius: 10px;
+    overflow: hidden; cursor: zoom-in; background: #f9fafb; aspect-ratio: 1 / 1;
+}
+.co-file-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.co-file-item:hover { border-color: #16a34a; }
+.co-file-src {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: rgba(17, 24, 39, .62); color: #fff;
+    font-size: 11px; font-style: normal; text-align: center; padding: 2px 0;
+}
+.co-files-empty { grid-column: 1 / -1; text-align: center; color: #9ca3af; font-style: italic; padding: 20px; }
+.co-files-hint { margin: 12px 0 0; font-size: 12.5px; color: #6b7280; }
 
 /* --------------------- Chân bảng + phân trang --------------------- */
 .co-foot {
