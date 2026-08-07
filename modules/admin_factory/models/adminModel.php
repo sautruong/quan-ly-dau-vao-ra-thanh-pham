@@ -647,6 +647,75 @@ function admin_ensure_user_classification_schema()
     }
 }
 
+/* =====================================================================
+ *  ĐỊNH DANH TÀI KHOẢN: "Là khách hàng" / "Nội bộ sản xuất"
+ *  ---------------------------------------------------------------------
+ *  CỐ TÌNH KHÔNG tái dùng classification_id: cột đó là căn cứ phân phạm vi
+ *  của ADMIN PHÓ (adminController.php lọc danh sách user + manage_permissions
+ *  theo nó). Gán "Khách hàng" vào đó là admin phó mất im lặng quyền quản lý
+ *  user ấy. Ngoài ra catalog phân loại là chữ tự do admin gõ nên không đủ ổn
+ *  định để làm cờ nghiệp vụ quyết định "thấy đơn hàng nào".
+ *
+ *  user_kind : '' (chưa đánh dấu) | 'customer' | 'factory'.  Một cột thay vì
+ *  2 cột boolean vì 2 lựa chọn LOẠI TRỪ nhau ("nội bộ sản xuất thì không có
+ *  lựa chọn gì thêm"). Giao diện vẫn là 2 checkbox, JS ép loại trừ.
+ *  customer_id : soft FK tới customers.id — KHÔNG khai FOREIGN KEY cứng vì
+ *  admin_delete_customer() đang bắt lỗi ràng buộc để báo "đang được dùng ở
+ *  phiếu bán hàng / xuất kho"; thêm FK từ tbl_users sẽ làm câu báo đó sai.
+ * =====================================================================*/
+
+/** Thêm 2 cột định danh khách hàng vào tbl_users (1 lần / request). */
+function admin_ensure_user_customer_link_schema()
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    if (!db_fetch_row("SHOW COLUMNS FROM tbl_users LIKE 'user_kind'")) {
+        db_query("ALTER TABLE tbl_users ADD user_kind VARCHAR(20) NOT NULL DEFAULT ''");
+    }
+    if (!db_fetch_row("SHOW COLUMNS FROM tbl_users LIKE 'customer_id'")) {
+        db_query("ALTER TABLE tbl_users ADD customer_id INT(11) NOT NULL DEFAULT 0");
+        db_query("ALTER TABLE tbl_users ADD INDEX idx_users_customer (customer_id)");
+    }
+}
+
+/**
+ * Lưu định danh cho 1 tài khoản.
+ * @param string $kind '' | 'customer' | 'factory'
+ * @param int    $customer_id chỉ có nghĩa khi $kind === 'customer'
+ */
+function admin_set_user_customer_link($user_id, $kind, $customer_id = 0)
+{
+    admin_ensure_user_customer_link_schema();
+    $uid = (int) $user_id;
+    if ($uid <= 0) return ['ok' => false, 'message' => 'Tài khoản không hợp lệ.'];
+
+    $kind = (string) $kind;
+    if (!in_array($kind, ['', 'customer', 'factory'], true)) {
+        return ['ok' => false, 'message' => 'Loại định danh không hợp lệ.'];
+    }
+
+    // Ngoài 'customer' thì luôn dọn customer_id, tránh để lại liên kết mồ côi
+    // khiến view Đơn hàng vẫn lọc theo khách cũ sau khi đã đổi sang nội bộ.
+    $cid = $kind === 'customer' ? (int) $customer_id : 0;
+    if ($kind === 'customer' && $cid > 0) {
+        if (!db_fetch_row("SELECT id FROM customers WHERE id = {$cid} LIMIT 1")) {
+            return ['ok' => false, 'message' => 'Khách hàng không tồn tại.'];
+        }
+    }
+
+    // db_update() trả mysqli_affected_rows() = 0 khi giá trị không đổi -> so !== false.
+    $ok = db_update('tbl_users', ['user_kind' => $kind, 'customer_id' => $cid], "id = {$uid}");
+    if ($ok === false) return ['ok' => false, 'message' => 'Lưu thất bại.'];
+
+    $name = '';
+    if ($cid > 0) {
+        $r = db_fetch_row("SELECT name FROM customers WHERE id = {$cid} LIMIT 1");
+        $name = $r ? (string) $r['name'] : '';
+    }
+    return ['ok' => true, 'user_kind' => $kind, 'customer_id' => $cid, 'customer_name' => $name];
+}
+
 /** Danh sách phân loại sẵn có: [ {id, name}, ... ]. */
 function admin_get_user_classifications()
 {
@@ -701,12 +770,16 @@ function admin_get_user_list()
     // Trước khi liệt kê, dọn tài khoản rác để danh sách luôn chính xác.
     admin_purge_expired_pending_users();
     admin_ensure_user_classification_schema();
+    admin_ensure_user_customer_link_schema();
     return db_fetch_array(
         "SELECT u.id, u.fullname, u.dateofbirth, u.gender, u.phone, u.email, u.username,
                 u.status, u.avatar, u.role, u.classification_id,
-                c.name AS classification_name
+                u.user_kind, u.customer_id,
+                c.name AS classification_name,
+                cu.name AS customer_name
          FROM tbl_users u
          LEFT JOIN user_classifications c ON c.id = u.classification_id
+         LEFT JOIN customers cu ON cu.id = u.customer_id
          WHERE u.status IS NULL OR u.status <> 'system'
          ORDER BY u.id ASC"
     );

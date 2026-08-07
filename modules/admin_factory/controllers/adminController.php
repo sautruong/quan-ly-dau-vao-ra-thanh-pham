@@ -171,7 +171,31 @@ function manage_user_listAction()
         'classifications' => $is_admin ? admin_get_user_classifications() : [],
         'is_admin'        => $is_admin,
         'deputy_ids'      => $deputy_ids,
+        // Truyền cho CẢ admin phó (dù họ không sửa được): select phải hiện được TÊN khách hàng
+        // đang gán ở trạng thái chỉ-đọc, nếu không card sẽ trống trơn nhìn như chưa gán ai.
+        'customers'       => admin_get_customer_list() ?: [],
     ]);
+}
+
+/**
+ * AJAX (POST: user_id, kind, customer_id): định danh 1 tài khoản.
+ *  kind = '' (bỏ đánh dấu) | 'customer' (Là khách hàng) | 'factory' (Nội bộ sản xuất).
+ *  Chỉ ADMIN — admin phó không được đụng, vì cờ này quyết định user thấy đơn hàng của ai.
+ */
+function set_user_customer_linkAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_admin(true);
+    $user_id = (int) ($_POST['user_id'] ?? 0);
+    if ($user_id <= 0) {
+        echo json_encode(['ok' => false, 'message' => 'Thiếu người dùng.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    echo json_encode(
+        admin_set_user_customer_link($user_id, (string) ($_POST['kind'] ?? ''), (int) ($_POST['customer_id'] ?? 0)),
+        JSON_UNESCAPED_UNICODE
+    );
+    exit;
 }
 
 /**

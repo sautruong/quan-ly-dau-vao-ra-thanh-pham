@@ -98,6 +98,30 @@ $ajax_base      = '?mod=admin_factory&controllers=admin&action=';
             outline: none; transition: border-color .15s ease, box-shadow .15s ease;
         }
         input.classification-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+        /* Định danh tài khoản (Là khách hàng / Nội bộ sản xuất).
+           margin-top:auto DỜI TỪ .user-card-foot-class SANG ĐÂY: nó là thứ đẩy cả cụm chân thẻ
+           xuống đáy card, để nguyên ở khối cũ thì khối mới bị tách rời khỏi cụm. */
+        .user-card-foot-class { margin-top: 0; }
+        /* Phải là .user-card-foot.user-card-foot-kind (độ đặc 0,2,0): rule sẵn có
+           `.user-card-foot-class + .user-card-foot { margin-top: 0 }` ở trên cũng là 0,2,0 và
+           khối này CHÍNH LÀ sibling kề đó — viết selector 1 class sẽ bị nó đè, margin-top:auto
+           mất tác dụng và cụm chân thẻ không còn dính đáy card. */
+        .user-card-foot.user-card-foot-kind {
+            border-top: 1px solid #f3f4f6; margin-top: auto;
+            flex-wrap: wrap; gap: 6px; align-items: flex-start;
+        }
+        .user-kind-checks { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+        .user-kind-opt {
+            display: inline-flex; align-items: center; gap: 7px;
+            font-size: 13px; color: #374151; cursor: pointer; white-space: nowrap;
+        }
+        select.kind-customer-select {
+            flex: 1 0 100%; box-sizing: border-box; padding: 6px 8px; min-width: 0;
+            border: 1px solid #d0d4da; border-radius: 8px; font-size: 13px;
+            outline: none; transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        select.kind-customer-select:focus { border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22,163,74,0.15); }
+        select.kind-customer-select[hidden] { display: none; }
 
         @media (max-width: 1200px) { .user-grid { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 860px)  { .user-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -291,6 +315,50 @@ $ajax_base      = '?mod=admin_factory&controllers=admin&action=';
                                    <?php echo $is_admin ? '' : 'disabled'; ?>>
                         </div>
 
+                        <!-- Định danh tài khoản: quyết định user thấy đơn hàng của khách nào ở
+                             view /customer_orders/orders. Hai ô loại trừ nhau (JS ép), chọn
+                             "Là khách hàng" mới hiện ô chọn khách. -->
+                        <?php
+                            $u_kind = (string) ($u['user_kind'] ?? '');
+                            $u_cid  = (int) ($u['customer_id'] ?? 0);
+                        ?>
+                        <div class="user-card-foot user-card-foot-kind" data-kind="<?php echo htmlspecialchars($u_kind, ENT_QUOTES, 'UTF-8'); ?>">
+                            <span class="user-card-foot-label">Định danh</span>
+                            <div class="user-kind-checks">
+                                <!-- .app-round-check chỉ là ô tròn 20x20; chữ phải nằm NGOÀI nó
+                                     (bọc .user-kind-opt), nếu nhét vào trong sẽ bị cắt mất. -->
+                                <label class="user-kind-opt">
+                                    <span class="app-round-check">
+                                        <input type="checkbox" class="kind-check" value="customer"
+                                               <?php echo $u_kind === 'customer' ? 'checked' : ''; ?>
+                                               <?php echo $is_admin ? '' : 'disabled'; ?>>
+                                        <span class="app-round-check-mark"><i class="fa-solid fa-check"></i></span>
+                                    </span>
+                                    Là khách hàng
+                                </label>
+                                <label class="user-kind-opt">
+                                    <span class="app-round-check">
+                                        <input type="checkbox" class="kind-check" value="factory"
+                                               <?php echo $u_kind === 'factory' ? 'checked' : ''; ?>
+                                               <?php echo $is_admin ? '' : 'disabled'; ?>>
+                                        <span class="app-round-check-mark"><i class="fa-solid fa-check"></i></span>
+                                    </span>
+                                    Nội bộ sản xuất
+                                </label>
+                            </div>
+                            <select class="kind-customer-select" <?php echo $is_admin ? '' : 'disabled'; ?>
+                                    <?php echo $u_kind === 'customer' ? '' : 'hidden'; ?>>
+                                <option value="0">— Chọn khách hàng —</option>
+                                <?php foreach ($customers as $cus):
+                                    $cus_id = (int) $cus['id'];
+                                    ?>
+                                    <option value="<?php echo $cus_id; ?>" <?php echo $cus_id === $u_cid ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars((string) $cus['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
                         <!-- Chân: trạng thái tài khoản (admin trưởng & admin phó đều chỉnh được) -->
                         <div class="user-card-foot">
                             <span class="user-card-foot-label">Trạng thái</span>
@@ -476,6 +544,57 @@ $ajax_base      = '?mod=admin_factory&controllers=admin&action=';
                     showToast('Lỗi kết nối', true);
                 });
             });
+        });
+
+        /* ----------- Định danh: Là khách hàng / Nội bộ sản xuất -----------
+           Hai checkbox LOẠI TRỪ nhau (tick cái này thì cái kia tự bỏ) nên phía dưới chỉ lưu
+           MỘT giá trị kind. Bỏ tick cả hai = xoá định danh (kind rỗng). */
+        function kindSave(box) {
+            var uid = rowUserId(box);
+            if (!uid) return;
+            var checked = box.querySelector('.kind-check:checked');
+            var kind    = checked ? checked.value : '';
+            var sel     = box.querySelector('.kind-customer-select');
+            var cid     = kind === 'customer' && sel ? parseInt(sel.value, 10) || 0 : 0;
+
+            // Chọn "Là khách hàng" mà chưa chọn khách -> chưa gửi đi, chờ chọn xong.
+            if (kind === 'customer' && cid <= 0) { box.setAttribute('data-kind', kind); return; }
+
+            var fd = new FormData();
+            fd.append('user_id', uid);
+            fd.append('kind', kind);
+            fd.append('customer_id', cid);
+            fetch(AJAX_BASE + 'set_user_customer_link', { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res && res.ok) {
+                        box.setAttribute('data-kind', kind);
+                        flash(box, true);
+                    } else {
+                        flash(box, false);
+                        showToast((res && res.message) || 'Cập nhật thất bại', true);
+                    }
+                })
+                .catch(function () { flash(box, false); showToast('Lỗi kết nối', true); });
+        }
+
+        document.querySelectorAll('.user-card-foot-kind').forEach(function (box) {
+            var sel = box.querySelector('.kind-customer-select');
+            box.querySelectorAll('.kind-check').forEach(function (cb) {
+                cb.addEventListener('change', function () {
+                    if (cb.checked) {
+                        // Ép loại trừ: bỏ tick ô còn lại trong CÙNG thẻ.
+                        box.querySelectorAll('.kind-check').forEach(function (o) { if (o !== cb) o.checked = false; });
+                    }
+                    var laKhach = cb.checked && cb.value === 'customer';
+                    if (sel) {
+                        sel.hidden = !laKhach;
+                        if (!laKhach) sel.value = '0';
+                    }
+                    kindSave(box);
+                });
+            });
+            if (sel) sel.addEventListener('change', function () { kindSave(box); });
         });
 
         /* ----------- Menu "Quản lý" trong thẻ ----------- */
