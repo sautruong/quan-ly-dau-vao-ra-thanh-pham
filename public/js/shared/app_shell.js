@@ -3131,3 +3131,113 @@
         navigator.serviceWorker.register(base + 'sw.js', { scope: base || './' }).catch(function () {});
     });
 })();
+
+/* =====================================================================================
+   HIỆU ỨNG "ĐANG GHI" DÙNG CHUNG (anh Sáu chốt 7/8/2026)
+   -------------------------------------------------------------------------------------
+   Vòng xoay giữa màn hình khi một thao tác GHI dữ liệu chạy lâu. Nạp toàn cục qua
+   app_shell.js nên MỌI trang app đều có, không phải sửa từng view.
+
+   Nguyên tắc:
+   - Chỉ tính request GHI (POST/PUT/PATCH/DELETE). GET là đọc, không hiện.
+   - Chỉ hiện khi vượt NGUONG ms. Lưu nhanh (<300ms) mà cũng nháy overlay thì khó chịu hơn
+     là không có gì.
+   - Đếm số request đang chạy: nhiều lệnh ghi chồng nhau chỉ hiện MỘT overlay, và chỉ tắt
+     khi cái cuối cùng xong.
+   - Bỏ qua các request NỀN chạy liên tục (poll chat / chuông / lịch / báo cáo tự động),
+     nếu không overlay sẽ nhấp nháy suốt ngày.
+   - Bọc cả window.fetch LẪN sự kiện ajax của jQuery, vì dự án dùng cả hai.
+
+   Gọi tay được: AppBusy.show('Đang ghi…') / AppBusy.hide().
+   Tắt cho 1 lệnh: fetch(url, { method:'POST', appBusy:false }).
+   ===================================================================================== */
+(function () {
+    'use strict';
+    if (window.AppBusy) return;
+
+    var NGUONG = 400;                 // ms — dưới mức này coi như tức thì, không hiện
+    var dangChay = 0, hen = null, lop = null;
+
+    /* Địa chỉ của các request NỀN — tuyệt đối không hiện overlay cho chúng. */
+    /* Gồm cả các action của CHAT (send/react/markRead/typing): chặn màn hình khi gửi một tin
+       nhắn là sai — người dùng cần gõ tiếp ngay, không phải chờ. */
+    var BO_QUA = /(action=)?(poll|chatPoll|unread|presence|notif|evcalCheck|auto_report_due_check|auto_report_send|touch|heartbeat|send|react|markRead|typing)\b/i;
+
+    function dung() {
+        if (lop) return lop;
+        lop = document.createElement('div');
+        lop.className = 'app-busy';
+        lop.setAttribute('aria-hidden', 'true');
+        lop.innerHTML = '<div class="app-busy-box">'
+                      + '<span class="app-busy-spin"></span>'
+                      + '<span class="app-busy-text">Đang ghi dữ liệu…</span>'
+                      + '</div>';
+        document.body.appendChild(lop);
+        return lop;
+    }
+
+    function hien(chu) {
+        var el = dung();
+        var t = el.querySelector('.app-busy-text');
+        if (t) t.textContent = chu || 'Đang ghi dữ liệu…';
+        el.classList.add('is-on');
+        el.setAttribute('aria-hidden', 'false');
+    }
+
+    function an() {
+        if (!lop) return;
+        lop.classList.remove('is-on');
+        lop.setAttribute('aria-hidden', 'true');
+    }
+
+    function batDau(chu) {
+        dangChay++;
+        if (dangChay === 1) {
+            clearTimeout(hen);
+            hen = setTimeout(function () { hien(chu); }, NGUONG);
+        }
+    }
+    function ketThuc() {
+        dangChay--;
+        if (dangChay <= 0) { dangChay = 0; clearTimeout(hen); an(); }
+    }
+
+    window.AppBusy = {
+        show: function (chu) { clearTimeout(hen); hien(chu); },
+        hide: function () { dangChay = 0; clearTimeout(hen); an(); },
+        begin: batDau,
+        end: ketThuc
+    };
+
+    /* ---- Bọc window.fetch ---- */
+    if (typeof window.fetch === 'function') {
+        var fetchGoc = window.fetch;
+        window.fetch = function (input, init) {
+            var url = typeof input === 'string' ? input : (input && input.url) || '';
+            var pt  = (init && init.method) || (input && input.method) || 'GET';
+            var laGhi = /^(POST|PUT|PATCH|DELETE)$/i.test(pt);
+            var tat   = init && init.appBusy === false;
+
+            if (!laGhi || tat || BO_QUA.test(url)) return fetchGoc.apply(this, arguments);
+
+            batDau(init && init.appBusyText);
+            return fetchGoc.apply(this, arguments).then(
+                function (r) { ketThuc(); return r; },
+                function (e) { ketThuc(); throw e; }
+            );
+        };
+    }
+
+    /* ---- Bọc ajax của jQuery (order_factory và vài view khác dùng $.ajax) ---- */
+    if (window.jQuery) {
+        window.jQuery(document).on('ajaxSend', function (e, xhr, cfg) {
+            var pt = (cfg && cfg.type) || 'GET';
+            if (!/^(POST|PUT|PATCH|DELETE)$/i.test(pt)) return;
+            if (BO_QUA.test((cfg && cfg.url) || '')) return;
+            xhr.__appBusy = true;
+            batDau();
+        }).on('ajaxComplete', function (e, xhr) {
+            if (xhr && xhr.__appBusy) { xhr.__appBusy = false; ketThuc(); }
+        });
+    }
+})();
