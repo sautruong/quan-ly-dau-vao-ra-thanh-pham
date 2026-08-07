@@ -2944,28 +2944,46 @@ html.dd2-cap-mobile .dd2-col-production .dd2-day-nav {
    desktop dung vung du ban clone rong bao nhieu.
    (De rieng o day, ngoai moi @media, nen khong dinh gi toi trang xem thuong.)
    ===================================================================== */
+/* KHONG dung !important cho `overflow` va `height` o khoi nay — do dac
+   html.dd2-cap-mobile ... (0,2,0) da du thang rule cua @media (0,1,0).
+   LY DO SONG CON: !important trong stylesheet THANG CA INLINE STYLE. Ma:
+     - onclone dat cw.style.overflow='visible' / cm.style.overflow='visible' de mo khoa vung
+       cuon cho anh chup. Neu o day de overflow:hidden !important thi HANG 3 (Theo doi ton kho
+       + Bien dong gia nhap) bi cat khoi anh, chi con vung trang.
+     - applyMobileCaptureLayout() ghim chieu cao 2 hang dau bang inline px. Neu o day de
+       height: calc(50% - 12px) !important thi doan ghim px do bi vo hieu hoan toan.
+   Ca 2 loi tren deu do chinh khoi nay gay ra o lan va truoc. */
 html.dd2-cap-mobile #wrapper,
 html.dd2-cap-mobile .dd2-content {
     width: var(--dd2-cap-w, 1600px) !important;
     min-width: var(--dd2-cap-w, 1600px) !important;
     max-width: none !important;
-    overflow: hidden !important;
+    overflow: hidden;
+}
+
+/* Khung chup mobile hep hon (1600) nen chieu cao phai co theo cho GIU DUNG TI LE cua ban
+   desktop 1920x950 — de nguyen 950 thi khung cao hon tuong doi, cac khoi nhin dai ra. */
+html.dd2-cap-mobile,
+html.dd2-cap-mobile body,
+html.dd2-cap-mobile #wrapper {
+    height: var(--dd2-cap-h, 792px);
+    max-height: var(--dd2-cap-h, 792px);
 }
 
 html.dd2-cap-mobile .dd2-content {
     flex: 1 1 auto !important;
-    height: auto !important;
+    height: auto;
     min-height: 0 !important;
 }
 
 html.dd2-cap-mobile .dd2-main {
-    overflow: hidden !important;
+    overflow: hidden;
 }
 
-/* Hang: tra ve NGANG + cao dung nua vung cuon (dung lai .dd2-row goc). */
+/* Hang: tra ve NGANG (khoi <=1200px doi thanh column). Chieu cao do JS ghim px. */
 html.dd2-cap-mobile .dd2-row {
     flex-direction: row !important;
-    height: calc(50% - 12px) !important;
+    height: calc(50% - 12px);
     flex: 0 0 auto !important;
 }
 

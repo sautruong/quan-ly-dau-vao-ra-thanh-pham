@@ -2421,6 +2421,9 @@
        trong ảnh -> đọc trên điện thoại rõ hơn hẳn. 1600 an toàn: giữa 1200 và 1920 KHÔNG có
        breakpoint nào (cả file chỉ có @media 1200 và 768) nên bố cục y hệt bản 1920. */
     var CAPTURE_MOBILE_W = 1600;
+    /* Chiều cao phải co theo bề rộng để GIỮ ĐÚNG TỈ LỆ khung desktop 1920x950. Để nguyên 950
+       thì khung 1600 hoá ra cao hơn tương đối, và mọi khối nhìn dài ra so với bản desktop. */
+    var CAPTURE_MOBILE_H = Math.round(CAPTURE_DESKTOP_H * CAPTURE_MOBILE_W / CAPTURE_DESKTOP_W);
     var captureModal = document.getElementById('dd2-capture-modal');
     var captureBlob = null;
     var captureBlobUrl = '';
@@ -2514,6 +2517,7 @@
            đè nhau. Ghim px tuyệt đối thì bố cục desktop đứng vững bất kể clone rộng bao nhiêu
            (phần dựng lại các rule của khối ≤1200px nằm ở daily_dashboard.css). */
         doc.documentElement.style.setProperty('--dd2-cap-w', CAPTURE_MOBILE_W + 'px');
+        doc.documentElement.style.setProperty('--dd2-cap-h', CAPTURE_MOBILE_H + 'px');
         doc.documentElement.classList.add('dd2-cap-mobile');
         output.style.display = 'none';
 
@@ -2559,6 +2563,7 @@
         return function undoMobileCaptureLayout() {
             caoCu.forEach(function (x) { x[0].style.height = x[1]; x[0].style.flex = x[2]; });
             doc.documentElement.style.removeProperty('--dd2-cap-w');
+            doc.documentElement.style.removeProperty('--dd2-cap-h');
             doc.documentElement.classList.remove('dd2-cap-mobile');
             output.style.display = outputDisplayCu;
             if (note.parentNode) note.parentNode.removeChild(note);
