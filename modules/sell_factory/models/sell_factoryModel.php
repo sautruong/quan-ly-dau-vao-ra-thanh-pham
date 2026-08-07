@@ -127,6 +127,66 @@ function sf_get_all_categories()
 }
 
 /**
+ * GỬI ẢNH ĐƠN HÀNG VÀO CHAT (hộp thoại 1-1 với đồng nghiệp).
+ * Cùng công thức với fm_share_to_chat() / ar_send_to_recipients(): lưu tệp vào kho của chat,
+ * chèn 1 tin loại 'image' rồi gắn dòng chat_attachments.
+ *
+ * @param int    $uid        người gửi (user đang đăng nhập)
+ * @param array  $file       phần tử của $_FILES (ảnh PNG do html2canvas dựng)
+ * @param array  $target_ids danh sách user nhận
+ * @param string $note       lời nhắn kèm theo (rỗng thì dùng câu mặc định)
+ * @return array ['ok'=>bool, 'sent'=>int, 'message'=>string]
+ */
+function sf_share_order_to_chat($uid, $file, array $target_ids, $note = '')
+{
+    $uid = (int) $uid;
+    if ($uid <= 0) return ['ok' => false, 'message' => 'Chưa đăng nhập.'];
+
+    require_once APPPATH . DIRECTORY_SEPARATOR . 'libraries' . DIRECTORY_SEPARATOR . 'chat.php';
+    chat_ensure_tables();
+
+    $ids = [];
+    foreach ($target_ids as $t) {
+        $t = (int) $t;
+        if ($t > 0 && $t !== $uid && !in_array($t, $ids, true)) $ids[] = $t;
+    }
+    if (!$ids) return ['ok' => false, 'message' => 'Chưa chọn người nhận.'];
+
+    $stored = chat_store_upload($file);
+    if (empty($stored['ok'])) {
+        return ['ok' => false, 'message' => 'Không lưu được ảnh: ' . ($stored['reason'] ?? '')];
+    }
+
+    $body = trim((string) $note);
+    if ($body === '') $body = '🧾 Đơn đặt hàng nhà máy — ' . date('d/m/Y H:i');
+
+    // Mọi người nhận DÙNG CHUNG 1 tệp trên đĩa (giống ar_send_one) — không nhân bản vô ích.
+    $att = [
+        'file_name'     => (string) $stored['file_name'],
+        'original_name' => (string) $stored['original_name'],
+        'mime'          => (string) $stored['mime'],
+        'size'          => (int) $stored['size'],
+        'is_image'      => (int) $stored['is_image'] ? 1 : 0,
+    ];
+
+    $sent = 0;
+    foreach ($ids as $t) {
+        $cid = chat_get_or_create_direct($uid, $t);
+        if ($cid <= 0) continue;
+        $mid = (int) chat_insert_message($cid, $uid, $body, 'image');
+        if ($mid <= 0) continue;
+        $row = $att;
+        $row['message_id'] = $mid;
+        db_insert('chat_attachments', $row);
+        chat_mark_read($cid, $uid, $mid); // bản của người gửi coi như đã đọc
+        $sent++;
+    }
+
+    if ($sent === 0) return ['ok' => false, 'message' => 'Không gửi được cho người nhận nào.'];
+    return ['ok' => true, 'sent' => $sent];
+}
+
+/**
  * DANH SÁCH SẢN PHẨM CỦA MẺ SẢN XUẤT GẦN NHẤT — dùng để "chớp sáng" ô sản phẩm khi vào
  * trang order_factory, cho người đặt hàng thấy ngay hôm rồi nhà máy vừa làm ra những gì.
  *

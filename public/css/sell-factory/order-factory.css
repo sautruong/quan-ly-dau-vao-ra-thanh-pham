@@ -502,6 +502,18 @@ p {
     transform: translateY(-2px);
 }
 
+/* Nút "Gửi qua chat" — cùng bộ với 2 nút trên, lấy sắc xanh lá của app cho khác Zalo. */
+.share-chat {
+    background: var(--color-green-soft);
+    color: var(--color-green-dark);
+}
+
+.share-chat:hover {
+    background: var(--color-green);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
 
 
 /* ============================================
@@ -916,6 +928,13 @@ input:focus {
     padding: 16px;
     border: 1px dashed var(--color-gray-300);
     border-radius: var(--radius-md);
+}
+
+/* Viền gạch đứt chỉ để nhìn trên màn hình cho biết đây là vùng sẽ chụp — KHÔNG được lọt vào
+   ảnh. JS gắn .of-capturing ngay trước html2canvas rồi gỡ ngay sau (cả nút "Chụp hóa đơn"
+   lẫn nút "Gửi qua chat" đều đi qua một hàm chụp dùng chung). */
+.zalo-capture.of-capturing {
+    border-color: transparent;
 }
 
 .zalo-title {
@@ -1748,6 +1767,134 @@ input:focus {
 
 /* --- Modal giỏ hàng (override .modal-box rộng hơn) --- */
 .of-cart-modal { z-index: 1300; }
+
+/* Modal "Share Zalo" MỞ TỪ TRONG modal "Đơn hiện tại" nên phải nằm CHỒNG LÊN nó.
+   Trước đây nó chỉ có .modal-mask (z-index:100 ở trên) trong khi .of-cart-modal là 1300
+   -> hoá đơn bị lớp nền mờ của giỏ hàng phủ kín, tưởng như không mở ra. */
+#modal-zalo { z-index: 1400; }
+
+/* ===================== MODAL "GỬI ĐƠN QUA CHAT" =====================
+   Cùng lý do z-index với #modal-zalo: mở từ trong modal "Đơn hiện tại" (1300).
+   ==================================================================== */
+#modal-share-chat { z-index: 1400; }
+
+.of-chat-box {
+    width: min(440px, 94vw) !important;
+    max-width: 440px !important;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.of-chat-head h3 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    color: var(--color-green-dark);
+}
+
+.of-chat-hint {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--color-gray-500, #6b7280);
+}
+
+.of-chat-filter,
+.of-chat-note {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--color-gray-300, #d1d5db);
+    border-radius: 8px;
+    font-size: 13.5px;
+    outline: none;
+}
+
+.of-chat-filter:focus,
+.of-chat-note:focus { border-color: var(--color-green-light); }
+
+/* Danh bạ: vùng cuộn riêng để modal không dài quá màn hình. */
+.of-chat-list {
+    flex: 1 1 auto;
+    min-height: 120px;
+    max-height: 46vh;
+    overflow-y: auto;
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.of-chat-loading,
+.of-chat-empty {
+    padding: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--color-gray-500, #6b7280);
+    font-style: italic;
+}
+
+.of-chat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13.5px;
+}
+
+.of-chat-row:hover { background: var(--color-green-soft); }
+.of-chat-row input { accent-color: var(--color-green); }
+
+.of-chat-ava {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+
+.of-chat-ava-x {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-green-soft);
+    color: var(--color-green-dark);
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* Chấm xanh "đang online" — cùng quy ước với chat widget. */
+.of-chat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-green-light);
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.of-chat-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.of-chat-status { font-size: 12.5px; color: var(--color-gray-500, #6b7280); }
+
+.of-chat-send {
+    background: var(--color-green);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.of-chat-send:hover:not(:disabled) { background: var(--color-green-dark); }
+.of-chat-send:disabled { opacity: .6; cursor: default; }
 .of-cart-box {
     width: min(760px, 94vw) !important;
     max-width: 760px !important;

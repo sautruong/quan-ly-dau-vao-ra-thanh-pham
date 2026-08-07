@@ -384,21 +384,56 @@
 
     /* --------------------------- Share Zalo --------------------------- */
     $(document).on('click', '#btn-share-zalo', function () {
-        var payload = collectOrderPayload();
-        if (payload.items.length === 0) { alert('Chưa có sản phẩm để chia sẻ.'); return; }
-        $('#zalo-customer-name').text(payload.customer_name || '________');
-        var rows = '';
-        $.each(payload.items, function (i, it) {
-            rows += '<tr><td>' + it.product_name + '</td><td>' + (it.unit || '') + '</td>'
-                  + '<td>' + it.qt_order + '</td><td>' + fmtWeight(it.line_weight) + '</td></tr>';
-        });
-        $('#zalo-body').html(rows);
-        $('#zalo-weight-total-value').text(fmtWeight(payload.weight_total));
+        // Dựng hoá đơn bằng ĐÚNG hàm mà nút "Gửi qua chat" dùng -> hai đường không bao giờ lệch.
+        if (!fillInvoicePreview()) { alert('Chưa có sản phẩm để chia sẻ.'); return; }
         openModal('modal-zalo');
     });
+    /* ---------------------------------------------------------------------------------
+       CHỤP HOÁ ĐƠN — hàm dùng chung cho "Chụp hóa đơn" (Zalo) và "Gửi qua chat", để hai
+       đường luôn ra CÙNG MỘT tấm ảnh.
+
+       Hai việc phải làm quanh lúc chụp:
+       1. Gỡ viền gạch đứt của .zalo-capture — nó chỉ để nhìn trên màn hình, không được vào ảnh.
+       2. Nếu #modal-zalo đang đóng (đường "Gửi qua chat" không mở nó ra) thì phải cho nó
+          ĐƯỢC BỐ TRÍ, nếu không html2canvas đo ra 0x0 và ảnh rỗng. Dùng display:flex kèm
+          opacity:0 thay vì mở modal thật: opacity nằm trên lớp mask (cha), mà html2canvas chỉ
+          đọc computed style của CHÍNH #zalo-capture trở xuống nên ảnh vẫn đục bình thường.
+       --------------------------------------------------------------------------------- */
+    function captureInvoiceCanvas() {
+        var el = document.getElementById('zalo-capture');
+        var $mask = $('#modal-zalo');
+        var dangHien = $mask.is(':visible');
+        var styleCu = $mask.attr('style') || '';
+
+        if (!dangHien) $mask.css({ display: 'flex', opacity: 0, pointerEvents: 'none' });
+        $(el).addClass('of-capturing');
+
+        // html2canvas trả Promise GỐC (không phải Deferred của jQuery) nên KHÔNG có .always() —
+        // phải dọn dẹp ở cả 2 nhánh bằng tay, nếu không viền gạch đứt sẽ mất luôn trên màn hình
+        // và #modal-zalo kẹt ở display:flex khi chụp lỗi.
+        var donDep = function () {
+            $(el).removeClass('of-capturing');
+            if (!dangHien) {
+                if (styleCu) $mask.attr('style', styleCu);
+                else $mask.removeAttr('style').hide();
+            }
+        };
+        return html2canvas(el, { backgroundColor: '#fff', scale: 2 }).then(
+            function (canvas) { donDep(); return canvas; },
+            function (err) { donDep(); throw err; }
+        );
+    }
+
+    /** Bọc canvas -> Blob PNG (toBlob không trả Promise sẵn). */
+    function canvasToBlob(canvas) {
+        return new Promise(function (resolve, reject) {
+            canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error('Không dựng được ảnh.')); }, 'image/png');
+        });
+    }
+
     $(document).on('click', '#btn-capture-zalo', function () {
         var $btn = $(this).prop('disabled', true).text('Đang chụp...');
-        html2canvas(document.getElementById('zalo-capture'), { backgroundColor: '#fff', scale: 2 }).then(function (canvas) {
+        captureInvoiceCanvas().then(function (canvas) {
             canvas.toBlob(function (blob) {
                 if (navigator.clipboard && window.ClipboardItem) {
                     navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function () {
@@ -408,6 +443,99 @@
                 $btn.prop('disabled', false).text('Chụp hóa đơn');
             }, 'image/png');
         });
+    });
+
+    /* =================================================================================
+       GỬI ĐƠN QUA CHAT — dựng đúng hoá đơn của "Share Zalo" rồi gửi ảnh đó vào hộp thoại
+       chat với người được chọn. Server: sf_share_order_to_chat().
+       ================================================================================= */
+
+    /** Đổ nội dung đơn hiện tại vào #zalo-capture. Trả payload, hoặc null nếu đơn rỗng. */
+    function fillInvoicePreview() {
+        var payload = collectOrderPayload();
+        if (payload.items.length === 0) return null;
+        $('#zalo-customer-name').text(payload.customer_name || '________');
+        var rows = '';
+        $.each(payload.items, function (i, it) {
+            rows += '<tr><td>' + it.product_name + '</td><td>' + (it.unit || '') + '</td>'
+                  + '<td>' + it.qt_order + '</td><td>' + fmtWeight(it.line_weight) + '</td></tr>';
+        });
+        $('#zalo-body').html(rows);
+        $('#zalo-weight-total-value').text(fmtWeight(payload.weight_total));
+        return payload;
+    }
+
+    $(document).on('click', '#btn-share-chat', function () {
+        if (!fillInvoicePreview()) { alert('Chưa có sản phẩm để gửi.'); return; }
+        $('#of-chat-status').text('');
+        $('#of-chat-filter').val('');
+        openModal('modal-share-chat');
+        loadChatContacts();
+    });
+
+    var chatContactsLoaded = false;
+    function loadChatContacts() {
+        if (chatContactsLoaded) return;
+        $.getJSON(BASE + 'chat_contacts', function (res) {
+            if (!res || !res.ok) { $('#of-chat-list').html('<div class="of-chat-empty">Không tải được danh bạ.</div>'); return; }
+            var rows = (res.data || []).map(function (u) {
+                var ten = u.alias || u.fullname || u.username || '';
+                var ava = u.avatar
+                    ? '<img class="of-chat-ava" src="' + escHtml(u.avatar) + '" alt="">'
+                    : '<span class="of-chat-ava of-chat-ava-x">' + escHtml(ten.charAt(0)) + '</span>';
+                return '<label class="of-chat-row">'
+                     + '<input type="checkbox" class="of-chat-pick" value="' + (+u.id) + '">'
+                     + ava + '<span>' + escHtml(ten) + '</span>'
+                     + (u.online ? '<span class="of-chat-dot" title="Đang online"></span>' : '')
+                     + '</label>';
+            }).join('');
+            $('#of-chat-list').html(rows || '<div class="of-chat-empty">Chưa có ai trong danh bạ.</div>');
+            chatContactsLoaded = true;
+        }).fail(function () {
+            $('#of-chat-list').html('<div class="of-chat-empty">Lỗi mạng khi tải danh bạ.</div>');
+        });
+    }
+
+    $(document).on('input', '#of-chat-filter', function () {
+        var kw = noAccent(String($(this).val() || ''));
+        $('#of-chat-list .of-chat-row').each(function () {
+            $(this).toggle(kw === '' || noAccent($(this).text()).indexOf(kw) !== -1);
+        });
+    });
+
+    $(document).on('click', '#of-chat-send', function () {
+        var $btn = $(this);
+        var targets = $('#of-chat-list .of-chat-pick:checked').map(function () { return +this.value; }).get();
+        if (!targets.length) { $('#of-chat-status').text('Chưa chọn người nhận.'); return; }
+
+        $btn.prop('disabled', true).text('Đang gửi…');
+        $('#of-chat-status').text('Đang dựng ảnh hoá đơn…');
+
+        captureInvoiceCanvas()
+            .then(canvasToBlob)
+            .then(function (blob) {
+                var fd = new FormData();
+                fd.append('image', blob, 'don-hang.png');
+                fd.append('note', $('#of-chat-note').val() || '');
+                $.each(targets, function (i, id) { fd.append('targets[]', id); });
+                $('#of-chat-status').text('Đang gửi…');
+                return $.ajax({
+                    url: BASE + 'share_order_to_chat', method: 'POST', data: fd,
+                    processData: false, contentType: false, dataType: 'json'
+                });
+            })
+            .then(function (res) {
+                if (res && res.ok) {
+                    closeModal('modal-share-chat');
+                    alert('Đã gửi hoá đơn cho ' + res.sent + ' người qua chat.');
+                    $('#of-chat-note').val('');
+                    $('#of-chat-list .of-chat-pick:checked').prop('checked', false);
+                } else {
+                    $('#of-chat-status').text((res && res.msg) || 'Gửi thất bại.');
+                }
+            })
+            .catch(function () { $('#of-chat-status').text('Lỗi mạng khi gửi.'); })
+            .then(function () { $btn.prop('disabled', false).text('Gửi'); });
     });
     function downloadCanvas(canvas) {
         var a = document.createElement('a');

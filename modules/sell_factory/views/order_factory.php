@@ -249,6 +249,7 @@ if (!function_exists('of_render_product')) {
                     <div class="wp-button">
                         <button class="share-factory" id="btn-share-factory">Gửi nhà máy</button>
                         <button class="share-zalo" id="btn-share-zalo">Share Zalo</button>
+                        <button class="share-chat" id="btn-share-chat"><i class="fa-regular fa-comments"></i> Gửi qua chat</button>
                     </div>
 
                     <div class="order-inv-status" id="order-inv-status" hidden></div>
@@ -319,6 +320,29 @@ if (!function_exists('of_render_product')) {
             </div>
             <div class="modal-zalo-footer">
                 <button class="btn-capture-zalo" id="btn-capture-zalo">Chụp hóa đơn</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============== MODAL : GỬI ĐƠN QUA CHAT ==============
+         Mở TỪ TRONG modal "Đơn hiện tại" nên z-index phải cao hơn (xem order-factory.css).
+         Hoá đơn gửi đi chính là #zalo-capture ở trên — dựng lại nội dung rồi html2canvas,
+         không vẽ thêm bản thứ hai để hai đường luôn ra cùng một tấm ảnh. -->
+    <div class="modal-mask of-chat-modal" id="modal-share-chat" style="display:none;">
+        <div class="modal-box of-chat-box">
+            <span class="modal-close" data-close="modal-share-chat">&times;</span>
+            <div class="of-chat-head">
+                <h3><i class="fa-regular fa-comments"></i> Gửi đơn qua chat</h3>
+                <p class="of-chat-hint">Chọn người nhận — ảnh hoá đơn sẽ được gửi vào hộp thoại chat với họ.</p>
+            </div>
+            <input type="text" class="of-chat-filter" id="of-chat-filter" autocomplete="off" placeholder="Tìm tên người nhận...">
+            <div class="of-chat-list" id="of-chat-list">
+                <div class="of-chat-loading">Đang tải danh bạ…</div>
+            </div>
+            <input type="text" class="of-chat-note" id="of-chat-note" autocomplete="off" placeholder="Lời nhắn (tuỳ chọn)">
+            <div class="of-chat-foot">
+                <span class="of-chat-status" id="of-chat-status"></span>
+                <button type="button" class="of-chat-send" id="of-chat-send">Gửi</button>
             </div>
         </div>
     </div>

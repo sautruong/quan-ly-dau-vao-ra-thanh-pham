@@ -45,6 +45,38 @@ function order_historyAction()
     ]);
 }
 
+/* AJAX: danh bạ chat (cho hộp chọn người nhận của nút "Gửi qua chat").
+   Đi vòng qua đây thay vì gọi thẳng ?mod=chat&action=contacts để trang này không phụ thuộc
+   vào phân quyền/định dạng trả về của module chat. */
+function chat_contactsAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $uid = sf_current_user_id();
+    if ($uid <= 0) { echo json_encode(['ok' => false, 'msg' => 'Chưa đăng nhập.'], JSON_UNESCAPED_UNICODE); return; }
+    require_once APPPATH . DIRECTORY_SEPARATOR . 'libraries' . DIRECTORY_SEPARATOR . 'chat.php';
+    chat_ensure_tables();
+    echo json_encode(['ok' => true, 'data' => chat_contacts($uid)], JSON_UNESCAPED_UNICODE);
+}
+
+/* AJAX: gửi ảnh đơn hàng vào chat. multipart: image (PNG), targets[] , note. */
+function share_order_to_chatAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $uid = sf_current_user_id();
+    if ($uid <= 0) { echo json_encode(['ok' => false, 'msg' => 'Chưa đăng nhập.'], JSON_UNESCAPED_UNICODE); return; }
+
+    $targets = isset($_POST['targets']) ? (array) $_POST['targets'] : [];
+    if (empty($_FILES['image']) || ($_FILES['image']['error'] ?? 1) !== UPLOAD_ERR_OK) {
+        echo json_encode(['ok' => false, 'msg' => 'Thiếu ảnh đơn hàng.'], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    $res = sf_share_order_to_chat($uid, $_FILES['image'], $targets, (string) ($_POST['note'] ?? ''));
+    echo json_encode(
+        ['ok' => !empty($res['ok']), 'sent' => (int) ($res['sent'] ?? 0), 'msg' => (string) ($res['message'] ?? '')],
+        JSON_UNESCAPED_UNICODE
+    );
+}
+
 /* AJAX: danh sách sản phẩm + thứ tự hiển thị (cho modal cài đặt). */
 function display_order_listAction()
 {
