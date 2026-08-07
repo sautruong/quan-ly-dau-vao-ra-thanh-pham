@@ -2926,6 +2926,94 @@ html.dd2-cap-mobile .dd2-col-production .dd2-day-nav {
     display: none;
 }
 
+/* =====================================================================
+   EP BO CUC DESKTOP KHI CHUP TU MOBILE  (va 7/8/2026)
+   ---------------------------------------------------------------------
+   GOC RE cua anh chup vo tren may that (Oppo A12) trong khi test bang
+   viewport-resize thi dep: html2canvas dung bo cuc cua BAN CLONE trong mot
+   iframe an. Tren may yeu, iframe do KHONG nhan duoc be rong 1920 ma bi kep
+   ve be rong thiet bi (~360-400px) -> @media (max-width:1200px) o tren KICH
+   HOAT trong ban clone -> hang xep doc, .dd2-row{flex-direction:column},
+   cac cot flex:none... roi html2canvas ve theo toa do cua bo cuc doc ay.
+   Trieu chung khop tung cai: tieu de Production Report mat margin-left:auto
+   nen roi vao giua, cum app head lech, dong ten NCC / muc chi Quy bi day ra
+   khoi o, ngay "/21 ngay truoc" rot xuong dong rieng, chu de len nhau.
+   ---------------------------------------------------------------------
+   CACH CHUA: khong trong cay vao viewport nua. Ghim BE RONG PX tuyet doi cho
+   khung chup va dung !important dung lai moi rule cua khoi <=1200px, de bo cuc
+   desktop dung vung du ban clone rong bao nhieu.
+   (De rieng o day, ngoai moi @media, nen khong dinh gi toi trang xem thuong.)
+   ===================================================================== */
+html.dd2-cap-mobile #wrapper,
+html.dd2-cap-mobile .dd2-content {
+    width: var(--dd2-cap-w, 1600px) !important;
+    min-width: var(--dd2-cap-w, 1600px) !important;
+    max-width: none !important;
+    overflow: hidden !important;
+}
+
+html.dd2-cap-mobile .dd2-content {
+    flex: 1 1 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+html.dd2-cap-mobile .dd2-main {
+    overflow: hidden !important;
+}
+
+/* Hang: tra ve NGANG + cao dung nua vung cuon (dung lai .dd2-row goc). */
+html.dd2-cap-mobile .dd2-row {
+    flex-direction: row !important;
+    height: calc(50% - 12px) !important;
+    flex: 0 0 auto !important;
+}
+
+/* Cot: tra lai flex-basis that (khoi <=1200px dat flex:none cho ca 6 cot). */
+html.dd2-cap-mobile .dd2-col-import { flex: 1 1 21.04% !important; }
+html.dd2-cap-mobile .dd2-col-export { flex: 1 1 30.6% !important; }
+html.dd2-cap-mobile .dd2-col-output { flex: 0 0 38.36% !important; }
+html.dd2-cap-mobile .dd2-col-production { flex: 0 0 38.36% !important; }
+html.dd2-cap-mobile .dd2-col-material-order,
+html.dd2-cap-mobile .dd2-col-group { flex: 1 1 50% !important; }
+html.dd2-cap-mobile .dd2-col-stock-watch,
+html.dd2-cap-mobile .dd2-col-price-change { flex: 1 1 50% !important; }
+
+html.dd2-cap-mobile .dd2-card { height: 100% !important; }
+
+/* Thanh icon doc ben trai va khung ngoai: giu dung chieu doc nhu desktop. */
+html.dd2-cap-mobile .dd2-body { flex-direction: row !important; }
+html.dd2-cap-mobile .dd2-sidebar {
+    flex-direction: column !important;
+    width: 52px !important;
+}
+html.dd2-cap-mobile .dd2-sb-group { flex-direction: column !important; }
+html.dd2-cap-mobile .dd2-sb-group-bottom { margin-top: auto !important; margin-left: 0 !important; }
+
+/* Cac vung cuon trong card: bo tran chieu cao cua ban mobile. */
+html.dd2-cap-mobile .dd2-list,
+html.dd2-cap-mobile .dd2-prod-table-wrap { max-height: none !important; }
+
+html.dd2-cap-mobile .dd2-branch-grid { grid-template-columns: 1fr 1fr !important; }
+
+/* Tieu de "Production Report" luon sat mep PHAI (khoi <=1200px lam mat auto margin). */
+html.dd2-cap-mobile .dd2-page-head { flex-direction: row !important; align-items: center !important; }
+html.dd2-cap-mobile .dd2-page-date-wrap { margin-left: auto !important; }
+
+/* Khoi Xuat kho: cum "N don hang - M SP" + gia tri canh GIUA. */
+html.dd2-cap-mobile .dd2-col-export .dd2-import-stats-top,
+html.dd2-cap-mobile .dd2-col-export .dd2-import-main {
+    text-align: center !important;
+    justify-content: center !important;
+}
+
+/* Hop "Today + <chi nhanh>" chong len bieu do: rong VUA DU om chu, khong keo het the. */
+html.dd2-cap-mobile .dd2-col-export .dd2-export-today {
+    width: -moz-fit-content !important;
+    width: fit-content !important;
+    max-width: 90% !important;
+}
+
 /* Modal chụp (chỉ mobile) */
 .dd2-capture-box {
     width: 560px;

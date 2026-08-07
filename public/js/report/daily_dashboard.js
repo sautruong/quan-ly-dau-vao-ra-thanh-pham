@@ -2269,7 +2269,11 @@
         var contentEl = doc.querySelector('.dd2-content');
         if (!contentEl) throw new Error('Không tìm thấy nội dung báo cáo.');
 
-        var scale = 2;
+        /* Ảnh chụp từ mobile lấy scale cao hơn cho NÉT (anh Sáu: "ảnh hơi mờ"). Khung mobile hẹp
+           hơn (1600 thay vì 1920) nên 3x vẫn ra file nhỏ hơn 2x của khung desktop tính theo
+           tổng điểm ảnh, mà chữ thì vừa to hơn vừa sắc hơn. */
+        var laMobile = doc.documentElement.classList.contains('dd2-cap-mobile');
+        var scale = laMobile ? 3 : 2;
         // 2026-07-28: trang có thêm hàng 3 nên .dd2-main cuộn dọc -> ảnh chụp phải lấy CẢ phần
         // đang bị cuộn khuất. Cách làm: đo phần dư (scrollHeight - clientHeight) để nới chiều cao
         // vùng chụp, còn bản CLONE của html2canvas thì mở khóa overflow + ghim chiều cao từng hàng
@@ -2412,6 +2416,11 @@
     // ảnh ra như nhau ở mọi thiết bị). Ở bề rộng này không sản phẩm/hàng hóa nào bị cắt tên.
     var CAPTURE_DESKTOP_W = 1920;
     var CAPTURE_DESKTOP_H = 950;
+    /* Khung riêng cho ảnh chụp từ MOBILE — hẹp hơn desktop 1 bậc (anh Sáu: "zoom dashboard lên
+       xíu, ảnh hơi mờ chữ bé"). Cùng một cỡ chữ px, khung càng hẹp thì chữ càng chiếm tỉ lệ lớn
+       trong ảnh -> đọc trên điện thoại rõ hơn hẳn. 1600 an toàn: giữa 1200 và 1920 KHÔNG có
+       breakpoint nào (cả file chỉ có @media 1200 và 768) nên bố cục y hệt bản 1920. */
+    var CAPTURE_MOBILE_W = 1600;
     var captureModal = document.getElementById('dd2-capture-modal');
     var captureBlob = null;
     var captureBlobUrl = '';
@@ -2499,6 +2508,12 @@
         var prodNext   = prod.nextSibling;
         var outputDisplayCu = output.style.display;
 
+        /* Ghim BỀ RỘNG PX cho khung chụp. Đây là mấu chốt: html2canvas dựng bản clone trong một
+           iframe ẩn, mà máy yếu (Oppo A12) không nhận được bề rộng 1920 nên clone bị kẹp về bề
+           rộng thiết bị -> @media (max-width:1200px) kích hoạt trong clone -> hàng xếp dọc, chữ
+           đè nhau. Ghim px tuyệt đối thì bố cục desktop đứng vững bất kể clone rộng bao nhiêu
+           (phần dựng lại các rule của khối ≤1200px nằm ở daily_dashboard.css). */
+        doc.documentElement.style.setProperty('--dd2-cap-w', CAPTURE_MOBILE_W + 'px');
         doc.documentElement.classList.add('dd2-cap-mobile');
         output.style.display = 'none';
         // Chèn NGAY SAU khối Sản lượng (đang ẩn) -> nằm đúng giữa Nhập kho và Xuất kho.
@@ -2520,6 +2535,7 @@
         else prod.appendChild(note);
 
         return function undoMobileCaptureLayout() {
+            doc.documentElement.style.removeProperty('--dd2-cap-w');
             doc.documentElement.classList.remove('dd2-cap-mobile');
             output.style.display = outputDisplayCu;
             if (note.parentNode) note.parentNode.removeChild(note);

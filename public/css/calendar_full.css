@@ -36,14 +36,26 @@
 .calfull-view-btn:hover { color: var(--app-green, #096926); }
 .calfull-view-btn.is-active { background: #fff; color: var(--app-green, #096926); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 
+/* PHẢI khai gap: 8px giống hệt .calfull-grid. Đây là 2 lưới RIÊNG BIỆT: hàng tiêu đề không có
+   gap thì mỗi cột rộng W/7, còn ô ngày có gap thì mỗi cột rộng (W-48)/7 -> nhãn thứ trôi dần
+   sang phải so với ô ngày, tới cột cuối lệch gần nửa ô. */
 .calfull-weekdays {
-    display: grid; grid-template-columns: repeat(7, 1fr);
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px;
     padding: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--app-gray-500); text-align: center;
 }
 .calfull-weekdays .sun { color: #dc2626; }
 
-.calfull-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+/* minmax(0, 1fr) — KHÔNG phải 1fr trần (vá 7/8/2026).
+   `1fr` = `minmax(auto, 1fr)`: cột KHÔNG được phép hẹp hơn nội dung nhỏ nhất của nó. Ngày nào có
+   sự kiện tên dài là cột đó phình ra, các cột còn lại co lại -> 7 cột RỘNG KHÁC NHAU và tổng bề
+   rộng vượt khung (sinh thanh cuộn ngang). Hàng tiêu đề .calfull-weekdays lại là một grid RIÊNG
+   chia đều 7 phần, nên nhãn thứ và ô ngày lệch nhau — nhìn vào tưởng ngày rơi sai thứ
+   (7/8/2026 là thứ Sáu nhưng hiện dưới cột "Thứ 7"). minmax(0,1fr) cho phép cột hẹp hơn nội dung,
+   chip đã có sẵn ellipsis nên chữ dài tự cắt.
+   Mini lịch trên header không dính vì nó là lưới khác (.calfull-ymini-grid / app_shell). */
+.calfull-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
 .calfull-day {
+    min-width: 0;   /* cùng lý do: ô là grid item, mặc định không co dưới min-content */
     min-height: 150px; display: flex; flex-direction: column; gap: 6px;
     background: #fff; border: 1px solid var(--app-gray-100); border-radius: 12px;
     padding: 8px; transition: var(--app-trans);
