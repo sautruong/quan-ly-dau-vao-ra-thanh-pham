@@ -2885,6 +2885,47 @@ html.dd2-capturing .app-sidebar {
     transition: none !important;
 }
 
+/* =====================================================================
+   BO CUC RIENG CHO ANH CHUP TU MOBILE  (class .dd2-cap-mobile)
+   ---------------------------------------------------------------------
+   Chi song trong luc chup tu thiet bi mobile — xem applyMobileCaptureLayout()
+   trong daily_dashboard.js. Trang xem binh thuong va anh chup tu may tinh
+   (ke ca bao cao gui tu dong tren may chu nha may) KHONG dinh gi o day.
+   Viec di chuyen khoi (an "San luong", dua "San xuat hom nay" len hang 1) do
+   JS lam vi 2 khoi nam o 2 .dd2-row khac nhau — CSS khong bat cau duoc.
+   Phan duoi day chi lo BE RONG cua cac cot sau khi da dao cho.
+   ===================================================================== */
+
+/* Hang 1: "San xuat hom nay" thay cho "San luong" -> nhan DUNG be rong cu cua
+   San luong (38.36%), nho vay ti le hang 1 khong doi mot chut nao. */
+html.dd2-cap-mobile .dd2-col-production {
+    flex: 0 0 38.36%;
+}
+
+/* Hang 2 chi con 2 khoi -> chia doi. flex-basis 50% + gap lam tong vuot 100%,
+   ca hai cung flex-shrink:1 nen co lai deu nhau => dung 50/50. */
+html.dd2-cap-mobile .dd2-col-material-order,
+html.dd2-cap-mobile .dd2-col-group {
+    flex: 1 1 50%;
+}
+
+/* Dong "Tong san luong cua thang: N" — giu lai con so cua khoi San luong vua an.
+   Nam TRONG .dd2-card-head cua khoi San xuat hom nay (khong phai dong rieng) de ton 0 chieu cao:
+   .dd2-prod-table-wrap dang tat overflow nen bat cu thu gi chiem cao deu day dong cuoi cua bang
+   tran khoi day card. margin-left:auto de bam sat le phai, dung cho ma cac card khac dat nhan ky. */
+html.dd2-cap-mobile .dd2-cap-output-note {
+    margin-left: auto;
+    font-size: 15px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+/* Nut dieu huong ngay von visibility:hidden (chi hien khi ro chuot) nhung VAN chiem ~56px trong
+   head — an han di de dong ghi chu tren khong bi day sang trai. */
+html.dd2-cap-mobile .dd2-col-production .dd2-day-nav {
+    display: none;
+}
+
 /* Modal chụp (chỉ mobile) */
 .dd2-capture-box {
     width: 560px;

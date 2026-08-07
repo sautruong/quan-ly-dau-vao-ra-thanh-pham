@@ -2419,6 +2419,31 @@
     /** Bố cục dashboard đổi sang xếp dọc từ 1200px trở xuống — dưới mốc này mới cần ép desktop. */
     function needsDesktopCapture() { return window.innerWidth <= 1200; }
 
+    /**
+     * CÓ PHẢI THIẾT BỊ MOBILE THẬT KHÔNG — dùng riêng cho bố cục ảnh chụp mobile.
+     * KHÔNG được dùng needsDesktopCapture() cho việc này: đó là phép đo BỀ RỘNG (<=1200px), mà
+     * máy tính rất hay lọt xuống dưới mốc đó — Windows scale 125% trên màn 1366 cho innerWidth
+     * CSS 1092, scale 175% trên màn 1920 cho 1097, chưa kể cửa sổ không phóng to hết. Lúc ấy ảnh
+     * báo cáo gửi tự động từ MÁY CHỦ NHÀ MÁY sẽ bị đổi bố cục — trái hẳn yêu cầu "chỉ áp dụng cho
+     * chụp mobile".
+     * Dấu hiệu dùng: userAgentData.mobile (Chrome, chuẩn xác nhất) -> nếu không có thì
+     * (pointer: coarse) + (hover: none) = thiết bị cảm ứng thuần. Laptop cảm ứng có chuột vẫn
+     * cho (pointer: fine) nên không dính. Không xác định được thì trả FALSE = giữ nguyên hiện trạng.
+     */
+    function laThietBiMobile() {
+        try {
+            if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+                return navigator.userAgentData.mobile;
+            }
+        } catch (e) {}
+        try {
+            return !!(window.matchMedia
+                && window.matchMedia('(pointer: coarse)').matches
+                && window.matchMedia('(hover: none)').matches);
+        } catch (e) {}
+        return false;
+    }
+
     function captureFileName() {
         var d = new Date();
         var p = function (n) { return (n < 10 ? '0' : '') + n; };
@@ -2441,6 +2466,66 @@
         if (el) el.textContent = text;
         var prev = document.getElementById('dd2-capture-preview');
         if (prev && spinning) prev.innerHTML = '<div class="dd2-capture-spin"></div>';
+    }
+
+    /* =====================================================================================
+       BỐ CỤC RIÊNG CHO ẢNH CHỤP Ở MOBILE (6/8/2026 — anh Sáu chốt)
+       -------------------------------------------------------------------------------------
+       CHỈ áp dụng khi CHỤP TỪ THIẾT BỊ MOBILE. Trang xem bình thường, và ảnh chụp từ máy tính
+       (kể cả báo cáo gửi tự động chạy trên máy chủ nhà máy), GIỮ NGUYÊN hiện trạng.
+         - Ẩn khối "Sản lượng", đưa "Sản xuất hôm nay" lên đúng chỗ đó ở hàng 1.
+         - Hàng 2 còn "Đặt hàng nguyên liệu" + nhóm (Chi nhánh đặt hàng + Quỹ) -> chia đôi 50/50.
+         - Chèn dòng "Tổng sản lượng của tháng: <số>" vào khối Sản xuất hôm nay (giữ lại con số
+           của khối Sản lượng vừa bị ẩn).
+
+       PHẢI đổi DOM trên tài liệu THẬT trước khi gọi html2canvas, KHÔNG làm trong onclone:
+       html2canvas đã quét xong cấu trúc con trước lúc onclone chạy nên mọi thay đổi cấu trúc
+       ở đó đều không vào ảnh (đã đo được nhiều lần: ảnh ra trắng hoặc giữ trạng thái cũ).
+
+       Trả về hàm HOÀN TÁC — bắt buộc gọi trong finally của luồng chụp tại chỗ, vì đó là trang
+       người dùng đang xem thật. Nhánh iframe thì không cần (khung bị xoá sau khi chụp).
+       ===================================================================================== */
+    function applyMobileCaptureLayout(doc) {
+        doc = doc || document;
+        var main = doc.querySelector('.dd2-main');
+        var output = doc.querySelector('.dd2-col-output');
+        var prod = doc.querySelector('.dd2-col-production');
+        if (!main || !output || !prod) return function () {};
+        var rows = main.querySelectorAll(':scope > .dd2-row');
+        if (rows.length < 2) return function () {};
+
+        // Ghi lại chỗ cũ để trả về đúng vị trí (hàng 2, ngay trước "Đặt hàng nguyên liệu").
+        var prodParent = prod.parentNode;
+        var prodNext   = prod.nextSibling;
+        var outputDisplayCu = output.style.display;
+
+        doc.documentElement.classList.add('dd2-cap-mobile');
+        output.style.display = 'none';
+        // Chèn NGAY SAU khối Sản lượng (đang ẩn) -> nằm đúng giữa Nhập kho và Xuất kho.
+        rows[0].insertBefore(prod, output.nextSibling);
+
+        /* Dòng tổng sản lượng tháng — lấy thẳng con số đang hiển thị ở khối Sản lượng, không tính
+           lại, để ảnh luôn khớp với những gì trang đang thể hiện.
+           ĐẶT TRONG .dd2-card-head chứ KHÔNG thành một dòng riêng: .dd2-prod-table-wrap có
+           overflow bị tắt (css ~970-974) nên mọi thứ chiếm thêm chiều cao đều đẩy dòng cuối của
+           bảng tràn khỏi đáy card ở những ngày nhiều sản phẩm. Nằm trong head thì tốn 0 chiều cao,
+           và bám đúng chỗ mà các card khác đặt nhãn kỳ ("aug, 2026"). */
+        var numEl = doc.getElementById('dd2-output-current');
+        var soThang = numEl ? numEl.textContent.trim() : '';
+        var note = doc.createElement('span');
+        note.className = 'dd2-cap-output-note';
+        note.textContent = 'Tổng sản lượng của tháng: ' + soThang;
+        var head = prod.querySelector('.dd2-card-head');
+        if (head) head.appendChild(note);
+        else prod.appendChild(note);
+
+        return function undoMobileCaptureLayout() {
+            doc.documentElement.classList.remove('dd2-cap-mobile');
+            output.style.display = outputDisplayCu;
+            if (note.parentNode) note.parentNode.removeChild(note);
+            // insertBefore với ref null = appendChild -> đúng cả khi trước đó nó là con cuối.
+            if (prodParent) prodParent.insertBefore(prod, prodNext);
+        };
     }
 
     /** Đổi tạm viewport + ghim khung về tỉ lệ desktop. Trả hàm khôi phục nguyên trạng. */
@@ -2543,7 +2628,15 @@
             var blank = [];
             Object.keys(charts).forEach(function (k) {
                 var c = charts[k];
-                if (c && c.canvas && isCanvasBlank(c.canvas)) blank.push(k);
+                if (!c || !c.canvas) return;
+                /*
+                  BỎ QUA CHART ĐANG BỊ ẨN. Bố cục chụp mobile ẩn hẳn khối "Sản lượng"
+                  (applyMobileCaptureLayout) -> canvas của nó về 0x0, mà isCanvasBlank() coi
+                  0x0 là TRẮNG. Không có nhánh này thì hàm luôn trả false, và guard mới ở
+                  captureDesktopFramedBlob sẽ huỷ OAN nhánh chụp tại chỗ mỗi lần chụp từ mobile.
+                */
+                if (!c.canvas.offsetWidth && !c.canvas.offsetHeight) return;
+                if (isCanvasBlank(c.canvas)) blank.push(k);
             });
             if (!blank.length) return true;
             console.warn('Biểu đồ chưa vẽ (' + blank.join(', ') + ') — ép vẽ lại lần ' + (attempt + 1));
@@ -2605,7 +2698,7 @@
      *  chắc chắn kích hoạt và Chart.js vẽ canvas đúng cỡ desktop — không phụ thuộc chút nào vào
      *  việc thiết bị có chịu đổi thẻ <meta viewport> hay không (đã gặp máy thật bỏ qua hoàn toàn:
      *  đo được vẫn 384px). Đúng tinh thần #print-sheet khổ A4 cứng của phiếu in. */
-    async function captureViaFrame(onStatus) {
+    async function captureViaFrame(onStatus, laChupMobile) {
         onStatus('Đang dựng khung ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
         var frame = document.createElement('iframe');
         frame.setAttribute('aria-hidden', 'true');
@@ -2637,6 +2730,10 @@
             // Chờ font nạp xong: html2canvas tự đo chữ, font chưa sẵn sàng là số đo lệch -> chữ
             // tràn/ mất. Máy chậm mới lộ, máy nhanh thì font đã có sẵn trong bộ đệm.
             try { if (fdoc.fonts && fdoc.fonts.ready) await fdoc.fonts.ready; } catch (e) {}
+            /* Bố cục riêng cho ảnh chụp mobile — áp lên TÀI LIỆU TRONG KHUNG. Không cần hoàn tác
+               vì khung bị xoá ở finally. Đặt TRƯỚC vòng ép Chart.js bên dưới để chart đo đúng bề
+               rộng mới (Xuất kho co lại khi Sản xuất hôm nay chen vào hàng 1). */
+            if (laChupMobile) applyMobileCaptureLayout(fdoc);
             await waitMs(2200);
             // ÉP Chart.js TRONG IFRAME đo lại — nếu nó vẽ lúc bố cục chưa đứng yên (máy chậm, hoặc
             // #wrapper còn chạy transition padding-left chừa chỗ sidebar) thì canvas giữ cỡ cũ,
@@ -2650,6 +2747,10 @@
                         fdoc.querySelectorAll('canvas').forEach(function (cv) {
                             var ch = FW.Chart.getChart(cv);
                             if (!ch) return;
+                            // Chart đang bị ẩn (bố cục chụp mobile ẩn khối Sản lượng) có canvas
+                            // 0x0, mà isCanvasBlank() coi 0x0 là trắng -> chuaVe luôn true, vòng
+                            // lặp không bao giờ break sớm và phí ~800ms mỗi lần chụp.
+                            if (!cv.offsetWidth && !cv.offsetHeight) return;
                             // stop() TRƯỚC rồi mới update('none') — chỉ khi hàng đợi animation RỖNG
                             // thì Chart.js mới vẽ đồng bộ; xem ghi chú ở resizeChartsForCapture().
                             // (Ghi chú cũ ở đây SAI: update('none') một mình KHÔNG vẽ đồng bộ nếu
@@ -2680,15 +2781,23 @@
         var mode = '';
         try { mode = new URLSearchParams(location.search).get('dd2capture') || ''; } catch (e) { mode = ''; }
 
+        /* Chốt "có phải đang chụp từ mobile không" NGAY TẠI ĐÂY, trước mọi thao tác — sau
+           forceDesktopLayout() thì thẻ viewport đã làm sai lệch mọi phép đo bề rộng.
+           Dùng laThietBiMobile() (dấu hiệu THIẾT BỊ) chứ KHÔNG dùng needsDesktopCapture()
+           (dấu hiệu BỀ RỘNG) — xem ghi chú dài ở laThietBiMobile(). */
+        var laChupMobile = laThietBiMobile();
+
         // (1) Ép viewport tại chỗ
         if (mode !== 'frame' && mode !== 'inline') {
             onStatus('Đang cố định bố cục ' + CAPTURE_DESKTOP_W + 'x' + CAPTURE_DESKTOP_H + '…');
             var truocW = layoutViewportWidth();
             var restore = forceDesktopLayout();
             var gotW = await waitDesktopViewport(truocW);
-            var veDuoc = false, b1 = null;
+            var veDuoc = false, b1 = null, undoMobile = null;
             if (gotW) {
                 try {
+                    // Đổi bố cục TRƯỚC khi chờ + đo lại chart, để chart đo đúng bề rộng cuối cùng.
+                    if (laChupMobile) undoMobile = applyMobileCaptureLayout(document);
                     // #wrapper có transition padding-left 0.22s (chừa chỗ sidebar) -> chờ bố cục
                     // đứng yên rồi mới đo, nếu không chiều cao từng hàng ghim vào clone sẽ lệch.
                     await waitMs(400);
@@ -2713,6 +2822,13 @@
                         b1 = await buildReportBlob(CAPTURE_DESKTOP_H, gotW);
                     }
                 } finally {
+                    /* Trả trang về nguyên trạng TRƯỚC khi trả viewport — đây là trang người dùng
+                       đang xem thật, không được để sót khối bị ẩn hay bị dời chỗ.
+                       try/catch riêng: nếu undoMobile() ném thì restore() vẫn PHẢI chạy, nếu không
+                       điện thoại kẹt ở viewport 1920 + class .dd2-capturing (ghim cao 950px,
+                       overflow:hidden) — hỏng nặng hơn nhiều so với việc bố cục chưa trả xong. */
+                    try { if (undoMobile) undoMobile(); }
+                    catch (e) { console.warn('Không hoàn tác được bố cục chụp mobile:', e); }
                     restore();
                 }
                 if (veDuoc && b1) return { blob: b1, forced: true, width: gotW, via: 'viewport' };
@@ -2733,7 +2849,7 @@
         // (2) Iframe khung cứng
         if (mode !== 'inline') {
             try {
-                var b2 = await captureViaFrame(onStatus);
+                var b2 = await captureViaFrame(onStatus, laChupMobile);
                 return { blob: b2, forced: true, width: CAPTURE_DESKTOP_W, via: 'iframe' };
             } catch (err) {
                 console.warn('Chụp qua khung iframe không thành công:', err);
