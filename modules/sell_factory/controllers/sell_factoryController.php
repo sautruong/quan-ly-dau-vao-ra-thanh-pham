@@ -28,6 +28,8 @@ function order_factoryAction()
         'categories'     => $categories,
         'history'        => $history,
         'last_branch'    => $last_branch,
+        // Sản phẩm của mẻ sản xuất gần nhất -> ô sản phẩm chớp sáng khi vào trang.
+        'recent_prod_ids' => sf_get_recent_production_product_ids(),
     ]);
 }
 

@@ -49,6 +49,11 @@ if (!function_exists('of_split_columns')) {
     }
 }
 
+/* Sản phẩm của mẻ sản xuất gần nhất — tra O(1) lúc render để gắn cờ chớp sáng.
+   Dùng biến toàn cục vì of_render_product() là hàm thường (không phải closure), được gọi
+   rải rác trong view và không tiện đổi chữ ký ở 5 chỗ gọi. */
+$GLOBALS['of_recent_prod_ids'] = array_flip(array_map('intval', (array) ($recent_prod_ids ?? [])));
+
 /* ----- Render 1 dòng sản phẩm (dùng chung TRÀ + 4 nhóm dưới) ----- */
 if (!function_exists('of_render_product')) {
     function of_render_product($p, $category_id)
@@ -59,9 +64,12 @@ if (!function_exists('of_render_product')) {
         $qty   = (int) $p['qt_fgi'];
         $inv   = htmlspecialchars((string) $p['inventory_text'], ENT_QUOTES, 'UTF-8');
         $skey  = htmlspecialchars(mb_strtolower((string) $p['product_name'], 'UTF-8'), ENT_QUOTES, 'UTF-8');
+        // Sản phẩm thuộc mẻ sản xuất gần nhất -> gắn cờ để JS chớp sáng khi vào trang.
+        $moiSX = isset($GLOBALS['of_recent_prod_ids'][$pid]) ? ' data-recent-produced="1"' : '';
         echo '<div class="of-prod product-item btn-order-product" data-product-id="' . $pid . '"'
             . ' data-product-name="' . $name . '" data-unit="' . $unit . '"'
             . ' data-category-id="' . (int) $category_id . '" data-search="' . $skey . '"'
+            . $moiSX
             . ' title="Thêm vào giỏ hàng">'
             . '<span class="of-prod-name">' . $name . ' <b>- ' . $qty . '</b></span>'
             . '<span class="of-prod-lead"></span>'

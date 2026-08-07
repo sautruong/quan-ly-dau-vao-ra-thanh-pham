@@ -521,6 +521,30 @@
         var rid = null;
         try { rid = sessionStorage.getItem('sf_reorder_id'); sessionStorage.removeItem('sf_reorder_id'); } catch (e) {}
         if (rid) loadOrderById(rid);
+
+        flashRecentlyProduced();
     });
+
+    /* ---------------------------------------------------------------------------------
+       CHỚP SÁNG SẢN PHẨM CỦA MẺ SẢN XUẤT GẦN NHẤT
+       View gắn sẵn data-recent-produced="1" cho những ô thuộc ngày sản xuất mới nhất trong
+       finished_product_production_data (xem sf_get_recent_production_product_ids()).
+       Ở đây chỉ bật/tắt class — toàn bộ phồng/giữ màu/nhạt dần nằm ở CSS .of-prod-flash.
+
+       Gỡ class sau khi animation kết thúc để ô trở lại HOÀN TOÀN giống các ô khác: nếu để
+       lại, `background` của keyframe cuối vẫn thắng rule :hover nên di chuột vào ô đó sẽ
+       không đổi màu như những ô còn lại.
+       --------------------------------------------------------------------------------- */
+    function flashRecentlyProduced() {
+        var $items = $('.of-prod[data-recent-produced="1"]');
+        if (!$items.length) return;
+
+        $items.addClass('of-prod-flash');
+        $items.one('animationend', function () { $(this).removeClass('of-prod-flash'); });
+        /* Chốt chặn theo thời gian (5.8s của keyframes + 0.4s dư): ô bị bộ lọc tìm kiếm ẩn đi
+           (display:none) giữa chừng thì animation dừng và animationend KHÔNG BAO GIỜ bắn — gõ
+           tìm kiếm ngay khi vừa vào trang là dính. Không có dòng này thì ô đó giữ nền xanh mãi. */
+        setTimeout(function () { $items.removeClass('of-prod-flash'); }, 6200);
+    }
 
 })(jQuery);

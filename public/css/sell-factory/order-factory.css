@@ -1561,6 +1561,43 @@ input:focus {
     font-weight: 500; /* đồng nhất toàn dòng SP, bằng với tên SP */
 }
 .of-prod:hover { background: var(--color-green-soft); }
+
+/* =====================================================================================
+   CHỚP SÁNG SẢN PHẨM CỦA MẺ SẢN XUẤT GẦN NHẤT (vào trang là chạy 1 lần)
+   -------------------------------------------------------------------------------------
+   Ô có data-recent-produced="1" (view gắn từ finished_product_production_data, ngày sản
+   xuất mới nhất). JS chỉ thêm/gỡ class .of-prod-flash — mọi thứ còn lại là CSS.
+   Kịch bản: phồng nhẹ rồi trở về (0.6s) -> GIỮ nguyên màu 5s -> nhạt dần về mặc định.
+   transform-origin: left để ô phồng ra phía trong dòng, không lấn sang cột bên cạnh.
+   ===================================================================================== */
+.of-prod-flash {
+    background: var(--color-green-soft);
+    box-shadow: 0 0 0 1px var(--color-green-light) inset;
+    /* Tổng 5.8s = 0.6s phồng + 4.6s giữ (nằm trong 5s giữ màu) + 0.6s nhạt dần.
+       Đặt chung một animation để 3 chặng nối liền, không cần setTimeout tầng hai. */
+    animation: ofRecentFlash 5.8s ease-out 1 both;
+}
+.of-prod-flash .of-prod-name b { color: var(--color-green-dark); }
+
+@keyframes ofRecentFlash {
+    0%   { transform: scale(1);    background: var(--color-green-soft); }
+    /* ~0.3s: đỉnh phồng. 1.06 đủ thấy trên dòng cao ~26px mà không xô lệch dòng kế. */
+    5%   { transform: scale(1.06); background: var(--color-green-soft); }
+    10%  { transform: scale(1);    background: var(--color-green-soft); }
+    /* Giữ nguyên màu tới mốc 5s kể từ đầu (5 / 5.8 ≈ 86%). */
+    86%  { transform: scale(1);    background: var(--color-green-soft); }
+    /* Nhạt dần về trong suốt = trả lại đúng nền mặc định của các ô còn lại. */
+    100% { transform: scale(1);    background: rgba(220, 252, 231, 0); }
+}
+
+/* Người dùng chọn "giảm chuyển động" thì bỏ phần phồng, chỉ giữ đổi màu rồi nhạt dần. */
+@media (prefers-reduced-motion: reduce) {
+    .of-prod-flash { animation-name: ofRecentFlashSoft; }
+    @keyframes ofRecentFlashSoft {
+        0%, 86% { background: var(--color-green-soft); }
+        100%    { background: rgba(220, 252, 231, 0); }
+    }
+}
 .of-prod-name { white-space: nowrap; }
 .of-prod-name b { color: var(--color-gray-700); font-weight: inherit; }
 .of-prod-lead {

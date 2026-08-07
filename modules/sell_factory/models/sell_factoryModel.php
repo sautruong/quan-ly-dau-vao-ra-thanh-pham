@@ -127,6 +127,37 @@ function sf_get_all_categories()
 }
 
 /**
+ * DANH SÁCH SẢN PHẨM CỦA MẺ SẢN XUẤT GẦN NHẤT — dùng để "chớp sáng" ô sản phẩm khi vào
+ * trang order_factory, cho người đặt hàng thấy ngay hôm rồi nhà máy vừa làm ra những gì.
+ *
+ * Cách xác định "gần nhất": lấy NGÀY sản xuất mới nhất còn trong
+ * finished_product_production_data rồi trả về mọi sản phẩm của đúng ngày đó.
+ * KHÔNG trừ lùi theo thứ trong tuần: nhà máy nghỉ Chủ nhật nên MAX(ngày) tự rơi vào thứ Bảy,
+ * và cách này cũng tự đúng cho cả ngày lễ / đợt nghỉ dài — không phải bảo trì luật ngày nghỉ.
+ *
+ * @return array danh sách product_id (int), có thể rỗng nếu bảng chưa có dữ liệu.
+ */
+function sf_get_recent_production_product_ids()
+{
+    $row = db_fetch_row(
+        "SELECT DATE(MAX(created_at)) AS d FROM finished_product_production_data"
+    );
+    $ngay = $row && !empty($row['d']) ? $row['d'] : '';
+    if ($ngay === '') return [];
+
+    $rows = db_fetch_array(
+        "SELECT DISTINCT product_id
+         FROM finished_product_production_data
+         WHERE DATE(created_at) = '" . escape_string($ngay) . "'
+           AND product_id > 0"
+    ) ?: [];
+
+    $ids = [];
+    foreach ($rows as $r) $ids[] = (int) $r['product_id'];
+    return $ids;
+}
+
+/**
  * Quy đổi tồn theo quy cách bao bì ngoài
  *  - qt_fgi  : tồn (finished_goods_inventory.quantity)
  *  - qt_ops  : số đơn vị/1 bao bì ngoài (outer_packaging_specifications.quantity)
