@@ -12,5 +12,16 @@
             <button type="button" class="app-modal-close" data-ltp-day-close aria-label="Đóng">&times;</button>
         </div>
         <div class="app-modal-body" id="ltp-day-modal-body"></div>
+        <!-- Chân modal: chỉ hiện khi card ngày ĐANG XEM có nút "XUẤT KH" (.ltp-export-plan).
+             Trên mobile .ltp-card > .ltp-card-foot bị display:none (xem @media 768px trong
+             long_term_production_plan.css) nên nút gốc không bấm tới được — nút này là lối vào
+             duy nhất. View nào không có nút gốc (KHSX dự kiến ở Đặt hàng nhà máy) thì chân modal
+             tự ẩn, không cần khai báo gì thêm. -->
+        <div class="app-modal-foot" id="ltp-day-modal-foot" hidden>
+            <button type="button" class="ltp-btn ltp-day-export"
+                    title="Ghi đè kế hoạch sản xuất trong ngày bằng danh sách của ngày này">
+                <i class="fa-solid fa-paper-plane"></i> Xuất kế hoạch
+            </button>
+        </div>
     </div>
 </div>
