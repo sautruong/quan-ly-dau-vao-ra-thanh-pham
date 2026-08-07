@@ -1059,4 +1059,29 @@ label {
     /* Toolbar xuong hang doc o mobile -> bo margin-right:auto (khong con nghia)
        va cho nut trai ngang cho de bam. */
     .btn-plan-products { margin-right: 0; width: 100%; justify-content: center; }
+
+    /* ---------------------------------------------------------------------------------
+       MOBILE (anh Sau chot 7/8/2026): "DSSP theo ke hoach" chi con ICON, dat canh PHAI
+       va NGANG HANG voi o tim kiem san pham — nut chu day du chiem tron mot dong, day
+       moi thu khac xuong duoi.
+       Dat CUOI khoi @media de de len rule .btn-plan-products{width:100%} ngay phia tren.
+       --------------------------------------------------------------------------------- */
+    .wp-toolbar {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .wp-toolbar > .wp-search {
+        flex: 1 1 auto;
+        min-width: 0;          /* khong co dong nay thi o tim day nut ra khoi hang */
+    }
+    .btn-plan-products {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 auto;
+        padding: 0;
+        border-radius: 10px;
+        justify-content: center;
+    }
+    .btn-plan-products .btn-plan-label { display: none; }
+    .wp-toolbar > .wp-date-picker { flex: 1 1 100%; padding-right: 0; }
 }

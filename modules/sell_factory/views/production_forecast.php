@@ -41,12 +41,7 @@ $days = isset($days) && is_array($days) ? $days : [];
         <?php get_header('app'); ?>
 
         <div class="of-page">
-            <nav class="main-menu of-tabs">
-                <a href="?mod=sell_factory&controllers=sell_factory&action=order_factory">TỒN THÀNH PHẨM NHÀ MÁY</a>
-                <a href="?mod=sell_factory&controllers=sell_factory&action=production_forecast" class="active">KHSX DỰ KIẾN</a>
-                <a href="?mod=sell_factory&controllers=sell_factory&action=order_history">LỊCH SỬ ĐẶT HÀNG</a>
-            </nav>
-
+            <?php /* Đã gỡ thanh tab — 3 view đã thành 3 mục menu cấp 2 ở sidebar. */ ?>
             <div class="pf-wrap">
                 <div class="ltp-page-head">
                     <h1>KẾ HOẠCH SẢN XUẤT DỰ KIẾN</h1>

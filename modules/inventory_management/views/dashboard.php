@@ -81,7 +81,8 @@
                 */ ?>
                 <button type="button" class="btn-plan-products" id="btn-plan-products"
                         title="Nạp danh sách sản phẩm theo kế hoạch sản xuất hôm nay">
-                    <i class="fa-solid fa-clipboard-list"></i> DSSP theo kế hoạch
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span class="btn-plan-label">DSSP theo kế hoạch</span>
                 </button>
                 <!-- Input ngày giờ ghi -->
                 <div class="wp-date-picker">

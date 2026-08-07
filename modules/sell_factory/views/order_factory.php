@@ -101,12 +101,8 @@ if (!function_exists('of_render_product')) {
         <?php get_header('app'); ?>
 
         <div class="of-page">
-            <nav class="main-menu of-tabs">
-                <a href="?mod=sell_factory&controllers=sell_factory&action=order_factory" class="active">TỒN THÀNH PHẨM NHÀ MÁY</a>
-                <a href="?mod=sell_factory&controllers=sell_factory&action=production_forecast">KHSX DỰ KIẾN</a>
-                <a href="?mod=sell_factory&controllers=sell_factory&action=order_history">LỊCH SỬ ĐẶT HÀNG</a>
-            </nav>
-
+            <?php /* Đã gỡ thanh tab: 3 view này giờ là 3 mục menu cấp 2 trong nhóm
+                     "BÁN HÀNG - NHÀ MÁY" ở sidebar (xem permission_ensure_static_views). */ ?>
             <div class="of-toolbar">
                 <div class="of-search">
                     <i class="fa-solid fa-magnifying-glass"></i>

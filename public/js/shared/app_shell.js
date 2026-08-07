@@ -1857,6 +1857,29 @@
                 // Gắn class SAU khi đã dời + rút gọn: đây cũng là công tắc hiện nút (CSS).
                 btn.classList.add('app-cdb-icon');
             });
+
+            /* MOBILE: gom nút Database vào menu 6 chấm cho header đỡ chật (anh Sáu chốt 7/8/2026).
+               Chỉ THÊM một mục vào menu và trỏ ngược về chính nút gốc — nút gốc vẫn nằm nguyên ở
+               header (CSS ẩn nó trên mobile), nhờ vậy mọi thuộc tính data-tables và trình xử lý
+               của check_database.js không phải đụng tới.
+               Phải TỰ gắn sự kiện: vòng gán cho .app-tools-item ở mục 3 đã chạy xong từ trước,
+               mục thêm sau này sẽ không được nó phủ. */
+            var cdb0  = document.querySelector('.btn-check-db.app-cdb-icon');
+            var tMenu = document.getElementById('app-tools-menu');
+            var tWrap = document.getElementById('app-header-tools');
+            if (cdb0 && tMenu && !tMenu.querySelector('.app-tools-item-cdb')) {
+                if (!cdb0.id) cdb0.id = 'app-cdb-icon-btn';
+                var item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'app-tools-item app-tools-item-cdb';
+                item.innerHTML = '<i class="fa-solid fa-database"></i> Database';
+                item.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (tWrap) tWrap.classList.remove('is-open');
+                    setTimeout(function () { cdb0.click(); }, 0);
+                });
+                tMenu.appendChild(item);
+            }
         })();
 
         if (hdrRight) {

@@ -162,6 +162,23 @@ function permission_ensure_static_views()
         "INSERT IGNORE INTO tbl_views (module, controller, action, label, group_label, sort, is_active)
          VALUES ('customer_orders', 'customer_orders', 'orders', 'Đơn hàng', 'QUẢN LÝ ĐƠN HÀNG', 150, 1)"
     );
+
+    /* 3 tab của "Bán hàng - nhà máy" tách thành 3 mục menu cấp 2 (thay cho thanh tab trong
+       trang). Trước đây chỉ order_factory có trong danh mục; 2 view kia không đăng ký nên
+       vừa không hiện ở sidebar, vừa lọt guard FAIL-OPEN (ai đăng nhập cũng vào được). */
+    db_query(
+        "INSERT IGNORE INTO tbl_views (module, controller, action, label, group_label, sort, is_active) VALUES
+         ('sell_factory', 'sell_factory', 'production_forecast', 'KHSX dự kiến',      'BÁN HÀNG - NHÀ MÁY', 71, 1),
+         ('sell_factory', 'sell_factory', 'order_history',       'Lịch sử đặt hàng',  'BÁN HÀNG - NHÀ MÁY', 72, 1)"
+    );
+
+    /* Đổi nhãn mục đầu cho khớp bộ 3 (chỉ khi vẫn là nhãn seed gốc — tránh đè tên admin đã
+       tự sửa). Dùng UPDATE vì INSERT IGNORE ở trên không sửa được dòng đã có. */
+    db_query(
+        "UPDATE tbl_views SET label = 'Tồn thành phẩm nhà máy'
+         WHERE module = 'sell_factory' AND controller = 'sell_factory' AND action = 'order_factory'
+           AND label = 'Đặt hàng nhà máy'"
+    );
 }
 
 function permission_all_views_grouped()

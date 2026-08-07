@@ -25,12 +25,7 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
         <?php get_header('app'); ?>
 
         <div class="of-page">
-            <nav class="main-menu of-tabs">
-                <a href="?mod=sell_factory&controllers=sell_factory&action=order_factory">TỒN THÀNH PHẨM NHÀ MÁY</a>
-                <a href="?mod=sell_factory&controllers=sell_factory&action=production_forecast">KHSX DỰ KIẾN</a>
-                <a href="?mod=sell_factory&controllers=sell_factory&action=order_history" class="active">LỊCH SỬ ĐẶT HÀNG</a>
-            </nav>
-
+            <?php /* Đã gỡ thanh tab — 3 view đã thành 3 mục menu cấp 2 ở sidebar. */ ?>
             <div class="of-history-wrap">
                 <h2 class="of-block-title">Lịch sử đặt hàng của tôi</h2>
                 <table class="of-history-table">

@@ -499,6 +499,9 @@ body.app-sidebar-collapsed .app-sb-group { position: relative; }
 .app-tools-item:hover { background: var(--app-gray-100); }
 .app-tools-item i { width: 18px; text-align: center; color: var(--app-gray-500); }
 
+/* Mục "Database" trong menu 6 chấm CHỈ dùng trên mobile — desktop đã có icon riêng cạnh chuông. */
+.app-tools-item-cdb { display: none; }
+
 /* Nút gom Reset/In/Share (KHSX) — do app_shell.js tạo trên mobile; desktop giữ nguyên inline */
 .app-actions { display: contents; }
 .app-actions-btn { display: none; }
@@ -1554,8 +1557,26 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
         z-index: 3000;
     }
 
-    /* Check database: đã là icon cạnh chuông (.app-cdb-icon) nên mobile giữ nguyên,
-       không còn proxy vào menu tiện ích. */
+    /* Check database (anh Sáu chốt 7/8/2026): trên mobile GOM vào menu 6 chấm cho header đỡ
+       chật — ẩn icon đứng riêng, hiện mục "Database" trong menu (app_shell.js tự thêm mục này
+       và trỏ ngược về chính nút gốc, nên data-tables của từng view vẫn nguyên). */
+    .btn-check-db.app-cdb-icon { display: none; }
+    .app-tools-item-cdb { display: flex; }
+
+    /* Menu 6 chấm: canh GIỮA màn hình. Trước đây nó là position:absolute; right:0 so với nút,
+       mà nút nằm gần mép trái header nên menu rộng 210px bị tràn ra ngoài và mất một phần bên
+       trái. position:fixed + translateX(-50%) thì luôn nằm gọn giữa, không phụ thuộc chỗ đứng
+       của nút. */
+    .app-tools-menu {
+        position: fixed;
+        top: 66px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: min(300px, 92vw);
+        max-height: 76vh;
+        overflow-y: auto;
+    }
 
     /* ---- R2-5: Reset / In BC / Share KHSX gom sau 1 nút icon (.app-actions do JS tạo) ---- */
     /*
