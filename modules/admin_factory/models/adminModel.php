@@ -710,8 +710,9 @@ function admin_set_user_customer_link($user_id, $kind, $customer_id = 0)
 
     $name = '';
     if ($cid > 0) {
-        $r = db_fetch_row("SELECT name FROM customers WHERE id = {$cid} LIMIT 1");
-        $name = $r ? (string) $r['name'] : '';
+        $r = db_fetch_row("SELECT name, short_name FROM customers WHERE id = {$cid} LIMIT 1");
+        // Trả tên viết tắt để giao diện hiển thị gọn, khớp với select trong thẻ user.
+        $name = $r ? (trim((string) $r['short_name']) !== '' ? (string) $r['short_name'] : (string) $r['name']) : '';
     }
     return ['ok' => true, 'user_kind' => $kind, 'customer_id' => $cid, 'customer_name' => $name];
 }
@@ -776,7 +777,8 @@ function admin_get_user_list()
                 u.status, u.avatar, u.role, u.classification_id,
                 u.user_kind, u.customer_id,
                 c.name AS classification_name,
-                cu.name AS customer_name
+                -- Tên viết tắt cho gọn thẻ user; khách chưa đặt viết tắt thì dùng tên đầy đủ.
+                COALESCE(NULLIF(cu.short_name, ''), cu.name) AS customer_name
          FROM tbl_users u
          LEFT JOIN user_classifications c ON c.id = u.classification_id
          LEFT JOIN customers cu ON cu.id = u.customer_id

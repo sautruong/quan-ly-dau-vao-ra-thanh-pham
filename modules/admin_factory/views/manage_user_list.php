@@ -351,9 +351,15 @@ $ajax_base      = '?mod=admin_factory&controllers=admin&action=';
                                 <option value="0">— Chọn khách hàng —</option>
                                 <?php foreach ($customers as $cus):
                                     $cus_id = (int) $cus['id'];
+                                    // Hiện TÊN VIẾT TẮT cho gọn (tên đầy đủ kiểu "CÔNG TY TNHH ...
+                                    // ĐỊA ĐIỂM KINH DOANH SỐ 2 TẠI CẦN THƠ" tràn hết thẻ user).
+                                    // Khách nào chưa đặt tên viết tắt thì đành dùng tên đầy đủ.
+                                    $cus_short = trim((string) ($cus['short_name'] ?? ''));
+                                    $cus_label = $cus_short !== '' ? $cus_short : (string) $cus['name'];
                                     ?>
-                                    <option value="<?php echo $cus_id; ?>" <?php echo $cus_id === $u_cid ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars((string) $cus['name'], ENT_QUOTES, 'UTF-8'); ?>
+                                    <option value="<?php echo $cus_id; ?>" <?php echo $cus_id === $u_cid ? 'selected' : ''; ?>
+                                            title="<?php echo htmlspecialchars((string) $cus['name'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($cus_label, ENT_QUOTES, 'UTF-8'); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
