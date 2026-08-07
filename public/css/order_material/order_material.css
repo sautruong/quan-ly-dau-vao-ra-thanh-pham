@@ -867,7 +867,7 @@
 
 .om-doc-title span {
     display: inline-block;
-    font-family: Arial, "Segoe UI", sans-serif;
+    font-family: var(--app-font);
     font-size: 38px;
     font-weight: 700;
     letter-spacing: 1px;

@@ -4,7 +4,7 @@
 .ucard-modal {
     position: fixed; inset: 0; z-index: 100050;
     display: none; align-items: center; justify-content: center;
-    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    font-family: var(--app-font);
 }
 .ucard-modal.is-open { display: flex; }
 .ucard-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, .45); }

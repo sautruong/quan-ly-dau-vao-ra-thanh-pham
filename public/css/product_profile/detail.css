@@ -1,7 +1,7 @@
 .main-content {
     padding: 20px;
     /* background: #f5f7fb; */
-    font-family: "Segoe UI", sans-serif;
+    font-family: var(--app-font);
     overflow: hidden;
     height: calc(100vh - 60px);
     display: flex;

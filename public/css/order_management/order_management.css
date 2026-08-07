@@ -17,7 +17,7 @@
 }
 
 * { box-sizing: border-box; }
-body { background: var(--om-gray-100); color: #111827; font-family: "Segoe UI", sans-serif; }
+body { background: var(--om-gray-100); color: #111827; font-family: var(--app-font); }
 
 /* App shell: header lên trên, content xuống dưới (không giàn ngang). */
 #wrapper { display: block; }

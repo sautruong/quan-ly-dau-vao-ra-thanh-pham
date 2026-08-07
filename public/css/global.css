@@ -1,9 +1,18 @@
 /* ================================
    STYLE TỔNG QUAN
 ================================ */
+/* Font toàn hệ thống — biến --app-font khai ở reset.css (file duy nhất mọi view đều nạp).
+   Dùng selector * chứ không chỉ body: rất nhiều chỗ trong dự án khai font-family riêng lẻ,
+   và reset.css cũng đặt stack hệ thống cho body (độ đặc 0,0,1 > 0,0,0 nên body sẽ thắng * ) —
+   vì thế phải khai thêm cho html/body ở dưới. */
 * {
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--app-font);
     box-sizing: border-box;
+}
+
+html,
+body {
+    font-family: var(--app-font);
 }
 
 html,

@@ -15,7 +15,7 @@
     right: 22px;
     bottom: 22px;
     z-index: 99990;
-    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    font-family: var(--app-font);
     font-size: 14px;
     color: #1f2937;
 }

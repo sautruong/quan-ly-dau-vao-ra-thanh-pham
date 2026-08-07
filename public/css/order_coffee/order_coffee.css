@@ -691,7 +691,7 @@
 
 .oc-doc-title span {
     display: inline-block;
-    font-family: Arial, "Segoe UI", sans-serif;
+    font-family: var(--app-font);
     font-size: 38px;
     font-weight: 700;
     letter-spacing: 1px;
@@ -1924,7 +1924,7 @@ textarea.oc-input { resize: vertical;text-align: left;font-style: italic;
 
 /* Báo cáo tồn bao bì (modal "Xuất báo cáo") */
 .oc-pkgr-wrap { border: 1px solid #eaecef; border-radius: 10px; overflow-x: auto; margin-top: 16px; }
-.oc-pkgr-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; font-family: Arial, "Segoe UI", sans-serif; }
+.oc-pkgr-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; font-family: var(--app-font); }
 .oc-pkgr-table thead th {
     background: #2e9e57; color: #fff; text-align: left; font-weight: 600;
     padding: 8px 10px; border-right: 1px solid #fff; white-space: nowrap;

@@ -44,7 +44,7 @@
 body {
     background: var(--color-gray-100);
     color: var(--color-gray-900);
-    font-family: "Segoe UI", sans-serif;
+    font-family: var(--app-font);
 }
 
 p {
@@ -939,7 +939,7 @@ input:focus {
 
 .zalo-title {
     text-align: center;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--app-font);
     font-size: 18px;
     font-weight: 600;
     color: #b91c1c;

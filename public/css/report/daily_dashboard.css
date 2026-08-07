@@ -2990,9 +2990,11 @@ html.dd2-cap-mobile .dd2-sidebar {
 html.dd2-cap-mobile .dd2-sb-group { flex-direction: column !important; }
 html.dd2-cap-mobile .dd2-sb-group-bottom { margin-top: auto !important; margin-left: 0 !important; }
 
-/* Cac vung cuon trong card: bo tran chieu cao cua ban mobile. */
-html.dd2-cap-mobile .dd2-list,
-html.dd2-cap-mobile .dd2-prod-table-wrap { max-height: none !important; }
+/* CO Y KHONG dat max-height:none cho .dd2-list / .dd2-prod-table-wrap.
+   Khoi <=1200px dat 320px; bo tran di thi the phinh theo noi dung va keo hang cao ra. Ban
+   desktop von khong khai max-height, de nguyen 320px cua ban mobile cung khong hai gi vi chieu
+   cao hang da duoc ghim px trong applyMobileCaptureLayout(), phan du cuon ben trong the va
+   onclone se mo overflow ra khi dung anh. */
 
 html.dd2-cap-mobile .dd2-branch-grid { grid-template-columns: 1fr 1fr !important; }
 

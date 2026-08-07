@@ -941,11 +941,11 @@ a img {
 .pf-share-logo { width: 40px; height: 40px; }
 .pf-share-titles h1 .pf-share-etext {
     font-size: 22px; font-weight: 800; color: #1a2b4a; text-transform: uppercase;
-    font-family: Arial, "Segoe UI", sans-serif; letter-spacing: .8px;
+    font-family: var(--app-font); letter-spacing: .8px;
 }
 .pf-share-titles h4 .pf-share-etext {
     font-size: 17px; font-weight: 500; color: #3d3c50; white-space: pre-line;
-    line-height: 1.4; font-family: Arial, sans-serif; letter-spacing: .4px;
+    line-height: 1.4; font-family: var(--app-font); letter-spacing: .4px;
 }
 .pf-share-doctitle-wrap { text-align: right; flex: 0 0 auto; }
 .pf-share-doctitle { color: #c51212; font-size: 24px; font-weight: 750; margin: 2px 0 2px; white-space: nowrap; }

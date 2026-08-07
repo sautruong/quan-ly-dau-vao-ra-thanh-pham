@@ -2516,6 +2516,7 @@
         doc.documentElement.style.setProperty('--dd2-cap-w', CAPTURE_MOBILE_W + 'px');
         doc.documentElement.classList.add('dd2-cap-mobile');
         output.style.display = 'none';
+
         // Chèn NGAY SAU khối Sản lượng (đang ẩn) -> nằm đúng giữa Nhập kho và Xuất kho.
         rows[0].insertBefore(prod, output.nextSibling);
 
@@ -2534,7 +2535,29 @@
         if (head) head.appendChild(note);
         else prod.appendChild(note);
 
+        /*
+          GHIM CHIỀU CAO 2 HÀNG ĐẦU BẰNG PX THẬT — làm CUỐI CÙNG, sau khi đã đảo chỗ xong.
+          .dd2-row dùng `height: calc(50% - 12px)`, mà phần trăm chỉ giải được khi tổ tiên có
+          chiều cao XÁC ĐỊNH. Chuỗi là #wrapper -> .dd2-content -> .dd2-body -> .dd2-main; mà
+          onclone của chính luồng chụp đặt height:auto lên #wrapper/.dd2-content (bản vá "nền xám
+          phủ hết đáy") -> đứt chuỗi -> 50% thành auto -> 2 hàng đầu giãn theo nội dung và đẩy
+          HÀNG 3 (Theo dõi tồn kho + Biến động giá nhập) ra ngoài vùng cắt, mất hẳn khỏi ảnh.
+          Đo rồi ghim px thì hết phụ thuộc phần trăm. Hàng cuối để tự do — nó vốn được phép cao
+          hơn để chứa hết bảng đang cuộn.
+        */
+        var caoMain = main.clientHeight;               // đọc gây reflow -> số đo là bố cục cuối
+        var caoCu = [];
+        if (caoMain > 100) {
+            var caoHang = Math.floor((caoMain - 24) / 2);   // 24 = gap giữa 2 hàng
+            for (var i = 0; i < 2 && i < rows.length; i++) {
+                caoCu.push([rows[i], rows[i].style.height, rows[i].style.flex]);
+                rows[i].style.height = caoHang + 'px';
+                rows[i].style.flex = '0 0 auto';
+            }
+        }
+
         return function undoMobileCaptureLayout() {
+            caoCu.forEach(function (x) { x[0].style.height = x[1]; x[0].style.flex = x[2]; });
             doc.documentElement.style.removeProperty('--dd2-cap-w');
             doc.documentElement.classList.remove('dd2-cap-mobile');
             output.style.display = outputDisplayCu;
