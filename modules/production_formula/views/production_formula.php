@@ -50,7 +50,7 @@ $pf_share = function_exists('pf_get_share_settings')
                     title="Xem toàn bộ hình ảnh nguyên liệu của công thức đang mở">
                     <i class="fa-solid fa-images"></i> Xem hình ảnh nguyên liệu
                 </button>
-                <?php if (!permission_is_view_only('production_formula', 'production_formula', 'production_formula')): ?>
+                <?php if (permission_can_check_db('production_formula', 'production_formula', 'production_formula')): ?>
                 <button type="button" class="btn-check-db pf-tool-btn"
                     data-tables="product_materials,material_information,material_inventory,product_recipe_notes,product_batch_recipes,product_batch_recipe_items,material_images,products">
                     <i class="fa-solid fa-database"></i> Check Database

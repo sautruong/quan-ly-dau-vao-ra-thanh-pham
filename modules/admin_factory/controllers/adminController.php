@@ -596,6 +596,7 @@ function user_views_getAction()
         'view_ids'       => permission_granted_view_ids($uid),
         'view_only_ids'  => $view_only_ids,
         'edit_today_ids' => permission_user_edit_today_ids($uid),
+        'check_db_ids'   => permission_user_check_db_ids($uid),
     ]);
     exit;
 }
@@ -690,12 +691,19 @@ function user_views_saveAction()
         $edit_today_ids = [];
     }
 
+    // "Database" (7/8/2026) — ĐỘC LẬP với "Chỉ xem", chỉ cần view được cấp.
+    $check_db_ids = $_POST['check_db_ids'] ?? [];
+    if (!is_array($check_db_ids)) {
+        $check_db_ids = [];
+    }
+
     $view_ids       = array_map('intval', $view_ids);
     $view_only_ids  = array_map('intval', $view_only_ids);
     $edit_today_ids = array_map('intval', $edit_today_ids);
+    $check_db_ids   = array_map('intval', $check_db_ids);
 
     if (permission_is_admin($me)) {
-        permission_set_user_views($uid, $view_ids, $view_only_ids, $edit_today_ids);
+        permission_set_user_views($uid, $view_ids, $view_only_ids, $edit_today_ids, $check_db_ids);
         echo json_encode(['ok' => true, 'count' => count($view_ids)]);
         exit;
     }
@@ -736,7 +744,17 @@ function user_views_saveAction()
     $keep_edit_today_out_of_scope = array_values(array_filter($existing_edit_today, static fn($v) => !isset($scope_set[$v])));
     $final_edit_today = array_values(array_unique(array_merge($keep_edit_today_out_of_scope, $submitted_edit_today_in_scope)));
 
-    permission_set_user_views($uid, $final, $final_view_only, $final_edit_today);
+    // "Database": cùng luật giữ-ngoài-phạm-vi như 2 cờ trên — nếu không, admin phó lưu 1 phát là
+    // xoá mất cờ do admin trưởng đặt ở nhóm khác.
+    $submitted_check_db_in_scope = array_values(array_filter(
+        $check_db_ids,
+        static fn($v) => isset($scope_set[$v]) && in_array($v, $submitted_in_scope, true)
+    ));
+    $existing_check_db = permission_user_check_db_ids($uid);
+    $keep_check_db_out_of_scope = array_values(array_filter($existing_check_db, static fn($v) => !isset($scope_set[$v])));
+    $final_check_db = array_values(array_unique(array_merge($keep_check_db_out_of_scope, $submitted_check_db_in_scope)));
+
+    permission_set_user_views($uid, $final, $final_view_only, $final_edit_today, $final_check_db);
 
     // Đẩy chuông cho admin trưởng tại thời điểm lưu.
     $target = admin_get_user_by_id($uid);

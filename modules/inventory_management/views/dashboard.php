@@ -58,7 +58,7 @@
 
                 </ul>
             </nav>
-            <?php if (!permission_is_view_only('inventory_management', 'inventory_management', 'dashboard')): ?>
+            <?php if (permission_can_check_db('inventory_management', 'inventory_management', 'dashboard')): ?>
             <div class="cdb-actions">
                 <button type="button" class="btn-check-db"
                     data-tables="finished_product_production_data,production_receipts,production_materials,production_costs_daily,finished_goods_inventory,products">

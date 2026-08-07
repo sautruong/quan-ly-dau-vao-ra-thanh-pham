@@ -93,10 +93,12 @@ $BASE       = '?mod=customer_orders&controllers=customer_orders&action=';
                         </select>
                     </div>
                     <?php /* Không có nút LỌC: mọi ô lọc tự gửi biểu mẫu ngay khi đổi (co-auto). */ ?>
+                    <?php if (permission_can_check_db('customer_orders', 'customer_orders', 'orders')): ?>
                     <button type="button" class="btn-check-db"
                             data-tables="sales_orders,sales_warehouse_export_invoices,warehouse_receipt_invoices,stock_exports,customers">
                         <i class="fa-solid fa-database"></i> Check database
                     </button>
+                    <?php endif; ?>
                 </form>
             </div>
 

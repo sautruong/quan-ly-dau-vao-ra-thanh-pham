@@ -81,12 +81,14 @@
                             <i class="fa-solid fa-flask"></i> Xem thành phần
                         </button>
                         <!-- (6) Nút kiểm tra database — app_shell.js gom thành icon cạnh trái chuông -->
+                        <?php if (permission_can_check_db('product_profile', 'product_profile', 'list')): ?>
                         <button type="button" class="btn-check-db" data-pp-open="#checkdb-modal"
                             data-default-table="<?= htmlspecialchars(!empty($affected_table) ? $affected_table : 'products') ?>"
                             data-affected-id="<?= (int) ($affected_id ?? 0) ?>"
                             data-affected-table="<?= htmlspecialchars($affected_table ?? '') ?>">
                             <i class="fa-solid fa-database"></i> Check database
                         </button>
+                        <?php endif; ?>
                         <!-- Tần suất lặp lại file hồ sơ (toàn hệ thống, có phân trang) -->
                         <button type="button" class="btn-frequency" id="btn-file-frequency" title="Xem tần suất lặp lại của file hồ sơ (toàn hệ thống)">
                             <i class="fa-solid fa-chart-column"></i> Tần suất

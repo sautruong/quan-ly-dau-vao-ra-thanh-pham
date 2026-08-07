@@ -111,6 +111,10 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
         .view-item .edit-today-toggle { margin-left: 10px; color: #096926; }
         .view-item .edit-today-toggle input { border-color: #096926; }
         .view-item .edit-today-toggle input:checked { background: #096926; }
+        /* "Database" — màu xanh dương để phân biệt hẳn với 2 ô kia (vàng: chỉ xem, xanh lá: sửa trong ngày) */
+        .view-item .check-db-toggle { margin-left: 10px; color: #2563eb; }
+        .view-item .check-db-toggle input { border-color: #2563eb; }
+        .view-item .check-db-toggle input:checked { background: #2563eb; }
         /* Nút chuông mở modal nhắc nhở — cấu hình toàn hệ thống, không theo user. */
         .prm-gear {
             margin-left: 8px; border: 0; background: none; cursor: pointer;
@@ -368,6 +372,17 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                                             <input type="checkbox" class="view-only-check" data-view="<?php echo $vid; ?>"> Chỉ xem
                                         </label>
                                         <?php endif; ?>
+                                        <?php /*
+                                          "Database" (7/8/2026) — ĐỘC LẬP với "Chỉ xem": user chỉ-xem vẫn có
+                                          thể được cho phép soi bảng. Chỉ khoá khi chưa tick ô cấp view.
+                                          Tick vào thì nút Database mới hiện trên header của view đó, VÀ endpoint
+                                          check_database phía server mới cho qua.
+                                        */ ?>
+                                        <label class="view-only-toggle check-db-toggle"
+                                               title="Cho phép xem nội dung bảng dữ liệu của view này (nút Database trên header)">
+                                            <input type="checkbox" class="check-db-check" data-view="<?php echo $vid; ?>" disabled>
+                                            Database
+                                        </label>
                                         <?php if ($can_edit_today): ?>
                                         <?php /*
                                           "Cho phép chỉnh sửa trong ngày" (5/8/2026) — CỬA HẸP mở ra từ "Chỉ xem":
@@ -820,6 +835,8 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
         var viewOnlyChecks = Array.prototype.slice.call(document.querySelectorAll('.view-only-check'));
         /* "Sửa trong ngày" (5/8/2026) — chỉ bật được KHI "Chỉ xem" đang bật. */
         var editTodayChecks = Array.prototype.slice.call(document.querySelectorAll('.edit-today-check'));
+        /* "Database" (7/8/2026) — DOC LAP voi "Chi xem", chi khoa khi chua cap view. */
+        var checkDbChecks = Array.prototype.slice.call(document.querySelectorAll('.check-db-check'));
 
         function showToast(msg, isErr) {
             var t = document.getElementById('toast');
@@ -834,6 +851,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
             viewChecks.forEach(function (c) { c.checked = on; });
             viewOnlyChecks.forEach(function (c) { c.checked = false; });
             editTodayChecks.forEach(function (c) { c.checked = false; });
+            checkDbChecks.forEach(function (c) { c.checked = false; });
             syncGroupChecks();
         }
 
@@ -843,6 +861,9 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
         }
         function editTodayCheckFor(viewId) {
             return editTodayChecks.filter(function (c) { return c.dataset.view === String(viewId); })[0];
+        }
+        function checkDbCheckFor(viewId) {
+            return checkDbChecks.filter(function (c) { return c.dataset.view === String(viewId); })[0];
         }
         function syncViewOnlyAvailability() {
             viewChecks.forEach(function (c) {
@@ -858,6 +879,12 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                     var allow = c.checked && voc && voc.checked;
                     if (!allow) { etc.checked = false; }
                     etc.disabled = !allow;
+                }
+                /* "Database" KHÔNG phụ thuộc "Chỉ xem" — chỉ cần view được cấp là bật được. */
+                var cdc = checkDbCheckFor(c.value);
+                if (cdc) {
+                    if (!c.checked) { cdc.checked = false; }
+                    cdc.disabled = !c.checked;
                 }
             });
         }
@@ -903,7 +930,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
             adminOnlyCard.style.display = isDep ? '' : 'none';
         }
 
-        function applyViewIds(ids, viewOnlyIds, editTodayIds) {
+        function applyViewIds(ids, viewOnlyIds, editTodayIds, checkDbIds) {
             var set = {};
             (ids || []).forEach(function (id) { set[String(id)] = true; });
             viewChecks.forEach(function (c) { c.checked = !!set[c.value]; });
@@ -913,6 +940,9 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
             var etSet = {};
             (editTodayIds || []).forEach(function (id) { etSet[String(id)] = true; });
             editTodayChecks.forEach(function (c) { c.checked = !!etSet[c.dataset.view]; });
+            var cdSet = {};
+            (checkDbIds || []).forEach(function (id) { cdSet[String(id)] = true; });
+            checkDbChecks.forEach(function (c) { c.checked = !!cdSet[c.dataset.view]; });
             syncGroupChecks();
             syncViewOnlyAvailability();
             baseline = checkedSet(); dirty = false;   // chỉ so theo các view hiển thị (phạm vi)
@@ -964,7 +994,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                 .then(function (r) { return r.json(); })
                 .then(function (res) {
                     if (!res || !res.ok) { showToast((res && res.message) || 'Không tải được quyền', true); return; }
-                    applyViewIds(res.view_ids || [], res.view_only_ids || [], res.edit_today_ids || []);
+                    applyViewIds(res.view_ids || [], res.view_only_ids || [], res.edit_today_ids || [], res.check_db_ids || []);
                     permArea.classList.remove('disabled-area');
                     btnSave.disabled = false;
                     syncable = true;
@@ -987,6 +1017,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
             viewChecks.forEach(function (c) { if (c.checked) fd.append('view_ids[]', c.value); });
             viewOnlyChecks.forEach(function (c) { if (c.checked && !c.disabled) fd.append('view_only_ids[]', c.dataset.view); });
             editTodayChecks.forEach(function (c) { if (c.checked && !c.disabled) fd.append('edit_today_ids[]', c.dataset.view); });
+            checkDbChecks.forEach(function (c) { if (c.checked && !c.disabled) fd.append('check_db_ids[]', c.dataset.view); });
 
             btnSave.disabled = true;
             fetch(AJAX_BASE + 'user_views_save', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -1014,7 +1045,7 @@ $cur_admin_uname = (string) ($current_admin['username'] ?? '');
                     var remote = {};
                     (res.view_ids || []).forEach(function (id) { if (visibleIds[String(id)]) remote[String(id)] = true; });
                     if (setsDiffer(remote, baseline)) {
-                        applyViewIds(res.view_ids || [], res.view_only_ids || [], res.edit_today_ids || []);
+                        applyViewIds(res.view_ids || [], res.view_only_ids || [], res.edit_today_ids || [], res.check_db_ids || []);
                         showToast('Đã đồng bộ thay đổi phân quyền từ người khác');
                     }
                 })

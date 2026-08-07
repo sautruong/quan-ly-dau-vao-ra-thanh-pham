@@ -49,10 +49,12 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
                         <button type="button" class="btn-share-khsx" id="btn-share-khsx">
                             <i class="fa-solid fa-share-nodes"></i> Share KHSX
                         </button>
+                        <?php if (permission_can_check_db('production_staff', 'production_staff', 'plan_for_staff')): ?>
                         <button type="button" class="btn-check-db"
                             data-tables="production_plans,products,pre_production_notes,additional_tasks,finished_goods_inventory,product_info_basic,material_information,finished_product_production_data">
                             <i class="fa-solid fa-database"></i> Check Database
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

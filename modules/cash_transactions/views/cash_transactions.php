@@ -43,7 +43,7 @@
                     </li>
                 </ul>
             </nav>
-            <?php if (!permission_is_view_only('cash_transactions', 'cash_transactions', 'cash_transactions')): ?>
+            <?php if (permission_can_check_db('cash_transactions', 'cash_transactions', 'cash_transactions')): ?>
             <div class="cdb-actions">
                 <button type="button" class="btn-check-db"
                     data-tables="cash_transactions,transactions">

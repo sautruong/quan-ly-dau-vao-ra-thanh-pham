@@ -59,7 +59,7 @@
 
                 </ul>
             </nav>
-            <?php if (!permission_is_view_only('inventory_management', 'inventory_management', 'other_receipt')): ?>
+            <?php if (permission_can_check_db('inventory_management', 'inventory_management', 'other_receipt')): ?>
             <div class="cdb-actions">
                 <button type="button" class="btn-check-db"
                     data-tables="stock_imports,finished_goods_inventory,products">

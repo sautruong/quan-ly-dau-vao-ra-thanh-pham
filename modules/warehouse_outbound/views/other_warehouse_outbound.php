@@ -51,7 +51,7 @@
                     </li>
                 </ul>
             </nav>
-            <?php if (!permission_is_view_only('warehouse_outbound', 'warehouse_outbound', 'other_warehouse_outbound')): ?>
+            <?php if (permission_can_check_db('warehouse_outbound', 'warehouse_outbound', 'other_warehouse_outbound')): ?>
             <div class="cdb-actions">
                 <button type="button" class="btn-check-db"
                     data-tables="stock_exports,finished_goods_inventory,transactions">

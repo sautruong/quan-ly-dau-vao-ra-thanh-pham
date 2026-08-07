@@ -35,9 +35,11 @@
                     <button type="button" class="sl-btn sl-btn-print" id="sl-btn-print">
                         <i class="fa-solid fa-print"></i> In A4
                     </button>
+                    <?php if (permission_can_check_db('sample_label', 'sample_label', 'sample_label')): ?>
                     <button type="button" class="btn-check-db" data-tables="products,app_settings">
                         <i class="fa-solid fa-database"></i> Check Database
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
 

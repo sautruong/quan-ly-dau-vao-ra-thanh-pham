@@ -275,13 +275,16 @@ function permission_filter_menu_groups($groups)
  * (Xóa hết rồi insert lại — đơn giản & nhất quán.)
  * $view_only_ids: tập con của $view_ids được gán can_edit = 0 (chỉ xem).
  */
-function permission_set_user_views($user_id, array $view_ids, array $view_only_ids = [], array $edit_today_ids = [])
+function permission_set_user_views($user_id, array $view_ids, array $view_only_ids = [], array $edit_today_ids = [], array $check_db_ids = [])
 {
     $uid = (int) $user_id;
     if ($uid <= 0) {
         return false;
     }
     permission_ensure_edit_today_column();
+    // PHẢI gọi TRƯỚC db_insert bên dưới: db_insert dựng tên cột từ array_keys, thiếu cột thật
+    // trong bảng là câu INSERT lỗi 1054 và giết cả request.
+    permission_ensure_check_db_column();
     db_delete('tbl_user_views', "user_id = {$uid}");
 
     // Lọc về int hợp lệ & loại trùng.
@@ -291,6 +294,7 @@ function permission_set_user_views($user_id, array $view_ids, array $view_only_i
     )));
     $view_only_set  = array_flip(array_map('intval', $view_only_ids));
     $edit_today_set = array_flip(array_map('intval', $edit_today_ids));
+    $check_db_set   = array_flip(array_map('intval', $check_db_ids));
     foreach ($ids as $vid) {
         $only = isset($view_only_set[$vid]);
         db_insert('tbl_user_views', [
@@ -301,6 +305,8 @@ function permission_set_user_views($user_id, array $view_ids, array $view_only_i
             // khoá, không phải một mức quyền song song. Tick nó mà không tick "Chỉ xem" thì user
             // vốn đã sửa được mọi ngày — lưu cờ này vào chỉ tạo hiểu nhầm lúc đọc lại dữ liệu.
             'can_edit_today' => ($only && isset($edit_today_set[$vid])) ? 1 : 0,
+            // "Database" ĐỘC LẬP với chỉ-xem: user chỉ-xem vẫn có thể được cho phép soi bảng.
+            'can_check_db'   => isset($check_db_set[$vid]) ? 1 : 0,
         ]);
     }
     return true;
@@ -325,6 +331,106 @@ function permission_ensure_edit_today_column()
     if (db_num_rows("SHOW COLUMNS FROM tbl_user_views LIKE 'can_edit_today'") <= 0) {
         db_query("ALTER TABLE tbl_user_views ADD COLUMN can_edit_today TINYINT(1) NOT NULL DEFAULT 0");
     }
+}
+
+/* =====================================================================
+ *  QUYỀN "DATABASE" — nút Check database của từng view (7/8/2026)
+ *  ---------------------------------------------------------------------
+ *  Trước đây nút hiện cho mọi user không phải "chỉ xem". Nay admin tick
+ *  từng view mới hiện, và ĐƯỜNG SERVER cũng chặn theo cờ này chứ không
+ *  chỉ ẩn nút — ẩn nút mà không chặn thì gõ thẳng URL vẫn đọc được bảng.
+ * ===================================================================== */
+
+/** Cột `can_check_db` — tạo nếu chưa có, chạy 1 lần/request. */
+function permission_ensure_check_db_column()
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    if (db_num_rows("SHOW TABLES LIKE 'tbl_user_views'") <= 0) {
+        return;
+    }
+    if (db_num_rows("SHOW COLUMNS FROM tbl_user_views LIKE 'can_check_db'") <= 0) {
+        db_query("ALTER TABLE tbl_user_views ADD COLUMN can_check_db TINYINT(1) NOT NULL DEFAULT 0");
+        /* BACKFILL 1 LẦN DUY NHẤT — nằm trong nhánh "cột vừa được tạo" nên không bao giờ chạy lại.
+           Giữ nguyên hiện trạng cho user đang dùng: ai đang thấy nút (tức không phải chỉ-xem) thì
+           vẫn thấy. Không có bước này thì sau khi cập nhật mã, TẤT CẢ user mất nút cùng lúc và
+           admin phải đi tick lại từ đầu cho từng người. */
+        db_query("UPDATE tbl_user_views SET can_check_db = 1 WHERE can_edit = 1");
+    }
+}
+
+/** Các view_id user này đang được bật cờ "Database" (để màn Phân quyền tick lại đúng). */
+function permission_user_check_db_ids($user_id)
+{
+    $uid = (int) $user_id;
+    if ($uid <= 0) {
+        return [];
+    }
+    permission_ensure_check_db_column();
+    $rows = db_fetch_array(
+        "SELECT view_id FROM tbl_user_views WHERE user_id = {$uid} AND can_check_db = 1"
+    ) ?: [];
+    return array_map(static fn($r) => (int) $r['view_id'], $rows);
+}
+
+/**
+ * User này có được xem Database ở view đó không.
+ *
+ * FAIL-CLOSED, ngược với permission_user_can_edit() (hàm đó trả true ở các nhánh thoát sớm).
+ * An toàn vì mọi view mang nút đều có trong tbl_views, nên user thường vào được trang thì chắc
+ * chắn đã có bản ghi tbl_user_views (permission_guard() chặn từ trước).
+ */
+function permission_can_check_db($module, $controller, $action, $user = null)
+{
+    if ($user === null) {
+        $user = permission_current_user();
+    }
+    if (permission_is_admin($user)) {
+        return true; // admin luôn thấy
+    }
+    $uid = (int) ($user['id'] ?? 0);
+    if ($uid <= 0) {
+        return false;
+    }
+    $view = permission_find_view($module, $controller, $action);
+    if (!$view) {
+        return false;
+    }
+    permission_ensure_check_db_column();
+    $vid = (int) $view['id'];
+    $row = db_fetch_row(
+        "SELECT can_check_db FROM tbl_user_views WHERE user_id = {$uid} AND view_id = {$vid} LIMIT 1"
+    );
+    return $row ? ((int) $row['can_check_db'] === 1) : false;
+}
+
+/**
+ * Chốt chặn phía SERVER cho endpoint check_database của 1 module.
+ * Endpoint được gọi theo dạng /{mod}/check_database nên chỉ biết MODULE, không biết đang đứng ở
+ * view nào — vì thế cho qua khi user được bật cờ ở BẤT KỲ view nào thuộc module đó.
+ */
+function permission_can_check_db_in_module($module, $user = null)
+{
+    if ($user === null) {
+        $user = permission_current_user();
+    }
+    if (permission_is_admin($user)) {
+        return true;
+    }
+    $uid = (int) ($user['id'] ?? 0);
+    if ($uid <= 0) {
+        return false;
+    }
+    permission_ensure_check_db_column();
+    $m = escape_string((string) $module);
+    return db_num_rows(
+        "SELECT 1 FROM tbl_user_views uv
+           JOIN tbl_views v ON v.id = uv.view_id
+          WHERE uv.user_id = {$uid} AND uv.can_check_db = 1 AND v.module = '{$m}' LIMIT 1"
+    ) > 0;
 }
 
 /* =====================================================================

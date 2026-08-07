@@ -378,6 +378,24 @@ function cdb_preview_tables($tables_csv, $pageSize = 10)
 function cdb_handle_ajax()
 {
     header('Content-Type: application/json; charset=utf-8');
+
+    /* CHỐT CHẶN QUYỀN (7/8/2026) — endpoint này trước đây KHÔNG kiểm gì cả: bất kỳ ai đã đăng
+       nhập, gõ thẳng /{mod}/check_database là đọc được nội dung bảng. Ẩn nút ở giao diện KHÔNG
+       phải là bảo vệ.
+       Chặn theo MODULE vì URL chỉ mang tên module, không biết đang đứng ở view nào —
+       permission_can_check_db_in_module() cho qua khi user được bật cờ ở bất kỳ view nào của
+       module đó. Admin luôn qua. */
+    if (function_exists('permission_can_check_db_in_module')) {
+        if (!permission_current_user()) {
+            echo json_encode(['ok' => false, 'message' => 'Chưa đăng nhập.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if (!permission_can_check_db_in_module(get_module())) {
+            echo json_encode(['ok' => false, 'message' => 'Bạn không có quyền xem dữ liệu bảng.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+
     $table = trim((string) ($_POST['table'] ?? $_GET['table'] ?? ''));
     if ($table !== '') {
         $page = (int) ($_POST['page'] ?? $_GET['page'] ?? 1);

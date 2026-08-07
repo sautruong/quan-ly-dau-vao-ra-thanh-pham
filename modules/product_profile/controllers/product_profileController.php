@@ -1253,6 +1253,14 @@ function check_databaseAction()
 {
     header('Content-Type: application/json');
 
+    /* CHỐT CHẶN QUYỀN (7/8/2026) — endpoint này KHÔNG đi qua cdb_handle_ajax() nên phải tự
+       kiểm, nếu không thì ẩn nút ở giao diện xong user vẫn gõ thẳng URL đọc được bảng. */
+    if (function_exists('permission_can_check_db_in_module')
+        && !permission_can_check_db_in_module('product_profile')) {
+        echo json_encode(['ok' => false, 'message' => 'Bạn không có quyền xem dữ liệu bảng.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     // Whitelist các bảng được phép xem (tránh truy vấn tùy tiện)
     $allowed = [
         'products', 'product_categories', 'product_info_basic', 'pricing_policies',

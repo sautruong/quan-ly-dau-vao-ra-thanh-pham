@@ -97,12 +97,14 @@ $detail_error    = $_GET['error'] ?? '';
                         <button type="button" class="btn-view-info" data-pp-open="#info-basic-modal">
                             <i class="fa-solid fa-circle-info"></i> Xem thông tin sản phẩm
                         </button>
+                        <?php if (permission_can_check_db('product_profile', 'product_profile', 'product_detail')): ?>
                         <button type="button" class="btn-check-db" data-pp-open="#checkdb-modal"
                             data-default-table="<?= htmlspecialchars($checkdb_default) ?>"
                             data-affected-id="<?= $affected_id ?>"
                             data-affected-table="<?= htmlspecialchars($affected_table) ?>">
                             <i class="fa-solid fa-database"></i> Check database
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
 

@@ -61,7 +61,7 @@
 
                 </ul>
             </nav>
-            <?php if (!permission_is_view_only('inventory_receiving', 'inventory_receiving', 'other_row_material_receiving')): ?>
+            <?php if (permission_can_check_db('inventory_receiving', 'inventory_receiving', 'other_row_material_receiving')): ?>
             <div class="cdb-actions">
                 <button type="button" class="btn-check-db"
                     data-tables="stock_imports,warehouse_receipts,raw_material_purchase_data,material_inventory,material_information">
