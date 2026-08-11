@@ -3140,8 +3140,8 @@
 
    Nguyên tắc:
    - Chỉ tính request GHI (POST/PUT/PATCH/DELETE). GET là đọc, không hiện.
-   - Chỉ hiện khi vượt NGUONG ms. Lưu nhanh (<300ms) mà cũng nháy overlay thì khó chịu hơn
-     là không có gì.
+   - Chỉ hiện khi vượt NGUONG ms (1.5s). Thao tác ghi bình thường xong trước mốc đó thì người
+     dùng không thấy gì cả — đúng ý: chỉ việc THẬT SỰ lâu mới cần báo.
    - Đếm số request đang chạy: nhiều lệnh ghi chồng nhau chỉ hiện MỘT overlay, và chỉ tắt
      khi cái cuối cùng xong.
    - Bỏ qua các request NỀN chạy liên tục (poll chat / chuông / lịch / báo cáo tự động),
@@ -3155,7 +3155,11 @@
     'use strict';
     if (window.AppBusy) return;
 
-    var NGUONG = 400;                 // ms — dưới mức này coi như tức thì, không hiện
+    /* NGƯỠNG 1.5 GIÂY (nâng từ 400ms ngày 11/8/2026 — anh Sáu báo overlay hiện ở mọi nơi).
+       400ms là quá nhạy: phần lớn thao tác ghi bình thường đã vượt mốc đó, nên overlay nháy
+       liên tục và biến từ "báo hiệu đang bận" thành phiền nhiễu. 1.5s thì chỉ những việc THẬT
+       SỰ lâu — mà người dùng đằng nào cũng phải chờ — mới hiện. */
+    var NGUONG = 1500;
     var dangChay = 0, hen = null, lop = null;
 
     /* Địa chỉ của các request NỀN — tuyệt đối không hiện overlay cho chúng. */
