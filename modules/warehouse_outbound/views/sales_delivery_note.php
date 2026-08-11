@@ -112,6 +112,15 @@
                     <tbody id="sale-tbody">
                     </tbody>
                 </table>
+                <?php /*
+                  MOBILE: nút thêm dòng thủ công. Trên máy tính dòng mới tự sinh khi gõ xong dòng
+                  cuối (ensureEmptyRow trong sales_issue.js), nhưng trên điện thoại luồng nhập
+                  bị bàn phím ảo che và dòng trống lại bị dọn khi rời ô — nên cần nút bấm rõ ràng.
+                  CSS ẩn nút này ở desktop.
+                */ ?>
+                <button type="button" class="btn-add-sale-row" id="btn-add-sale-row">
+                    <i class="fa-solid fa-plus"></i> Thêm dòng
+                </button>
                 <div class="wp-total">
                     <div class="wp-weight">
                         <div class="label">Tổng khối lượng:</div>

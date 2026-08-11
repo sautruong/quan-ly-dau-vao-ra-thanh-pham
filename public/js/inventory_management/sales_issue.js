@@ -1762,5 +1762,24 @@
         prefillFromSession();
     }
 
+    /* ---------------------------------------------------------------------------------
+       NÚT "THÊM DÒNG" (mobile) — anh Sáu chốt 11/8/2026.
+       Trên máy tính dòng mới tự sinh khi gõ xong dòng cuối (ensureEmptyRow), nhưng trên điện
+       thoại bàn phím ảo che mất dòng cuối và dòng trống lại bị dọn ngay khi rời ô, nên phải có
+       nút bấm rõ ràng.
+       Luôn thêm MỘT dòng mới rồi đưa con trỏ vào ô tên hàng của dòng đó — đỡ một lần chạm.
+       Nút không có trong mọi view dùng file này nên phải kiểm tồn tại trước khi gắn.
+       --------------------------------------------------------------------------------- */
+    var $btnAddRow = document.getElementById('btn-add-sale-row');
+    if ($btnAddRow) {
+        $btnAddRow.addEventListener('click', function () {
+            var tr = makeRow();
+            $tbody.appendChild(tr);
+            recalcTotals();
+            var o = tr.querySelector('.name_product');
+            if (o) { o.focus(); tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        });
+    }
+
     init();
 })();

@@ -1037,3 +1037,31 @@
     vertical-align: middle;
 }
 .je-explain-note { color: #888; font-size: 12px; font-style: italic; }
+
+/* =====================================================================================
+   NUT "THEM DONG" — CHI hien tren mobile (anh Sau chot 11/8/2026).
+   Tren may tinh dong moi tu sinh khi go xong dong cuoi (ensureEmptyRow), nen nut la thua.
+   Tren dien thoai ban phim ao che mat dong cuoi va dong trong lai bi don khi roi o, nen phai
+   co nut bam ro rang.
+   ===================================================================================== */
+.btn-add-sale-row { display: none; }
+
+@media (max-width: 768px) {
+    .btn-add-sale-row {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        margin: 10px 0 4px;
+        padding: 12px 14px;
+        border: 1.5px dashed #c2c8d0;
+        border-radius: 10px;
+        background: #fff;
+        color: #096926;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-add-sale-row:active { background: #f0fdf4; border-color: #096926; }
+}
