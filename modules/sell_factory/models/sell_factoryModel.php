@@ -187,28 +187,36 @@ function sf_share_order_to_chat($uid, $file, array $target_ids, $note = '')
 }
 
 /**
- * DANH SÁCH SẢN PHẨM CỦA MẺ SẢN XUẤT GẦN NHẤT — dùng để "chớp sáng" ô sản phẩm khi vào
- * trang order_factory, cho người đặt hàng thấy ngay hôm rồi nhà máy vừa làm ra những gì.
+ * DANH SÁCH SẢN PHẨM CỦA VÀI MẺ SẢN XUẤT GẦN NHẤT — dùng để "chớp sáng" ô sản phẩm khi vào
+ * trang order_factory, cho người đặt hàng thấy ngay mấy hôm rồi nhà máy vừa làm ra những gì.
  *
- * Cách xác định "gần nhất": lấy NGÀY sản xuất mới nhất còn trong
- * finished_product_production_data rồi trả về mọi sản phẩm của đúng ngày đó.
- * KHÔNG trừ lùi theo thứ trong tuần: nhà máy nghỉ Chủ nhật nên MAX(ngày) tự rơi vào thứ Bảy,
- * và cách này cũng tự đúng cho cả ngày lễ / đợt nghỉ dài — không phải bảo trì luật ngày nghỉ.
- *
+ * @param int $so_ngay số NGÀY CÓ SẢN XUẤT gần nhất cần lấy (mặc định 3 — anh Sáu chốt 11/8/2026).
  * @return array danh sách product_id (int), có thể rỗng nếu bảng chưa có dữ liệu.
  */
-function sf_get_recent_production_product_ids()
+function sf_get_recent_production_product_ids($so_ngay = 3)
 {
-    $row = db_fetch_row(
-        "SELECT DATE(MAX(created_at)) AS d FROM finished_product_production_data"
-    );
-    $ngay = $row && !empty($row['d']) ? $row['d'] : '';
-    if ($ngay === '') return [];
+    $so_ngay = max(1, (int) $so_ngay);
+
+    /* Lấy $so_ngay NGÀY CÓ SẢN XUẤT gần nhất — không phải "$so_ngay ngày lịch gần nhất".
+       Khác biệt quan trọng: nhà máy nghỉ Chủ nhật (và lễ), nên đếm lùi theo lịch sẽ trúng vào
+       ngày trống và chỉ còn 2 danh sách. Lấy theo DISTINCT ngày có dữ liệu thì hôm nay là thứ Ba
+       sẽ tự ra thứ Hai / thứ Bảy / thứ Sáu, đúng như anh Sáu mô tả, mà không cần biết lịch nghỉ. */
+    $ngayRows = db_fetch_array(
+        "SELECT DISTINCT DATE(created_at) AS d
+         FROM finished_product_production_data
+         WHERE product_id > 0
+         ORDER BY d DESC
+         LIMIT {$so_ngay}"
+    ) ?: [];
+    if (!$ngayRows) return [];
+
+    $q = [];
+    foreach ($ngayRows as $r) $q[] = "'" . escape_string((string) $r['d']) . "'";
 
     $rows = db_fetch_array(
         "SELECT DISTINCT product_id
          FROM finished_product_production_data
-         WHERE DATE(created_at) = '" . escape_string($ngay) . "'
+         WHERE DATE(created_at) IN (" . implode(',', $q) . ")
            AND product_id > 0"
     ) ?: [];
 
