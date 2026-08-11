@@ -625,7 +625,128 @@ function sf_get_production_forecast()
         $d['items'] = $items_by_date[$d['date']] ?? [];
     }
     unset($d);
+
+    sf_apply_common_names($days);
+    sf_mark_material_shortage($days);
     return $days;
+}
+
+/**
+ * Đổi tên hiển thị sang TÊN THƯỜNG GỌI (products.common_product_name) cho riêng view này.
+ *
+ * KHÔNG sửa ltp_get_items_grouped(): hàm đó dùng chung với /production_staff/long_term_production_plan,
+ * đổi ở đó là đổi luôn tên trên bảng lập kế hoạch — ngoài phạm vi anh Sáu yêu cầu.
+ */
+function sf_apply_common_names(array &$days)
+{
+    $pids = [];
+    foreach ($days as $d) {
+        foreach ($d['items'] ?? [] as $it) {
+            $pid = (int) ($it['product_id'] ?? 0);
+            if ($pid > 0) $pids[$pid] = true;
+        }
+    }
+    if (!$pids) return;
+
+    $rows = db_fetch_array(
+        "SELECT id, COALESCE(NULLIF(common_product_name, ''), product_name) AS ten
+         FROM products WHERE id IN (" . implode(',', array_keys($pids)) . ")"
+    ) ?: [];
+    $ten = [];
+    foreach ($rows as $r) $ten[(int) $r['id']] = (string) $r['ten'];
+
+    foreach ($days as &$d) {
+        foreach ($d['items'] as &$it) {
+            $pid = (int) ($it['product_id'] ?? 0);
+            if (isset($ten[$pid]) && $ten[$pid] !== '') $it['product_name'] = $ten[$pid];
+        }
+        unset($it);
+    }
+    unset($d);
+}
+
+/**
+ * ĐÁNH DẤU SẢN PHẨM THIẾU NGUYÊN VẬT LIỆU trong kế hoạch dự kiến.
+ *
+ * Với mỗi dòng kế hoạch: nhân định mức trong product_materials lên đúng SỐ LƯỢNG dự kiến rồi
+ * đối chiếu tồn material_inventory. Chỉ cần MỘT thành phần không đủ là gắn cờ cho cả dòng.
+ *
+ * Gộp TẤT CẢ sản phẩm của cả cửa sổ vào ĐÚNG 2 truy vấn (một cho công thức, một cho tồn) —
+ * một cửa sổ 10 ngày có thể vài chục dòng, hỏi từng dòng là vài chục lượt truy vấn cho mỗi
+ * lần mở trang.
+ *
+ * LƯU Ý VỀ CÁCH TÍNH: tồn NVL là MỘT KHO DÙNG CHUNG, nên khi hai ngày khác nhau cùng cần một
+ * NVL thì ở đây mỗi ngày được xét ĐỘC LẬP (không trừ dần). Đây là cảnh báo "đủ để làm lô này
+ * không", không phải bài toán phân bổ tồn cho cả tuần — nói rõ để sau này không hiểu nhầm.
+ *
+ * @param array $days Mảng ngày (tham chiếu). Mỗi item được thêm khoá 'mat_short' (bool)
+ *                    và 'mat_short_names' (danh sách NVL thiếu, để đưa vào tooltip).
+ */
+function sf_mark_material_shortage(array &$days)
+{
+    // Gom product_id của mọi dòng kế hoạch trong cửa sổ.
+    $pids = [];
+    foreach ($days as $d) {
+        foreach ($d['items'] ?? [] as $it) {
+            $pid = (int) ($it['product_id'] ?? 0);
+            if ($pid > 0) $pids[$pid] = true;
+        }
+    }
+    if (!$pids) return;
+
+    // (1) Công thức của tất cả sản phẩm liên quan.
+    $rows = db_fetch_array(
+        "SELECT pm.product_id, pm.material_id, pm.quantity_required,
+                COALESCE(NULLIF(mi.common_material_name, ''), mi.material_name) AS material_name
+         FROM product_materials pm
+         LEFT JOIN material_information mi ON mi.id = pm.material_id
+         WHERE pm.product_id IN (" . implode(',', array_keys($pids)) . ")
+           AND pm.material_id > 0"
+    ) ?: [];
+    if (!$rows) return;
+
+    $congThuc = [];   // product_id => [ [material_id, dinh_muc, ten], ... ]
+    $matIds   = [];
+    foreach ($rows as $r) {
+        $mid = (int) $r['material_id'];
+        $congThuc[(int) $r['product_id']][] = [
+            'mid'  => $mid,
+            'dm'   => (float) $r['quantity_required'],
+            'ten'  => (string) ($r['material_name'] ?? ''),
+        ];
+        $matIds[$mid] = true;
+    }
+    if (!$matIds) return;
+
+    // (2) Tồn của tất cả NVL liên quan.
+    $tonRows = db_fetch_array(
+        "SELECT material_id, quantity FROM material_inventory
+         WHERE material_id IN (" . implode(',', array_keys($matIds)) . ")"
+    ) ?: [];
+    $ton = [];
+    foreach ($tonRows as $r) $ton[(int) $r['material_id']] = (float) $r['quantity'];
+
+    foreach ($days as &$d) {
+        foreach ($d['items'] as &$it) {
+            $pid = (int) ($it['product_id'] ?? 0);
+            $sl  = (float) ($it['quantity'] ?? 0);
+            $it['mat_short'] = false;
+            $it['mat_short_names'] = [];
+            if ($pid <= 0 || $sl <= 0 || empty($congThuc[$pid])) continue;
+
+            foreach ($congThuc[$pid] as $tp) {
+                if ($tp['dm'] <= 0) continue;              // định mức 0 -> không ràng buộc gì
+                $can = $tp['dm'] * $sl;
+                $co  = $ton[$tp['mid']] ?? 0.0;
+                if ($co + 0.0001 < $can) {                 // dung sai nhỏ cho số thập phân
+                    $it['mat_short'] = true;
+                    if ($tp['ten'] !== '') $it['mat_short_names'][] = $tp['ten'];
+                }
+            }
+        }
+        unset($it);
+    }
+    unset($d);
 }
 
 /**

@@ -32,6 +32,12 @@ $days = isset($days) && is_array($days) ? $days : [];
         /* Forecast hiển thị kèm đơn vị nên không bó hẹp ô số lượng như bảng nhập */
         .pf-board .ltp-item-name { font-size: 12px; }
         .pf-board .ltp-item-qty { width: auto; font-size: 12px; }
+        /* Cảnh báo thiếu NVL — icon đặt cạnh TRÁI tên sản phẩm. */
+        .pf-warn {
+            flex: 0 0 auto; margin-right: 5px; color: #f59e0b; font-size: 12px;
+            line-height: 1; cursor: help;
+        }
+        .pf-board .ltp-item.pf-mat-short .ltp-item-name { color: #b45309; }
     </style>
 </head>
 
@@ -45,7 +51,7 @@ $days = isset($days) && is_array($days) ? $days : [];
             <div class="pf-wrap">
                 <div class="ltp-page-head">
                     <h1>KẾ HOẠCH SẢN XUẤT DỰ KIẾN</h1>
-                    <p class="ltp-hint">Lịch sản xuất dự kiến của nhà máy theo tuần (gồm 2 ngày trước, hôm nay và các ngày tới).</p>
+                    <p class="ltp-hint">Lịch sản xuất dự kiến của nhà máy thời gian tới</p>
                 </div>
 
                 <div class="ltp-board pf-board">
@@ -81,8 +87,19 @@ $days = isset($days) && is_array($days) ? $days : [];
                                                 $nm = htmlspecialchars((string) ($it['product_name'] ?: ('#' . (int) $it['product_id'])), ENT_QUOTES, 'UTF-8');
                                                 $q  = rtrim(rtrim(number_format((float) $it['quantity'], 2, '.', ''), '0'), '.');
                                                 $unit = htmlspecialchars((string) ($it['unit'] ?? ''), ENT_QUOTES, 'UTF-8');
+                                                /* Cảnh báo thiếu NVL: nhân định mức product_materials lên đúng số lượng
+                                                   dự kiến rồi đối chiếu tồn — xem sf_mark_material_shortage(). */
+                                                $thieu = !empty($it['mat_short']);
+                                                $dsThieu = $thieu ? array_slice((array) ($it['mat_short_names'] ?? []), 0, 6) : [];
+                                                $tip = 'KHSX có thể thay đổi do thành phần NVL của SP này chưa đầy đủ để đảm bảo sản xuất ra số lượng bên.';
+                                                if ($dsThieu) $tip .= "\nThiếu: " . implode(', ', $dsThieu);
                                             ?>
-                                                <li class="ltp-item" style="padding-right:8px;">
+                                                <li class="ltp-item<?php echo $thieu ? ' pf-mat-short' : ''; ?>" style="padding-right:8px;">
+                                                    <?php if ($thieu): ?>
+                                                        <span class="pf-warn" title="<?php echo htmlspecialchars($tip, ENT_QUOTES, 'UTF-8'); ?>">
+                                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                                        </span>
+                                                    <?php endif; ?>
                                                     <span class="ltp-item-name"><?php echo $nm; ?></span>
                                                     <span class="ltp-item-qty"><?php echo htmlspecialchars($q, ENT_QUOTES, 'UTF-8'); ?> <?php echo $unit; ?></span>
                                                 </li>

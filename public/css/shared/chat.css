@@ -256,6 +256,23 @@
 .chat-att-file .sz { font-size: 11px; color: var(--chat-muted); }
 .chat-msg.is-me .chat-att-file .sz { color: var(--chat-muted); }
 
+/* Nút TẢI XUỐNG cho tệp đính kèm — hiện khi rê chuột vào.
+   Bấm vào thẻ tệp giờ là MỞ TRỰC TIẾP (bỏ thuộc tính download ở chat.js), nên phải có lối
+   riêng cho ai muốn tải về. Đặt cạnh trái nút "Thêm vào thư viện" để không đè lên nhau. */
+.chat-att-dl {
+    position: absolute; top: 8px; right: 40px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(17, 24, 39, .55); color: #fff;
+    font-size: 12px; display: flex; align-items: center; justify-content: center;
+    text-decoration: none; opacity: 0; transition: opacity .15s ease, background .15s ease;
+}
+.chat-att-wrap:hover .chat-att-dl { opacity: 1; }
+.chat-att-dl:hover { background: var(--chat-primary); color: #fff; }
+/* Trên cảm ứng không có hover -> luôn hiện mờ để bấm được. */
+@media (hover: none) {
+    .chat-att-wrap .chat-att-dl { opacity: .85; }
+}
+
 /* Nút "Thêm vào thư viện của tôi" — hiện khi hover vào đính kèm */
 .chat-att-addlib {
     position: absolute; top: 8px; right: 8px;
@@ -273,6 +290,9 @@
 .chat-att-file ~ .chat-att-addlib:hover,
 .chat-att-file ~ .chat-att-addlib.is-done,
 .chat-att-file ~ .chat-att-addlib.is-saved { background: var(--chat-primary); color: #fff; }
+/* Cùng lý do cho nút tải xuống: thẻ tệp nền trắng nên nút nền tối sẽ chìm. */
+.chat-att-file ~ .chat-att-dl { background: rgba(255, 255, 255, .9); color: var(--chat-primary); box-shadow: 0 1px 4px rgba(0, 0, 0, .15); }
+.chat-att-file ~ .chat-att-dl:hover { background: var(--chat-primary); color: #fff; }
 
 /* ---- Khu soạn tin ---- */
 .chat-compose { border-top: 1px solid var(--chat-line); padding: 8px; flex: 0 0 auto; background: #fff; }

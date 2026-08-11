@@ -596,11 +596,18 @@
                     + ' data-sender-name="' + esc(m.sender_name || '') + '" data-sender-avatar="' + esc(m.sender_avatar || '')
                     + '" data-time="' + esc(m.created_at || '') + '">'
                     + addLibBtn(a) + '</div>';
+                /* Bấm vào tệp = MỞ TRỰC TIẾP ở tab mới (PDF/ảnh/văn bản xem ngay trong trình
+                   duyệt), KHÔNG tải xuống. Trước đây có thuộc tính `download` nên trình duyệt
+                   luôn tải về, muốn xem phải mở từ thư mục Downloads.
+                   Ai cần tải thì rê chuột vào sẽ hiện nút mũi tên xuống bên cạnh — nút đó mới
+                   mang `download`. */
                 return '<div class="chat-att-wrap">'
-                    + '<a class="chat-att-file" href="' + esc(a.url) + '" target="_blank" download="' + esc(a.original_name) + '">'
-                    + '<i class="fa-solid fa-file-arrow-down"></i>'
+                    + '<a class="chat-att-file" href="' + esc(a.url) + '" target="_blank" rel="noopener">'
+                    + '<i class="fa-solid fa-file-lines"></i>'
                     + '<span class="meta"><span class="nm">' + esc(a.original_name) + '</span>'
                     + '<span class="sz">' + fmtSize(a.size) + (fileExt(a.original_name) ? (' - ' + fileExt(a.original_name)) : '') + '</span></span></a>'
+                    + '<a class="chat-att-dl" href="' + esc(a.url) + '" download="' + esc(a.original_name) + '"'
+                    + ' title="Tải xuống" aria-label="Tải xuống"><i class="fa-solid fa-download"></i></a>'
                     + addLibBtn(a) + '</div>';
             }).join('');
             var bodyHtml = (m.body && m.body.trim() !== '') ? '<div class="chat-bubble">' + highlightMentions(applyTextFormatDisplay(esc(m.body))) + '</div>' : '';
