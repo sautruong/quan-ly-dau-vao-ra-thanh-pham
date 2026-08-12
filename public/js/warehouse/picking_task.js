@@ -274,7 +274,31 @@
                 (done ? '<i class="fa-solid fa-circle-check"></i>' : '') +
                 '</button>';
         }).join(''));
+        capNhatNhacRoiTrang();
     }
+    /* ---- Nhắc còn phiếu chưa bấm "Soạn xong" ----
+       Bấm "Soạn xong" mới là lúc chuông báo về cho admin. Rời trang khi còn phiếu dở thì
+       admin không hề biết kho đã bốc tới đâu — nên vừa hiện dải nhắc trong trang (thấy được
+       trước khi đi), vừa chặn ở beforeunload (bắt phải xác nhận mới rời). Mọi phiếu đã bấm
+       xong hết thì im lặng hoàn toàn. */
+    function soPhieuChuaXong() {
+        return SLIPS.filter(function (s) { return String(s.status) !== 'done'; }).length;
+    }
+    function capNhatNhacRoiTrang() {
+        var n = soPhieuChuaXong();
+        var $b = $('#wpk-leave-warn');
+        if (!$b.length) return;
+        if (!n) { $b.attr('hidden', true).empty(); return; }
+        $b.removeAttr('hidden').html('<i class="fa-solid fa-triangle-exclamation"></i> Còn <b>' + n +
+            '</b> phiếu chưa bấm “Soạn xong” — rời trang lúc này là admin chưa nhận được báo soạn.');
+    }
+    window.addEventListener('beforeunload', function (e) {
+        if (!soPhieuChuaXong()) return;      // xong hết thì đi thoải mái
+        e.preventDefault();
+        e.returnValue = '';                  // trình duyệt tự hiện hộp xác nhận (không sửa được chữ)
+        return '';
+    });
+
     /** Đồng bộ bộ đếm của phiếu đang mở từ dữ liệu vừa nhận (không đợi tải lại trang). */
     function capNhatChipHienTai() {
         if (!SLIP) return;

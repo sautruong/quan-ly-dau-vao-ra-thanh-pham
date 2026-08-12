@@ -48,6 +48,9 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                  và đổi phiếu không phải tải lại cả trang. -->
             <div class="wpk-chips" id="wpk-chips"></div>
 
+            <!-- Nhắc còn phiếu chưa bấm "Soạn xong" — JS bật/tắt theo số phiếu còn lại. -->
+            <div class="wpk-leave-warn" id="wpk-leave-warn" hidden></div>
+
             <?php if (!$slip): ?>
                 <p class="wpk-empty">Chưa có yêu cầu soạn hàng nào</p>
             <?php else: ?>
