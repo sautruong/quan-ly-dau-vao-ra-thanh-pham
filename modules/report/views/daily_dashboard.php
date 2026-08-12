@@ -84,8 +84,8 @@ function dd2_stock_watch_row($m, $kind)
         . '</span></div>';
 }
 
-$MIN_PROD_ROWS = 5;
-$PROD_PAGE_SIZE = 5;
+$MIN_PROD_ROWS = 6;   // 2026-08-12: card "Sản xuất..." hiện tối đa 6 SP/trang, đệm đủ 6 dòng cho cao đều
+$PROD_PAGE_SIZE = 6;
 $SW_MIN_ROWS   = 6;   // đệm cho 2 khối "Theo dõi tồn kho" luôn cao bằng nhau (2 dòng x 3 cột)
 $today_label = strtolower(rp_dd_month_short((int) date('n')));
 $page_date_label = date('d') . ' ' . $today_label . ', ' . date('Y');
@@ -270,7 +270,7 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                         <?php $dd2_prod_count = count($d_prodDay['rows'] ?? []); ?>
                         <div class="dd2-card dd2-col-production">
                             <div class="dd2-card-head">
-                                <p class="dd2-title"><i class="fa-solid fa-industry"></i> <span id="dd2-production-title-text"><?php echo dd2_esc($d_prodDay['label']); ?></span><span class="dd2-title-count" id="dd2-production-count"<?php echo $dd2_prod_count > 5 ? '' : ' hidden'; ?>><?php echo $dd2_prod_count > 5 ? '/' . dd2_num($dd2_prod_count) . ' sản phẩm' : ''; ?></span></p>
+                                <p class="dd2-title"><i class="fa-solid fa-industry"></i> <span id="dd2-production-title-text"><?php echo dd2_esc($d_prodDay['label']); ?></span><span class="dd2-title-count" id="dd2-production-count"<?php echo $dd2_prod_count > $PROD_PAGE_SIZE ? '' : ' hidden'; ?>><?php echo $dd2_prod_count > $PROD_PAGE_SIZE ? '/' . dd2_num($dd2_prod_count) . ' sản phẩm' : ''; ?></span></p>
                                 <div class="dd2-day-nav">
                                     <button type="button" class="dd2-day-nav-btn" id="dd2-day-prev" title="Ngày trước"><i class="fa-solid fa-chevron-left"></i></button>
                                     <button type="button" class="dd2-day-nav-btn" id="dd2-day-next" title="Ngày sau" disabled><i class="fa-solid fa-chevron-right"></i></button>

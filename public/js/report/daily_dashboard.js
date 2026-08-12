@@ -63,11 +63,14 @@
 
     // Badge số lượng cạnh tiêu đề card ("Sản xuất hôm nay/7 sản phẩm", "Đặt hàng nguyên liệu/6 đơn hàng")
     // — chỉ hiện khi count > 5, chữ mờ/nhỏ hơn tiêu đề (xem .dd2-title-count).
-    function setCardCount(elId, count, unit) {
+    // nguong = số dòng 1 trang của card đó; chỉ khi tổng VƯỢT một trang mới hiện "/N ...".
+    // Mặc định 5 cho các card cũ; card "Sản xuất" truyền 6 vào (2026-08-12).
+    function setCardCount(elId, count, unit, nguong) {
         var el = document.getElementById(elId);
         if (!el) return;
         var n = Number(count) || 0;
-        if (n > 5) { el.hidden = false; el.textContent = '/' + fmtNum(n) + ' ' + unit; }
+        var max = Number(nguong) || 5;
+        if (n > max) { el.hidden = false; el.textContent = '/' + fmtNum(n) + ' ' + unit; }
         else { el.hidden = true; el.textContent = ''; }
     }
 
@@ -893,17 +896,17 @@
     var prodDayOffset = 0;
     var prodCurrentDate = (INITIAL.production_day && INITIAL.production_day.date) || new Date().toISOString().slice(0, 10);
 
-    // Phân trang 5 SP/trang, ẩn mặc định chỉ hiện khi hover (giống Nhập kho/Quỹ) — vì
+    // Phân trang 6 SP/trang, ẩn mặc định chỉ hiện khi hover (giống Nhập kho/Quỹ) — vì
     // daily_dashboard_production_full đã trả về TOÀN BỘ SP trong ngày 1 lần, phân trang
     // ở đây cắt mảng phía client, không gọi lại API khi đổi trang.
-    var PROD_PAGE_SIZE = 5;
+    var PROD_PAGE_SIZE = 6;
     var prodRowsAll = (INITIAL.production_day && INITIAL.production_day.rows) || [];
     var prodPage = 1;
 
     function renderProductionPage() {
         var body = document.getElementById('dd2-products-body');
         if (!body) return;
-        setCardCount('dd2-production-count', prodRowsAll.length, 'sản phẩm');
+        setCardCount('dd2-production-count', prodRowsAll.length, 'sản phẩm', PROD_PAGE_SIZE);
         var totalPages = Math.max(1, Math.ceil(prodRowsAll.length / PROD_PAGE_SIZE));
         if (prodPage > totalPages) prodPage = totalPages;
         var start = (prodPage - 1) * PROD_PAGE_SIZE;
@@ -919,7 +922,10 @@
                     ? '<img class="dd2-prod-img" src="public/images/' + escapeHtml(p.image_url) + '" alt="">'
                     : '<span class="dd2-prod-img dd2-prod-img-empty"><i class="fa-solid fa-box"></i></span>';
                 html += '<tr class="dd2-prod-row" data-product-id="' + p.product_id + '">' +
-                    '<td class="dd2-prod-name">' + imgCell + '<span class="dd2-prod-name-text">' + escapeHtml(p.name) + '</span></td>' +
+                    // Phải bọc .dd2-prod-name-inner y như bản PHP, nếu không thì sau khi bấm
+                    // mũi tên đổi ngày, ảnh và tên SP mất canh giữa theo chiều dọc.
+                    '<td class="dd2-prod-name"><div class="dd2-prod-name-inner">' + imgCell +
+                    '<span class="dd2-prod-name-text">' + escapeHtml(p.name) + '</span></div></td>' +
                     '<td>' + fmtNum(p.quantity) + '</td>' +
                     '<td class="dd2-prod-cost" data-product-id="' + p.product_id + '">' + fmtMoney(p.cost) +
                     ' <span class="dd2-warn-dot ' + (p.warn_class || '') + '"></span></td></tr>';

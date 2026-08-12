@@ -2467,12 +2467,21 @@
     color: #111827;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.dd2-pc-table th:nth-child(1), .dd2-pc-table td:nth-child(1) { width: 78px; }
+/* 2026-08-12: CHỈ cột "Tên hàng hóa" mới được cắt "..." — trước đây quy tắc này đặt ở
+   .dd2-pc-table td nên nó ăn cả cột NGÀY, làm ngày hiện thành "11/08/20…" (rõ nhất trên
+   ảnh chụp). Ngày/giá/tỷ lệ giờ chỉ có overflow:hidden, và bề rộng bên dưới đủ rộng để
+   không bao giờ chạm ngưỡng cắt. */
+.dd2-pc-name { text-overflow: ellipsis; }
+
+/* Cột NGÀY cố định 92px: dd/mm/yyyy ở font-size 12.5px chiếm ~70px + 12px đệm 2 bên,
+   còn dư ~10px an toàn cho cả chữ đậm khi trùng ngày hôm nay (.is-today). Bù lại bằng
+   cách bóp 2 cột giá 92->86px (chuỗi dài nhất "1,234,567 đ" chỉ ~78px) nên cột tên chỉ
+   hụt 4px so với trước. */
+.dd2-pc-table th:nth-child(1), .dd2-pc-table td:nth-child(1) { width: 92px; }
 .dd2-pc-table th:nth-child(3), .dd2-pc-table td:nth-child(3),
-.dd2-pc-table th:nth-child(4), .dd2-pc-table td:nth-child(4) { width: 92px; text-align: right; }
+.dd2-pc-table th:nth-child(4), .dd2-pc-table td:nth-child(4) { width: 86px; text-align: right; }
 .dd2-pc-table th:nth-child(5), .dd2-pc-table td:nth-child(5) { width: 76px; text-align: right; }
 
 /* Cần kèm td vì .dd2-pc-table td (đặt trước) có độ ưu tiên cao hơn selector 1 class. */
