@@ -882,9 +882,13 @@
     background-color: #f9fafb;
 }
 
+/* Cột "Diễn giải" của khối Lịch sử — chữ THẲNG (anh Sáu chốt 11/8/2026).
+   Bỏ font-style:italic: đây là nội dung nghiệp vụ đọc thường xuyên, in nghiêng làm khó đọc và
+   trông như ghi chú phụ. dashboard.css được nhiều view nhập liệu dùng chung nên sửa 1 chỗ là
+   cả nhóm đổi theo. */
 .history-table tbody td:nth-child(2) {
     color: var(--color-gray-900);
-    font-style: italic;
+    font-style: normal;
     line-height: 1.5;
 }
 
