@@ -238,8 +238,8 @@
     justify-content: center;
     min-width: 20px;
     height: 20px;
-    padding: 0 5px;
-    border-radius: 6px;
+    padding: 0 4px;
+    border-radius: 999px;
     background: var(--wpk-accent);
     color: #fff;
     font-size: 12px;
@@ -614,9 +614,6 @@
    ===================================================================== */
 .wpk-history { margin-top: 22px; }
 
-.wpk-history .history-table { width: 100%; }
-.wpk-hist-row { cursor: pointer; }
-.wpk-hist-row:hover td { background: #f6fbf7; }
 .wpk-hist-empty { color: #9ca3af; text-align: center; padding: 18px 0; }
 .wpk-hist-ok   { color: #15803d; font-weight: 600; }
 .wpk-hist-wait { color: #b45309; font-weight: 600; }
@@ -695,16 +692,21 @@
    ĐIỆN THOẠI
    ===================================================================== */
 @media (max-width: 768px) {
-    /* Khung 1 màn hình của global.css (padding + đổ bóng) chỉ hợp với máy tính;
-       trên điện thoại nó ăn mất bề ngang vốn đã hẹp. */
-    #wrapper {
+    /* Khung 1 màn hình của global.css (padding + đổ bóng) chỉ hợp với máy tính; trên điện
+       thoại nó ăn mất bề ngang vốn đã hẹp.
+       PHẢI kèm body.app-has-sidebar: app_shell.css đặt padding-left cho ĐÚNG selector đó
+       (kể cả bản .app-sidebar-collapsed 16px trong media query), specificity cao hơn
+        trần nên chỉ ghi padding:0 ở đây là không ăn — đúng lỗi "vẫn 16px". */
+    #wrapper,
+    body.app-has-sidebar #wrapper,
+    body.app-has-sidebar.app-sidebar-collapsed #wrapper {
         padding: 0 !important;
         box-shadow: none !important;
         border-radius: 0;
     }
 
     .wpk-page {
-        padding: 12px;
+        padding: 10px 8px 24px;
         overflow: visible;
         min-height: 0;
     }
@@ -713,7 +715,155 @@
        hàng cần nút đó, không cần chat. Chỉ ẩn ở view này, chat vẫn chạy ở trang khác. */
     .chat-widget .chat-launcher { display: none !important; }
 
-    .wpk-slip { border-radius: 10px; padding: 10px; }
-    .wpk-history .history-table { font-size: 12.5px; }
+    /* Trải hết bề ngang: bỏ khung thẻ, chữ nhỏ lại cho vừa màn hình đứng. */
+    .wpk-slip {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+        margin-top: 6px;
+    }
+
+    .wpk-info-row b { font-weight: 500; font-size: 13px; }
+    .wpk-name-text  { font-size: 13px; }
+    .wpk-sub        { font-size: 11.5px; }
+    .wpk-qty        { font-size: 14px; min-width: 48px; }
+    .wpk-row-main   { padding: 8px 0; }
+    .wpk-table-head { padding: 0 0 6px; }
+    .wpk-hist-cards { grid-template-columns: 1fr; }
 }
 
+
+/* ---- Lịch sử: thẻ thay cho bảng, mỗi thẻ mang màu của khách ---- */
+.wpk-hist-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.wpk-hist-card {
+    --c: #16a34a;
+    border: 1px solid #eef0f2;
+    border-left: 4px solid var(--c);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    cursor: pointer;
+    transition: box-shadow .14s, transform .14s;
+}
+
+.wpk-hist-card:hover { box-shadow: 0 4px 14px rgba(0, 0, 0, .08); transform: translateY(-1px); }
+
+.wpk-hist-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.wpk-hist-cust { font-size: 15px; font-weight: 700; color: var(--c); }
+
+.wpk-hist-mid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 12.5px;
+    color: #6b7280;
+}
+
+.wpk-hist-mid b { color: #111827; }
+
+.wpk-hist-bot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.wpk-hist-del {
+    border: none;
+    background: transparent;
+    color: #d1d5db;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 6px;
+    border-radius: 6px;
+}
+
+.wpk-hist-del:hover { color: #dc2626; background: #fef2f2; }
+
+/* ---- Avatar người soạn ---- */
+.wpk-ava-group { display: inline-flex; }
+
+.wpk-ava {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid #fff;
+    flex: 0 0 auto;
+}
+
+.wpk-ava + .wpk-ava { margin-left: -8px; }
+.wpk-ava.has-img { background: transparent; }
+.wpk-ava img { width: 100%; height: 100%; object-fit: cover; }
+.wpk-ava-none { color: #9ca3af; font-size: 12.5px; }
+
+/* Avatar bay lên từ ô tích rồi tan — báo cho người bên kia biết ai vừa bốc xong dòng đó. */
+.wpk-ava-fly {
+    position: fixed;
+    z-index: 11000;
+    pointer-events: none;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition: transform .95s cubic-bezier(.22, .9, .3, 1), opacity .95s ease;
+}
+
+.wpk-ava-fly.is-fly { transform: translateY(-58px) scale(1.25); opacity: 0; }
+
+/* ---- Nút gỡ phiếu trên chip (admin, hiện khi rê chuột) ---- */
+.wpk-chip { position: relative; }
+
+.wpk-chip-del {
+    display: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .18);
+    color: #fff;
+    font-size: 14px;
+    line-height: 16px;
+    text-align: center;
+    margin-left: 2px;
+}
+
+.wpk-chip:hover .wpk-chip-del { display: inline-block; }
+.wpk-chip-del:hover { background: #dc2626; }
+
+/* ---- Chế độ xem lại phiếu cũ ---- */
+.wpk-slip.is-readonly .wpk-row-main { padding: 7px 4px; }
+.wpk-slip.is-readonly .wpk-name-wrap { cursor: default; }
+
+/* ---- Cảnh báo thiếu tồn: mỗi mặt hàng một dòng ---- */
+.wpk-warn-head { font-weight: 700; margin-bottom: 4px; }
+.wpk-warn-head i { margin-right: 5px; }
+
+.wpk-warn-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 0;
+}
+
+.wpk-warn-line span { flex: 0 0 auto; opacity: .8; }

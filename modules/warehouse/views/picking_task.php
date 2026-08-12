@@ -48,23 +48,23 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                  và đổi phiếu không phải tải lại cả trang. -->
             <div class="wpk-chips" id="wpk-chips"></div>
 
-            <?php if (!$slip): ?>
-                <p class="wpk-empty">Chưa có yêu cầu soạn hàng nào</p>
-            <?php else: ?>
+            <p class="wpk-empty" id="wpk-empty"<?php echo $slip ? ' hidden' : ''; ?>>Chưa có yêu cầu soạn hàng nào</p>
 
-                <div class="wpk-slip" id="wpk-slip" data-slip-id="<?php echo (int) $slip['id']; ?>">
+                <div class="wpk-slip" id="wpk-slip" data-slip-id="<?php echo $slip ? (int) $slip['id'] : 0; ?>"<?php echo $slip ? '' : ' hidden'; ?>>
 
                     <div class="wpk-info">
-                        <div class="wpk-info-row"><span>Khách hàng:</span><b id="wpk-cust"><?php echo wpk_esc(trim((string) $slip['customer_short']) !== '' ? $slip['customer_short'] : $slip['customer_name']); ?></b></div>
+                        <div class="wpk-info-row"><span>Khách hàng:</span><b id="wpk-cust"><?php echo $slip ? wpk_esc(trim((string) $slip['customer_short']) !== '' ? $slip['customer_short'] : $slip['customer_name']) : ''; ?></b></div>
                         <div class="wpk-info-row"><span>Người nhận:</span><b id="wpk-receiver"><?php
-                            $rc = trim((string) $slip['receiver']);
-                            $ph = trim((string) $slip['phone']);
-                            echo wpk_esc($rc . ($ph !== '' ? ' - ' . $ph : ''));
+                            if ($slip) {
+                                $rc = trim((string) $slip['receiver']);
+                                $ph = trim((string) $slip['phone']);
+                                echo wpk_esc($rc . ($ph !== '' ? ' - ' . $ph : ''));
+                            }
                         ?></b></div>
-                        <div class="wpk-info-row"><span>Địa chỉ:</span><b id="wpk-address"><?php echo wpk_esc($slip['address']); ?></b></div>
+                        <div class="wpk-info-row"><span>Địa chỉ:</span><b id="wpk-address"><?php echo $slip ? wpk_esc($slip['address']) : ''; ?></b></div>
                     </div>
 
-                    <div class="wpk-toolbar">
+                    <div class="wpk-toolbar" id="wpk-toolbar">
                         <div class="wpk-search-box">
                             <input type="text" id="wpk-search" autocomplete="off" placeholder="Thêm sản phẩm / NVL vào phiếu...">
                             <ul class="wpk-suggest" id="wpk-suggest"></ul>
@@ -90,7 +90,7 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                     <div class="wpk-foot">
                         <div class="wpk-foot-note">
                             <span>Ghi chú:</span>
-                            <input type="text" id="wpk-note" value="<?php echo wpk_esc($slip['note']); ?>" placeholder="Nhập ghi chú...">
+                            <input type="text" id="wpk-note" value="<?php echo $slip ? wpk_esc($slip['note']) : ''; ?>" placeholder="Nhập ghi chú...">
                         </div>
                         <div class="wpk-foot-sum">Số kiện dự kiến: <b id="wpk-sum"></b></div>
                         <button type="button" class="wpk-btn wpk-btn-done" id="wpk-finish">
@@ -98,8 +98,6 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                         </button>
                     </div>
                 </div>
-
-            <?php endif; ?>
 
             <!-- ===== LỊCH SỬ SOẠN HÀNG — dùng khối lọc ngày + phân trang chung ===== -->
             <div class="wpk-history">
@@ -117,6 +115,7 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                         <div class="hf-group hf-rows">
                             <label for="hf-page-size">Số dòng</label>
                             <select id="hf-page-size" class="hf-select">
+                                <option value="4" selected>4</option>
                                 <option value="10">10</option>
                                 <option value="20">20</option>
                                 <option value="50">50</option>
@@ -129,19 +128,7 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                         </button>
                     </div>
                 </div>
-                <table class="history-table" id="wpk-hist-table">
-                    <thead>
-                        <tr>
-                            <td>Soạn xong lúc</td>
-                            <td>Khách hàng</td>
-                            <td>Số dòng</td>
-                            <td>Số kiện</td>
-                            <td>Người soạn</td>
-                            <td>Trạng thái</td>
-                        </tr>
-                    </thead>
-                    <tbody id="wpk-hist-body"></tbody>
-                </table>
+                <div class="wpk-hist-cards" id="wpk-hist-body"></div>
                 <div class="hf-pager" id="wpk-hist-pager"></div>
             </div>
         </div>
@@ -175,6 +162,7 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
     <script>
         window.WPK_SLIP  = <?php echo $slip ? json_encode($slip, JSON_UNESCAPED_UNICODE) : 'null'; ?>;
         window.WPK_SLIPS = <?php echo json_encode($slips, JSON_UNESCAPED_UNICODE); ?>;
+        window.WPK_ME    = <?php echo json_encode(isset($me) ? $me : ['id' => 0], JSON_UNESCAPED_UNICODE); ?>;
     </script>
     <script src="<?php echo asset_ver('public/js/warehouse/picking_task.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>

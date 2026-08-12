@@ -26,6 +26,8 @@
     var BASE  = '?mod=warehouse&controllers=warehouse&action=';
     var SLIP  = window.WPK_SLIP || null;
     var SLIPS = window.WPK_SLIPS || [];
+    var ME     = window.WPK_ME || { id: 0 };
+    var CHIXEM = false;   // đang xem lại 1 phiếu trong lịch sử -> khoá mọi thao tác
 
     var rawMode   = {};   // {itemId: true} — dòng đang hiện SỐ thay vì quy đổi kiện
     var kienTimer = {};   // {group: timeoutId} — hẹn 2s mới báo sai định dạng
@@ -42,6 +44,7 @@
     }
     function slipId() { return SLIP ? Number(SLIP.id) : 0; }
     function editable() {
+        if (CHIXEM) return false;   // xem lại phiếu cũ: chỉ đọc, không sửa/xoá gì được
         return !!SLIP && !Number(SLIP.synced) && (SLIP.status === 'new' || SLIP.status === 'doing');
     }
     function dongSong() { return ((SLIP && SLIP.items) || []).filter(function (i) { return !i.removed; }); }
@@ -159,6 +162,22 @@
         var remind = it.reminder_note
             ? '<div class="wpk-remind"><i class="fa-solid fa-thumbtack"></i> ' + esc(it.reminder_note) + '</div>' : '';
 
+        // Xem lại phiếu cũ: cùng bố cục nhưng bỏ hết checkbox / nút xoá / ô nhập.
+        if (CHIXEM) {
+            return '' +
+                '<div class="wpk-row is-readonly" data-id="' + it.id + '">' +
+                  '<div class="wpk-row-main">' +
+                    '<div class="wpk-name-wrap">' + grp +
+                      '<div class="wpk-name">' +
+                        '<div class="wpk-name-text">' + esc(String(it.product_name || '').toUpperCase()) + '</div>' +
+                        (sub.length ? '<div class="wpk-sub">' + sub.join(' · ') + '</div>' : '') +
+                      '</div>' +
+                    '</div>' +
+                    '<div class="wpk-qty-wrap"><span class="wpk-qty">' + esc(qtyText) + '</span></div>' +
+                  '</div>' +
+                '</div>';
+        }
+
         return '' +
             '<div class="wpk-row' + (locked ? ' is-picked' : '') + '" data-id="' + it.id + '">' +
               '<div class="wpk-row-main">' +
@@ -219,8 +238,16 @@
             }).join(''));
         }
 
-        $('#wpk-slip').toggleClass('is-locked', !editable());
-        $('#wpk-finish').prop('disabled', !editable());
+        $('#wpk-slip').toggleClass('is-locked', !editable()).toggleClass('is-readonly', CHIXEM);
+        // Xem lại phiếu cũ: giấu ô thêm hàng + khối đã gỡ, nút dưới đổi thành "Chi tiết".
+        $('#wpk-toolbar').toggle(!CHIXEM);
+        $('#wpk-note').prop('readonly', CHIXEM);
+        if (CHIXEM) $rm.attr('hidden', true);
+        $('#wpk-finish')
+            .prop('disabled', CHIXEM ? false : !editable())
+            .html(CHIXEM
+                ? '<i class="fa-solid fa-circle-info"></i> Chi tiết'
+                : '<i class="fa-solid fa-circle-check"></i> Soạn xong');
         datLaiTrangThai(giu);
     }
 
@@ -252,9 +279,15 @@
         $('#wpk-sum').text((SLIP.summary && SLIP.summary.text) || '—');
         var shorts = dongSong().filter(function (i) { return i.is_short; });
         var $w = $('#wpk-warn');
-        if (!shorts.length) { $w.attr('hidden', true).empty(); return; }
-        $w.removeAttr('hidden').html('<i class="fa-solid fa-triangle-exclamation"></i> Thiếu tồn: ' +
-            esc(shorts.map(function (i) { return i.product_name + ' (tồn ' + num(i.stock) + ')'; }).join('; ')));
+        if (!shorts.length || CHIXEM) { $w.attr('hidden', true).empty(); return; }
+        // Mỗi mặt hàng MỘT DÒNG — gộp hết vào một dòng dài thì đứng bốc hàng không đọc nổi.
+        $w.removeAttr('hidden').html(
+            '<div class="wpk-warn-head"><i class="fa-solid fa-triangle-exclamation"></i> Thiếu tồn</div>' +
+            shorts.map(function (i) {
+                return '<div class="wpk-warn-line"><b>' + esc(i.product_name) + '</b>' +
+                    '<span>tồn ' + num(i.stock) + ' ' + esc(i.unit || '') + '</span></div>';
+            }).join('')
+        );
     }
 
     /* ---- Chip chọn phiếu: nhiều phiếu cùng lúc, bộ đếm cập nhật ngay khi tích ---- */
@@ -277,6 +310,7 @@
                 '<span class="wpk-chip-name">' + esc(s.label) + '</span>' +
                 '<span class="wpk-chip-count">' + pk + '/' + tot + '</span>' +
                 (done ? '<i class="fa-solid fa-circle-check"></i>' : '') +
+                (ME.is_admin ? '<span class="wpk-chip-del" title="Gỡ phiếu soạn này">&times;</span>' : '') +
                 '</button>';
         }).join(''));
     }
@@ -577,6 +611,7 @@
      * ===================================================================== */
     $(document).on('click', '#wpk-finish', function () {
         if (!SLIP) return;
+        if (CHIXEM) { moModalChiTiet(); return; }   // đang xem lịch sử -> nút là "Chi tiết"
         var left = dongSong().filter(function (i) { return !i.picked; });
         if (left.length) {
             alert('Còn ' + left.length + ' mặt hàng chưa tích bốc đủ. Tích hết mới gọi là soạn xong.');
@@ -599,23 +634,33 @@
             .fail(function () { $btn.prop('disabled', false); alert('Lỗi mạng / máy chủ.'); });
     });
 
+    /** Đổ phần đầu phiếu (khách / người nhận / địa chỉ / ghi chú / màu) từ SLIP.
+        Dùng chung cho cả đổi phiếu đang soạn lẫn xem lại phiếu trong lịch sử. */
+    function dungThongTinPhieu() {
+        if (!SLIP) return;
+        $('#wpk-cust').text((SLIP.customer_short && String(SLIP.customer_short).trim()) || SLIP.customer_name || '');
+        $('#wpk-receiver').text([SLIP.receiver, SLIP.phone].filter(Boolean).join(' - '));
+        $('#wpk-address').text(SLIP.address || '');
+        $('#wpk-note').val(SLIP.note || '');
+        $('#wpk-slip').attr('data-slip-id', SLIP.id);
+        var page = document.querySelector('.wpk-page');
+        if (page) page.style.setProperty('--wpk-accent', SLIP.accent || '#16a34a');
+    }
+
     /* ----- Đổi phiếu: nạp bằng AJAX, không tải lại cả trang ----- */
     function moPhieu(id) {
         if (!id) return;
         $.getJSON(BASE + 'slip_data', { slip_id: id }, function (res) {
             if (!res || !res.ok) { alert((res && res.msg) || 'Không mở được phiếu.'); return; }
+            CHIXEM = false;                     // rời chế độ xem lịch sử
+            lichSuDangXem = null;
             SLIP = res.slip;
             if (res.slips) SLIPS = res.slips;
             rawMode = {};
             $('#wpk-kien').removeAttr('data-groups');
-            $('#wpk-cust').text((SLIP.customer_short && String(SLIP.customer_short).trim()) || SLIP.customer_name || '');
-            $('#wpk-receiver').text([SLIP.receiver, SLIP.phone].filter(Boolean).join(' - '));
-            $('#wpk-address').text(SLIP.address || '');
-            $('#wpk-note').val(SLIP.note || '');
-            $('#wpk-slip').attr('data-slip-id', SLIP.id);
-            var mau = SLIP.accent || '#16a34a';
-            var page = document.querySelector('.wpk-page');
-            if (page) page.style.setProperty('--wpk-accent', mau);
+            $('#wpk-empty').attr('hidden', true);
+            $('#wpk-slip').removeAttr('hidden');
+            dungThongTinPhieu();
             chotThuTu();
             renderAll();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -623,14 +668,16 @@
     }
     $(document).on('click', '.wpk-chip', function () {
         var id = Number($(this).data('slip-id')) || 0;
-        if (!id || id === slipId()) return;
+        // Đang xem lịch sử thì bấm lại chính chip đó cũng phải quay về chế độ soạn.
+        if (!id || (id === slipId() && !CHIXEM)) return;
         moPhieu(id);
     });
 
     /* =====================================================================
      *  LỊCH SỬ SOẠN HÀNG — lọc ngày + phân trang (khối dùng chung history_filter)
-     *  Bấm 1 dòng để xem lại BẢN CHỤP lúc bấm "Soạn xong", không phải trạng thái
-     *  hiện giờ của phiếu.
+     *  Bấm 1 thẻ để ĐỔ NGƯỢC phiếu cũ lên chính khối .wpk-slip ở trên, ở chế độ
+     *  CHỈ XEM (CHIXEM) — nhìn y như lúc đang soạn, chỉ khác là không sửa được gì.
+     *  Nút dưới cùng lúc đó đổi thành "Chi tiết" để mở modal số liệu.
      * ===================================================================== */
     var histPage = 1;
 
@@ -641,6 +688,20 @@
         return p[3] + ':' + p[4] + ' ' + p[2] + '/' + p[1] + '/' + p[0];
     }
 
+    /** Avatar 1 người soạn; chưa có ảnh thì lấy chữ cái đầu. */
+    function avatarHtml(u, cls) {
+        var t = 'title="' + esc(u.name || u.username || '') + '"';
+        if (u.avatar) {
+            return '<span class="wpk-ava ' + (cls || '') + ' has-img" ' + t + '>' +
+                '<img src="public/images/avatar/' + esc(u.avatar) + '" alt=""></span>';
+        }
+        return '<span class="wpk-ava ' + (cls || '') + '" ' + t + '>' + esc(u.initial || '?') + '</span>';
+    }
+    function avatarsHtml(list) {
+        if (!list || !list.length) return '<span class="wpk-ava-none">—</span>';
+        return '<span class="wpk-ava-group">' + list.map(function (u) { return avatarHtml(u); }).join('') + '</span>';
+    }
+
     function loadHistory() {
         var $body = $('#wpk-hist-body');
         if (!$body.length) return;
@@ -648,26 +709,33 @@
             from: $('#hf-date-from').val() || '',
             to:   $('#hf-date-to').val() || '',
             page: histPage,
-            per:  $('#hf-page-size').val() || 10
+            per:  $('#hf-page-size').val() || 4
         }, function (res) {
-            if (!res || !res.ok) { $body.html('<tr><td colspan="6">Không tải được lịch sử.</td></tr>'); return; }
+            if (!res || !res.ok) { $body.html('<p class="wpk-hist-empty">Không tải được lịch sử.</p>'); return; }
             var d = res.data;
             histPage = d.page;
             $('#hf-count').text(d.total ? ('Tổng ' + d.total + ' phiếu') : '');
             if (!d.rows.length) {
-                $body.html('<tr><td colspan="6" class="wpk-hist-empty">Chưa có phiếu nào soạn xong.</td></tr>');
+                $body.html('<p class="wpk-hist-empty">Chưa có phiếu nào soạn xong.</p>');
             } else {
                 $body.html(d.rows.map(function (r) {
-                    return '<tr class="wpk-hist-row" data-slip-id="' + r.id + '">' +
-                        '<td>' + esc(ngayGio(r.done_at)) + '</td>' +
-                        '<td><b>' + esc(r.label) + '</b></td>' +
-                        '<td>' + r.lines + '</td>' +
-                        '<td>' + esc(r.kien || '—') + '</td>' +
-                        '<td>' + esc(r.done_by_name || '') + '</td>' +
-                        '<td>' + (Number(r.synced)
-                            ? '<span class="wpk-hist-ok">Đã cập nhật đơn</span>'
-                            : '<span class="wpk-hist-wait">Chờ admin cập nhật</span>') + '</td>' +
-                        '</tr>';
+                    var mau = r.accent || '#16a34a';
+                    return '<div class="wpk-hist-card" data-slip-id="' + r.id + '" style="--c: ' + esc(mau) + '">' +
+                        '<div class="wpk-hist-top">' +
+                            '<b class="wpk-hist-cust">' + esc(r.label) + '</b>' +
+                            (Number(r.synced)
+                                ? '<span class="wpk-hist-ok">Đã cập nhật đơn</span>'
+                                : '<span class="wpk-hist-wait">Chờ cập nhật</span>') +
+                        '</div>' +
+                        '<div class="wpk-hist-mid">' +
+                            '<span>' + esc(ngayGio(r.done_at)) + '</span>' +
+                            '<span>' + r.lines + ' SP</span>' +
+                            '<span><b>' + esc(r.kien || '—') + '</b></span>' +
+                        '</div>' +
+                        '<div class="wpk-hist-bot">' + avatarsHtml(r.pickers) +
+                            (ME.is_admin ? '<button type="button" class="wpk-hist-del" title="Xoá phiếu soạn"><i class="fa-solid fa-trash-can"></i></button>' : '') +
+                        '</div>' +
+                        '</div>';
                 }).join(''));
             }
             renderHistPager(d.total_pages);
@@ -696,56 +764,205 @@
     $(document).on('change', '#hf-date-from, #hf-date-to, #hf-page-size', function () { histPage = 1; loadHistory(); });
     $(document).on('click', '#hf-reset', function () {
         $('#hf-date-from, #hf-date-to').val('');
-        $('#hf-page-size').val('10');
+        $('#hf-page-size').val('4');
         histPage = 1; loadHistory();
     });
 
-    $(document).on('click', '.wpk-hist-row', function () {
+    /* ---- Bấm 1 thẻ lịch sử: dựng lại phiếu cũ ở chế độ chỉ xem ---- */
+    var lichSuDangXem = null;
+
+    /** Nắn dữ liệu lịch sử về đúng hình dạng của 1 phiếu để dùng lại nguyên bộ hàm vẽ. */
+    function slipTuLichSu(d) {
+        var s = d.snapshot || {};
+        return {
+            id: d.id,
+            customer_short: d.label, customer_name: d.label,
+            receiver: d.receiver, phone: d.phone, address: d.address, note: d.note,
+            accent: d.accent, status: 'done', synced: d.synced ? 1 : 0,
+            kien_map: s.kien_map || {},
+            summary: { text: s.kien || '', weight: s.weight || 0, groups: [], invalid: [] },
+            items: (s.items || []).map(function (it, i) {
+                return {
+                    id: 'h' + i, product_name: it.name, unit: it.unit,
+                    qty_order: it.order, qty_actual: it.pick,
+                    kien_text: it.kien, order_kien: '', kien_group: it.group,
+                    picked: true, removed: false, added_by_staff: false,
+                    item_type: 'product', ops_qty: 0, kien_whole: 0, kien_rem: 0,
+                    stock: 0, is_short: false, inv_kien: '', pack_label: '',
+                    reminder_note: '', sort_order: null
+                };
+            })
+        };
+    }
+
+    $(document).on('click', '.wpk-hist-card', function () {
         var id = Number($(this).data('slip-id')) || 0;
         if (!id) return;
         $.getJSON(BASE + 'history_detail', { slip_id: id }, function (res) {
             if (!res || !res.ok) { alert((res && res.msg) || 'Không xem được phiếu.'); return; }
-            var d = res.data, s = d.snapshot || {};
-            $('#wpk-hist-title').text('Phiếu soạn — ' + (d.label || ''));
-            $('#wpk-hist-meta').html(
-                '<div><span>Soạn xong:</span><b>' + esc(ngayGio(d.done_at)) + (d.done_by ? ' · ' + esc(d.done_by) : '') + '</b></div>' +
-                '<div><span>Người nhận:</span><b>' + esc(d.receiver || '—') + '</b></div>' +
-                '<div><span>Địa chỉ:</span><b>' + esc(d.address || '—') + '</b></div>' +
-                (d.note ? '<div><span>Ghi chú:</span><b>' + esc(d.note) + '</b></div>' : '')
-            );
-            $('#wpk-hist-items').html((s.items || []).map(function (it) {
-                var lech = Number(it.pick) - Number(it.order);
-                return '<tr>' +
-                    '<td>' + esc(it.name) + (it.group != null ? ' <span class="wpk-grp-badge">' + it.group + '</span>' : '') + '</td>' +
-                    '<td>' + num(it.order) + '</td>' +
-                    '<td><b>' + num(it.pick) + '</b>' +
-                        (Math.abs(lech) > 0.0001 ? ' <span class="wpk-hist-diff">' + (lech > 0 ? '+' : '') + num(lech) + '</span>' : '') + '</td>' +
-                    '<td>' + esc(it.kien || '') + '</td>' +
-                    '</tr>';
-            }).join('') || '<tr><td colspan="4">Không có dòng nào.</td></tr>');
-            var kmap = s.kien_map || {};
-            var kienKhai = Object.keys(kmap).sort(function (a, b) { return a - b; })
-                .map(function (g) { return 'Kiện (' + g + ') = ' + esc(kmap[g]); }).join(' · ');
-            $('#wpk-hist-foot').html(
-                '<div><b>Số kiện:</b> ' + esc(s.kien || '—') +
-                (s.weight ? ' · ' + num(s.weight) + ' kg' : '') + '</div>' +
-                (kienKhai ? '<div>' + kienKhai + '</div>' : '') +
-                '<div>' + (d.synced
-                    ? '<span class="wpk-hist-ok">Đã cập nhật vào đơn hàng lúc ' + esc(ngayGio(d.synced_at)) + '</span>'
-                    : '<span class="wpk-hist-wait">Chưa được admin cập nhật vào đơn hàng</span>') + '</div>'
-            );
-            $('#wpk-hist-modal').removeAttr('hidden');
+            lichSuDangXem = res.data;
+            CHIXEM = true;
+            SLIP = slipTuLichSu(res.data);
+            rawMode = {};
+            $('#wpk-kien').removeAttr('data-groups');
+            dungThongTinPhieu();
+            $('#wpk-empty').attr('hidden', true);
+            $('#wpk-slip').removeAttr('hidden');
+            chotThuTu();
+            renderList(); renderKien(); renderSummary(); renderChips();
+            $('html, body').animate({ scrollTop: 0 }, 200);
         });
     });
+
+    /* ---- Nút "Chi tiết" (chỉ có ở chế độ xem lịch sử) -> modal số liệu ---- */
+    function moModalChiTiet() {
+        var d = lichSuDangXem;
+        if (!d) return;
+        var s = d.snapshot || {};
+        $('#wpk-hist-title').text('Phiếu soạn — ' + (d.label || ''));
+        $('#wpk-hist-meta').html(
+            '<div><span>Soạn xong:</span><b>' + esc(ngayGio(d.done_at)) + '</b></div>' +
+            '<div><span>Người soạn:</span><b>' + avatarsHtml(d.pickers) + '</b></div>' +
+            '<div><span>Người nhận:</span><b>' + esc(d.receiver || '—') + '</b></div>' +
+            '<div><span>Địa chỉ:</span><b>' + esc(d.address || '—') + '</b></div>' +
+            (d.note ? '<div><span>Ghi chú:</span><b>' + esc(d.note) + '</b></div>' : '')
+        );
+        $('#wpk-hist-items').html((s.items || []).map(function (it) {
+            var lech = Number(it.pick) - Number(it.order);
+            return '<tr>' +
+                '<td>' + esc(it.name) + (it.group != null ? ' <span class="wpk-grp-badge">' + it.group + '</span>' : '') + '</td>' +
+                '<td>' + num(it.order) + '</td>' +
+                '<td><b>' + num(it.pick) + '</b>' +
+                    (Math.abs(lech) > 0.0001 ? ' <span class="wpk-hist-diff">' + (lech > 0 ? '+' : '') + num(lech) + '</span>' : '') + '</td>' +
+                '<td>' + esc(it.kien || '') + '</td>' +
+                '</tr>';
+        }).join('') || '<tr><td colspan="4">Không có dòng nào.</td></tr>');
+        var kmap = s.kien_map || {};
+        var kienKhai = Object.keys(kmap).sort(function (a, b) { return a - b; })
+            .map(function (g) { return 'Kiện (' + g + ') = ' + esc(kmap[g]); }).join(' · ');
+        $('#wpk-hist-foot').html(
+            '<div><b>Số kiện:</b> ' + esc(s.kien || '—') + (s.weight ? ' · ' + num(s.weight) + ' kg' : '') + '</div>' +
+            (kienKhai ? '<div>' + kienKhai + '</div>' : '') +
+            '<div>' + (d.synced
+                ? '<span class="wpk-hist-ok">Đã cập nhật vào đơn hàng lúc ' + esc(ngayGio(d.synced_at)) + '</span>'
+                : '<span class="wpk-hist-wait">Chưa được admin cập nhật vào đơn hàng</span>') + '</div>'
+        );
+        $('#wpk-hist-modal').removeAttr('hidden');
+    }
     $(document).on('click', '#wpk-hist-close', function () { $('#wpk-hist-modal').attr('hidden', true); });
     $(document).on('click', '#wpk-hist-modal', function (e) {
         if (e.target === this) $(this).attr('hidden', true);
+    });
+
+    /* =====================================================================
+     *  REAL-TIME — người này tích, người kia thấy ngay
+     * ---------------------------------------------------------------------
+     *  Không có websocket nên đi bằng polling (giống chat widget). Chỉ chạy khi
+     *  tab đang hiện và phiếu còn sửa được; đang gõ trong ô nhập thì hoãn một
+     *  nhịp để không giật mất con trỏ.
+     * ===================================================================== */
+    var POLL_MS = 4000;
+    var pollTimer = null;
+
+    function dangGo() {
+        var el = document.activeElement;
+        return !!(el && el.tagName === 'INPUT' && el.closest && el.closest('#wpk-slip'));
+    }
+
+    /** Bay avatar người vừa tích lên từ đúng ô checkbox rồi tan dần. */
+    function bayAvatar(itemId, nguoi) {
+        var el = document.querySelector('.wpk-row[data-id="' + itemId + '"] .wpk-chk');
+        if (!el || !nguoi) return;
+        var r = el.getBoundingClientRect();
+        var $fly = $('<span class="wpk-ava-fly">' + avatarHtml(nguoi) + '</span>').appendTo('body');
+        $fly.css({ left: (r.left + r.width / 2 - 16) + 'px', top: (r.top + r.height / 2 - 16) + 'px' });
+        // Ép trình duyệt tính layout trước khi gắn class chạy, nếu không nó gộp 2 bước và mất hiệu ứng.
+        void $fly[0].offsetWidth;
+        $fly.addClass('is-fly');
+        setTimeout(function () { $fly.remove(); }, 1300);
+    }
+
+    function nhipPoll() {
+        if (!SLIP || CHIXEM || document.hidden || dangGo()) return;
+        if (!editable()) return;
+        $.getJSON(BASE + 'slip_data', { slip_id: slipId() }, function (res) {
+            if (!res || !res.ok || !res.slip) return;
+            if (Number(res.slip.id) !== slipId() || CHIXEM) return;   // đã đổi phiếu giữa chừng
+
+            // Dòng nào vừa chuyển sang ĐÃ TÍCH do NGƯỜI KHÁC -> bay avatar của họ.
+            var truoc = {};
+            ((SLIP.items) || []).forEach(function (i) { truoc[i.id] = !!i.picked; });
+            var danhBa = {};
+            ((res.slip.pickers) || []).forEach(function (u) { danhBa[u.id] = u; });
+            var moiTich = [];
+            ((res.slip.items) || []).forEach(function (i) {
+                if (i.picked && truoc[i.id] === false && Number(i.picked_by) !== Number(ME.id)) {
+                    moiTich.push({ id: i.id, nguoi: danhBa[i.picked_by] });
+                }
+            });
+
+            SLIP = res.slip;
+            if (res.slips) SLIPS = res.slips;
+            renderAll();
+            moiTich.forEach(function (x) { bayAvatar(x.id, x.nguoi); });
+        });
+    }
+    function batPoll() {
+        clearInterval(pollTimer);
+        pollTimer = setInterval(nhipPoll, POLL_MS);
+    }
+
+    /* =====================================================================
+     *  ADMIN: XOÁ PHIẾU SOẠN
+     *  Dùng khi admin cần sửa lại đơn rồi gửi phiếu mới — bỏ hẳn phiếu cũ cho
+     *  nhân viên khỏi soạn nhầm bản lỗi thời.
+     * ===================================================================== */
+    function xoaPhieu(id, nhan, sauKhiXong) {
+        if (!ME.is_admin) return;
+        if (!confirm('Xoá hẳn phiếu soạn "' + nhan + '"? Không khôi phục lại được.')) return;
+        $.post(BASE + 'delete_slip', { slip_id: id }, function (res) {
+            if (!res || !res.ok) { alert((res && res.msg) || 'Không xoá được.'); return; }
+            SLIPS = SLIPS.filter(function (s) { return Number(s.id) !== Number(id); });
+            if (Number(id) === slipId()) {
+                // Đang mở đúng phiếu vừa xoá -> nhảy sang phiếu còn lại, hết thì dọn trống.
+                if (SLIPS.length) { moPhieu(Number(SLIPS[0].id)); }
+                else {
+                    SLIP = null; CHIXEM = false;
+                    $('#wpk-slip').attr('hidden', true);
+                    $('#wpk-empty').removeAttr('hidden');
+                    renderChips();
+                }
+            } else { renderChips(); }
+            if (typeof sauKhiXong === 'function') sauKhiXong();
+        }, 'json').fail(function () { alert('Lỗi mạng / máy chủ.'); });
+    }
+
+    $(document).on('click', '.wpk-chip-del', function (e) {
+        e.stopPropagation();                       // đừng để lọt xuống handler mở phiếu
+        var $chip = $(this).closest('.wpk-chip');
+        xoaPhieu(Number($chip.data('slip-id')) || 0, $chip.find('.wpk-chip-name').text());
+    });
+    $(document).on('click', '.wpk-hist-del', function (e) {
+        e.stopPropagation();                       // đừng để lọt xuống handler xem lại phiếu
+        var $card = $(this).closest('.wpk-hist-card');
+        var id = Number($card.data('slip-id')) || 0;
+        xoaPhieu(id, $card.find('.wpk-hist-cust').text(), function () {
+            if (lichSuDangXem && Number(lichSuDangXem.id) === id) {
+                lichSuDangXem = null; CHIXEM = false;
+                $('#wpk-slip').attr('hidden', true);
+                if (!SLIPS.length) $('#wpk-empty').removeAttr('hidden');
+            }
+            loadHistory();
+        });
     });
 
     $(function () {
         renderChips();
         if (SLIP) { chotThuTu(); renderAll(); }
         loadHistory();
+        batPoll();
+        // Quay lại tab thì hỏi server ngay, khỏi đợi hết nhịp.
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) nhipPoll(); });
     });
 
 })(jQuery);

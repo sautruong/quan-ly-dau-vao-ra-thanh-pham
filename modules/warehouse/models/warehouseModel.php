@@ -91,6 +91,11 @@ function wh_ensure_tables()
     if (!db_fetch_row("SHOW COLUMNS FROM wh_picking_slips LIKE 'finish_snapshot'")) {
         db_query("ALTER TABLE wh_picking_slips ADD finish_snapshot TEXT DEFAULT NULL");
     }
+    // Ai tích dòng này — một phiếu có thể do 2-3 người cùng bốc, nên phải ghi theo TỪNG DÒNG
+    // chứ không chỉ done_by (người bấm nút cuối).
+    if (!db_fetch_row("SHOW COLUMNS FROM wh_picking_items LIKE 'picked_by'")) {
+        db_query("ALTER TABLE wh_picking_items ADD picked_by INT(11) NOT NULL DEFAULT 0");
+    }
 }
 
 /** Đăng ký view "Soạn hàng" vào danh mục phân quyền (idempotent). */
@@ -227,6 +232,7 @@ function wh_enrich_item($r)
         'qty_actual'   => $qty_actual,
         'kien_group'   => ($r['kien_group'] === null || $r['kien_group'] === '') ? null : (int) $r['kien_group'],
         'picked'       => !empty($r['picked']),
+        'picked_by'    => (int) ($r['picked_by'] ?? 0),
         'removed'      => !empty($r['removed']),
         'added_by_staff' => !empty($r['added_by_staff']),
         'seq'          => (int) ($r['seq'] ?? 0),
@@ -276,6 +282,9 @@ function wh_get_slip($slip_id)
     $s['items']    = $items;
     $s['kien_map'] = $kien_map;
     $s['summary']  = wh_kien_summary($items, $kien_map);
+    // Danh bạ người soạn (id -> avatar/tên) để phía màn hình kia dựng được avatar bay lên
+    // ngay khi đồng nghiệp tích một dòng.
+    $s['pickers']  = wh_slip_pickers($slip_id, (int) ($s['done_by'] ?? 0));
     return $s;
 }
 
@@ -291,8 +300,10 @@ function wh_list_slips_for_staff()
                 (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0) AS total_items,
                 (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0 AND i.picked = 1) AS picked_items
          FROM wh_picking_slips s
-         WHERE s.status IN ('new','doing')
-            OR (s.status = 'done' AND s.done_at >= DATE_SUB(NOW(), INTERVAL 1 DAY))
+         LEFT JOIN factory_order_sales_history h ON h.id = s.order_id
+         WHERE COALESCE(h.picked, 0) = 0
+           AND (s.status IN ('new','doing')
+                OR (s.status = 'done' AND s.done_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)))
          ORDER BY (s.status = 'done') ASC, s.sent_at DESC, s.id DESC"
     ) ?: [];
     foreach ($rows as &$r) {
@@ -490,11 +501,14 @@ function wh_set_item_group($item_id, $group)
 }
 
 /** Tích / bỏ tích "đã bốc đủ" (tích = khóa dòng, bỏ tích = mở lại). */
-function wh_set_item_picked($item_id, $picked)
+function wh_set_item_picked($item_id, $picked, $user_id = 0)
 {
     $it = wh_get_item($item_id);
     if (!$it) return ['ok' => false, 'msg' => 'Không tìm thấy dòng hàng.'];
-    db_update('wh_picking_items', ['picked' => $picked ? 1 : 0], 'id = ' . (int) $item_id);
+    db_update('wh_picking_items', [
+        'picked'    => $picked ? 1 : 0,
+        'picked_by' => $picked ? (int) $user_id : 0,
+    ], 'id = ' . (int) $item_id);
     wh_touch_slip((int) $it['slip_id']);
     return ['ok' => true, 'slip_id' => (int) $it['slip_id']];
 }
@@ -626,6 +640,7 @@ function wh_finish_slip($slip_id, $user_id = 0)
         'lines'    => count($live),
         'removed'  => count($slip['items']) - count($live),
         'kien_map' => $slip['kien_map'],
+        'pickers'  => wh_slip_pickers((int) $slip['id'], (int) $user_id),
         'items'    => array_map(static fn($i) => [
             'name'  => (string) $i['product_name'],
             'unit'  => (string) $i['unit'],
@@ -650,6 +665,44 @@ function wh_finish_slip($slip_id, $user_id = 0)
  * ===================================================================== */
 
 /**
+ * Những ai đã soạn phiếu này (để hiện avatar).
+ * Gộp người tích từng dòng (wh_picking_items.picked_by) với người bấm "Soạn xong"
+ * (done_by) — một phiếu 2-3 người cùng bốc là chuyện thường, chỉ lấy done_by thì
+ * mất công người còn lại.
+ * Trả [{id, name, username, avatar, initial}, ...]
+ */
+function wh_slip_pickers($slip_id, $done_by = 0)
+{
+    $slip_id = (int) $slip_id;
+    $ids = [];
+    if ($slip_id > 0) {
+        foreach ((db_fetch_array(
+            "SELECT DISTINCT picked_by FROM wh_picking_items
+             WHERE slip_id = $slip_id AND picked = 1 AND picked_by > 0"
+        ) ?: []) as $r) $ids[] = (int) $r['picked_by'];
+    }
+    if ((int) $done_by > 0) $ids[] = (int) $done_by;
+    $ids = array_values(array_unique(array_filter($ids)));
+    if (!$ids) return [];
+
+    $rows = db_fetch_array(
+        'SELECT id, fullname, username, avatar FROM tbl_users WHERE id IN (' . implode(',', $ids) . ')'
+    ) ?: [];
+    $out = [];
+    foreach ($rows as $r) {
+        $ten = trim((string) $r['fullname']) !== '' ? (string) $r['fullname'] : (string) $r['username'];
+        $out[] = [
+            'id'       => (int) $r['id'],
+            'name'     => $ten,
+            'username' => (string) $r['username'],
+            'avatar'   => (string) ($r['avatar'] ?? ''),
+            'initial'  => mb_strtoupper(mb_substr($ten, 0, 1, 'UTF-8'), 'UTF-8'),
+        ];
+    }
+    return $out;
+}
+
+/**
  * Danh sách phiếu ĐÃ soạn xong, lọc theo khoảng ngày + phân trang.
  * Lọc theo done_at (ngày báo xong) chứ không phải sent_at — người tra cứu nghĩ theo
  * "hôm đó soạn cái gì", không phải "hôm đó admin gửi cái gì".
@@ -667,10 +720,9 @@ function wh_history_slips($from = '', $to = '', $page = 1, $per_page = 10)
     $w = implode(' AND ', $where);
 
     $rows = db_fetch_array(
-        "SELECT s.id, s.order_id, s.customer_name, s.customer_short, s.done_at, s.done_by,
-                s.synced, s.synced_at, s.finish_snapshot, u.username AS done_by_name
+        "SELECT s.id, s.order_id, s.customer_name, s.customer_short, s.accent, s.done_at, s.done_by,
+                s.synced, s.synced_at, s.finish_snapshot
          FROM wh_picking_slips s
-         LEFT JOIN tbl_users u ON u.id = s.done_by
          WHERE $w
          ORDER BY s.done_at DESC, s.id DESC
          LIMIT $per OFFSET $off"
@@ -696,9 +748,11 @@ function wh_history_slips($from = '', $to = '', $page = 1, $per_page = 10)
                 ];
             }
         }
-        $r['kien']   = (string) ($snap['kien'] ?? '');
-        $r['lines']  = (int) ($snap['lines'] ?? 0);
-        $r['weight'] = (float) ($snap['weight'] ?? 0);
+        $r['kien']    = (string) ($snap['kien'] ?? '');
+        $r['lines']   = (int) ($snap['lines'] ?? 0);
+        $r['weight']  = (float) ($snap['weight'] ?? 0);
+        // Nhiều người cùng soạn 1 phiếu -> trả cả danh sách để hiện nhiều avatar.
+        $r['pickers'] = wh_slip_pickers((int) $r['id'], (int) $r['done_by']);
         unset($r['finish_snapshot']);
     }
     unset($r);
@@ -736,8 +790,7 @@ function wh_history_detail($slip_id)
             ], $live),
         ];
     }
-    $who = (int) ($slip['done_by'] ?? 0) > 0
-        ? db_fetch_row('SELECT username FROM tbl_users WHERE id = ' . (int) $slip['done_by'] . ' LIMIT 1') : null;
+
     return [
         'id'        => (int) $slip['id'],
         'order_id'  => (int) $slip['order_id'],
@@ -746,7 +799,9 @@ function wh_history_detail($slip_id)
         'address'   => (string) $slip['address'],
         'note'      => (string) $slip['note'],
         'done_at'   => (string) ($slip['done_at'] ?? ''),
-        'done_by'   => $who ? (string) $who['username'] : '',
+        'pickers'   => wh_slip_pickers((int) $slip['id'], (int) ($slip['done_by'] ?? 0)),
+        'accent'    => (string) ($slip['accent'] ?? '#16a34a'),
+        'phone'     => (string) ($slip['phone'] ?? ''),
         'synced'    => !empty($slip['synced']),
         'synced_at' => (string) ($slip['synced_at'] ?? ''),
         'snapshot'  => $snap,
@@ -814,6 +869,23 @@ function wh_sync_to_order($slip_id)
     ], 'id = ' . (int) $slip['id']);
 
     return ['ok' => true, 'order_id' => $order_id, 'lines' => count($items), 'weight' => $wt, 'value' => $val];
+}
+
+/**
+ * Xoá hẳn 1 phiếu soạn + toàn bộ dòng của nó.
+ * XOÁ CỨNG là cố ý: phiếu soạn chỉ là bản nháp công việc của kho, không phải chứng
+ * từ. Đơn hàng gốc và các bút toán xuất kho nằm chỗ khác nên không bị ảnh hưởng —
+ * kể cả phiếu đã đồng bộ, số đã ghi vào đơn vẫn còn nguyên trong đơn.
+ */
+function wh_delete_slip($slip_id)
+{
+    wh_ensure_tables();
+    $slip_id = (int) $slip_id;
+    if ($slip_id <= 0) return false;
+    if (!db_fetch_row("SELECT id FROM wh_picking_slips WHERE id = $slip_id LIMIT 1")) return false;
+    db_query("DELETE FROM wh_picking_items WHERE slip_id = $slip_id");
+    db_query("DELETE FROM wh_picking_slips WHERE id = $slip_id");
+    return true;
 }
 
 /** Admin bấm cho 1 dòng nhân viên đã gỡ quay lại phiếu. */

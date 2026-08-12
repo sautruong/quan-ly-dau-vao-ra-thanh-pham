@@ -80,9 +80,21 @@ function picking_taskAction()
     if ($sid <= 0 && $slips) $sid = (int) $slips[0]['id'];
     $slip  = $sid > 0 ? wh_get_slip($sid) : null;
 
+    // Người đang đăng nhập — JS cần để biết dòng vừa được tích là do MÌNH hay đồng nghiệp
+    // (chỉ bay avatar khi người khác tích).
+    $u = permission_current_user();
+    $ten = trim((string) ($u['fullname'] ?? '')) !== '' ? (string) $u['fullname'] : (string) ($u['username'] ?? '');
+
     load_view('picking_task', [
         'slips' => $slips,
         'slip'  => $slip,
+        'me'    => [
+            'id'       => (int) ($u['id'] ?? 0),
+            'name'     => $ten,
+            'avatar'   => (string) ($u['avatar'] ?? ''),
+            'initial'  => mb_strtoupper(mb_substr($ten, 0, 1, 'UTF-8'), 'UTF-8'),
+            'is_admin' => (function_exists('permission_is_admin') && permission_is_admin($u)) ? 1 : 0,
+        ],
     ]);
 }
 
@@ -130,13 +142,14 @@ function set_item_groupAction()
 /** Tích / bỏ tích "bốc đủ". */
 function set_item_pickedAction()
 {
-    wh_guard_json();
+    $u = wh_guard_json();
     $item_id = (int) ($_POST['item_id'] ?? 0);
     $picked  = !empty($_POST['picked']);
     $it = wh_get_item($item_id);
     if (!$it) wh_json(['ok' => false, 'msg' => 'Không tìm thấy dòng hàng.']);
     wh_require_editable((int) $it['slip_id']);
-    $r = wh_set_item_picked($item_id, $picked);
+    // Ghi luôn AI tích dòng này -> lịch sử hiện đủ avatar khi 2-3 người cùng soạn 1 phiếu.
+    $r = wh_set_item_picked($item_id, $picked, (int) ($u['id'] ?? 0));
     if (empty($r['ok'])) wh_json($r);
     wh_json_slip((int) $it['slip_id']);
 }
@@ -240,6 +253,21 @@ function historyAction()
             (int) ($_REQUEST['per'] ?? 10)
         ),
     ]);
+}
+
+/**
+ * Xoá hẳn 1 phiếu soạn. CHỈ ADMIN — dùng khi cần sửa lại đơn rồi gửi phiếu mới,
+ * bỏ bản cũ cho nhân viên khỏi soạn nhầm.
+ */
+function delete_slipAction()
+{
+    $u = wh_guard_json();
+    if (!function_exists('permission_is_admin') || !permission_is_admin($u)) {
+        wh_json(['ok' => false, 'msg' => 'Chỉ admin mới xoá được phiếu soạn.']);
+    }
+    $id = (int) ($_POST['slip_id'] ?? 0);
+    if ($id <= 0) wh_json(['ok' => false, 'msg' => 'Thiếu slip_id.']);
+    wh_json(['ok' => wh_delete_slip($id)]);
 }
 
 /** Chi tiết 1 phiếu trong lịch sử (chỉ xem). */
