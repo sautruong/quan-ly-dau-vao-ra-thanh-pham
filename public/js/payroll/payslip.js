@@ -128,7 +128,41 @@
                 state.employees = res.employees || [];
                 state.summary = res.summary || null;
                 render();
+                showStaleWarning(res.stale);
             });
+    }
+
+    /**
+     * Cảnh báo SỐ ĐÃ LƯU LỆCH SỐ HIỆN TẠI.
+     * Trang này tính LIVE mỗi lần tải, còn MAIL phiếu lương đọc số đã đóng băng lúc bấm Lưu.
+     * Hai bên lệch thì mail gửi đi sai mà trước đây không có dấu hiệu gì — đúng tình huống
+     * tháng 7/2026: snapshot ghi 02-03/08, luật loại hàng "Mẫu" thêm ngày 05/08.
+     */
+    function showStaleWarning(stale) {
+        var cu = document.getElementById('pyStaleWarn');
+        if (cu) cu.remove();
+        if (!stale || !stale.length) return;
+
+        var box = document.createElement('div');
+        box.id = 'pyStaleWarn';
+        box.className = 'py-stale-warn';
+        box.innerHTML =
+            '<div class="py-stale-head"><i class="fa-solid fa-triangle-exclamation"></i> '
+          + 'Số liệu đã thay đổi so với lần lưu gần nhất</div>'
+          + '<ul class="py-stale-list">'
+          + stale.map(function (d) {
+                return '<li>' + d.label + ': đã lưu <b>' + money(d.saved) + '</b>'
+                     + ' → hiện tại <b>' + money(d.live) + '</b></li>';
+            }).join('')
+          + '</ul>'
+          + '<p class="py-stale-note">Mail phiếu lương gửi theo <b>số đã lưu</b>, nên hiện đang '
+          + 'khác với bảng trên màn hình. Bấm <b>Lưu</b> để cập nhật rồi hãy gửi mail.</p>';
+
+        /* Đặt ngay dưới banner lịch sử — cùng chỗ mà người dùng vốn đã quen nhìn để biết
+           trang đang ở trạng thái gì. Không dùng .py-wrap: class đó không tồn tại trong view. */
+        var moc = document.getElementById('pyHistoryBanner');
+        if (moc && moc.parentNode) moc.parentNode.insertBefore(box, moc.nextSibling);
+        else document.body.insertBefore(box, document.body.firstChild);
     }
 
     function loadHistory(y, m) {

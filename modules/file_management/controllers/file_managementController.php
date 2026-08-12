@@ -414,7 +414,24 @@ function openAction()
     echo '<!DOCTYPE html><html><head><meta charset="UTF-8">'
         . '<title>' . htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8') . '</title>'
         . '<style>html,body{margin:0;height:100%;}iframe{border:0;width:100%;height:100%;display:block;}</style>'
-        . '</head><body><iframe src="' . htmlspecialchars($dlUrl, ENT_QUOTES, 'UTF-8') . '"></iframe></body></html>';
+        . '</head><body><iframe id="fm-view" src="' . htmlspecialchars($dlUrl, ENT_QUOTES, 'UTF-8') . '"></iframe>'
+        /*
+          Ctrl+P (⌘+P trên Mac) = IN ĐÚNG NỘI DUNG TỆP, thay cho nút in ở góc phải của trình xem.
+          Không chặn thì trình duyệt in TRANG NGOÀI — mà trang ngoài chỉ có đúng một thẻ iframe,
+          nên bản in ra trắng hoặc chỉ được một phần.
+          iframe cùng gốc (đều là action download của chính app) nên gọi thẳng contentWindow.print()
+          được; có try/catch phòng trường hợp trình duyệt chặn, khi đó để trình duyệt in như cũ
+          còn hơn là không in được gì.
+        */
+        . '<script>'
+        . 'document.addEventListener("keydown",function(e){'
+        . 'if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==="p"){'
+        . 'var f=document.getElementById("fm-view");'
+        . 'if(!f||!f.contentWindow)return;'
+        . 'try{e.preventDefault();f.contentWindow.focus();f.contentWindow.print();}catch(err){}'
+        . '}});'
+        . '</script>'
+        . '</body></html>';
     exit;
 }
 
