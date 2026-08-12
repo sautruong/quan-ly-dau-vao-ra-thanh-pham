@@ -28,6 +28,7 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/global.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/history_filter.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/warehouse/picking_task.css'); ?>">
     <script src="<?php echo asset_ver('public/js/jquery-4.0.0.js'); ?>"></script>
 </head>
@@ -41,40 +42,26 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
 
             <div class="wpk-page-head">
                 <h1><i class="fa-solid fa-dolly"></i> Soạn hàng</h1>
-                <span class="wpk-page-sub">Phiếu soạn admin gửi xuống — bốc xong tích vào từng dòng.</span>
             </div>
 
-            <!-- Chọn phiếu đang soạn -->
-            <div class="wpk-chips" id="wpk-chips">
-                <?php foreach ($slips as $s):
-                    $done   = ((string) $s['status'] === 'done');
-                    $active = $slip && (int) $s['id'] === (int) $slip['id'];
-                    $tot    = (int) $s['total_items'];
-                    $pk     = (int) $s['picked_items'];
-                ?>
-                    <button type="button" class="wpk-chip<?php echo $active ? ' is-active' : ''; ?><?php echo $done ? ' is-done' : ''; ?>"
-                            data-slip-id="<?php echo (int) $s['id']; ?>">
-                        <span class="wpk-chip-name"><?php echo wpk_esc($s['label']); ?></span>
-                        <span class="wpk-chip-count"><?php echo $pk; ?>/<?php echo $tot; ?></span>
-                        <?php if ($done): ?><i class="fa-solid fa-circle-check"></i><?php endif; ?>
-                    </button>
-                <?php endforeach; ?>
-            </div>
+            <!-- Chọn phiếu đang soạn — JS dựng để bộ đếm "PLCT 3/9" cập nhật ngay khi tích,
+                 và đổi phiếu không phải tải lại cả trang. -->
+            <div class="wpk-chips" id="wpk-chips"></div>
 
             <?php if (!$slip): ?>
-                <p class="wpk-empty">Chưa có phiếu soạn nào. Admin gửi phiếu từ trang <b>Đơn hàng từ chi nhánh</b>.</p>
+                <p class="wpk-empty">Chưa có yêu cầu soạn hàng nào</p>
             <?php else: ?>
 
                 <div class="wpk-slip" id="wpk-slip" data-slip-id="<?php echo (int) $slip['id']; ?>">
 
                     <div class="wpk-info">
                         <div class="wpk-info-row"><span>Khách hàng:</span><b id="wpk-cust"><?php echo wpk_esc(trim((string) $slip['customer_short']) !== '' ? $slip['customer_short'] : $slip['customer_name']); ?></b></div>
-                        <div class="wpk-info-row"><span>Người nhận:</span><b><?php
+                        <div class="wpk-info-row"><span>Người nhận:</span><b id="wpk-receiver"><?php
                             $rc = trim((string) $slip['receiver']);
                             $ph = trim((string) $slip['phone']);
                             echo wpk_esc($rc . ($ph !== '' ? ' - ' . $ph : ''));
                         ?></b></div>
-                        <div class="wpk-info-row"><span>Địa chỉ:</span><b><?php echo wpk_esc($slip['address']); ?></b></div>
+                        <div class="wpk-info-row"><span>Địa chỉ:</span><b id="wpk-address"><?php echo wpk_esc($slip['address']); ?></b></div>
                     </div>
 
                     <div class="wpk-toolbar">
@@ -90,7 +77,7 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                     </div>
 
                     <div class="wpk-table-head">
-                        <span>Tên sản phẩm</span>
+                        <span id="wpk-total-label">TỔNG 0 SP</span>
                         <span>Đặt hàng</span>
                     </div>
 
@@ -118,6 +105,66 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                 </div>
 
             <?php endif; ?>
+
+            <!-- ===== LỊCH SỬ SOẠN HÀNG — dùng khối lọc ngày + phân trang chung ===== -->
+            <div class="wpk-history">
+                <div class="history-bar">
+                    <div class="history"><p>Lịch sử soạn hàng</p></div>
+                    <div class="history-filter" id="history-filter">
+                        <div class="hf-group hf-daterange">
+                            <span class="hf-cal-icon"><i class="fa-regular fa-calendar-days"></i></span>
+                            <label for="hf-date-from">Từ ngày</label>
+                            <input type="date" id="hf-date-from" class="hf-date">
+                            <span class="hf-arrow"><i class="fa-solid fa-arrow-right-long"></i></span>
+                            <label for="hf-date-to">đến ngày</label>
+                            <input type="date" id="hf-date-to" class="hf-date">
+                        </div>
+                        <div class="hf-group hf-rows">
+                            <label for="hf-page-size">Số dòng</label>
+                            <select id="hf-page-size" class="hf-select">
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <span class="hf-count" id="hf-count"></span>
+                        <button type="button" class="hf-reset" id="hf-reset" title="Bỏ tất cả bộ lọc">
+                            <i class="fa-solid fa-rotate-left"></i> Bỏ lọc
+                        </button>
+                    </div>
+                </div>
+                <table class="history-table" id="wpk-hist-table">
+                    <thead>
+                        <tr>
+                            <td>Soạn xong lúc</td>
+                            <td>Khách hàng</td>
+                            <td>Số dòng</td>
+                            <td>Số kiện</td>
+                            <td>Người soạn</td>
+                            <td>Trạng thái</td>
+                        </tr>
+                    </thead>
+                    <tbody id="wpk-hist-body"></tbody>
+                </table>
+                <div class="hf-pager" id="wpk-hist-pager"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: xem lại 1 phiếu trong lịch sử (chỉ đọc) -->
+    <div class="wpk-modal-mask" id="wpk-hist-modal" hidden>
+        <div class="wpk-modal-box wpk-hist-box">
+            <button type="button" class="wpk-modal-close" id="wpk-hist-close">&times;</button>
+            <h3 class="wpk-modal-title" id="wpk-hist-title"></h3>
+            <div class="wpk-hist-meta" id="wpk-hist-meta"></div>
+            <div class="wpk-hist-scroll">
+                <table class="wpk-hist-items">
+                    <thead><tr><td>Tên sản phẩm</td><td>Đơn đặt</td><td>Thực soạn</td><td>Kiện</td></tr></thead>
+                    <tbody id="wpk-hist-items"></tbody>
+                </table>
+            </div>
+            <div class="wpk-hist-foot" id="wpk-hist-foot"></div>
         </div>
     </div>
 
@@ -131,7 +178,8 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
     </div>
 
     <script>
-        window.WPK_SLIP = <?php echo $slip ? json_encode($slip, JSON_UNESCAPED_UNICODE) : 'null'; ?>;
+        window.WPK_SLIP  = <?php echo $slip ? json_encode($slip, JSON_UNESCAPED_UNICODE) : 'null'; ?>;
+        window.WPK_SLIPS = <?php echo json_encode($slips, JSON_UNESCAPED_UNICODE); ?>;
     </script>
     <script src="<?php echo asset_ver('public/js/warehouse/picking_task.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>

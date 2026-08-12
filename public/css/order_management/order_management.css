@@ -715,3 +715,28 @@ tr.ps-empty-row .ps-stt-badge { background: #e2e2e2; color: #b3b3b3; }
 }
 .om-picking-sum { font-size: 13.5px; color: #374151; }
 .om-picking-sum::first-line { font-weight: 600; }
+
+/* Thông báo tự tắt — thay hộp thoại "OK" cho việc đã chắc chắn xong. */
+.om-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 16px);
+    z-index: 12000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 90vw;
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: #111827;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+.om-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+.om-toast i { color: #4ade80; }

@@ -1005,6 +1005,15 @@
      * ===================================================================== */
     var pickingSlip = null;
 
+    /** Báo xong việc rồi tự tắt — không bắt bấm OK cho một việc đã chắc chắn thành công. */
+    function omToast(msg) {
+        var $t = $('#om-toast');
+        if (!$t.length) $t = $('<div id="om-toast" class="om-toast"></div>').appendTo('body');
+        $t.html('<i class="fa-solid fa-circle-check"></i> ' + esc(msg)).addClass('is-on');
+        clearTimeout(omToast._t);
+        omToast._t = setTimeout(function () { $t.removeClass('is-on'); }, 2600);
+    }
+
     $(document).on('click', '.om-send-picking', function () {
         var $btn = $(this);
         var $card = $btn.closest('.om-card');
@@ -1021,7 +1030,7 @@
             $btn.attr('data-slip-id', res.id).data('slip-id', res.id)
                 .addClass('is-doing').attr('title', 'Kho đang soạn — bấm để xem tiến độ')
                 .find('i').attr('class', 'fa-solid fa-clipboard-list');
-            alert('Đã gửi phiếu soạn xuống kho.');
+            omToast('Đã gửi phiếu soạn xuống kho.');
         }, 'json').fail(function () { $btn.prop('disabled', false); alert('Lỗi mạng/Server.'); });
     });
 

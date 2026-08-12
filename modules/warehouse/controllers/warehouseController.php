@@ -224,6 +224,34 @@ function finish_slipAction()
 }
 
 /* ---------------------------------------------------------------------
+ *  AJAX — Lịch sử soạn hàng
+ * -------------------------------------------------------------------*/
+
+/** Danh sách phiếu đã soạn xong (lọc ngày + phân trang). */
+function historyAction()
+{
+    wh_guard_json();
+    wh_json([
+        'ok'   => true,
+        'data' => wh_history_slips(
+            (string) ($_REQUEST['from'] ?? ''),
+            (string) ($_REQUEST['to'] ?? ''),
+            (int) ($_REQUEST['page'] ?? 1),
+            (int) ($_REQUEST['per'] ?? 10)
+        ),
+    ]);
+}
+
+/** Chi tiết 1 phiếu trong lịch sử (chỉ xem). */
+function history_detailAction()
+{
+    wh_guard_json();
+    $d = wh_history_detail((int) ($_REQUEST['slip_id'] ?? 0));
+    if (!$d) wh_json(['ok' => false, 'msg' => 'Không tìm thấy phiếu soạn.']);
+    wh_json(['ok' => true, 'data' => $d]);
+}
+
+/* ---------------------------------------------------------------------
  *  AJAX — dùng chung với order_management
  * -------------------------------------------------------------------*/
 
