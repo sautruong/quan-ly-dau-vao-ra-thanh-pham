@@ -176,7 +176,13 @@ function ltp_add_productAction()
     if ($id <= 0) { echo json_encode(['ok' => false, 'message' => 'Dữ liệu không hợp lệ.']); exit; }
 
     $pid = (int) ($_POST['product_id'] ?? 0);
-    $p = db_fetch_row("SELECT product_name, unit FROM products WHERE id = $pid LIMIT 1");
+    // TÊN THƯỜNG GỌI, đúng như ô gợi ý và như card sau khi F5 (ltp_get_items_grouped).
+    // Trước đây chỗ này trả tên gốc nên vừa bấm "Thêm sản phẩm" là card hiện một tên, F5 xong
+    // lại hiện tên khác — cùng một sản phẩm mà nhìn như bị đổi.
+    $p = db_fetch_row(
+        "SELECT COALESCE(NULLIF(common_product_name, ''), product_name) AS product_name, unit
+         FROM products WHERE id = $pid LIMIT 1"
+    );
     echo json_encode([
         'ok'   => true,
         'item' => [
@@ -336,13 +342,15 @@ function ltp_product_stock_searchAction()
     if ($keyword === '') { echo json_encode(['data' => []]); exit; }
 
     $kw  = escape_string($keyword);
+    // Cũng đi theo tên thường gọi: gõ tên quen tay ("Đường Nâu Mật Mía") mà chỉ dò
+    // p.product_name thì không ra kết quả nào, trong khi ô gợi ý bên cạnh lại ra.
     $sql = "SELECT p.id,
-                   p.product_name AS name,
+                   COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS name,
                    COALESCE(NULLIF(p.unit, ''), '') AS unit,
                    COALESCE(fgi.quantity, 0) AS quantity
             FROM products p
             LEFT JOIN finished_goods_inventory fgi ON fgi.product_id = p.id
-            WHERE p.product_name LIKE '%$kw%'
+            WHERE p.product_name LIKE '%$kw%' OR p.common_product_name LIKE '%$kw%'
             ORDER BY p.product_name ASC
             LIMIT 15";
     $rows = db_fetch_array($sql);

@@ -414,7 +414,9 @@ function ltp_get_completed($before = null)
     $t = escape_string($cut);
 
     $items = db_fetch_array(
-        "SELECT l.id, l.plan_date, l.product_id, l.quantity, p.product_name, p.unit
+        "SELECT l.id, l.plan_date, l.product_id, l.quantity,
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                p.unit
          FROM long_term_production_plans l
          LEFT JOIN products p ON p.id = l.product_id
          WHERE l.plan_date < '$t'
@@ -637,7 +639,8 @@ function ltp_get_backup_items()
 {
     return db_fetch_array(
         "SELECT b.id, b.product_id, b.quantity, b.note, b.sort_order, b.created_at,
-                p.product_name, p.unit
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                p.unit
          FROM long_term_production_backup b
          LEFT JOIN products p ON p.id = b.product_id
          ORDER BY b.sort_order ASC, b.id ASC"
@@ -650,7 +653,9 @@ function ltp_backup_row($id)
     $id = (int) $id;
     if ($id <= 0) return null;
     return db_fetch_row(
-        "SELECT b.id, b.product_id, b.quantity, b.note, b.created_at, p.product_name, p.unit
+        "SELECT b.id, b.product_id, b.quantity, b.note, b.created_at,
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                p.unit
          FROM long_term_production_backup b
          LEFT JOIN products p ON p.id = b.product_id
          WHERE b.id = $id LIMIT 1"
