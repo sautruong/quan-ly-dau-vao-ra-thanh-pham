@@ -155,8 +155,8 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
             <p class="wpk-modal-sub" id="wpk-group-sub"></p>
             <input type="number" class="wpk-modal-input" id="wpk-group-val" min="1" step="1"
                    inputmode="numeric" placeholder="Nhập số kiện chung...">
-            <p class="wpk-modal-hint" id="wpk-group-hint">Để trống rồi Xác nhận = bỏ chung kiện.</p>
-            <!-- Giống modal đổi số: CHỈ nút này mới ghi, bấm × ở góc là không đổi gì. -->
+            <!-- Giống modal đổi số: CHỈ nút này mới ghi, bấm × ở góc là không đổi gì.
+                 Để trống ô rồi Xác nhận = bỏ chung kiện (xem #wpk-group-save trong JS). -->
             <div class="wpk-modal-foot is-center">
                 <button type="button" class="wpk-mbtn wpk-mbtn-ok wpk-mbtn-wide" id="wpk-group-save">Xác nhận</button>
             </div>
