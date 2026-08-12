@@ -552,3 +552,12 @@
     .ltp-auto-field input, .ltp-auto-field select { font-size: 16px; }
     .pae-toast { left: 12px; right: 12px; bottom: 12px; max-width: none; }
 }
+
+/* =====================================================================================
+   GO THANH .app-subtabs O RIENG TRANG NAY (anh Sau chot 11/8/2026).
+   2 trang ke hoach da co muc rieng trong sidebar nen thanh nay chi lap lai dieu huong va an
+   mat chieu cao — nhat la tren dien thoai.
+   An bang CSS o file RIENG cua trang thay vi sua layout/header-app.php: header do dung chung
+   voi /production_staff/plan_for_staff, go o day thi trang kia mat luon thanh dieu huong.
+   ===================================================================================== */
+.app-subtabs { display: none; }

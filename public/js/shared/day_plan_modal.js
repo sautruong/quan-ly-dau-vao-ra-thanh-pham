@@ -19,6 +19,8 @@
     var bodyEl  = document.getElementById('ltp-day-modal-body');
     var footEl  = document.getElementById('ltp-day-modal-foot');
     var exportBtn = footEl && footEl.querySelector('.ltp-day-export');
+    var addProdBtn = footEl && footEl.querySelector('.ltp-day-add-product');
+    var addTaskBtn = footEl && footEl.querySelector('.ltp-day-add-task');
     var openedCard = null;   // card ngày THẬT đang xem (không phải bản clone trong modal)
 
     function isMobile() { return window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
@@ -31,11 +33,21 @@
         bodyEl.innerHTML = '';
         var content = card.querySelector('.ltp-card-body');
         bodyEl.appendChild(content ? content.cloneNode(true) : document.createTextNode('Chưa có nội dung.'));
-        // Chân modal chỉ hiện khi card có nút gốc — view nào không có thì không mọc nút thừa.
+        /* Chân modal hiện khi card có ÍT NHẤT MỘT nút gốc tương ứng. Mỗi nút trong chân modal
+           bật/tắt độc lập theo đúng nút gốc của card đang xem — view "KHSX dự kiến" bên Đặt hàng
+           nhà máy chỉ xem, không có nút nào, nên chân modal tự ẩn hoàn toàn. */
         if (footEl) {
-            var coNutGoc = !!card.querySelector('.ltp-export-plan');
-            footEl.hidden = !coNutGoc;
-            if (exportBtn) { exportBtn.disabled = false; exportBtn.classList.remove('is-busy'); }
+            var coXuat = !!card.querySelector('.ltp-export-plan');
+            var coThemSP = !!card.querySelector('.ltp-btn-add-product');
+            var coThemVK = !!card.querySelector('.ltp-btn-add-task');
+            if (exportBtn) {
+                exportBtn.hidden = !coXuat;
+                exportBtn.disabled = false;
+                exportBtn.classList.remove('is-busy');
+            }
+            if (addProdBtn) addProdBtn.hidden = !coThemSP;
+            if (addTaskBtn) addTaskBtn.hidden = !coThemVK;
+            footEl.hidden = !(coXuat || coThemSP || coThemVK);
         }
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
@@ -54,6 +66,23 @@
        click() theo lệnh vẫn kích hoạt được, và handler bên long_term_production_plan.js đọc dữ
        liệu từ card THẬT nên không dính bản clone trong modal (clone giữ nguyên id/class, tự đọc
        lại là nhân đôi dòng). Xuất xong handler tự chuyển sang trang plan_for_staff. */
+    /* "+ Sản phẩm" / "Việc khác" — bấm hộ nút gốc của card đang xem rồi ĐÓNG modal ngày.
+       Phải đóng: 2 nút gốc mở tiếp modal chọn sản phẩm/việc khác, để chồng 2 lớp modal trên
+       điện thoại thì lớp dưới che mất ô nhập và bấm ra ngoài là đóng nhầm lớp.
+       Handler bên long_term_production_plan.js đọc activeCard từ closest('.ltp-card') của chính
+       nút gốc, nên nó luôn trỏ đúng card THẬT — không dính bản clone trong modal này. */
+    function bamHoNutGoc(selector) {
+        return function () {
+            if (!openedCard) return;
+            var goc = openedCard.querySelector(selector);
+            if (!goc) return;
+            closeDay();
+            setTimeout(function () { goc.click(); }, 0);
+        };
+    }
+    if (addProdBtn) addProdBtn.addEventListener('click', bamHoNutGoc('.ltp-btn-add-product'));
+    if (addTaskBtn) addTaskBtn.addEventListener('click', bamHoNutGoc('.ltp-btn-add-task'));
+
     if (exportBtn) {
         exportBtn.addEventListener('click', function () {
             if (!openedCard) return;
