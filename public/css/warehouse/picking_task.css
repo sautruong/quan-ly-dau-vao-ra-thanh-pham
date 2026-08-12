@@ -4,13 +4,31 @@
  *  máy tính chỉ là trường hợp màn hình rộng hơn.
  * ========================================================================== */
 
+/* BẮT BUỘC — global.css đặt `#wrapper { display: flex }` (hàng NGANG, di sản của layout
+   sidebar cũ #sidebar-left). View nào dùng app-shell mà không tự vô hiệu hoá thì
+   <header class="app-header"> và khối nội dung thành 2 item nằm CẠNH nhau: header co lại
+   bằng nội dung và bị canh giữa theo chiều dọc ở bên trái, nội dung dạt sang phải.
+   order_management.css chữa bằng `display: block`; ở đây dựng thẳng flex CỘT để .app-header
+   nằm trên và .wpk-page ăn hết phần cao còn lại. */
+#wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
 .wpk-page {
     --wpk-accent: #16a34a;
     padding: 16px;
+    width: 100%;
     max-width: 900px;
     margin: 0 auto;
     font-size: 15px;
     color: #111827;
+    /* #wrapper để overflow:hidden + height:100% nên phần dư PHẢI tự cuộn bên trong,
+       không thì danh sách hàng dài bị cắt cụt mà không có thanh cuộn nào. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .wpk-page-head h1 {
@@ -550,6 +568,15 @@
 
 .wpk-info-line span { color: #6b7280; }
 .wpk-info-line i { color: #9ca3af; font-style: normal; }
+
+/* ---- Điện thoại: app_shell.css đã mở khoá cuộn cho html/body/#wrapper, nên khối này
+       phải trả overflow về visible, nếu không sẽ thành 2 tầng cuộn lồng nhau. ---- */
+@media (max-width: 768px) {
+    .wpk-page {
+        overflow: visible;
+        min-height: 0;
+    }
+}
 
 /* ---- Màn hình rộng ---- */
 @media (min-width: 768px) {
