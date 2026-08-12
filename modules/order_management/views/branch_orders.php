@@ -162,7 +162,7 @@ if (!function_exists('om_money')) {
                         $slip_status = $slip ? (string) $slip['status'] : '';
                         $slip_done   = ($slip_status === 'done');
                         $slip_synced = $slip ? !empty($slip['synced']) : false;
-                        if ($slip_synced)      { $send_cls = ' is-synced';  $send_title = 'Đã cập nhật đơn theo phiếu soạn'; $send_icon = 'fa-clipboard-check'; }
+                        if ($slip_synced)      { $send_cls = ' is-synced';  $send_title = 'Đã cập nhật đơn theo phiếu soạn — bấm để gửi thêm phiếu mới'; $send_icon = 'fa-paper-plane'; }
                         elseif ($slip_done)    { $send_cls = ' is-done';    $send_title = 'Kho đã soạn xong — bấm để xem & cập nhật đơn'; $send_icon = 'fa-clipboard-check'; }
                         elseif ($slip)         { $send_cls = ' is-doing';   $send_title = 'Kho đang soạn — bấm để xem tiến độ'; $send_icon = 'fa-clipboard-list'; }
                         else                   { $send_cls = '';            $send_title = 'Gửi phiếu soạn cho nhân viên kho'; $send_icon = 'fa-paper-plane'; }

@@ -28,7 +28,6 @@
     var SLIPS = window.WPK_SLIPS || [];
 
     var rawMode   = {};   // {itemId: true} — dòng đang hiện SỐ thay vì quy đổi kiện
-    var qtyTimer  = {};   // {itemId: timeoutId} — hẹn 2s tự lưu số bốc
     var kienTimer = {};   // {group: timeoutId} — hẹn 2s mới báo sai định dạng
     var thuTuDong = {};   // {itemId: thứ tự} — CHỐT lúc mở phiếu, không sắp lại nữa
 
@@ -127,7 +126,7 @@
             $slot.removeAttr('hidden');
             var v = t.giaTri[k];
             if (v !== undefined && v !== null) $slot.find('input').val(v);
-            if (p[1] === 'group') capNhatNutSlot($slot);
+            capNhatNutSlot($slot);
         });
         if (!t.focus) return;
         var $inp = $('#wpk-list .wpk-row[data-id="' + t.focus.id + '"] .wpk-slot-' + t.focus.loai + ' input');
@@ -183,10 +182,11 @@
                   (it.kien_group !== null && it.kien_group !== undefined ? it.kien_group : '') + '">' +
                 '<button type="button" class="wpk-slot-btn" data-mode="close" title="Đóng"><i class="fa-solid fa-xmark"></i></button>' +
               '</div>' +
-              '<div class="wpk-slot wpk-slot-qty" hidden>' +
+              '<div class="wpk-slot wpk-slot-qty" hidden data-goc="' + (Number(it.qty_actual) || 0) + '">' +
                 '<label>Bốc thực tế</label>' +
                 '<input type="number" class="wpk-qty-input" min="0" step="1" inputmode="decimal" value="' + (Number(it.qty_actual) || 0) + '">' +
                 '<span class="wpk-slot-unit">' + esc(it.unit || '') + '</span>' +
+                '<button type="button" class="wpk-slot-btn" data-mode="close" title="Đóng"><i class="fa-solid fa-xmark"></i></button>' +
               '</div>' +
             '</div>';
     }
@@ -265,32 +265,27 @@
             var mo   = SLIP && Number(s.id) === slipId();
             var done = String(s.status) === 'done';
             var tot = Number(s.total_items) || 0, pk = Number(s.picked_items) || 0;
-            // Phiếu đang mở -> is-open (nền xanh); mọi phiếu CÒN PHẢI SOẠN -> is-active
-            // (viền xanh) để nhân viên thấy ngay còn mấy phiếu và nhảy qua lại.
+            // MÀU RIÊNG TỪNG KHÁCH (customers.secondary_color) — chip PLDN vẫn vàng dù đang
+            // mở PLHCM màu đỏ. Đổ vào biến --c của riêng chip đó, CSS đọc var(--c) nên không
+            // chip nào ăn theo màu của phiếu đang mở.
+            var mau = s.accent || '#16a34a';
+            // Phiếu đang mở -> is-open (nền màu khách); phiếu CÒN PHẢI SOẠN -> is-active
+            // (chữ + viền màu khách) để nhân viên thấy ngay còn mấy phiếu và nhảy qua lại.
             var cls = 'wpk-chip' + (mo ? ' is-open' : '') + (done ? ' is-done' : ' is-active');
-            return '<button type="button" class="' + cls + '" data-slip-id="' + s.id + '">' +
+            return '<button type="button" class="' + cls + '" data-slip-id="' + s.id + '"' +
+                ' style="--c: ' + esc(mau) + '">' +
                 '<span class="wpk-chip-name">' + esc(s.label) + '</span>' +
                 '<span class="wpk-chip-count">' + pk + '/' + tot + '</span>' +
                 (done ? '<i class="fa-solid fa-circle-check"></i>' : '') +
                 '</button>';
         }).join(''));
-        capNhatNhacRoiTrang();
     }
     /* ---- Nhắc còn phiếu chưa bấm "Soạn xong" ----
        Bấm "Soạn xong" mới là lúc chuông báo về cho admin. Rời trang khi còn phiếu dở thì
-       admin không hề biết kho đã bốc tới đâu — nên vừa hiện dải nhắc trong trang (thấy được
-       trước khi đi), vừa chặn ở beforeunload (bắt phải xác nhận mới rời). Mọi phiếu đã bấm
-       xong hết thì im lặng hoàn toàn. */
+       admin không hề biết kho đã bốc tới đâu. Chỉ chặn ở beforeunload — dải nhắc trong trang
+       đã bỏ theo yêu cầu, hàng chip vốn đã cho thấy còn mấy phiếu chưa xong. */
     function soPhieuChuaXong() {
         return SLIPS.filter(function (s) { return String(s.status) !== 'done'; }).length;
-    }
-    function capNhatNhacRoiTrang() {
-        var n = soPhieuChuaXong();
-        var $b = $('#wpk-leave-warn');
-        if (!$b.length) return;
-        if (!n) { $b.attr('hidden', true).empty(); return; }
-        $b.removeAttr('hidden').html('<i class="fa-solid fa-triangle-exclamation"></i> Còn <b>' + n +
-            '</b> phiếu chưa bấm “Soạn xong” — rời trang lúc này là admin chưa nhận được báo soạn.');
     }
     window.addEventListener('beforeunload', function (e) {
         if (!soPhieuChuaXong()) return;      // xong hết thì đi thoải mái
@@ -369,72 +364,57 @@
         var $slot = $row.find(which === 'group' ? '.wpk-slot-group' : '.wpk-slot-qty');
         if (!$slot.length) return;
         $slot.removeAttr('hidden');
-        if (which === 'group') capNhatNutSlot($slot);
+        capNhatNutSlot($slot);
         var $inp = $slot.find('input');
         $inp.trigger('focus');
         if ($inp[0] && $inp[0].select) $inp[0].select();
     }
 
     /* =====================================================================
-     *  Ô "BỐC THỰC TẾ" — gõ xong dừng 2s là tự lưu.
-     * ===================================================================== */
-    $(document).on('input', '.wpk-qty-input', function () {
-        var $inp = $(this);
-        var id = Number($inp.closest('.wpk-row').data('id')) || 0;
-        if (!id) return;
-        clearTimeout(qtyTimer[id]);
-        var val = $inp.val();
-        qtyTimer[id] = setTimeout(function () {
-            post('set_item_qty', { item_id: id, qty: Number(val) || 0 });
-        }, 2000);
-    });
-    // Enter / rời ô -> lưu ngay, khỏi phải chờ hết 2s.
-    $(document).on('keydown', '.wpk-qty-input', function (e) {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        $(this).trigger('blur');
-    });
-    // focusout chứ không phải blur: blur không nổi bọt nên ủy quyền qua document không ăn.
-    $(document).on('focusout', '.wpk-qty-input', function () {
-        var id = Number($(this).closest('.wpk-row').data('id')) || 0;
-        if (!id) return;
-        clearTimeout(qtyTimer[id]);
-        var it = timDong(id);
-        var v = Number($(this).val()) || 0;
-        if (it && Number(it.qty_actual) === v) return;   // không đổi thì khỏi gọi server
-        post('set_item_qty', { item_id: id, qty: v });
-    });
-
-    /* =====================================================================
-     *  Ô "CHUNG KIỆN SỐ"
-     *  Chưa nhập gì -> nút ×  (đóng; nếu dòng đang có số thì × = bỏ chung kiện).
-     *  Nhập số > 0  -> nút ✓  (xác nhận: lưu rồi đóng).
+     *  HAI Ô NHẬP TRONG DÒNG — CÙNG MỘT KIỂU XÁC NHẬN
+     *  Chưa nhập / không đổi gì -> nút ×  (đóng, không ghi gì).
+     *  Có thay đổi hợp lệ       -> nút ✓  (xác nhận: lưu rồi đóng).
+     *  Cố ý KHÔNG tự lưu khi rời ô: nhân viên đang bốc hàng, chạm nhầm rồi bỏ đi
+     *  mà số vẫn được ghi thì rất khó truy.
      * ===================================================================== */
     function capNhatNutSlot($slot) {
-        var v = Number($slot.find('.wpk-group-input').val());
-        var ok = !isNaN(v) && v > 0;
+        var doi;
+        if ($slot.hasClass('wpk-slot-group')) {
+            var g = Number($slot.find('.wpk-group-input').val());
+            doi = !isNaN(g) && g > 0;
+        } else {
+            var v   = Number($slot.find('.wpk-qty-input').val());
+            var goc = Number($slot.attr('data-goc'));
+            doi = !isNaN(v) && v >= 0 && v !== goc;
+        }
         $slot.find('.wpk-slot-btn')
-            .attr('data-mode', ok ? 'ok' : 'close')
-            .attr('title', ok ? 'Xác nhận' : 'Đóng')
-            .html('<i class="fa-solid ' + (ok ? 'fa-check' : 'fa-xmark') + '"></i>');
+            .attr('data-mode', doi ? 'ok' : 'close')
+            .attr('title', doi ? 'Xác nhận' : 'Đóng')
+            .html('<i class="fa-solid ' + (doi ? 'fa-check' : 'fa-xmark') + '"></i>');
     }
-    $(document).on('input', '.wpk-group-input', function () {
+    $(document).on('input', '.wpk-group-input, .wpk-qty-input', function () {
         capNhatNutSlot($(this).closest('.wpk-slot'));
     });
-    $(document).on('keydown', '.wpk-group-input', function (e) {
+    $(document).on('keydown', '.wpk-group-input, .wpk-qty-input', function (e) {
         if (e.key !== 'Enter') return;
         e.preventDefault();
         $(this).closest('.wpk-slot').find('.wpk-slot-btn').trigger('click');
     });
     $(document).on('click', '.wpk-slot-btn', function () {
         var $slot = $(this).closest('.wpk-slot');
-        var $row  = $slot.closest('.wpk-row');
-        var id    = Number($row.data('id')) || 0;
-        var v     = Number($slot.find('.wpk-group-input').val());
+        var id    = Number($slot.closest('.wpk-row').data('id')) || 0;
+        var laOk  = $(this).attr('data-mode') === 'ok';
+        var laQty = $slot.hasClass('wpk-slot-qty');
         $slot.attr('hidden', true);
         if (!id) return;
-        if ($(this).attr('data-mode') === 'ok') { post('set_item_group', { item_id: id, group: v }); return; }
-        // × : chưa nhập gì. Dòng đang mang số chung kiện thì hiểu là BỎ chung kiện.
+
+        if (laQty) {
+            if (laOk) post('set_item_qty', { item_id: id, qty: Number($slot.find('.wpk-qty-input').val()) || 0 });
+            else $slot.find('.wpk-qty-input').val($slot.attr('data-goc'));   // trả về số cũ
+            return;
+        }
+        if (laOk) { post('set_item_group', { item_id: id, group: Number($slot.find('.wpk-group-input').val()) }); return; }
+        // × ở ô chung kiện: chưa nhập gì. Dòng đang mang số thì hiểu là BỎ chung kiện.
         var it = timDong(id);
         if (it && it.kien_group !== null && it.kien_group !== undefined) {
             post('set_item_group', { item_id: id, group: '' });

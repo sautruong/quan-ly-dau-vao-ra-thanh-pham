@@ -1018,17 +1018,25 @@
         var $btn = $(this);
         var $card = $btn.closest('.om-card');
         var slipId = Number($btn.data('slip-id')) || 0;
+        var daDongBo = $btn.hasClass('is-synced');
 
-        if (slipId > 0) { openPickingModal(slipId); return; }
+        // Phiếu đang soạn dở / đã soạn xong nhưng CHƯA cập nhật đơn -> bấm là xem lại.
+        // Phiếu ĐÃ cập nhật đơn thì vòng đó khép rồi, bấm là gửi phiếu MỚI — kho hay cần
+        // soạn bổ sung cho chính đơn đó.
+        if (slipId > 0 && !daDongBo) { openPickingModal(slipId); return; }
 
         var cust = $card.find('.om-card-cust').text().trim();
-        if (!confirm('Gửi phiếu soạn đơn "' + cust + '" xuống cho nhân viên kho?')) return;
+        var hoi = daDongBo
+            ? 'Đơn "' + cust + '" đã cập nhật theo phiếu soạn trước. Gửi thêm một phiếu soạn MỚI xuống kho?'
+            : 'Gửi phiếu soạn đơn "' + cust + '" xuống cho nhân viên kho?';
+        if (!confirm(hoi)) return;
         $btn.prop('disabled', true);
         $.post(BASE + 'send_picking_slip', { order_id: $card.data('id') }, function (res) {
             $btn.prop('disabled', false);
             if (!res || !res.ok) { alert((res && res.msg) || 'Không gửi được phiếu soạn.'); return; }
             $btn.attr('data-slip-id', res.id).data('slip-id', res.id)
-                .addClass('is-doing').attr('title', 'Kho đang soạn — bấm để xem tiến độ')
+                .removeClass('is-synced is-done').addClass('is-doing')
+                .attr('title', 'Kho đang soạn — bấm để xem tiến độ')
                 .find('i').attr('class', 'fa-solid fa-clipboard-list');
             omToast('Đã gửi phiếu soạn xuống kho.');
         }, 'json').fail(function () { $btn.prop('disabled', false); alert('Lỗi mạng/Server.'); });

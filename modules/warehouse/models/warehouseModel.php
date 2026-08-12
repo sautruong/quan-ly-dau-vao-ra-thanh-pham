@@ -287,7 +287,7 @@ function wh_list_slips_for_staff()
 {
     wh_ensure_tables();
     $rows = db_fetch_array(
-        "SELECT s.id, s.order_id, s.customer_name, s.customer_short, s.status, s.sent_at, s.done_at,
+        "SELECT s.id, s.order_id, s.customer_name, s.customer_short, s.status, s.sent_at, s.done_at, s.accent,
                 (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0) AS total_items,
                 (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0 AND i.picked = 1) AS picked_items
          FROM wh_picking_slips s

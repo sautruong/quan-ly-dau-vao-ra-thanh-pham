@@ -48,9 +48,6 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                  và đổi phiếu không phải tải lại cả trang. -->
             <div class="wpk-chips" id="wpk-chips"></div>
 
-            <!-- Nhắc còn phiếu chưa bấm "Soạn xong" — JS bật/tắt theo số phiếu còn lại. -->
-            <div class="wpk-leave-warn" id="wpk-leave-warn" hidden></div>
-
             <?php if (!$slip): ?>
                 <p class="wpk-empty">Chưa có yêu cầu soạn hàng nào</p>
             <?php else: ?>
@@ -72,11 +69,6 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                             <input type="text" id="wpk-search" autocomplete="off" placeholder="Thêm sản phẩm / NVL vào phiếu...">
                             <ul class="wpk-suggest" id="wpk-suggest"></ul>
                         </div>
-                    </div>
-
-                    <div class="wpk-hint no-print">
-                        <i class="fa-solid fa-hand-pointer"></i>
-                        Gạt <b>tên hàng sang phải</b> để đánh số chung kiện · gạt <b>ô số lượng sang trái</b> để nhập số bốc khác.
                     </div>
 
                     <div class="wpk-table-head">
