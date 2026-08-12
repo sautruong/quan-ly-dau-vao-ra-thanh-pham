@@ -561,3 +561,26 @@
    voi /production_staff/plan_for_staff, go o day thi trang kia mat luon thanh dieu huong.
    ===================================================================================== */
 .app-subtabs { display: none; }
+
+/* =====================================================================================
+   TRONG MODAL XEM 1 NGAY (mobile) — modal nay muon NODE THAT cua card (day_plan_modal.js),
+   nen moi handler san co chay y het tren may tinh: bam ten de doi san pham, bam SL de sua,
+   bam x de xoa.
+   Nut x va tay keo von chi hien khi RE CHUOT (.ltp-item:hover) — dien thoai khong co hover nen
+   khong bam duoc. Trong modal cho hien san.
+   ===================================================================================== */
+#ltp-day-modal .ltp-item-del,
+#ltp-day-modal .ltp-task-del {
+    opacity: .75;
+    pointer-events: auto;
+}
+#ltp-day-modal .ltp-item-del:active,
+#ltp-day-modal .ltp-task-del:active { opacity: 1; background: #f7dada; }
+
+/* Vung cham toi thieu 32px cho ngon tay; the x goc chi ~20px. */
+@media (hover: none) {
+    #ltp-day-modal .ltp-item-del,
+    #ltp-day-modal .ltp-task-del { min-width: 32px; min-height: 32px; font-size: 22px; }
+    /* Tay keo doi ngay khong dung duoc bang cham -> an di cho do vuong. */
+    #ltp-day-modal .ltp-item-grip { display: none; }
+}

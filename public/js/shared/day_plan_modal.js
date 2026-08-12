@@ -21,7 +21,10 @@
     var exportBtn = footEl && footEl.querySelector('.ltp-day-export');
     var addProdBtn = footEl && footEl.querySelector('.ltp-day-add-product');
     var addTaskBtn = footEl && footEl.querySelector('.ltp-day-add-task');
-    var openedCard = null;   // card ngày THẬT đang xem (không phải bản clone trong modal)
+    var openedCard = null;   // card ngày THẬT đang xem
+    /* Node .ltp-card-body đang được MƯỢN vào modal, và chỗ cũ để trả về khi đóng. */
+    var muonBody = null;
+    var muonChoCu = null;
 
     function isMobile() { return window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }
 
@@ -30,9 +33,21 @@
         var wd = card.querySelector('.ltp-day .wd');
         var dt = card.querySelector('.ltp-day .dt');
         titleEl.textContent = ((wd ? wd.textContent : '') + ' ' + (dt ? dt.textContent : '')).trim() || 'Kế hoạch ngày';
+        /* MƯỢN NODE THẬT, KHÔNG CLONE (đổi 11/8/2026).
+           Trước đây modal hiển thị bản sao — xem thì được, nhưng mọi thao tác sửa/xoá bên trong
+           đều rơi vào bản sao rồi biến mất khi đóng modal, nên trên điện thoại không đổi tên hay
+           xoá sản phẩm được. Mượn chính node của card thì TẤT CẢ handler sẵn có chạy y như trên
+           máy tính, không phải viết lại cái nào.
+           Nhớ đúng chỗ cũ để trả về; closeDay() luôn trả trước khi rời modal. */
         bodyEl.innerHTML = '';
-        var content = card.querySelector('.ltp-card-body');
-        bodyEl.appendChild(content ? content.cloneNode(true) : document.createTextNode('Chưa có nội dung.'));
+        muonBody = card.querySelector('.ltp-card-body');
+        if (muonBody) {
+            muonChoCu = { cha: muonBody.parentNode, ke: muonBody.nextSibling };
+            bodyEl.appendChild(muonBody);
+        } else {
+            muonChoCu = null;
+            bodyEl.appendChild(document.createTextNode('Chưa có nội dung.'));
+        }
         /* Chân modal hiện khi card có ÍT NHẤT MỘT nút gốc tương ứng. Mỗi nút trong chân modal
            bật/tắt độc lập theo đúng nút gốc của card đang xem — view "KHSX dự kiến" bên Đặt hàng
            nhà máy chỉ xem, không có nút nào, nên chân modal tự ẩn hoàn toàn. */
@@ -56,6 +71,14 @@
     function closeDay() {
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
+        /* TRẢ node mượn về đúng chỗ TRƯỚC khi dọn ruột modal — nếu không, innerHTML='' sẽ xoá
+           luôn nội dung thật của card. Kiểm cha còn nằm trong tài liệu: nếu bảng đã vẽ lại
+           trong lúc modal mở thì card cũ đã bị thay, trả về là tạo node mồ côi. */
+        if (muonBody && muonChoCu && muonChoCu.cha && document.contains(muonChoCu.cha)) {
+            muonChoCu.cha.insertBefore(muonBody, muonChoCu.ke);
+        }
+        muonBody = null;
+        muonChoCu = null;
         bodyEl.innerHTML = '';
         openedCard = null;
         if (footEl) footEl.hidden = true;
