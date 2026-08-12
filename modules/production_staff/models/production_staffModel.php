@@ -288,8 +288,14 @@ function ltp_get_items_grouped($from, $to)
     if ($from === '' || $to === '') return [];
     $f = escape_string($from); $t = escape_string($to);
     $rows = db_fetch_array(
+        /* PHẢI dùng CÙNG công thức tên với ô gợi ý tìm kiếm (search_productAction cũng
+           COALESCE common_product_name trước). Trước đây ô gợi ý hiện TÊN THƯỜNG GỌI còn card
+           hiện TÊN GỐC, nên cùng một sản phẩm mang 2 tên khác nhau tuỳ lúc nhìn:
+           id=42 gợi ý ra "Đường Nâu Mật Mía" nhưng sau F5 card lại ghi "Đường đen VAT can 2.5kg".
+           Người dùng thấy tên đổi sau khi tải lại trang và tưởng hệ thống tự đổi sản phẩm. */
         "SELECT l.id, l.plan_date, l.product_id, l.quantity, l.sort_order, l.status,
-                p.product_name, p.unit
+                COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                p.unit
          FROM long_term_production_plans l
          LEFT JOIN products p ON p.id = l.product_id
          WHERE l.plan_date BETWEEN '$f' AND '$t'

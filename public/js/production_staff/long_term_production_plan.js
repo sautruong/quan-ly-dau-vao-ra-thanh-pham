@@ -526,8 +526,13 @@
                 if (activeNameInput !== input) return;
                 var data = (res && res.data) || [];
                 if (!data.length) { hideInlineSuggest(); return; }
-                inlineSuggest.innerHTML = data.map(function (p) {
-                    return '<li data-id="' + p.id + '" data-name="' + esc(p.product_name) + '">' +
+                inlineSuggest.innerHTML = data.map(function (p, i) {
+                    /* Mục ĐẦU sáng sẵn: Enter/Tab vốn đã lấy "mục đang sáng HOẶC mục đầu", nhưng
+                       trước đây không sáng gì cả nên người dùng không hề biết mình sắp chọn dòng
+                       nào — gõ xong bấm Enter là dính sản phẩm khác mà không nhận ra. Sáng sẵn
+                       thì hành vi vẫn y hệt, chỉ khác là NHÌN THẤY được trước khi bấm. */
+                    return '<li data-id="' + p.id + '" data-name="' + esc(p.product_name) + '"' +
+                           (i === 0 ? ' class="ltp-active"' : '') + '>' +
                            esc(p.product_name) + '</li>';
                 }).join('');
                 positionSuggest(input);
