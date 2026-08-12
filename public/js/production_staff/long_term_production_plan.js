@@ -395,11 +395,44 @@
         return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(s || '');
     }
 
+    /* Ô tên đang trong quá trình LƯU sản phẩm vừa chọn. Cần cờ này vì mousedown trên gợi ý
+       chạy TRƯỚC focusout, nhưng việc lưu là bất đồng bộ — không có cờ thì handler focusout
+       bên dưới sẽ trả ô về tên cũ ngay giữa lúc đang lưu. */
+    var dangCommit = null;
+
     // chọn 1 gợi ý sản phẩm: phân nhánh theo ngữ cảnh (item ngày / dòng dự phòng)
     function selectSuggestion(input, pid, name) {
+        dangCommit = input;
         if (input.closest('.ltp-backup-item')) commitBackupName(input, pid, name);
         else commitProduct(input, pid, name);
     }
+
+    /* ---------------------------------------------------------------------------------
+       GÕ TÊN MÀ KHÔNG CHỌN GỢI Ý = KHÔNG CÓ GÌ ĐƯỢC LƯU (vá 11/8/2026).
+       Sản phẩm chỉ được ghi khi bấm/Enter vào một mục trong danh sách gợi ý — commitProduct()
+       là nơi DUY NHẤT gửi product_id lên server. Nhưng ô tên là <input> nên chữ vừa gõ vẫn nằm
+       đó, nhìn y như đã lưu xong; phải tới lúc F5 mới hiện lại tên THẬT trong CSDL.
+       Đúng tình huống anh Sáu gặp: gõ "Đường đen bí đao" vào dòng vốn đang là sản phẩm khác,
+       nhập số lượng (số lượng thì LƯU ĐƯỢC vì đi đường riêng), F5 xong tên quay về sản phẩm cũ.
+       Nay rời ô mà chưa chọn gợi ý thì trả ngay về tên thật + nháy đỏ, để thấy liền là chưa ăn.
+       --------------------------------------------------------------------------------- */
+    document.addEventListener('focusout', function (e) {
+        var t = e.target;
+        if (!t || !t.classList || !t.classList.contains('ltp-item-name')) return;
+        if (t.classList.contains('ltp-prod-search') && t.closest('.ltp-item-draft')) {
+            // Dòng nháp: chưa từng có sản phẩm nào, để trống là đúng.
+            t.value = '';
+            return;
+        }
+        setTimeout(function () {
+            if (dangCommit === t) return;               // đang lưu lựa chọn hợp lệ
+            var thuc = t.getAttribute('data-name') || '';
+            if (t.value === thuc) return;               // không đổi gì
+            t.value = thuc;
+            t.classList.add('ltp-name-revert');
+            setTimeout(function () { t.classList.remove('ltp-name-revert'); }, 1000);
+        }, 60);
+    });
 
     // Lấy SL sản xuất gần nhất của sản phẩm điền vào ô .ltp-item-qty của dòng
     // (giống modal). Có id -> lưu luôn; rỗng (chưa từng SX) -> giữ nguyên ô.
@@ -445,6 +478,7 @@
             post('ltp_add_product', { plan_date: card.getAttribute('data-date'), product_id: pid, quantity: qty || 0 })
                 .then(function (res) {
                     hideInlineSuggest();
+                    if (dangCommit === input) dangCommit = null;
                     if (res && res.ok) {
                         item.setAttribute('data-id', res.item.id);
                         item.setAttribute('data-product-id', pid);
@@ -463,6 +497,7 @@
         // Dòng đã có: đổi sản phẩm + lấy SL sản xuất gần nhất cho ô số lượng.
         post('ltp_update_product', { id: id, quantity: qty, product_id: pid })
             .then(function (res) {
+                if (dangCommit === input) dangCommit = null;
                 if (res && res.ok) {
                     input.value = name;
                     input.setAttribute('data-name', name);

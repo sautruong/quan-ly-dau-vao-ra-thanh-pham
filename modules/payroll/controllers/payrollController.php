@@ -228,41 +228,12 @@ function payslip_dataAction()
         $out[] = py_calc_employee_month($emp, $y, $m, is_array($ov) ? $ov : [], $monthly_stats);
     }
 
-    /* ĐỐI CHIẾU LIVE vs SNAPSHOT (anh Sáu báo 11/8/2026: mail lệch với view).
-       View tính LIVE mỗi lần tải; MAIL lại đọc số ĐÃ ĐÓNG BĂNG trong payroll_monthly_summary
-       (py_send_payslip_email chỉ SELECT lại, không tính gì). Nên sau khi luật tính đổi — ví dụ
-       ngày 5/8 thêm luật loại hàng "Mẫu" khỏi sản lượng — snapshot cũ giữ số cũ vĩnh viễn và
-       mail gửi đi sai, mà không có dấu hiệu nào trên giao diện.
-       KHÔNG chuyển mail sang tính live: bảng lương đã chốt thì không được tự đổi khi dữ liệu
-       gốc thay đổi về sau. Thay vào đó báo cho người dùng biết để bấm Lưu. */
-    $snap = db_fetch_row("SELECT output_qty, output_per_cong_i, achievement_value_u, new_product_qty
-                          FROM payroll_monthly_summary WHERE year = {$y} AND month = {$m} LIMIT 1");
-    $stale = null;
-    if ($snap) {
-        $lech = [];
-        $doi = [
-            'output_qty'          => ['Sản lượng tháng',      (float) $monthly_stats['output_qty']],
-            'output_per_cong_i'   => ['Sản lượng / công (i)', (float) $monthly_stats['output_per_cong_i']],
-            'achievement_value_u' => ['Giá trị thành tích (u)', (float) $monthly_stats['achievement_value_u']],
-            'new_product_qty'     => ['SL sản phẩm mới',      (float) $monthly_stats['new_product_qty']],
-        ];
-        foreach ($doi as $cot => $v) {
-            // Sai số nhỏ do kiểu decimal, chỉ báo khi lệch thật.
-            if (abs((float) $snap[$cot] - $v[1]) > 0.01) {
-                $lech[] = ['label' => $v[0], 'saved' => (float) $snap[$cot], 'live' => $v[1]];
-            }
-        }
-        if ($lech) $stale = $lech;
-    }
-
     py_json([
         'success'  => true,
         'year'     => $y,
         'month'    => $m,
         'summary'  => $monthly_stats,
         'employees'=> $out,
-        // null = khớp (hoặc chưa lưu tháng này bao giờ); có mảng = snapshot đã cũ.
-        'stale'    => $stale,
     ]);
 }
 

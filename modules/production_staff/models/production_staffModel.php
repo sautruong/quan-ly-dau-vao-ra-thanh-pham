@@ -303,7 +303,84 @@ function ltp_get_items_grouped($from, $to)
     ) ?: [];
     $map = [];
     foreach ($rows as $r) $map[$r['plan_date']][] = $r;
+    ltp_mark_material_shortage($map);
     return $map;
+}
+
+/**
+ * ĐÁNH DẤU SẢN PHẨM THIẾU NGUYÊN VẬT LIỆU.
+ *
+ * Nhân định mức product_materials lên đúng SỐ LƯỢNG kế hoạch rồi đối chiếu tồn
+ * material_inventory; chỉ cần MỘT thành phần không đủ là gắn cờ cho cả dòng.
+ *
+ * Gộp TẤT CẢ sản phẩm vào ĐÚNG 2 truy vấn (một cho công thức, một cho tồn) — bảng kế hoạch có
+ * hàng chục dòng, hỏi từng dòng là hàng chục lượt truy vấn mỗi lần mở trang.
+ *
+ * Tồn NVL là MỘT kho dùng chung, nên mỗi ngày được xét ĐỘC LẬP (không trừ dần qua các ngày).
+ * Đây là cảnh báo "đủ để làm lô này không", không phải bài toán phân bổ tồn cho cả tuần.
+ *
+ * @param array $map [plan_date => [items]] — thêm 'mat_short' (bool) và 'mat_short_names'.
+ */
+function ltp_mark_material_shortage(array &$map)
+{
+    $pids = [];
+    foreach ($map as $items) {
+        foreach ($items as $it) {
+            $pid = (int) ($it['product_id'] ?? 0);
+            if ($pid > 0) $pids[$pid] = true;
+        }
+    }
+    if (!$pids) return;
+
+    $rows = db_fetch_array(
+        "SELECT pm.product_id, pm.material_id, pm.quantity_required,
+                COALESCE(NULLIF(mi.common_material_name, ''), mi.material_name) AS material_name
+         FROM product_materials pm
+         LEFT JOIN material_information mi ON mi.id = pm.material_id
+         WHERE pm.product_id IN (" . implode(',', array_keys($pids)) . ")
+           AND pm.material_id > 0"
+    ) ?: [];
+    if (!$rows) return;
+
+    $congThuc = [];
+    $matIds   = [];
+    foreach ($rows as $r) {
+        $mid = (int) $r['material_id'];
+        $congThuc[(int) $r['product_id']][] = [
+            'mid' => $mid,
+            'dm'  => (float) $r['quantity_required'],
+            'ten' => (string) ($r['material_name'] ?? ''),
+        ];
+        $matIds[$mid] = true;
+    }
+    if (!$matIds) return;
+
+    $tonRows = db_fetch_array(
+        "SELECT material_id, quantity FROM material_inventory
+         WHERE material_id IN (" . implode(',', array_keys($matIds)) . ")"
+    ) ?: [];
+    $ton = [];
+    foreach ($tonRows as $r) $ton[(int) $r['material_id']] = (float) $r['quantity'];
+
+    foreach ($map as &$items) {
+        foreach ($items as &$it) {
+            $pid = (int) ($it['product_id'] ?? 0);
+            $sl  = (float) ($it['quantity'] ?? 0);
+            $it['mat_short'] = false;
+            $it['mat_short_names'] = [];
+            if ($pid <= 0 || $sl <= 0 || empty($congThuc[$pid])) continue;
+
+            foreach ($congThuc[$pid] as $tp) {
+                if ($tp['dm'] <= 0) continue;
+                if (($ton[$tp['mid']] ?? 0.0) + 0.0001 < $tp['dm'] * $sl) {
+                    $it['mat_short'] = true;
+                    if ($tp['ten'] !== '') $it['mat_short_names'][] = $tp['ten'];
+                }
+            }
+        }
+        unset($it);
+    }
+    unset($items);
 }
 
 /** Map [plan_date => [task,...]] việc khác trong khoảng ngày. */

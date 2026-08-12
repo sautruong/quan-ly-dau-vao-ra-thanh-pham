@@ -1314,6 +1314,36 @@ function py_send_payslip_email($employee_id, $year, $month)
         return ['success' => false, 'message' => 'Tháng này chưa được lưu bảng lương.'];
     }
 
+    /* =====================================================================================
+       TÍNH LẠI PHẦN SẢN LƯỢNG / KPI ĐÚNG NHƯ TRÊN VIEW (vá 11/8/2026).
+       -------------------------------------------------------------------------------------
+       Trang /payroll/payslip tính LIVE mỗi lần mở, còn mail thì đọc số ĐÃ ĐÓNG BĂNG trong
+       payroll_monthly_summary / payroll_monthly_entries. Nên sau khi luật tính sản lượng đổi
+       (05/8/2026 thêm py_exclude_sample_sql() loại hàng "Mẫu"), snapshot cũ giữ số cũ và mail
+       gửi đi lệch với màn hình — kéo theo lệch cả Tổng thưởng KPI và THỰC LÃNH.
+
+       CHỈ thay đúng chuỗi số phụ thuộc sản lượng, KHÔNG thay cả bảng: mọi số do người dùng nhập
+       tay (tăng ca, tiền ứng, thưởng khác, BHXH tự nhập) vẫn giữ nguyên bản đã lưu.
+       py_calc_employee_month() với $overrides rỗng tự lùi về chính các giá trị đã lưu trong
+       payroll_monthly_entries, nên tính lại KHÔNG làm mất số nhập tay.
+       ===================================================================================== */
+    $emp_full = db_fetch_row("SELECT * FROM employees WHERE id = $eid LIMIT 1");
+    if ($emp_full) {
+        $stats = py_calc_monthly_stats($y, $m);
+        $live  = py_calc_employee_month($emp_full, $y, $m, [], $stats);
+
+        // Khối "Thành tích của nhóm" trong mail đọc theo tên cột của bảng snapshot.
+        $summary['output_qty']          = $stats['output_qty'];
+        $summary['output_per_cong_i']   = $stats['i'];
+        $summary['achievement_value_u'] = $stats['u'];
+        $summary['new_product_qty']     = $stats['new_product_qty'];
+
+        // Thưởng KPI sản lượng và các tổng phụ thuộc nó.
+        foreach (['kpi_o', 'kpi_total', 'total_with_bhxh', 'total_after_bhxh', 'net_pay'] as $k) {
+            if (array_key_exists($k, $live)) $entry[$k] = $live[$k];
+        }
+    }
+
     $off_days = py_off_days_with_reasons($eid, $y, $m);
     $html = py_build_payslip_email_html($emp, $entry, $summary, $off_days, $y, $m);
     $subject = 'Bảng lương tháng ' . $m . '/' . $y . ' - ' . $emp['full_name'];

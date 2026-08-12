@@ -90,9 +90,11 @@ $days = isset($days) && is_array($days) ? $days : [];
                                                 /* Cảnh báo thiếu NVL: nhân định mức product_materials lên đúng số lượng
                                                    dự kiến rồi đối chiếu tồn — xem sf_mark_material_shortage(). */
                                                 $thieu = !empty($it['mat_short']);
-                                                $dsThieu = $thieu ? array_slice((array) ($it['mat_short_names'] ?? []), 0, 6) : [];
+                                                /* CHỈ báo "có thiếu", TUYỆT ĐỐI không liệt kê tên NVL:
+                                                   đây là view KHÁCH HÀNG xem, nêu tên nguyên vật liệu là lộ
+                                                   công thức sản phẩm. Bản liệt kê chi tiết chỉ có ở view nhà máy
+                                                   /production_staff/long_term_production_plan. */
                                                 $tip = 'KHSX có thể thay đổi do thành phần NVL của SP này chưa đầy đủ để đảm bảo sản xuất ra số lượng bên.';
-                                                if ($dsThieu) $tip .= "\nThiếu: " . implode(', ', $dsThieu);
                                             ?>
                                                 <li class="ltp-item<?php echo $thieu ? ' pf-mat-short' : ''; ?>" style="padding-right:8px;">
                                                     <?php if ($thieu): ?>

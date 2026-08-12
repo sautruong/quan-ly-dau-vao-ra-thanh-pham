@@ -16,8 +16,20 @@ function ltp_render_item($it)
     $name = htmlspecialchars((string) ($it['product_name'] ?: ('#' . $pid)), ENT_QUOTES, 'UTF-8');
     $unit = htmlspecialchars((string) ($it['unit'] ?? ''), ENT_QUOTES, 'UTF-8');
     $qty  = htmlspecialchars(rtrim(rtrim(number_format((float) $it['quantity'], 2, '.', ''), '0'), '.'), ENT_QUOTES, 'UTF-8');
-    echo '<li class="ltp-item" data-id="' . $id . '" data-product-id="' . $pid . '" data-unit="' . $unit . '">'
+    /* Cảnh báo thiếu NVL — view NHÀ MÁY nên ĐƯỢC liệt kê tên nguyên vật liệu (khác view khách
+       hàng /sell_factory/production_forecast: ở đó chỉ báo có thiếu, nêu tên là lộ công thức). */
+    $thieu = !empty($it['mat_short']);
+    $warn  = '';
+    if ($thieu) {
+        $ds  = array_slice((array) ($it['mat_short_names'] ?? []), 0, 8);
+        $tip = 'KHSX có thể thay đổi do thành phần NVL của SP này chưa đầy đủ để đảm bảo sản xuất ra số lượng bên.';
+        if ($ds) $tip .= "\nThiếu: " . implode(', ', $ds);
+        $warn = '<span class="ltp-warn" title="' . htmlspecialchars($tip, ENT_QUOTES, 'UTF-8') . '">'
+              . '<i class="fa-solid fa-triangle-exclamation"></i></span>';
+    }
+    echo '<li class="ltp-item' . ($thieu ? ' ltp-mat-short' : '') . '" data-id="' . $id . '" data-product-id="' . $pid . '" data-unit="' . $unit . '">'
         . '<span class="ltp-item-grip" draggable="true" title="Kéo để chuyển ngày"><i class="fa-solid fa-grip-vertical"></i></span>'
+        . $warn
         . '<input type="text" class="ltp-item-name ltp-prod-search" value="' . $name . '" data-name="' . $name . '" autocomplete="off" spellcheck="false" title="Bấm để đổi sản phẩm">'
         . '<input type="text" class="ltp-item-qty" value="' . $qty . '" inputmode="decimal" title="Bấm để đổi số lượng">'
         . '<span class="ltp-item-del" title="Xóa">&times;</span>'

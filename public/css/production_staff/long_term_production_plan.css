@@ -584,3 +584,15 @@
     /* Tay keo doi ngay khong dung duoc bang cham -> an di cho do vuong. */
     #ltp-day-modal .ltp-item-grip { display: none; }
 }
+
+/* Canh bao thieu NVL — view NHA MAY nen tooltip CO liet ke ten nguyen vat lieu
+   (view khach hang /sell_factory/production_forecast chi bao co thieu, khong neu ten). */
+.ltp-warn { flex: 0 0 auto; margin-right: 4px; color: #f59e0b; font-size: 12px; line-height: 1; cursor: help; }
+.ltp-item.ltp-mat-short .ltp-item-name { color: #b45309; }
+
+/* Go ten ma khong chon goi y -> tra ve ten that, nhay do 1 giay cho thay lien la chua an. */
+.ltp-item-name.ltp-name-revert {
+    background: #fee2e2 !important;
+    border-color: #fca5a5 !important;
+    transition: background .2s ease, border-color .2s ease;
+}
