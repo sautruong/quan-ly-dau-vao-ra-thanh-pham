@@ -463,6 +463,10 @@
         if (!id) return;
         if (isNaN(v) || v < 0) { alert('Số lượng không hợp lệ.'); return; }
         dongModal('wpk-qty-modal');
+        /* Đưa dòng về hiển thị QUY ĐỔI KIỆN. Nếu trước đó người dùng đã bấm để xem số thô,
+           cờ rawMode của dòng vẫn còn bật, vẽ lại sẽ ra "95" thay vì "3B 5" — trong khi số
+           bốc phải đọc theo kiện mới đúng nghiệp vụ. Muốn xem lại số thô thì bấm 1 cái. */
+        delete rawMode[id];
         // Số dưới quy cách vẫn ghi bình thường; sau khi vẽ lại thì nháy sáng ô đó.
         post('set_item_qty', { item_id: id, qty: v }, function () { nhayOSoLuong(id); });
     });
