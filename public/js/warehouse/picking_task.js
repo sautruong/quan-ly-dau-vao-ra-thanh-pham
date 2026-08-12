@@ -279,13 +279,14 @@
         $box.html(html).removeAttr('hidden');
     }
 
-    /** "8B + 31T + 6 SP lẻ = 800 kg" — số kiện đi kèm khối lượng để biết luôn xe nào chở nổi. */
+    /** "8B + 31T + 6 SP lẻ = 800 kg" — số kiện đi kèm khối lượng để biết luôn xe nào chở nổi.
+        Khối lượng LÀM TRÒN 0 số lẻ (359,5 -> 360): đứng bốc hàng không ai cần tới lạng. */
     function chuoiKien(s) {
         if (!s) return '—';
         var t = s.text || '';
-        var kg = Number(s.weight) || 0;
+        var kg = Math.round(Number(s.weight) || 0);
         if (!t && !kg) return '—';
-        return (t || '—') + (kg ? ' = ' + num(kg) + ' kg' : '');
+        return (t || '—') + (kg ? ' = ' + kg.toLocaleString('vi-VN') + ' kg' : '');
     }
 
     function renderSummary() {

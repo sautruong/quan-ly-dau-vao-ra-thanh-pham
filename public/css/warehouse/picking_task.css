@@ -687,8 +687,15 @@
         border-radius: 0;
     }
 
+    /* Header dùng chung để margin-bottom 18px + padding-bottom 14px — trên điện thoại
+       tốn gần 1/6 màn hình cho khoảng trắng. Bóp lại, khoảng cách để .wpk-page tự lo. */
+    .app-header {
+        margin-bottom: 0;
+        padding-bottom: 8px;
+    }
+
     .wpk-page {
-        padding: 10px 8px 24px;
+        padding: 8px 12px 24px;
         overflow: visible;
         min-height: 0;
     }
