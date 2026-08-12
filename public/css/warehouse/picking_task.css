@@ -887,3 +887,21 @@
     background: var(--wpk-accent);
     color: #fff;
 }
+
+/* Chân modal 1 nút: canh giữa, nút rộng cho dễ bấm bằng ngón cái. */
+.wpk-modal-foot.is-center { justify-content: center; }
+.wpk-mbtn-wide { min-width: 190px; padding: 12px 20px; font-size: 15px; }
+
+/* Nháy sáng ô số lượng vừa đổi. */
+@keyframes wpkFlashQty {
+    0%   { background: transparent; color: inherit; }
+    18%  { background: var(--wpk-accent); color: #fff; }
+    70%  { background: var(--wpk-accent); color: #fff; }
+    100% { background: transparent; color: inherit; }
+}
+
+.wpk-qty.is-flash {
+    animation: wpkFlashQty 1s ease;
+    border-radius: 6px;
+    padding: 0 6px;
+}

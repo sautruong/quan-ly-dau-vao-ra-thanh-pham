@@ -173,9 +173,10 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
                 <span class="wpk-modal-unit" id="wpk-qty-unit"></span>
             </div>
             <p class="wpk-modal-hint" id="wpk-qty-preview"></p>
-            <div class="wpk-modal-foot">
-                <button type="button" class="wpk-mbtn wpk-mbtn-ghost" data-wpk-close="wpk-qty-modal">Đóng</button>
-                <button type="button" class="wpk-mbtn wpk-mbtn-ok" id="wpk-qty-save">Lưu</button>
+            <!-- CHỈ nút này mới ghi số mới. Muốn bỏ thì bấm × ở góc — bấm nhầm rồi thoát ra
+                 mà số vẫn bị đổi thì rất khó truy. -->
+            <div class="wpk-modal-foot is-center">
+                <button type="button" class="wpk-mbtn wpk-mbtn-ok wpk-mbtn-wide" id="wpk-qty-save">Xác nhận</button>
             </div>
         </div>
     </div>

@@ -422,26 +422,38 @@
         dongModal('wpk-group-modal');
     });
 
-    /** Xem trước: gõ 90 mà quy cách 30 gói/bao thì báo luôn "= 3B". */
+    /** Xem trước: gõ 90 mà quy cách 30 gói/bao thì báo luôn "= 3B".
+        Dưới 1 kiện VẪN LƯU BÌNH THƯỜNG — chỉ nói cho biết sẽ hiện ra số lẻ. */
     function veTruocQuyDoi() {
         var it = timDong(dongDangSua);
         var v = Number($('#wpk-qty-val').val());
         var ops = it ? (Number(it.ops_qty) || 0) : 0;
         if (!it || isNaN(v) || v < 0 || ops <= 0) { $('#wpk-qty-preview').text(''); return; }
         var chan = Math.floor(v / ops), du = v - chan * ops;
-        var chu = it.letter || '';
         $('#wpk-qty-preview').text(chan > 0
-            ? ('= ' + chan + chu + (du > 0 ? ' + ' + num(du) + ' ' + (it.unit || '') : ''))
-            : ('Chưa đủ 1 ' + (ops ? 'kiện' : '') + ' (' + ops + ' ' + (it.unit || '') + '/kiện)'));
+            ? ('= ' + chan + (it.letter || '') + (du > 0 ? ' + ' + num(du) + ' ' + (it.unit || '') : ''))
+            : ('= ' + num(v) + ' ' + (it.unit || '') + ' (chưa đủ 1 ' + (it.short_name || 'kiện') + ')'));
     }
     $(document).on('input', '#wpk-qty-val', veTruocQuyDoi);
 
+    /** Nháy sáng ô số lượng vừa đổi — để mắt bắt được ngay là số nào vừa thay. */
+    function nhayOSoLuong(id) {
+        var $o = $('.wpk-row[data-id="' + id + '"] .wpk-qty');
+        if (!$o.length) return;
+        $o.removeClass('is-flash');
+        void $o[0].offsetWidth;          // ép tính lại layout, không thì chạy 2 lần liên tiếp mất hiệu ứng
+        $o.addClass('is-flash');
+        setTimeout(function () { $o.removeClass('is-flash'); }, 1100);
+    }
+
     $(document).on('click', '#wpk-qty-save', function () {
         var v = Number($('#wpk-qty-val').val());
-        if (!dongDangSua) return;
+        var id = dongDangSua;
+        if (!id) return;
         if (isNaN(v) || v < 0) { alert('Số lượng không hợp lệ.'); return; }
-        post('set_item_qty', { item_id: dongDangSua, qty: v });
         dongModal('wpk-qty-modal');
+        // Số dưới quy cách vẫn ghi bình thường; sau khi vẽ lại thì nháy sáng ô đó.
+        post('set_item_qty', { item_id: id, qty: v }, function () { nhayOSoLuong(id); });
     });
     $(document).on('keydown', '#wpk-group-val, #wpk-qty-val', function (e) {
         if (e.key !== 'Enter') return;
