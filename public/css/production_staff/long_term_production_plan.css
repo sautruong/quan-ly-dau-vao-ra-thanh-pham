@@ -596,3 +596,13 @@
     border-color: #fca5a5 !important;
     transition: background .2s ease, border-color .2s ease;
 }
+
+/* Lý do vì sao tên vừa gõ bị trả về — nếu chỉ nháy đỏ suông thì người dùng tưởng
+   hệ thống tự đổi sản phẩm, đúng cái hiểu nhầm đã xảy ra với "Đường đen bí đao". */
+.ltp-item .ltp-name-warn {
+    flex: 1 0 100%;
+    margin: 2px 0 0 26px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: #b91c1c;
+}

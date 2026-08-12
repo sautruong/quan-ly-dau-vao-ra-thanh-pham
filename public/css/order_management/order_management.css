@@ -655,3 +655,63 @@ tr.ps-empty-row .ps-stt-badge { background: #e2e2e2; color: #b3b3b3; }
 }
 .om-qty-input:hover, .om-new-qty-input:hover { border-color: var(--om-gray-300); background: #fff; }
 .om-qty-input:focus, .om-new-qty-input:focus { outline: none; border-color: var(--om-green); background: #fff; }
+
+/* =====================================================================
+   PHIẾU SOẠN GỬI KHO — nút trên card + modal admin xem lại
+   ===================================================================== */
+
+/* Nút "Gửi phiếu soạn": xám = chưa gửi, vàng = kho đang soạn, xanh = đã soạn xong. */
+.om-send-picking {
+    background: #fff;
+    border: 1px solid var(--om-gray-300);
+    color: #6b7280;
+}
+.om-send-picking:hover { border-color: var(--om-green); color: var(--om-green); }
+.om-send-picking.is-doing { background: #fffbeb; border-color: #fcd34d; color: #b45309; }
+.om-send-picking.is-done  { background: #ecfdf3; border-color: #86efac; color: #15803d; }
+.om-send-picking.is-synced { background: #f3f4f6; border-color: var(--om-gray-300); color: #9ca3af; }
+
+.om-picking-box { max-width: 720px; }
+.om-picking-table td, .om-picking-table th { text-align: center; }
+.om-picking-table td.text-left, .om-picking-table th.text-left { text-align: left; }
+.om-pk-ok { color: #16a34a; font-size: 12px; }
+.om-pk-same { color: #d1d5db; }
+.om-pk-diff { color: #dc2626; font-weight: 700; }
+.om-pk-add { color: #15803d; font-size: 12px; font-weight: 600; }
+
+.om-picking-kien {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.om-picking-removed {
+    margin-top: 12px;
+    border: 1px dashed var(--om-gray-300);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+.om-picking-removed-head { font-size: 12.5px; font-weight: 700; color: #9ca3af; margin-bottom: 6px; }
+
+.om-pk-restore {
+    border: 1px solid var(--om-gray-300);
+    background: #fff;
+    border-radius: 999px;
+    padding: 4px 12px;
+    margin: 0 6px 6px 0;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: #6b7280;
+    cursor: pointer;
+}
+.om-pk-restore:hover { border-color: var(--om-green); color: var(--om-green); }
+
+/* Chân modal có thêm dòng tổng bên trái -> đổi sang bố cục 2 đầu. */
+.om-picking-box .om-modal-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.om-picking-sum { font-size: 13.5px; color: #374151; }
+.om-picking-sum::first-line { font-weight: 600; }

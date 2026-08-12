@@ -4,6 +4,7 @@
 $data = isset($data) ? $data : ['rows' => [], 'total_pages' => 0, 'page' => 1, 'customers' => []];
 if (!isset($data['customers']) || !is_array($data['customers'])) $data['customers'] = [];
 if (!isset($data['auto_delete_days'])) $data['auto_delete_days'] = 0;
+if (!isset($data['slip_map']) || !is_array($data['slip_map'])) $data['slip_map'] = [];
 
 if (!function_exists('om_money')) {
     function om_money($n) { return number_format((float) $n, 0, ',', '.'); }
@@ -155,7 +156,25 @@ if (!function_exists('om_money')) {
                             </div>
                         </div>
 
+                        <?php
+                        // Trạng thái phiếu soạn đã gửi xuống kho (nếu có).
+                        $slip = $data['slip_map'][(int) $o['id']] ?? null;
+                        $slip_status = $slip ? (string) $slip['status'] : '';
+                        $slip_done   = ($slip_status === 'done');
+                        $slip_synced = $slip ? !empty($slip['synced']) : false;
+                        if ($slip_synced)      { $send_cls = ' is-synced';  $send_title = 'Đã cập nhật đơn theo phiếu soạn'; $send_icon = 'fa-clipboard-check'; }
+                        elseif ($slip_done)    { $send_cls = ' is-done';    $send_title = 'Kho đã soạn xong — bấm để xem & cập nhật đơn'; $send_icon = 'fa-clipboard-check'; }
+                        elseif ($slip)         { $send_cls = ' is-doing';   $send_title = 'Kho đang soạn — bấm để xem tiến độ'; $send_icon = 'fa-clipboard-list'; }
+                        else                   { $send_cls = '';            $send_title = 'Gửi phiếu soạn cho nhân viên kho'; $send_icon = 'fa-paper-plane'; }
+                        ?>
                         <div class="om-card-actions">
+                            <button type="button"
+                                    class="om-btn om-btn-sm om-btn-icon om-send-picking<?= $send_cls ?>"
+                                    data-slip-id="<?= $slip ? (int) $slip['id'] : 0 ?>"
+                                    data-slip-status="<?= htmlspecialchars($slip_status, ENT_QUOTES, 'UTF-8') ?>"
+                                    title="<?= htmlspecialchars($send_title, ENT_QUOTES, 'UTF-8') ?>">
+                                <i class="fa-solid <?= $send_icon ?>"></i>
+                            </button>
                             <a class="om-btn om-btn-primary om-btn-sm om-btn-icon"
                                href="?mod=order_management&controllers=order_management&action=picking_slip&order_id=<?= (int) $o['id'] ?>"
                                title="Tạo phiếu soạn">
@@ -361,6 +380,40 @@ if (!function_exists('om_money')) {
             </div>
             <div class="om-modal-foot">
                 <button type="button" class="om-btn om-btn-primary" id="om-auto-delete-save"><i class="fa-solid fa-floppy-disk"></i> Lưu cài đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== MODAL: XEM PHIẾU SOẠN NHÂN VIÊN KHO ĐÃ CHỐT ======
+         Không sửa được ở đây — admin chỉ xem rồi quyết định có lấy số của kho ghi
+         đè lên đơn hay không ("Cập nhật đơn hàng"). -->
+    <div class="om-modal-mask" id="om-picking-modal" style="display:none;">
+        <div class="om-modal-box om-picking-box">
+            <span class="om-modal-close" id="om-picking-close">&times;</span>
+            <h3 class="om-modal-title"><i class="fa-solid fa-dolly"></i> Phiếu soạn — <span id="om-picking-cust"></span></h3>
+            <p class="om-modal-hint" id="om-picking-state"></p>
+            <table class="om-items om-picking-table">
+                <thead>
+                    <tr>
+                        <th class="text-left">Tên sản phẩm</th>
+                        <th>Đơn đặt</th>
+                        <th>Thực soạn</th>
+                        <th>Chung kiện</th>
+                        <th>Chênh lệch</th>
+                    </tr>
+                </thead>
+                <tbody id="om-picking-body"></tbody>
+            </table>
+            <div class="om-picking-kien" id="om-picking-kien"></div>
+            <div class="om-picking-removed" id="om-picking-removed" style="display:none;">
+                <div class="om-picking-removed-head"><i class="fa-solid fa-trash-can"></i> Nhân viên đã gỡ khỏi phiếu — bấm để cho vào lại</div>
+                <div id="om-picking-removed-list"></div>
+            </div>
+            <div class="om-modal-foot">
+                <span class="om-picking-sum" id="om-picking-sum"></span>
+                <button type="button" class="om-btn om-btn-primary" id="om-picking-sync">
+                    <i class="fa-solid fa-rotate"></i> Cập nhật đơn hàng
+                </button>
             </div>
         </div>
     </div>

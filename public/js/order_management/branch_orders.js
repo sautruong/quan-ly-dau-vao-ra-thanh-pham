@@ -991,4 +991,131 @@
         setTimeout(function () { $card.removeClass('om-card-pulse'); }, 650);
     })();
 
+    /* =====================================================================
+     *  PHIẾU SOẠN GỬI KHO
+     * ---------------------------------------------------------------------
+     *  Nút trên card có 4 trạng thái:
+     *   - chưa gửi   -> bấm là gửi phiếu xuống /warehouse/picking_task
+     *   - đang soạn  -> bấm là mở modal xem tiến độ (chưa cho cập nhật đơn)
+     *   - soạn xong  -> bấm là mở modal + cho "Cập nhật đơn hàng"
+     *   - đã đồng bộ -> chỉ xem lại
+     *
+     *  LUẬT: phiếu soạn KHÔNG tự ghi vào đơn. Nhân viên kho sửa/xóa thoải mái;
+     *  chỉ khi admin bấm "Cập nhật đơn hàng" số của kho mới ghi đè đơn gốc.
+     * ===================================================================== */
+    var pickingSlip = null;
+
+    $(document).on('click', '.om-send-picking', function () {
+        var $btn = $(this);
+        var $card = $btn.closest('.om-card');
+        var slipId = Number($btn.data('slip-id')) || 0;
+
+        if (slipId > 0) { openPickingModal(slipId); return; }
+
+        var cust = $card.find('.om-card-cust').text().trim();
+        if (!confirm('Gửi phiếu soạn đơn "' + cust + '" xuống cho nhân viên kho?')) return;
+        $btn.prop('disabled', true);
+        $.post(BASE + 'send_picking_slip', { order_id: $card.data('id') }, function (res) {
+            $btn.prop('disabled', false);
+            if (!res || !res.ok) { alert((res && res.msg) || 'Không gửi được phiếu soạn.'); return; }
+            $btn.attr('data-slip-id', res.id).data('slip-id', res.id)
+                .addClass('is-doing').attr('title', 'Kho đang soạn — bấm để xem tiến độ')
+                .find('i').attr('class', 'fa-solid fa-clipboard-list');
+            alert('Đã gửi phiếu soạn xuống kho.');
+        }, 'json').fail(function () { $btn.prop('disabled', false); alert('Lỗi mạng/Server.'); });
+    });
+
+    function openPickingModal(slipId) {
+        $.getJSON(BASE + 'picking_slip_review', { slip_id: slipId }, function (res) {
+            if (!res || !res.ok) { alert((res && res.msg) || 'Không tải được phiếu soạn.'); return; }
+            pickingSlip = res.slip;
+            renderPicking();
+            $('#om-picking-modal').fadeIn(120);
+        }).fail(function () { alert('Lỗi mạng/Server.'); });
+    }
+
+    function renderPicking() {
+        var s = pickingSlip;
+        if (!s) return;
+        var label = (s.customer_short && String(s.customer_short).trim()) || s.customer_name || '';
+        $('#om-picking-cust').text(label);
+
+        var done = (s.status === 'done');
+        var synced = !!Number(s.synced);
+        $('#om-picking-state').text(
+            synced ? 'Đã cập nhật đơn hàng theo phiếu này.'
+                   : (done ? 'Kho báo soạn xong. Xem lại rồi bấm "Cập nhật đơn hàng" để lấy số thực soạn ghi đè lên đơn.'
+                           : 'Kho đang soạn dở — chờ nhân viên bấm "Soạn xong" rồi hãy cập nhật đơn.')
+        );
+        $('#om-picking-sync').prop('disabled', !done || synced);
+
+        var live = (s.items || []).filter(function (i) { return !i.removed; });
+        var gone = (s.items || []).filter(function (i) { return i.removed; });
+
+        $('#om-picking-body').html(live.map(function (it) {
+            var d = Number(it.qty_actual) - Number(it.qty_order);
+            var dCell = it.added_by_staff
+                ? '<span class="om-pk-add">kho thêm</span>'
+                : (Math.abs(d) < 0.0001 ? '<span class="om-pk-same">—</span>'
+                    : '<span class="om-pk-diff">' + (d > 0 ? '+' : '') + wt(d) + '</span>');
+            return '<tr>' +
+                '<td class="text-left">' + esc(it.product_name) +
+                    (it.picked ? ' <i class="fa-solid fa-circle-check om-pk-ok" title="Kho đã tích bốc đủ"></i>' : '') + '</td>' +
+                '<td>' + (it.added_by_staff ? '—' : esc(it.order_kien || wt(it.qty_order))) + '</td>' +
+                '<td><b>' + esc(it.kien_text || wt(it.qty_actual)) + '</b></td>' +
+                '<td>' + (it.kien_group != null ? it.kien_group : '') + '</td>' +
+                '<td>' + dCell + '</td>' +
+                '</tr>';
+        }).join('') || '<tr><td colspan="5" class="text-center">Phiếu không còn dòng nào.</td></tr>');
+
+        var groups = (s.summary && s.summary.groups) || [];
+        var kmap = s.kien_map || {};
+        $('#om-picking-kien').html(groups.length
+            ? '<b>Đóng chung kiện:</b> ' + groups.slice().sort(function (a, b) { return a - b; })
+                .map(function (g) { return 'Kiện (' + g + ') = ' + esc(kmap[String(g)] || '?'); }).join(' · ')
+            : '');
+
+        if (!gone.length) $('#om-picking-removed').hide();
+        else {
+            $('#om-picking-removed').show();
+            $('#om-picking-removed-list').html(gone.map(function (it) {
+                return '<button type="button" class="om-pk-restore" data-item-id="' + it.id + '">' +
+                    '<i class="fa-solid fa-rotate-left"></i> ' + esc(it.product_name) + '</button>';
+            }).join(''));
+        }
+
+        var sum = s.summary || {};
+        $('#om-picking-sum').text('Số kiện dự kiến: ' + (sum.text || '—') +
+            (sum.weight ? ' · ' + wt(sum.weight) + ' kg' : ''));
+    }
+
+    // Cho lại 1 dòng nhân viên đã gỡ vào phiếu (dùng chung endpoint của module Kho).
+    $(document).on('click', '.om-pk-restore', function () {
+        var id = Number($(this).data('item-id')) || 0;
+        if (!id) return;
+        $.post('?mod=warehouse&controllers=warehouse&action=set_item_removed',
+            { item_id: id, removed: '' }, function (res) {
+                if (!res || !res.ok) { alert((res && res.msg) || 'Không phục hồi được.'); return; }
+                pickingSlip = res.slip;
+                renderPicking();
+            }, 'json').fail(function () { alert('Lỗi mạng/Server.'); });
+    });
+
+    $(document).on('click', '#om-picking-sync', function () {
+        if (!pickingSlip) return;
+        if (!confirm('Lấy số nhân viên kho đã soạn ghi đè lên đơn hàng gốc? Số cũ của đơn sẽ mất.')) return;
+        var $btn = $(this).prop('disabled', true);
+        $.post(BASE + 'sync_picking_slip', { slip_id: pickingSlip.id }, function (res) {
+            $btn.prop('disabled', false);
+            if (!res || !res.ok) { alert((res && res.msg) || 'Không cập nhật được.'); return; }
+            alert('Đã cập nhật đơn hàng: ' + res.lines + ' dòng, ' + wt(res.weight) + ' kg.');
+            location.reload();
+        }, 'json').fail(function () { $btn.prop('disabled', false); alert('Lỗi mạng/Server.'); });
+    });
+
+    $(document).on('click', '#om-picking-close', function () { $('#om-picking-modal').fadeOut(120); });
+    $(document).on('click', '#om-picking-modal', function (e) {
+        if (e.target === this) $(this).fadeOut(120);
+    });
+
 })(jQuery);

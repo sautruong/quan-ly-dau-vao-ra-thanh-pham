@@ -103,6 +103,8 @@ function cdb_allowed_tables()
         'cash_transactions',
         // production_staff (Lập KHSX / Bản KHSX cho nhân viên)
         'production_plans', 'pre_production_notes', 'additional_tasks', 'product_info_basic',
+        // production_staff — Kế hoạch sản xuất dài ngày
+        'long_term_production_plans', 'long_term_production_tasks', 'long_term_production_backup',
         // production_formula (Công thức sản xuất)
         'product_recipe_notes', 'product_batch_recipes', 'product_batch_recipe_items', 'material_images',
         // customer_orders (Quản lý đơn hàng) — 'sales_warehouse_export_invoices', 'stock_exports',

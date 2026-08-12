@@ -163,6 +163,15 @@ function permission_ensure_static_views()
          VALUES ('customer_orders', 'customer_orders', 'orders', 'Đơn hàng', 'QUẢN LÝ ĐƠN HÀNG', 150, 1)"
     );
 
+    /* Kho — "Soạn hàng": nhân viên kho nhận phiếu soạn admin gửi từ branch_orders.
+       Đăng ký ở đây (thay vì chỉ trong module) để view có mặt trong trang Phân quyền
+       ngay cả khi chưa ai mở /warehouse/picking_task lần nào — nếu không thì không cấp
+       quyền được cho ai, mà không cấp được thì cũng không ai mở để nó tự đăng ký. */
+    db_query(
+        "INSERT IGNORE INTO tbl_views (module, controller, action, label, group_label, sort, is_active)
+         VALUES ('warehouse', 'warehouse', 'picking_task', 'Soạn hàng', 'KHO', 152, 1)"
+    );
+
     /* 3 tab của "Bán hàng - nhà máy" tách thành 3 mục menu cấp 2 (thay cho thanh tab trong
        trang). Trước đây chỉ order_factory có trong danh mục; 2 view kia không đăng ký nên
        vừa không hiện ở sidebar, vừa lọt guard FAIL-OPEN (ai đăng nhập cũng vào được). */

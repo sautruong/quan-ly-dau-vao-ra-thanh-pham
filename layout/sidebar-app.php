@@ -48,6 +48,7 @@ function app_sidebar_group_icon($label)
         'QUẢN TRỊ HỆ THỐNG'       => 'fa-user-shield',
         'ĐƠN ĐẶT HÀNG'            => 'fa-clipboard-check',
         'QUẢN LÝ ĐƠN HÀNG'        => 'fa-file-invoice',
+        'KHO'                     => 'fa-dolly',
         'VĂN PHÒNG'               => 'fa-briefcase',
         'LƯƠNG'                   => 'fa-money-check-dollar',
         'Tiện ích'                => 'fa-toolbox',

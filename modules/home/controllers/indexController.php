@@ -229,7 +229,7 @@ function permissionStateAction()
         'DỰ ÁN' => 'fa-diagram-project', 'ĐƠN ĐẶT HÀNG' => 'fa-clipboard-check',
         'QUẢN LÝ FILE' => 'fa-folder-open', 'VĂN PHÒNG' => 'fa-briefcase',
         'LƯƠNG' => 'fa-money-check-dollar', 'Sự kiện' => 'fa-comment-dots',
-        'QUẢN LÝ ĐƠN HÀNG' => 'fa-file-invoice',
+        'QUẢN LÝ ĐƠN HÀNG' => 'fa-file-invoice', 'KHO' => 'fa-dolly',
     ];
 
     $groups = permission_menu_for_user($user);

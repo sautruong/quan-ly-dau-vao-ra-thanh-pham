@@ -9,6 +9,19 @@ function construct()
     load_model('order_management');
 }
 
+/**
+ * Nạp model module Kho (phiếu soạn) — chỉ nạp MODEL, không nạp controller bên đó
+ * để khỏi trùng tên hàm.
+ *
+ * PHẢI gọi TRONG action, không được require ở đầu tệp: load_model() dùng `require`
+ * trần nên nếu warehouseModel kéo order_managementModel vào trước construct() thì
+ * construct() nạp lại lần nữa -> "Cannot redeclare om_get_branch_pickup_reminders()".
+ */
+function om_load_warehouse_model()
+{
+    require_once __DIR__ . '/../../warehouse/models/warehouseModel.php';
+}
+
 /** Id user nhà máy đang thao tác (để gắn actor cho chuông). */
 function om_actor_id()
 {
@@ -36,6 +49,13 @@ function branch_ordersAction()
     $data = om_get_branch_orders($page, 10);
     $data['customers'] = om_get_customers();
     $data['auto_delete_days'] = om_get_auto_delete_days();
+    // Trạng thái phiếu soạn của từng đơn (1 truy vấn cho cả trang) -> nút "Gửi phiếu soạn"
+    // biết mình đang ở trạng thái nào: chưa gửi / đang soạn / đã soạn xong.
+    om_load_warehouse_model();
+    $data['slip_map'] = wh_slip_map_for_orders(array_map(
+        static fn($r) => (int) $r['id'],
+        $data['rows']
+    ));
     load_view('branch_orders', [
         'data' => $data,
     ]);
@@ -263,6 +283,83 @@ function order_prefillAction()
     $data = om_get_order_prefill($id);
     if (!$data) { echo json_encode(['ok' => false, 'msg' => 'Không tìm thấy đơn']); return; }
     echo json_encode(['ok' => true, 'data' => $data], JSON_UNESCAPED_UNICODE);
+}
+
+/* ==================================================================
+ *  PHIẾU SOẠN GỬI NHÂN VIÊN KHO  (module Kho / view "Soạn hàng")
+ * ================================================================== */
+
+/** Ai được nhận chuông "có phiếu soạn mới": user được cấp view Soạn hàng; chưa cấp ai thì báo admin. */
+function om_picking_receiver_ids()
+{
+    $ids  = [];
+    $view = permission_find_view('warehouse', 'warehouse', 'picking_task');
+    if ($view) {
+        $vid = (int) $view['id'];
+        foreach ((db_fetch_array("SELECT user_id FROM tbl_user_views WHERE view_id = $vid") ?: []) as $r) {
+            $ids[] = (int) $r['user_id'];
+        }
+    }
+    if (!$ids) $ids = notify_admin_ids();
+    return array_values(array_unique(array_filter($ids, static fn($v) => $v > 0)));
+}
+
+/* AJAX: admin bấm "Gửi phiếu soạn" trên 1 card đơn hàng. */
+function send_picking_slipAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    om_load_warehouse_model();
+    if (!permission_current_user()) { echo json_encode(['ok' => false, 'msg' => 'Chưa đăng nhập.']); return; }
+    $order_id = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
+    $actor    = om_actor_id();
+
+    $r = wh_create_slip_from_order($order_id, $actor);
+    if (empty($r['ok'])) { echo json_encode($r, JSON_UNESCAPED_UNICODE); return; }
+
+    $meta  = om_get_order_meta($order_id);
+    $label = (string) ($meta['customer_name'] ?? '');
+    $link  = '?mod=warehouse&controllers=warehouse&action=picking_task&slip_id=' . (int) $r['id'];
+    foreach (om_picking_receiver_ids() as $uid) {
+        if ((int) $uid === $actor) continue;
+        notify_create((int) $uid, 'Có phiếu soạn mới',
+            'Đơn "' . $label . '" đã được gửi xuống kho để soạn hàng.', $link, 'picking_slip', $actor);
+    }
+    echo json_encode(['ok' => true, 'id' => (int) $r['id']], JSON_UNESCAPED_UNICODE);
+}
+
+/* AJAX: admin xem lại phiếu nhân viên đã soạn (modal trên card đơn). */
+function picking_slip_reviewAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    om_load_warehouse_model();
+    if (!permission_current_user()) { echo json_encode(['ok' => false, 'msg' => 'Chưa đăng nhập.']); return; }
+    $slip_id  = isset($_GET['slip_id']) ? (int) $_GET['slip_id'] : 0;
+    $order_id = isset($_GET['order_id']) ? (int) $_GET['order_id'] : 0;
+    if ($slip_id <= 0 && $order_id > 0) {
+        $latest  = wh_latest_slip_for_order($order_id);
+        $slip_id = $latest ? (int) $latest['id'] : 0;
+    }
+    $slip = $slip_id > 0 ? wh_get_slip($slip_id) : null;
+    if (!$slip) { echo json_encode(['ok' => false, 'msg' => 'Đơn này chưa có phiếu soạn.']); return; }
+    echo json_encode(['ok' => true, 'slip' => $slip], JSON_UNESCAPED_UNICODE);
+}
+
+/* AJAX: "Cập nhật đơn hàng" — lấy số nhân viên đã chốt soạn ghi đè lên đơn gốc. */
+function sync_picking_slipAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    om_load_warehouse_model();
+    if (!permission_current_user()) { echo json_encode(['ok' => false, 'msg' => 'Chưa đăng nhập.']); return; }
+    $slip_id = isset($_POST['slip_id']) ? (int) $_POST['slip_id'] : 0;
+    if ($slip_id <= 0) { echo json_encode(['ok' => false, 'msg' => 'Thiếu slip_id.']); return; }
+
+    $r = wh_sync_to_order($slip_id);
+    if (empty($r['ok'])) { echo json_encode($r, JSON_UNESCAPED_UNICODE); return; }
+
+    $meta = om_get_order_meta((int) $r['order_id']);
+    om_notify_seller($meta, 'Đơn hàng đã cập nhật theo thực tế soạn',
+        'Đơn "' . ($meta['customer_name'] ?? '') . '" vừa được cập nhật theo số lượng nhân viên kho thực soạn.');
+    echo json_encode($r, JSON_UNESCAPED_UNICODE);
 }
 
 /* AJAX: "Xác nhận xuất kho" -> đánh dấu đã bốc + báo bán hàng + trả prefill để đẩy sang sales_delivery_note. */

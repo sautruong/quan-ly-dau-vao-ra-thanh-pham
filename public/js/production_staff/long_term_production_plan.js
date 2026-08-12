@@ -241,7 +241,13 @@
         return '<li class="ltp-item" data-id="' + it.id + '" data-product-id="' + it.product_id +
                '" data-unit="' + esc(it.unit || '') + '">' +
                '<span class="ltp-item-grip" draggable="true" title="Kéo để chuyển ngày"><i class="fa-solid fa-grip-vertical"></i></span>' +
-               '<input type="text" class="ltp-item-name" value="' + name + '" data-name="' + name + '" autocomplete="off" spellcheck="false" title="Bấm để đổi sản phẩm">' +
+               /* PHẢI có ltp-prod-search y như bản PHP dựng lúc tải trang (view dòng 33).
+                  Thiếu class này thì toàn bộ autocomplete tắt ngóm: handler input/keydown/
+                  focusout đều lọc theo .ltp-prod-search -> gõ tên không ra gợi ý nào, không
+                  chọn được sản phẩm nào, chữ cứ nằm đó như đã lưu. Và đây là bản dựng dùng
+                  MỖI KHI card vẽ lại (thêm SP, kéo đổi ngày...) nên chỉ cần thao tác một lần
+                  là cả ngày đó mất autocomplete. */
+               '<input type="text" class="ltp-item-name ltp-prod-search" value="' + name + '" data-name="' + name + '" autocomplete="off" spellcheck="false" title="Bấm để đổi sản phẩm">' +
                '<input type="text" class="ltp-item-qty" value="' + qty + '" inputmode="decimal" title="Bấm để đổi số lượng">' +
                '<span class="ltp-item-del" title="Xóa">&times;</span>' +
                '</li>';
@@ -416,22 +422,52 @@
        nhập số lượng (số lượng thì LƯU ĐƯỢC vì đi đường riêng), F5 xong tên quay về sản phẩm cũ.
        Nay rời ô mà chưa chọn gợi ý thì trả ngay về tên thật + nháy đỏ, để thấy liền là chưa ăn.
        --------------------------------------------------------------------------------- */
+    /** Bỏ dấu + thường hoá để so tên gõ tay với tên sản phẩm. */
+    function chuanHoaTen(s) {
+        return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+            .toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+
+    /** Trả ô về tên thật + nháy đỏ + báo lý do ngay dưới ô (tự tắt sau 2,6s). */
+    function traVeTenCu(input, lyDo) {
+        input.value = input.getAttribute('data-name') || '';
+        input.classList.add('ltp-name-revert');
+        setTimeout(function () { input.classList.remove('ltp-name-revert'); }, 1000);
+        var li = input.closest('.ltp-item');
+        if (!li || li.querySelector('.ltp-name-warn')) return;
+        var tip = document.createElement('div');
+        tip.className = 'ltp-name-warn';
+        tip.textContent = lyDo;
+        li.appendChild(tip);
+        setTimeout(function () { if (tip.parentNode) tip.parentNode.removeChild(tip); }, 2600);
+    }
+
     document.addEventListener('focusout', function (e) {
         var t = e.target;
         if (!t || !t.classList || !t.classList.contains('ltp-item-name')) return;
-        if (t.classList.contains('ltp-prod-search') && t.closest('.ltp-item-draft')) {
-            // Dòng nháp: chưa từng có sản phẩm nào, để trống là đúng.
-            t.value = '';
-            return;
-        }
+        if (t.closest('.ltp-item-draft')) return;   // dòng nháp có handler riêng bên dưới
+
+        var tenCu = t.getAttribute('data-name') || '';
+        var daGo  = t.value.trim();                  // PHẢI đọc ngay: handler dưới sẽ trả ô về tên cũ ở mốc 150ms
+
         setTimeout(function () {
-            if (dangCommit === t) return;               // đang lưu lựa chọn hợp lệ
-            var thuc = t.getAttribute('data-name') || '';
-            if (t.value === thuc) return;               // không đổi gì
-            t.value = thuc;
-            t.classList.add('ltp-name-revert');
-            setTimeout(function () { t.classList.remove('ltp-name-revert'); }, 1000);
-        }, 60);
+            if (dangCommit === t) return;            // đang lưu lựa chọn hợp lệ
+            if (daGo === '' || daGo === tenCu.trim()) { t.value = tenCu; return; }
+
+            // Gõ tay xong bỏ đi mà không bấm gợi ý: tự dò giúp thay vì im lặng nuốt.
+            // Khớp đúng tên (bỏ dấu) hoặc chỉ ra đúng 1 kết quả -> lưu luôn.
+            post('search_product', { keyword: daGo }).then(function (res) {
+                if (dangCommit === t) return;
+                var ds = (res && res.data) || [];
+                var dungY = ds.filter(function (p) { return chuanHoaTen(p.product_name) === chuanHoaTen(daGo); });
+                var chon = (dungY.length === 1) ? dungY[0] : (ds.length === 1 ? ds[0] : null);
+                if (chon) { selectSuggestion(t, parseInt(chon.id, 10), chon.product_name); return; }
+                traVeTenCu(t, ds.length
+                    ? 'Có ' + ds.length + ' sản phẩm gần giống — phải bấm chọn trong danh sách gợi ý.'
+                    : 'Không có sản phẩm nào tên "' + daGo + '".');
+            });
+        }, 170);
     });
 
     // Lấy SL sản xuất gần nhất của sản phẩm điền vào ô .ltp-item-qty của dòng

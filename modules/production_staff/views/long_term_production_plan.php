@@ -129,6 +129,14 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
                     <i class="fa-solid fa-gear"></i> Cài đặt
                 </button>
                 <?php endif; ?>
+                <?php if (permission_can_check_db('production_staff', 'production_staff', 'long_term_production_plan')): ?>
+                <div class="cdb-actions">
+                    <button type="button" class="btn-check-db"
+                        data-tables="long_term_production_plans,long_term_production_tasks,long_term_production_backup,products">
+                        <i class="fa-solid fa-database"></i> Check Database
+                    </button>
+                </div>
+                <?php endif; ?>
             </div>
             <div class="ltp-board" id="ltp-board">
                 <?php $ltp_cur_week = null; foreach ($days as $d):
@@ -396,6 +404,7 @@ $ltp_today_monday_ts = strtotime('monday this week', strtotime(date('Y-m-d')));
     <script src="<?php echo asset_ver('public/js/production_staff/long_term_production_plan.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/production_staff/plan_auto_export.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/day_plan_modal.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

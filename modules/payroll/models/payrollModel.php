@@ -344,6 +344,30 @@ function py_workdays_in_month($year, $month)
  *  Nhân sự — Trụ sở chính (branch = setting 'payroll.branch_filter')
  * ============================================================ */
 /** Trưởng phòng luôn đứng đầu, sau đó Nhân viên sắp theo thâm niên lâu nhất (hire_date sớm nhất) trước. */
+/**
+ * MỘT nhân viên với ĐÚNG hình dạng mà py_calc_employee_month() cần.
+ *
+ * BẪY ĐÃ DÍNH (12/8/2026): `SELECT * FROM employees` KHÔNG đủ — job_title nằm ở
+ * employee_organization còn hire_date nằm ở employee_work_info. Thiếu job_title thì
+ * py_calc_employee_month() thoát sớm với warning "Chưa cấu hình lương cho chức danh này"
+ * và KHÔNG trả về kpi_o, nên đoạn tính lại cho mail lặng lẽ không làm gì cả.
+ * Giữ ĐÚNG bộ cột của py_employees_for_branch() để 2 đường tính không bao giờ lệch.
+ */
+function py_employee_for_calc($employee_id)
+{
+    $eid = (int) $employee_id;
+    if ($eid <= 0) return null;
+    return db_fetch_row(
+        "SELECT e.id, e.employee_code, e.full_name, e.email,
+                w.hire_date, w.branch, w.employment_status,
+                o.job_title
+         FROM employees e
+         LEFT JOIN employee_work_info w ON e.id = w.employee_id
+         LEFT JOIN employee_organization o ON e.id = o.employee_id
+         WHERE e.id = $eid LIMIT 1"
+    );
+}
+
 function py_employees_for_branch($branch = null)
 {
     $branch = $branch !== null ? $branch : py_branch();
@@ -1327,7 +1351,7 @@ function py_send_payslip_email($employee_id, $year, $month)
        py_calc_employee_month() với $overrides rỗng tự lùi về chính các giá trị đã lưu trong
        payroll_monthly_entries, nên tính lại KHÔNG làm mất số nhập tay.
        ===================================================================================== */
-    $emp_full = db_fetch_row("SELECT * FROM employees WHERE id = $eid LIMIT 1");
+    $emp_full = py_employee_for_calc($eid);
     if ($emp_full) {
         $stats = py_calc_monthly_stats($y, $m);
         $live  = py_calc_employee_month($emp_full, $y, $m, [], $stats);
@@ -1339,8 +1363,15 @@ function py_send_payslip_email($employee_id, $year, $month)
         $summary['new_product_qty']     = $stats['new_product_qty'];
 
         // Thưởng KPI sản lượng và các tổng phụ thuộc nó.
-        foreach (['kpi_o', 'kpi_total', 'total_with_bhxh', 'total_after_bhxh', 'net_pay'] as $k) {
-            if (array_key_exists($k, $live)) $entry[$k] = $live[$k];
+        // Chỉ ghi đè khi $live tính được thật (thiếu cấu hình chức danh thì nó chỉ trả về
+        // {employee_id, full_name, warning} — lúc đó giữ nguyên số đã lưu còn hơn ghi số rỗng).
+        if (!isset($live['warning']) && array_key_exists('kpi_o', $live)) {
+            foreach ([
+                'kpi_o', 'kpi_i', 'kpi_u', 'kpi_o_base', 'new_product_bonus', 'kpi_total',
+                'total_with_bhxh', 'total_after_bhxh', 'net_pay',
+            ] as $k) {
+                if (array_key_exists($k, $live)) $entry[$k] = $live[$k];
+            }
         }
     }
 
