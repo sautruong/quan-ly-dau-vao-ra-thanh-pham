@@ -176,8 +176,8 @@
 
 .wpk-row {
     border-bottom: 1px solid #f4f5f7;
-    /* Chặn trình duyệt tự xử lý vuốt ngang (back/forward, pull-to-refresh) để
-       cử chỉ gạt của mình nhận được pointermove. */
+    /* Chặn trình duyệt tự xử lý chạm ngang/nháy đúp: không có nó thì bấm đúp ô số
+       lượng bị hiểu thành phóng to trang, modal đổi số không mở ra. */
     touch-action: pan-y;
 }
 
@@ -252,7 +252,7 @@
     margin-top: 2px;
 }
 
-/* Cụm "{checkbox} 2B" — gạt sang trái để nhập số bốc khác. */
+/* Cụm "{checkbox} 2B" — bấm 1 lần quy đổi, bấm đúp mở modal đổi số. */
 .wpk-qty-wrap {
     flex: 0 0 auto;
     display: flex;
@@ -315,53 +315,6 @@
 .wpk-del:hover { color: #dc2626; background: #fef2f2; }
 .wpk-row.is-picked .wpk-del { visibility: hidden; }
 
-/* Ô nhập hiện ra sau khi gạt */
-.wpk-slot {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 8px 10px 12px;
-    background: #f9fafb;
-    border-left: 3px solid var(--wpk-accent);
-}
-
-.wpk-slot label {
-    font-size: 12.5px;
-    color: #6b7280;
-    flex: 0 0 auto;
-}
-
-.wpk-slot input {
-    width: 110px;
-    border: 1px solid var(--wpk-accent);
-    border-radius: 8px;
-    padding: 7px 10px;
-    font-size: 15px;
-    font-weight: 600;
-    font-family: inherit;
-    outline: none;
-}
-
-.wpk-slot-unit { font-size: 12.5px; color: #9ca3af; }
-
-/* Chua nhap gi -> x (dong). Nhap so > 0 -> tick (xac nhan roi an). */
-.wpk-slot-btn {
-    flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fff;
-    color: #9ca3af;
-    cursor: pointer;
-    font-size: 15px;
-}
-
-.wpk-slot-btn[data-mode="ok"] {
-    border-color: var(--wpk-accent);
-    background: var(--wpk-accent);
-    color: #fff;
-}
 
 /* ---- Đã gỡ ---- */
 .wpk-removed {
@@ -554,17 +507,6 @@
     margin: 0 24px 12px 0;
 }
 
-.wpk-info-line {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 14px;
-    padding: 6px 0;
-    border-bottom: 1px solid #f4f5f7;
-}
-
-.wpk-info-line span { color: #6b7280; }
-.wpk-info-line i { color: #9ca3af; font-style: normal; }
 
 /* ---- Điện thoại: app_shell.css đã mở khoá cuộn cho html/body/#wrapper, nên khối này
        phải trả overflow về visible, nếu không sẽ thành 2 tầng cuộn lồng nhau. ---- */
@@ -685,6 +627,22 @@
         padding: 0 !important;
         box-shadow: none !important;
         border-radius: 0;
+        /* Trang ít nội dung (chưa có phiếu nào) vẫn phải phủ trắng hết màn hình. */
+        min-height: 100vh;
+    }
+
+    /* HAI DẢI ĐEN TRÊN/DƯỚI: global.css đặt `html, body { background: #000; display: flex;
+       align-items: center }` cho khung 1 màn hình của máy tính. Bản mobile của app_shell.css
+       chỉ trả `body` về display:block, KHÔNG đụng tới `html` — nên body vẫn là flex item bị
+       canh giữa theo chiều dọc, chừa nền đen lộ ra trên và dưới. Gỡ nốt ở đây. */
+    html {
+        display: block;
+        align-items: stretch;
+    }
+
+    html,
+    body {
+        background-color: #fff;
     }
 
     /* Header dùng chung để margin-bottom 18px + padding-bottom 14px — trên điện thoại
@@ -865,3 +823,67 @@
 .wpk-chk.is-lock { cursor: default; }
 .wpk-row.is-readonly { opacity: 1; background: transparent; }
 .wpk-row.is-readonly .wpk-qty { cursor: default; }
+
+/* ---- 2 modal nhập nhanh: chung kiện số / bốc thực tế ---- */
+.wpk-modal-sub {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0 0 12px;
+}
+
+.wpk-modal-sub b { color: #111827; }
+
+.wpk-modal-input {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 20px;
+    font-weight: 700;
+    font-family: inherit;
+    text-align: center;
+    outline: none;
+}
+
+.wpk-modal-input:focus { border-color: var(--wpk-accent); }
+
+.wpk-modal-inline { display: flex; align-items: center; gap: 8px; }
+.wpk-modal-inline .wpk-modal-input { flex: 1 1 auto; }
+.wpk-modal-unit { flex: 0 0 auto; font-size: 13px; color: #9ca3af; }
+
+.wpk-modal-hint {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wpk-accent);
+    min-height: 18px;
+    text-align: center;
+}
+
+.wpk-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.wpk-mbtn {
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    color: #374151;
+    cursor: pointer;
+}
+
+.wpk-mbtn-ghost:hover { border-color: #dc2626; color: #dc2626; }
+
+.wpk-mbtn-ok {
+    border-color: var(--wpk-accent);
+    background: var(--wpk-accent);
+    color: #fff;
+}

@@ -8,16 +8,16 @@
  *  cố ý không giữ trạng thái ở client, vì phiếu có thể mở song song trên điện
  *  thoại và máy tính, giữ ở client là hai bên lệch nhau ngay.
  *
- *  HAI THỨ PHẢI GIỮ NGUYÊN GIỮA CÁC LẦN VẼ LẠI (yêu cầu của anh Sáu):
- *   1. THỨ TỰ DÒNG — chốt một lần lúc mở phiếu (thuTuDong). Đổi số lượng hay
- *      bấm quy đổi kiện/số làm dòng rơi sang nhóm quy cách khác, nếu sắp lại
- *      theo nhóm thì dòng nhảy đi mất chỗ ngay dưới tay đang bốc.
- *   2. CÁC Ô ĐANG MỞ — gạt mở ô chung kiện ở nhiều dòng cùng lúc, chỉ đóng khi
- *      bấm × (hoặc ✓ sau khi nhập số). Kèm giữ luôn con trỏ đang gõ.
+ *  THỨ TỰ DÒNG PHẢI GIỮ NGUYÊN GIỮA CÁC LẦN VẼ LẠI (yêu cầu của anh Sáu):
+ *  chốt một lần lúc mở phiếu (thuTuDong). Đổi số lượng hay bấm quy đổi kiện/số
+ *  làm dòng rơi sang nhóm quy cách khác; nếu sắp lại theo nhóm thì dòng nhảy đi
+ *  mất chỗ ngay dưới tay đang bốc.
  *
- *  Cử chỉ (pointer events nên dùng chung cho cả chạm lẫn chuột):
- *   - Gạt TÊN HÀNG sang phải  -> ô nhập số chung kiện
- *   - Gạt Ô SỐ LƯỢNG sang trái -> ô nhập số bốc thật (dừng gõ 2s tự lưu)
+ *  Thao tác trên 1 dòng (không còn cử chỉ gạt — đứng bốc hàng một tay thì gạt
+ *  trúng/trượt thất thường, bấm dứt khoát hơn):
+ *   - Bấm TÊN HÀNG        -> modal đánh số chung kiện
+ *   - Bấm Ô SỐ LƯỢNG      -> quy đổi kiện <-> số
+ *   - Bấm ĐÚP Ô SỐ LƯỢNG  -> modal đổi số bốc thực tế
  * ============================================================================
  */
 (function ($) {
@@ -98,49 +98,6 @@
     }
 
     /* =====================================================================
-     *  GIỮ TRẠNG THÁI Ô ĐANG MỞ QUA MỖI LẦN VẼ LẠI
-     * ===================================================================== */
-    function chupTrangThai() {
-        var t = { mo: {}, giaTri: {}, focus: null };
-        $('#wpk-list .wpk-slot').each(function () {
-            if (this.hasAttribute('hidden')) return;
-            var id = Number($(this).closest('.wpk-row').data('id')) || 0;
-            var loai = $(this).hasClass('wpk-slot-group') ? 'group' : 'qty';
-            t.mo[id + '|' + loai] = true;
-            t.giaTri[id + '|' + loai] = $(this).find('input').val();
-        });
-        var el = document.activeElement;
-        if (el && el.closest && el.closest('#wpk-list .wpk-slot')) {
-            var $s = $(el).closest('.wpk-slot');
-            t.focus = {
-                id: Number($s.closest('.wpk-row').data('id')) || 0,
-                loai: $s.hasClass('wpk-slot-group') ? 'group' : 'qty',
-                caret: (typeof el.selectionStart === 'number') ? el.selectionStart : null
-            };
-        }
-        return t;
-    }
-    function datLaiTrangThai(t) {
-        if (!t) return;
-        Object.keys(t.mo).forEach(function (k) {
-            var p = k.split('|');
-            var $slot = $('#wpk-list .wpk-row[data-id="' + p[0] + '"] .wpk-slot-' + p[1]);
-            if (!$slot.length) return;
-            $slot.removeAttr('hidden');
-            var v = t.giaTri[k];
-            if (v !== undefined && v !== null) $slot.find('input').val(v);
-            capNhatNutSlot($slot);
-        });
-        if (!t.focus) return;
-        var $inp = $('#wpk-list .wpk-row[data-id="' + t.focus.id + '"] .wpk-slot-' + t.focus.loai + ' input');
-        if (!$inp.length) return;
-        $inp.trigger('focus');
-        if (t.focus.caret != null && $inp[0].setSelectionRange) {
-            try { $inp[0].setSelectionRange(t.focus.caret, t.focus.caret); } catch (e) {}
-        }
-    }
-
-    /* =====================================================================
      *  VẼ
      * ===================================================================== */
 
@@ -186,7 +143,7 @@
         return '' +
             '<div class="wpk-row' + (locked ? ' is-picked' : '') + '" data-id="' + it.id + '">' +
               '<div class="wpk-row-main">' +
-                '<div class="wpk-name-wrap" data-swipe="right">' +
+                '<div class="wpk-name-wrap">' +
                   grp +
                   '<div class="wpk-name">' +
                     '<div class="wpk-name-text">' + warn + esc(String(it.product_name || '').toUpperCase()) + '</div>' +
@@ -194,23 +151,11 @@
                     remind +
                   '</div>' +
                 '</div>' +
-                '<div class="wpk-qty-wrap" data-swipe="left">' +
+                '<div class="wpk-qty-wrap">' +
                   '<label class="wpk-chk"><input type="checkbox" class="wpk-picked"' + (locked ? ' checked' : '') + '><span></span></label>' +
                   '<span class="wpk-qty' + (quyDoiDuoc(it) ? '' : ' is-plain') + '">' + esc(qtyText) + '</span>' +
                 '</div>' +
                 '<button type="button" class="wpk-del" title="Gỡ khỏi phiếu">&times;</button>' +
-              '</div>' +
-              '<div class="wpk-slot wpk-slot-group" hidden>' +
-                '<label>Chung kiện số</label>' +
-                '<input type="number" class="wpk-group-input" min="1" step="1" inputmode="numeric" value="' +
-                  (it.kien_group !== null && it.kien_group !== undefined ? it.kien_group : '') + '">' +
-                '<button type="button" class="wpk-slot-btn" data-mode="close" title="Đóng"><i class="fa-solid fa-xmark"></i></button>' +
-              '</div>' +
-              '<div class="wpk-slot wpk-slot-qty" hidden data-goc="' + (Number(it.qty_actual) || 0) + '">' +
-                '<label>Bốc thực tế</label>' +
-                '<input type="number" class="wpk-qty-input" min="0" step="1" inputmode="decimal" value="' + (Number(it.qty_actual) || 0) + '">' +
-                '<span class="wpk-slot-unit">' + esc(it.unit || '') + '</span>' +
-                '<button type="button" class="wpk-slot-btn" data-mode="close" title="Đóng"><i class="fa-solid fa-xmark"></i></button>' +
               '</div>' +
             '</div>';
     }
@@ -218,7 +163,6 @@
     function renderList() {
         var $list = $('#wpk-list');
         if (!$list.length || !SLIP) return;
-        var giu = chupTrangThai();
 
         var live = dongSong();
         var gone = ((SLIP.items) || []).filter(function (i) { return i.removed; });
@@ -253,7 +197,6 @@
             .html(CHIXEM
                 ? '<i class="fa-solid fa-circle-info"></i> Chi tiết'
                 : '<i class="fa-solid fa-circle-check"></i> Soạn xong');
-        datLaiTrangThai(giu);
     }
 
     function renderKien() {
@@ -372,104 +315,6 @@
             .fail(function () { alert('Lỗi mạng / máy chủ.'); });
     }
 
-    /* =====================================================================
-     *  CỬ CHỈ GẠT — pointer events, chạy được cả chạm lẫn chuột.
-     *  Chỉ kích hoạt khi đi ngang rõ hơn đi dọc, nếu không sẽ cướp mất thao
-     *  tác cuộn trang trên điện thoại.
-     * ===================================================================== */
-    var NGUONG = 40;
-    var sw = null;
-    var nuotClick = false;
-
-    $(document).on('pointerdown', '.wpk-name-wrap, .wpk-qty-wrap', function (e) {
-        if (!editable()) return;
-        var $row = $(this).closest('.wpk-row');
-        if ($row.hasClass('is-picked')) return;         // đã tích = khóa
-        if ($(e.target).closest('.wpk-chk, input, button').length) return;
-        sw = { x: e.clientX, y: e.clientY, dir: $(this).data('swipe'), row: $row, fired: false };
-    });
-
-    $(document).on('pointermove', function (e) {
-        if (!sw || sw.fired) return;
-        var dx = e.clientX - sw.x, dy = e.clientY - sw.y;
-        if (Math.abs(dx) < NGUONG || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-        if (sw.dir === 'right' && dx > 0) { sw.fired = true; moSlot(sw.row, 'group'); }
-        else if (sw.dir === 'left' && dx < 0) { sw.fired = true; moSlot(sw.row, 'qty'); }
-    });
-
-    // Gạt xong thì nhả tay VẪN sinh ra 1 click — nuốt cái click đó, nếu không nó sẽ
-    // chạy tiếp handler quy đổi kiện/mở modal và vẽ lại danh sách, xóa mất ô vừa mở.
-    $(document).on('pointerup pointercancel', function () {
-        if (sw && sw.fired) {
-            nuotClick = true;
-            setTimeout(function () { nuotClick = false; }, 300);
-        }
-        sw = null;
-    });
-
-    /** Mở ô nhập. CỐ Ý KHÔNG đóng ô của dòng khác — đánh chung kiện là việc làm trên
-        nhiều dòng một lúc, đóng cái trước là nhân viên mất dấu mình đang gom những gì. */
-    function moSlot($row, which) {
-        var $slot = $row.find(which === 'group' ? '.wpk-slot-group' : '.wpk-slot-qty');
-        if (!$slot.length) return;
-        $slot.removeAttr('hidden');
-        capNhatNutSlot($slot);
-        var $inp = $slot.find('input');
-        $inp.trigger('focus');
-        if ($inp[0] && $inp[0].select) $inp[0].select();
-    }
-
-    /* =====================================================================
-     *  HAI Ô NHẬP TRONG DÒNG — CÙNG MỘT KIỂU XÁC NHẬN
-     *  Chưa nhập / không đổi gì -> nút ×  (đóng, không ghi gì).
-     *  Có thay đổi hợp lệ       -> nút ✓  (xác nhận: lưu rồi đóng).
-     *  Cố ý KHÔNG tự lưu khi rời ô: nhân viên đang bốc hàng, chạm nhầm rồi bỏ đi
-     *  mà số vẫn được ghi thì rất khó truy.
-     * ===================================================================== */
-    function capNhatNutSlot($slot) {
-        var doi;
-        if ($slot.hasClass('wpk-slot-group')) {
-            var g = Number($slot.find('.wpk-group-input').val());
-            doi = !isNaN(g) && g > 0;
-        } else {
-            var v   = Number($slot.find('.wpk-qty-input').val());
-            var goc = Number($slot.attr('data-goc'));
-            doi = !isNaN(v) && v >= 0 && v !== goc;
-        }
-        $slot.find('.wpk-slot-btn')
-            .attr('data-mode', doi ? 'ok' : 'close')
-            .attr('title', doi ? 'Xác nhận' : 'Đóng')
-            .html('<i class="fa-solid ' + (doi ? 'fa-check' : 'fa-xmark') + '"></i>');
-    }
-    $(document).on('input', '.wpk-group-input, .wpk-qty-input', function () {
-        capNhatNutSlot($(this).closest('.wpk-slot'));
-    });
-    $(document).on('keydown', '.wpk-group-input, .wpk-qty-input', function (e) {
-        if (e.key !== 'Enter') return;
-        e.preventDefault();
-        $(this).closest('.wpk-slot').find('.wpk-slot-btn').trigger('click');
-    });
-    $(document).on('click', '.wpk-slot-btn', function () {
-        var $slot = $(this).closest('.wpk-slot');
-        var id    = Number($slot.closest('.wpk-row').data('id')) || 0;
-        var laOk  = $(this).attr('data-mode') === 'ok';
-        var laQty = $slot.hasClass('wpk-slot-qty');
-        $slot.attr('hidden', true);
-        if (!id) return;
-
-        if (laQty) {
-            if (laOk) post('set_item_qty', { item_id: id, qty: Number($slot.find('.wpk-qty-input').val()) || 0 });
-            else $slot.find('.wpk-qty-input').val($slot.attr('data-goc'));   // trả về số cũ
-            return;
-        }
-        if (laOk) { post('set_item_group', { item_id: id, group: Number($slot.find('.wpk-group-input').val()) }); return; }
-        // × ở ô chung kiện: chưa nhập gì. Dòng đang mang số thì hiểu là BỎ chung kiện.
-        var it = timDong(id);
-        if (it && it.kien_group !== null && it.kien_group !== undefined) {
-            post('set_item_group', { item_id: id, group: '' });
-        }
-    });
-
     /* ----- Tích "bốc đủ" = khóa dòng; tích lại = mở ra sửa ----- */
     $(document).on('change', '.wpk-picked', function () {
         var id = Number($(this).closest('.wpk-row').data('id')) || 0;
@@ -497,40 +342,111 @@
         return !!it && (Number(it.ops_qty) || 0) > 0 && (Number(it.kien_whole) || 0) > 0;
     }
 
-    /* ----- Bấm ô số lượng: quy đổi kiện <-> số (KHÔNG đụng thứ tự dòng) ----- */
+    /* =====================================================================
+     *  BẤM Ô SỐ LƯỢNG
+     *   1 lần  -> quy đổi kiện <-> số (không đụng thứ tự dòng)
+     *   2 lần  -> modal đổi số bốc thực tế
+     *  Bấm đúp cũng sinh ra 2 cú click, nên phải HOÃN việc quy đổi ~230ms rồi
+     *  huỷ nếu bấm đúp tới — không thì màn hình nháy 2 lần trước khi modal mở.
+     * ===================================================================== */
+    var henQuyDoi = null;
+
     $(document).on('click', '.wpk-qty', function () {
-        if (nuotClick) return;
-        var id = Number($(this).closest('.wpk-row').data('id')) || 0;
+        var $o = $(this);
+        var id = Number($o.closest('.wpk-row').data('id')) || 0;
         if (!id) return;
         var it = timDong(id);
         if (!quyDoiDuoc(it)) return;              // nhỏ hơn quy cách -> giữ nguyên
-        rawMode[id] = !rawMode[id];
-        $(this).text(rawMode[id] ? num(it.qty_actual) : (it.kien_text || ''));
+        clearTimeout(henQuyDoi);
+        henQuyDoi = setTimeout(function () {
+            rawMode[id] = !rawMode[id];
+            $o.text(rawMode[id] ? num(it.qty_actual) : (it.kien_text || ''));
+        }, 230);
     });
 
-    /* ----- Bấm tên hàng: modal tồn kho + quy cách ----- */
-    $(document).on('click', '.wpk-name-text', function () {
-        if (nuotClick) return;
+    $(document).on('dblclick', '.wpk-qty', function () {
+        clearTimeout(henQuyDoi);
+        if (!editable()) return;
         var id = Number($(this).closest('.wpk-row').data('id')) || 0;
         var it = id ? timDong(id) : null;
         if (!it) return;
-        $('#wpk-info-name').text(it.product_name || '');
-        var lines = '';
-        lines += '<div class="wpk-info-line"><span>Tồn kho:</span><b>' + num(it.stock) + ' ' + esc(it.unit || '') +
-                 (it.inv_kien ? ' <i>(' + esc(it.inv_kien) + ')</i>' : '') + '</b></div>';
-        lines += '<div class="wpk-info-line"><span>QC:</span><b>' +
-                 (it.pack_label ? esc(it.pack_label) : 'Không có quy cách ngoài') + '</b></div>';
-        lines += '<div class="wpk-info-line"><span>Đơn đặt:</span><b>' + esc(it.order_kien || num(it.qty_order)) + '</b></div>';
-        lines += '<div class="wpk-info-line"><span>Đang bốc:</span><b>' + esc(it.kien_text || num(it.qty_actual)) + '</b></div>';
-        if (it.kien_group !== null && it.kien_group !== undefined) {
-            lines += '<div class="wpk-info-line"><span>Chung kiện:</span><b>' + it.kien_group + '</b></div>';
-        }
-        $('#wpk-info-lines').html(lines);
-        $('#wpk-info-modal').removeAttr('hidden');
+        if (it.picked) { alert('Dòng đã tích bốc đủ — bỏ tích trước rồi mới sửa được số.'); return; }
+        dongDangSua = id;
+        $('#wpk-qty-sub').html(esc(it.product_name) +
+            (it.pack_label ? ' · ' + esc(it.pack_label) : '') +
+            ' · đơn đặt <b>' + esc(it.order_kien || num(it.qty_order)) + '</b>');
+        $('#wpk-qty-unit').text(it.unit || '');
+        $('#wpk-qty-val').val(Number(it.qty_actual) || 0);
+        veTruocQuyDoi();
+        $('#wpk-qty-modal').removeAttr('hidden');
+        setTimeout(function () { $('#wpk-qty-val').trigger('focus').trigger('select'); }, 30);
     });
-    $(document).on('click', '#wpk-info-close', function () { $('#wpk-info-modal').attr('hidden', true); });
-    $(document).on('click', '#wpk-info-modal', function (e) {
+
+    /* =====================================================================
+     *  BẤM TÊN HÀNG -> modal đánh số chung kiện
+     * ===================================================================== */
+    $(document).on('click', '.wpk-name-wrap', function () {
+        if (!editable()) return;
+        var id = Number($(this).closest('.wpk-row').data('id')) || 0;
+        var it = id ? timDong(id) : null;
+        if (!it) return;
+        if (it.picked) { alert('Dòng đã tích bốc đủ — bỏ tích trước rồi mới đánh chung kiện được.'); return; }
+        dongDangSua = id;
+        $('#wpk-group-sub').html(esc(it.product_name) +
+            (it.inv_kien ? ' · TK ' + esc(it.inv_kien) : ''));
+        $('#wpk-group-val').val(it.kien_group != null ? it.kien_group : '');
+        $('#wpk-group-clear').toggle(it.kien_group != null);
+        $('#wpk-group-modal').removeAttr('hidden');
+        setTimeout(function () { $('#wpk-group-val').trigger('focus').trigger('select'); }, 30);
+    });
+
+    /* ---- Hai modal nhập: lưu / bỏ / đóng ---- */
+    var dongDangSua = 0;
+
+    function dongModal(id) { $('#' + id).attr('hidden', true); }
+    $(document).on('click', '[data-wpk-close]', function () { dongModal($(this).data('wpk-close')); });
+    $(document).on('click', '.wpk-modal-mask', function (e) {
         if (e.target === this) $(this).attr('hidden', true);
+    });
+
+    $(document).on('click', '#wpk-group-save', function () {
+        var v = Number($('#wpk-group-val').val());
+        if (!dongDangSua) return;
+        if (isNaN(v) || v <= 0) { alert('Nhập số kiện chung lớn hơn 0.'); return; }
+        post('set_item_group', { item_id: dongDangSua, group: v });
+        dongModal('wpk-group-modal');
+    });
+    $(document).on('click', '#wpk-group-clear', function () {
+        if (!dongDangSua) return;
+        post('set_item_group', { item_id: dongDangSua, group: '' });
+        dongModal('wpk-group-modal');
+    });
+
+    /** Xem trước: gõ 90 mà quy cách 30 gói/bao thì báo luôn "= 3B". */
+    function veTruocQuyDoi() {
+        var it = timDong(dongDangSua);
+        var v = Number($('#wpk-qty-val').val());
+        var ops = it ? (Number(it.ops_qty) || 0) : 0;
+        if (!it || isNaN(v) || v < 0 || ops <= 0) { $('#wpk-qty-preview').text(''); return; }
+        var chan = Math.floor(v / ops), du = v - chan * ops;
+        var chu = it.letter || '';
+        $('#wpk-qty-preview').text(chan > 0
+            ? ('= ' + chan + chu + (du > 0 ? ' + ' + num(du) + ' ' + (it.unit || '') : ''))
+            : ('Chưa đủ 1 ' + (ops ? 'kiện' : '') + ' (' + ops + ' ' + (it.unit || '') + '/kiện)'));
+    }
+    $(document).on('input', '#wpk-qty-val', veTruocQuyDoi);
+
+    $(document).on('click', '#wpk-qty-save', function () {
+        var v = Number($('#wpk-qty-val').val());
+        if (!dongDangSua) return;
+        if (isNaN(v) || v < 0) { alert('Số lượng không hợp lệ.'); return; }
+        post('set_item_qty', { item_id: dongDangSua, qty: v });
+        dongModal('wpk-qty-modal');
+    });
+    $(document).on('keydown', '#wpk-group-val, #wpk-qty-val', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        $(this.id === 'wpk-group-val' ? '#wpk-group-save' : '#wpk-qty-save').trigger('click');
     });
 
     /* =====================================================================

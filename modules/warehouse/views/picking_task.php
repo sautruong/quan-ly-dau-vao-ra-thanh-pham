@@ -147,14 +147,39 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
         </div>
     </div>
 
-    <!-- MODAL: thông tin hàng hóa (bấm vào tên sản phẩm) -->
-    <div class="wpk-modal-mask" id="wpk-info-modal" hidden>
+    <!-- MODAL: đánh số chung kiện (bấm vào tên hàng) -->
+    <div class="wpk-modal-mask" id="wpk-group-modal" hidden>
         <div class="wpk-modal-box">
-            <button type="button" class="wpk-modal-close" id="wpk-info-close">&times;</button>
-            <h3 class="wpk-modal-title" id="wpk-info-name"></h3>
-            <div class="wpk-info-lines" id="wpk-info-lines"></div>
+            <button type="button" class="wpk-modal-close" data-wpk-close="wpk-group-modal">&times;</button>
+            <h3 class="wpk-modal-title"><i class="fa-solid fa-box"></i> Chung kiện số</h3>
+            <p class="wpk-modal-sub" id="wpk-group-sub"></p>
+            <input type="number" class="wpk-modal-input" id="wpk-group-val" min="1" step="1"
+                   inputmode="numeric" placeholder="Nhập số kiện chung...">
+            <div class="wpk-modal-foot">
+                <button type="button" class="wpk-mbtn wpk-mbtn-ghost" id="wpk-group-clear">Bỏ chung kiện</button>
+                <button type="button" class="wpk-mbtn wpk-mbtn-ok" id="wpk-group-save">Lưu</button>
+            </div>
         </div>
     </div>
+
+    <!-- MODAL: đổi số lượng bốc thực tế (bấm đúp vào ô số lượng) -->
+    <div class="wpk-modal-mask" id="wpk-qty-modal" hidden>
+        <div class="wpk-modal-box">
+            <button type="button" class="wpk-modal-close" data-wpk-close="wpk-qty-modal">&times;</button>
+            <h3 class="wpk-modal-title"><i class="fa-solid fa-pen-to-square"></i> Bốc thực tế</h3>
+            <p class="wpk-modal-sub" id="wpk-qty-sub"></p>
+            <div class="wpk-modal-inline">
+                <input type="number" class="wpk-modal-input" id="wpk-qty-val" min="0" step="1" inputmode="decimal">
+                <span class="wpk-modal-unit" id="wpk-qty-unit"></span>
+            </div>
+            <p class="wpk-modal-hint" id="wpk-qty-preview"></p>
+            <div class="wpk-modal-foot">
+                <button type="button" class="wpk-mbtn wpk-mbtn-ghost" data-wpk-close="wpk-qty-modal">Đóng</button>
+                <button type="button" class="wpk-mbtn wpk-mbtn-ok" id="wpk-qty-save">Lưu</button>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         window.WPK_SLIP  = <?php echo $slip ? json_encode($slip, JSON_UNESCAPED_UNICODE) : 'null'; ?>;

@@ -3165,7 +3165,12 @@
     /* Địa chỉ của các request NỀN — tuyệt đối không hiện overlay cho chúng. */
     /* Gồm cả các action của CHAT (send/react/markRead/typing): chặn màn hình khi gửi một tin
        nhắn là sai — người dùng cần gõ tiếp ngay, không phải chờ. */
-    var BO_QUA = /(action=)?(poll|chatPoll|unread|presence|notif|evcalCheck|auto_report_due_check|auto_report_send|touch|heartbeat|send|react|markRead|typing)\b/i;
+    /* Và MỌI THAO TÁC TÍCH / BỎ TÍCH (toggle, đánh dấu đã bốc, khoá đơn, tích dòng phiếu
+       soạn...): chỉ là cập nhật 1 ô, xong gần như tức thì. Che cả màn hình chỉ để tích một
+       cái ô thì vừa chậm tay vừa khiến người dùng tưởng hệ thống treo — nhất là nhân viên
+       kho tích liên tục hàng chục dòng. `toggle` để trần nên bắt luôn itemToggle, star_toggle,
+       wall_pin_toggle, ajax_toggle_*... */
+    var BO_QUA = /(action=)?(poll|chatPoll|unread|presence|notif|evcalCheck|auto_report_due_check|auto_report_send|touch|heartbeat|send|react|markRead|typing|toggle|set_picked|set_item_picked|set_confirmed|set_lock|set_item_group|set_item_qty|set_item_removed|save_kien|save_note)\b/i;
 
     function dung() {
         if (lop) return lop;
