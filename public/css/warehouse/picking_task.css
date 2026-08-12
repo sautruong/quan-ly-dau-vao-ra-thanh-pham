@@ -4,6 +4,12 @@
  *  máy tính chỉ là trường hợp màn hình rộng hơn.
  * ========================================================================== */
 
+/* Các modal nằm NGOÀI .wpk-page (cuối trang, ngang hàng #wrapper) nên không với tới biến
+   --wpk-accent vốn khai trên .wpk-page. Biến không có giá trị thì khai báo dùng nó bị vô
+   hiệu -> nút "Xác nhận" thành chữ trắng trên nền trong suốt = NHÌN NHƯ KHÔNG CÓ NÚT.
+   Khai mặc định ở :root để mọi nơi luôn có màu; JS ghi đè theo màu khách khi mở phiếu. */
+:root { --wpk-accent: #16a34a; }
+
 /* BẮT BUỘC — global.css đặt `#wrapper { display: flex }` (hàng NGANG, di sản của layout
    sidebar cũ #sidebar-left). View nào dùng app-shell mà không tự vô hiệu hoá thì
    <header class="app-header"> và khối nội dung thành 2 item nằm CẠNH nhau: header co lại
@@ -882,11 +888,17 @@
 
 .wpk-mbtn-ghost:hover { border-color: #dc2626; color: #dc2626; }
 
+/* CỐ Ý dùng xanh cố định thay vì màu của khách: màu khách có thể là vàng/cam nhạt, chữ
+   trắng lên đó gần như không đọc được. Đây là nút xác nhận, không phải nhãn của khách. */
 .wpk-mbtn-ok {
-    border-color: var(--wpk-accent);
-    background: var(--wpk-accent);
+    border-color: #15803d;
+    background: #16a34a;
     color: #fff;
+    box-shadow: 0 3px 10px rgba(22, 163, 74, .35);
 }
+
+.wpk-mbtn-ok:hover { background: #15803d; }
+.wpk-mbtn-ok:active { transform: translateY(1px); }
 
 /* Chân modal 1 nút: canh giữa, nút rộng cho dễ bấm bằng ngón cái. */
 .wpk-modal-foot.is-center { justify-content: center; }
@@ -905,3 +917,6 @@
     border-radius: 6px;
     padding: 0 6px;
 }
+
+/* Nháy sáng số chung kiện vừa đặt — cùng kiểu với ô số lượng. */
+.wpk-grp-badge.is-flash { animation: wpkFlashQty 1s ease; }

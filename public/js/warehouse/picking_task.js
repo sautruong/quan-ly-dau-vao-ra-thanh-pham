@@ -395,7 +395,6 @@
         $('#wpk-group-sub').html(esc(it.product_name) +
             (it.inv_kien ? ' · TK ' + esc(it.inv_kien) : ''));
         $('#wpk-group-val').val(it.kien_group != null ? it.kien_group : '');
-        $('#wpk-group-clear').toggle(it.kien_group != null);
         $('#wpk-group-modal').removeAttr('hidden');
         setTimeout(function () { $('#wpk-group-val').trigger('focus').trigger('select'); }, 30);
     });
@@ -409,17 +408,29 @@
         if (e.target === this) $(this).attr('hidden', true);
     });
 
+    /** Nháy sáng số chung kiện vừa đặt. */
+    function nhaySoKien(id) {
+        var $o = $('.wpk-row[data-id="' + id + '"] .wpk-grp-badge');
+        if (!$o.length) return;
+        $o.removeClass('is-flash');
+        void $o[0].offsetWidth;
+        $o.addClass('is-flash');
+        setTimeout(function () { $o.removeClass('is-flash'); }, 1100);
+    }
+
+    /* Giống hệt modal đổi số: CHỈ "Xác nhận" mới ghi, bấm × là không đổi gì.
+       Bỏ trống ô rồi Xác nhận = bỏ chung kiện (khỏi cần nút riêng). */
     $(document).on('click', '#wpk-group-save', function () {
-        var v = Number($('#wpk-group-val').val());
-        if (!dongDangSua) return;
-        if (isNaN(v) || v <= 0) { alert('Nhập số kiện chung lớn hơn 0.'); return; }
-        post('set_item_group', { item_id: dongDangSua, group: v });
+        var raw = String($('#wpk-group-val').val() || '').trim();
+        var id  = dongDangSua;
+        if (!id) return;
+        if (raw !== '' && (isNaN(Number(raw)) || Number(raw) <= 0)) {
+            alert('Nhập số kiện chung lớn hơn 0, hoặc để trống để bỏ chung kiện.');
+            return;
+        }
         dongModal('wpk-group-modal');
-    });
-    $(document).on('click', '#wpk-group-clear', function () {
-        if (!dongDangSua) return;
-        post('set_item_group', { item_id: dongDangSua, group: '' });
-        dongModal('wpk-group-modal');
+        post('set_item_group', { item_id: id, group: raw === '' ? '' : Number(raw) },
+            function () { nhaySoKien(id); });
     });
 
     /** Xem trước: gõ 90 mà quy cách 30 gói/bao thì báo luôn "= 3B".
@@ -593,8 +604,12 @@
         $('#wpk-address').text(SLIP.address || '');
         $('#wpk-note').val(SLIP.note || '');
         $('#wpk-slip').attr('data-slip-id', SLIP.id);
+        var mau = SLIP.accent || '#16a34a';
         var page = document.querySelector('.wpk-page');
-        if (page) page.style.setProperty('--wpk-accent', SLIP.accent || '#16a34a');
+        if (page) page.style.setProperty('--wpk-accent', mau);
+        // Cả :root nữa — modal nằm ngoài .wpk-page, không đặt ở đây thì chúng giữ màu
+        // mặc định thay vì màu của khách đang mở.
+        document.documentElement.style.setProperty('--wpk-accent', mau);
     }
 
     /* ----- Đổi phiếu: nạp bằng AJAX, không tải lại cả trang ----- */
@@ -916,6 +931,7 @@
     });
 
     $(function () {
+        if (SLIP && SLIP.accent) document.documentElement.style.setProperty('--wpk-accent', SLIP.accent);
         renderChips();
         if (SLIP) { chotThuTu(); renderAll(); }
         loadHistory();
