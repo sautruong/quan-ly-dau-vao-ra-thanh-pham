@@ -193,8 +193,13 @@ function om_get_material_for_slip($material_id)
     // Giá bán NVL cho chi nhánh = selling_price mới nhất trong branch_material_selling_prices —
     // CÙNG nguồn với sf_get_material_order_info() (sell_factory). Trước đây hardcode 0 làm mọi
     // dòng NVL thêm qua order_management (Xem đơn/đơn thủ công/phiếu soạn) mất giá trị.
+    // TÊN THƯỜNG GỌI cho gọn — tên gốc của NVL dài lê thê ("Nguyên liệu thực phẩm: Bột kem
+    // không sữa - Non Dairy Creamer FES 70"), dán lên phiếu soạn thì tràn hết dòng. Phải
+    // khớp với ô gợi ý (om_search_products) kẻo chọn một tên mà dòng hiện tên khác.
     $row = db_fetch_row(
-        "SELECT m.id AS product_id, m.material_name AS product_name, m.unit,
+        "SELECT m.id AS product_id,
+                COALESCE(NULLIF(m.common_material_name, ''), m.material_name) AS product_name,
+                m.unit,
                 COALESCE(minv.quantity, 0) AS stock,
                 COALESCE((
                     SELECT b.selling_price
@@ -237,11 +242,12 @@ function om_search_products($keyword)
                OR p.common_product_name LIKE '%$keyword%'
             UNION ALL
             SELECT 'material' AS type, m.id AS product_id,
-                   m.material_name COLLATE utf8mb4_general_ci AS name,
+                   COALESCE(NULLIF(m.common_material_name, ''), m.material_name) COLLATE utf8mb4_general_ci AS name,
                    m.unit COLLATE utf8mb4_general_ci AS unit
             FROM material_information m
             WHERE m.classification IN ('Bao bì trong', 'Bao bì ngoài')
-              AND (m.material_name LIKE '%$keyword%' OR m.material_code LIKE '%$keyword%')
+              AND (m.material_name LIKE '%$keyword%' OR m.material_code LIKE '%$keyword%'
+                   OR m.common_material_name LIKE '%$keyword%')
             ORDER BY name ASC
             LIMIT 20";
     return db_fetch_array($sql) ?: [];

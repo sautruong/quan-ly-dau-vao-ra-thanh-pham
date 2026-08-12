@@ -40,9 +40,6 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
 
         <div class="wpk-page" style="--wpk-accent: <?php echo wpk_esc($accent); ?>;">
 
-            <div class="wpk-page-head">
-                <h1><i class="fa-solid fa-dolly"></i> Soạn hàng</h1>
-            </div>
 
             <!-- Chọn phiếu đang soạn — JS dựng để bộ đếm "PLCT 3/9" cập nhật ngay khi tích,
                  và đổi phiếu không phải tải lại cả trang. -->

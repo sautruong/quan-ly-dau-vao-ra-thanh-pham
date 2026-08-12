@@ -31,24 +31,6 @@
     overflow-y: auto;
 }
 
-.wpk-page-head h1 {
-    font-size: 20px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
-}
-
-.wpk-page-head h1 i { color: var(--wpk-accent); }
-
-.wpk-page-sub {
-    display: block;
-    color: #6b7280;
-    font-size: 13px;
-    margin-top: 4px;
-}
-
 .wpk-empty {
     color: #9ca3af;
     text-align: center;
@@ -867,3 +849,12 @@
 }
 
 .wpk-warn-line span { flex: 0 0 auto; opacity: .8; }
+
+/* Số lượng chưa đủ 1 kiện: không có gì để quy đổi -> không mời bấm. */
+.wpk-qty.is-plain { cursor: default; }
+
+/* Xem lại phiếu cũ: dấu tích vẫn xanh nhưng khoá, và KHÔNG làm mờ dòng —
+   phiếu đã soạn xong, mờ đi lại khó đọc. */
+.wpk-chk.is-lock { cursor: default; }
+.wpk-row.is-readonly { opacity: 1; background: transparent; }
+.wpk-row.is-readonly .wpk-qty { cursor: default; }

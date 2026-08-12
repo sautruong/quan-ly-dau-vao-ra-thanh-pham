@@ -641,6 +641,8 @@ function wh_finish_slip($slip_id, $user_id = 0)
         'removed'  => count($slip['items']) - count($live),
         'kien_map' => $slip['kien_map'],
         'pickers'  => wh_slip_pickers((int) $slip['id'], (int) $user_id),
+        // Kèm luôn quy cách + thứ tự hiển thị: xem lại phiếu cũ phải ra ĐÚNG thứ tự lúc
+        // đang soạn (nhóm chẵn quy cách -> quy cách + lẻ -> lẻ -> NVL), không phải A->B.
         'items'    => array_map(static fn($i) => [
             'name'  => (string) $i['product_name'],
             'unit'  => (string) $i['unit'],
@@ -648,6 +650,15 @@ function wh_finish_slip($slip_id, $user_id = 0)
             'pick'  => (float) $i['qty_actual'],
             'kien'  => (string) $i['kien_text'],
             'group' => $i['kien_group'],
+            'ops'   => (int) $i['ops_qty'],
+            'whole' => (int) $i['kien_whole'],
+            'rem'   => (float) $i['kien_rem'],
+            'type'  => (string) $i['item_type'],
+            'sort'  => $i['sort_order'],
+            'pack'  => (string) $i['pack_label'],
+            'tk'    => (string) $i['inv_kien'],
+            'short' => !empty($i['is_short']),
+            'stock' => (float) $i['stock'],
         ], $live),
     ];
 
@@ -773,6 +784,26 @@ function wh_history_detail($slip_id)
     $slip = wh_get_slip($slip_id);
     if (!$slip) return null;
     $snap = json_decode((string) ($slip['finish_snapshot'] ?? ''), true);
+
+    /* Bản chụp làm TRƯỚC khi bổ sung 5 trường quy cách (ops/whole/rem/type/sort) thì không
+       dựng lại được thứ tự -> vá từ chính các dòng còn trong CSDL. Khớp theo VỊ TRÍ là an
+       toàn: cả 2 danh sách đều sinh ra từ cùng một truy vấn sắp theo seq, id. */
+    if (is_array($snap) && !empty($snap['items']) && !array_key_exists('ops', $snap['items'][0])) {
+        $live = array_values(array_filter($slip['items'], static fn($i) => empty($i['removed'])));
+        foreach ($snap['items'] as $k => $it) {
+            if (!isset($live[$k])) break;
+            $snap['items'][$k]['ops']   = (int) $live[$k]['ops_qty'];
+            $snap['items'][$k]['whole'] = (int) $live[$k]['kien_whole'];
+            $snap['items'][$k]['rem']   = (float) $live[$k]['kien_rem'];
+            $snap['items'][$k]['type']  = (string) $live[$k]['item_type'];
+            $snap['items'][$k]['sort']  = $live[$k]['sort_order'];
+            $snap['items'][$k]['pack']  = (string) $live[$k]['pack_label'];
+            $snap['items'][$k]['tk']    = (string) $live[$k]['inv_kien'];
+            $snap['items'][$k]['short'] = !empty($live[$k]['is_short']);
+            $snap['items'][$k]['stock'] = (float) $live[$k]['stock'];
+        }
+    }
+
     if (!is_array($snap) || empty($snap['items'])) {
         $live = array_values(array_filter($slip['items'], static fn($i) => empty($i['removed'])));
         $snap = [
@@ -787,6 +818,15 @@ function wh_history_detail($slip_id)
                 'pick'  => (float) $i['qty_actual'],
                 'kien'  => (string) $i['kien_text'],
                 'group' => $i['kien_group'],
+                'ops'   => (int) $i['ops_qty'],
+                'whole' => (int) $i['kien_whole'],
+                'rem'   => (float) $i['kien_rem'],
+                'type'  => (string) $i['item_type'],
+                'sort'  => $i['sort_order'],
+                'pack'  => (string) $i['pack_label'],
+                'tk'    => (string) $i['inv_kien'],
+                'short' => !empty($i['is_short']),
+                'stock' => (float) $i['stock'],
             ], $live),
         ];
     }

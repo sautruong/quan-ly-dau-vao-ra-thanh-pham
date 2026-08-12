@@ -162,18 +162,23 @@
         var remind = it.reminder_note
             ? '<div class="wpk-remind"><i class="fa-solid fa-thumbtack"></i> ' + esc(it.reminder_note) + '</div>' : '';
 
-        // Xem lại phiếu cũ: cùng bố cục nhưng bỏ hết checkbox / nút xoá / ô nhập.
+        /* Xem lại phiếu cũ: GIỮ NGUYÊN bố cục đang soạn — vẫn quy cách, tồn kho, cảnh báo
+           thiếu và dấu tích xanh. Chỉ khác: dấu tích bị khoá, không có nút xoá, không có ô
+           nhập, và KHÔNG làm mờ dòng (phiếu này soạn xong rồi, mờ đi lại khó đọc). */
         if (CHIXEM) {
             return '' +
                 '<div class="wpk-row is-readonly" data-id="' + it.id + '">' +
                   '<div class="wpk-row-main">' +
                     '<div class="wpk-name-wrap">' + grp +
                       '<div class="wpk-name">' +
-                        '<div class="wpk-name-text">' + esc(String(it.product_name || '').toUpperCase()) + '</div>' +
+                        '<div class="wpk-name-text">' + warn + esc(String(it.product_name || '').toUpperCase()) + '</div>' +
                         (sub.length ? '<div class="wpk-sub">' + sub.join(' · ') + '</div>' : '') +
                       '</div>' +
                     '</div>' +
-                    '<div class="wpk-qty-wrap"><span class="wpk-qty">' + esc(qtyText) + '</span></div>' +
+                    '<div class="wpk-qty-wrap">' +
+                      '<label class="wpk-chk is-lock"><input type="checkbox" checked disabled><span></span></label>' +
+                      '<span class="wpk-qty">' + esc(qtyText) + '</span>' +
+                    '</div>' +
                   '</div>' +
                 '</div>';
         }
@@ -191,7 +196,7 @@
                 '</div>' +
                 '<div class="wpk-qty-wrap" data-swipe="left">' +
                   '<label class="wpk-chk"><input type="checkbox" class="wpk-picked"' + (locked ? ' checked' : '') + '><span></span></label>' +
-                  '<span class="wpk-qty">' + esc(qtyText) + '</span>' +
+                  '<span class="wpk-qty' + (quyDoiDuoc(it) ? '' : ' is-plain') + '">' + esc(qtyText) + '</span>' +
                 '</div>' +
                 '<button type="button" class="wpk-del" title="Gỡ khỏi phiếu">&times;</button>' +
               '</div>' +
@@ -274,9 +279,18 @@
         $box.html(html).removeAttr('hidden');
     }
 
+    /** "8B + 31T + 6 SP lẻ = 800 kg" — số kiện đi kèm khối lượng để biết luôn xe nào chở nổi. */
+    function chuoiKien(s) {
+        if (!s) return '—';
+        var t = s.text || '';
+        var kg = Number(s.weight) || 0;
+        if (!t && !kg) return '—';
+        return (t || '—') + (kg ? ' = ' + num(kg) + ' kg' : '');
+    }
+
     function renderSummary() {
         if (!SLIP) return;
-        $('#wpk-sum').text((SLIP.summary && SLIP.summary.text) || '—');
+        $('#wpk-sum').text(chuoiKien(SLIP.summary));
         var shorts = dongSong().filter(function (i) { return i.is_short; });
         var $w = $('#wpk-warn');
         if (!shorts.length || CHIXEM) { $w.attr('hidden', true).empty(); return; }
@@ -476,14 +490,21 @@
         post('set_item_removed', { item_id: id, removed: 0 });
     });
 
+    /** Dòng có gì để quy đổi không? Số lượng chưa đủ 1 kiện (vd 10 gói mà quy cách
+        15 gói/thùng) thì ô vốn đã hiện số lẻ rồi — bấm vào chẳng đổi được gì. */
+    function quyDoiDuoc(it) {
+        return !!it && (Number(it.ops_qty) || 0) > 0 && (Number(it.kien_whole) || 0) > 0;
+    }
+
     /* ----- Bấm ô số lượng: quy đổi kiện <-> số (KHÔNG đụng thứ tự dòng) ----- */
     $(document).on('click', '.wpk-qty', function () {
         if (nuotClick) return;
         var id = Number($(this).closest('.wpk-row').data('id')) || 0;
         if (!id) return;
-        rawMode[id] = !rawMode[id];
         var it = timDong(id);
-        if (it) $(this).text(rawMode[id] ? num(it.qty_actual) : (it.kien_text || ''));
+        if (!quyDoiDuoc(it)) return;              // nhỏ hơn quy cách -> giữ nguyên
+        rawMode[id] = !rawMode[id];
+        $(this).text(rawMode[id] ? num(it.qty_actual) : (it.kien_text || ''));
     });
 
     /* ----- Bấm tên hàng: modal tồn kho + quy cách ----- */
@@ -730,7 +751,7 @@
                         '<div class="wpk-hist-mid">' +
                             '<span>' + esc(ngayGio(r.done_at)) + '</span>' +
                             '<span>' + r.lines + ' SP</span>' +
-                            '<span><b>' + esc(r.kien || '—') + '</b></span>' +
+                            '<span><b>' + esc(chuoiKien({ text: r.kien, weight: r.weight })) + '</b></span>' +
                         '</div>' +
                         '<div class="wpk-hist-bot">' + avatarsHtml(r.pickers) +
                             (ME.is_admin ? '<button type="button" class="wpk-hist-del" title="Xoá phiếu soạn"><i class="fa-solid fa-trash-can"></i></button>' : '') +
@@ -781,15 +802,24 @@
             accent: d.accent, status: 'done', synced: d.synced ? 1 : 0,
             kien_map: s.kien_map || {},
             summary: { text: s.kien || '', weight: s.weight || 0, groups: [], invalid: [] },
+            // Bản chụp mang theo cả quy cách + thứ tự nên chotThuTu() dựng lại ĐÚNG thứ tự
+            // lúc đang soạn (chẵn quy cách -> quy cách + lẻ -> lẻ -> NVL), không phải A→B.
             items: (s.items || []).map(function (it, i) {
                 return {
                     id: 'h' + i, product_name: it.name, unit: it.unit,
                     qty_order: it.order, qty_actual: it.pick,
                     kien_text: it.kien, order_kien: '', kien_group: it.group,
                     picked: true, removed: false, added_by_staff: false,
-                    item_type: 'product', ops_qty: 0, kien_whole: 0, kien_rem: 0,
-                    stock: 0, is_short: false, inv_kien: '', pack_label: '',
-                    reminder_note: '', sort_order: null
+                    item_type: it.type || 'product',
+                    ops_qty: Number(it.ops) || 0,
+                    kien_whole: Number(it.whole) || 0,
+                    kien_rem: Number(it.rem) || 0,
+                    stock: Number(it.stock) || 0,
+                    is_short: !!it.short,
+                    inv_kien: it.tk || '',
+                    pack_label: it.pack || '',
+                    reminder_note: '',
+                    sort_order: (it.sort === undefined ? null : it.sort)
                 };
             })
         };
@@ -841,7 +871,7 @@
         var kienKhai = Object.keys(kmap).sort(function (a, b) { return a - b; })
             .map(function (g) { return 'Kiện (' + g + ') = ' + esc(kmap[g]); }).join(' · ');
         $('#wpk-hist-foot').html(
-            '<div><b>Số kiện:</b> ' + esc(s.kien || '—') + (s.weight ? ' · ' + num(s.weight) + ' kg' : '') + '</div>' +
+            '<div><b>Số kiện:</b> ' + esc(chuoiKien({ text: s.kien, weight: s.weight })) + '</div>' +
             (kienKhai ? '<div>' + kienKhai + '</div>' : '') +
             '<div>' + (d.synced
                 ? '<span class="wpk-hist-ok">Đã cập nhật vào đơn hàng lúc ' + esc(ngayGio(d.synced_at)) + '</span>'
