@@ -1085,3 +1085,40 @@ label {
     .btn-plan-products .btn-plan-label { display: none; }
     .wp-toolbar > .wp-date-picker { flex: 1 1 100%; padding-right: 0; }
 }
+
+/* =====================================================================================
+   HOP CANH BAO "San pham hien da ghi truoc do" — 2 nut Ghi de / Huy.
+   Dung tai cho bang JS (dashboard.js::showDupDialog) thay cho confirm() cua trinh duyet:
+   confirm() khong doi duoc chu tren nut, ma o day BAT BUOC phai ghi ro "Ghi de" de nguoi dung
+   biet hau qua la so cu bi thay the.
+   ===================================================================================== */
+.im-dup-mask {
+    position: fixed; inset: 0; z-index: 4200;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(17, 24, 39, .45);
+}
+.im-dup-box {
+    width: min(460px, 92vw); background: #fff; border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .28); padding: 20px 22px;
+    animation: imDupIn .16s ease;
+}
+@keyframes imDupIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+.im-dup-head { font-size: 16px; font-weight: 700; color: #b45309; margin-bottom: 12px; }
+.im-dup-head i { margin-right: 6px; }
+
+.im-dup-list { list-style: none; margin: 0 0 12px; padding: 0; max-height: 40vh; overflow-y: auto; }
+.im-dup-list li { padding: 7px 0; border-bottom: 1px solid #f3f4f6; font-size: 13.5px; color: #1f2937; }
+.im-dup-list li:last-child { border-bottom: 0; }
+.im-dup-date { color: #6b7280; font-size: 12.5px; }
+
+.im-dup-note { margin: 0 0 16px; font-size: 13px; color: #4b5563; }
+
+.im-dup-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.im-dup-actions button {
+    border-radius: 9px; padding: 9px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.im-dup-cancel { border: 1px solid #d1d5db; background: #fff; color: #374151; }
+.im-dup-cancel:hover { background: #f3f4f6; }
+.im-dup-ok { border: 0; background: #b45309; color: #fff; }
+.im-dup-ok:hover { background: #92400e; }

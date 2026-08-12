@@ -389,18 +389,52 @@
         if (btn) btn.classList.add('active');
     }
 
+    /**
+     * Có sản phẩm đã ghi trước đó trong ngày -> hiện hộp cảnh báo 2 nút "Ghi đè" / "Hủy".
+     * onOk(overwrite) — overwrite=true thì server dọn bản ghi cũ trước khi ghi số mới,
+     * tức SỐ MỚI THAY THẾ số cũ chứ không cộng thêm một bản ghi thứ hai.
+     */
     function checkDuplicatesThen(productIds, onOk) {
-        if (!productIds.length) { onOk(); return; }
+        if (!productIds.length) { onOk(false); return; }
         postForm('check_duplicates', {
             product_ids: JSON.stringify(productIds),
             plan_date:   pickerToDateYMD(),
             type_import: TYPE_IMPORT
         }).then(res => {
             const dups = (res && res.data) || [];
-            if (!dups.length) { onOk(); return; }
-            const lines = dups.map(d => 'Sản phẩm "' + d.product_name + '" đã được ghi trong ngày ' + d.date_vn + '.');
-            const msg = lines.join('\n') + '\n\nBạn vẫn muốn ghi tiếp?';
-            if (confirm(msg)) onOk();
+            if (!dups.length) { onOk(false); return; }
+            showDupDialog(dups, () => onOk(true));
+        });
+    }
+
+    /** Hộp cảnh báo trùng — dựng tại chỗ, không dùng confirm() của trình duyệt (không đổi được
+     *  chữ trên nút, mà ở đây bắt buộc phải ghi rõ "Ghi đè" để người dùng biết hậu quả). */
+    function showDupDialog(dups, onOverwrite) {
+        document.querySelectorAll('.im-dup-mask').forEach(el => el.remove());
+
+        const mask = document.createElement('div');
+        mask.className = 'im-dup-mask';
+        mask.innerHTML =
+            '<div class="im-dup-box" role="dialog" aria-modal="true">'
+          + '<div class="im-dup-head"><i class="fa-solid fa-triangle-exclamation"></i> Sản phẩm hiện đã ghi trước đó</div>'
+          + '<ul class="im-dup-list">'
+          + dups.map(d => '<li><b>' + escapeHtml(d.product_name) + '</b>'
+                + (d.date_vn ? ' <span class="im-dup-date">— đã ghi ngày ' + escapeHtml(d.date_vn) + '</span>' : '')
+                + '</li>').join('')
+          + '</ul>'
+          + '<p class="im-dup-note">Bấm <b>Ghi đè</b> để lấy số mới này thay cho số đã ghi trước đó.</p>'
+          + '<div class="im-dup-actions">'
+          + '<button type="button" class="im-dup-cancel">Hủy</button>'
+          + '<button type="button" class="im-dup-ok">Ghi đè</button>'
+          + '</div></div>';
+        document.body.appendChild(mask);
+
+        const dong = () => mask.remove();
+        mask.querySelector('.im-dup-cancel').addEventListener('click', dong);
+        mask.addEventListener('click', e => { if (e.target === mask) dong(); });
+        mask.querySelector('.im-dup-ok').addEventListener('click', () => { dong(); onOverwrite(); });
+        document.addEventListener('keydown', function esc(e) {
+            if (e.key === 'Escape') { dong(); document.removeEventListener('keydown', esc); }
         });
     }
 
@@ -412,12 +446,13 @@
             return;
         }
         const productIds = items.map(it => it.product_id).filter(Boolean);
-        checkDuplicatesThen(productIds, () => {
+        checkDuplicatesThen(productIds, (overwrite) => {
             flashActive($btnRec);
             postForm('record_stock', {
                 items:       JSON.stringify(items),
                 created_at:  pickerToMysql(),
-                type_import: TYPE_IMPORT
+                type_import: TYPE_IMPORT,
+                overwrite:   overwrite ? 1 : 0
             }).then(res => {
                 if (res && res.success) {
                     // Thay alert xác nhận bằng hiệu ứng bay vào khối "Lịch sử" — reload lại trang

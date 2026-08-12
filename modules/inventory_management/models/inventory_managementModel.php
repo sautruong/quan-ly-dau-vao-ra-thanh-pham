@@ -665,6 +665,43 @@ function im_remove_day_product($product_id, $date)
     return ['success' => true, 'removed' => $count, 'quantity' => $qty];
 }
 
+/**
+ * GHI ĐÈ: xoá sạch bản ghi CŨ của các sản phẩm trùng trong NGÀY đó, để lượt ghi ngay sau
+ * thay thế hẳn số cũ thay vì cộng thêm một bản ghi thứ hai.
+ *
+ * Dùng lại im_remove_day_product() vì nó đã lo đủ 3 việc: trừ lại tồn thành phẩm theo đúng số
+ * đã cộng lúc nhập, xoá dòng stock_imports, và xoá dòng sản lượng
+ * finished_product_production_data. Tự viết lại sẽ bỏ sót một trong ba.
+ *
+ * PHẢI gỡ dấu "đã gỡ" ngay sau đó: im_remove_day_product() ghi dấu vào im_dismissed_fg_products
+ * để dashboard ẩn sản phẩm trong ngày — hợp lý khi người dùng bấm × để bỏ hẳn, nhưng ở đây ta
+ * đang ghi đè nên sản phẩm phải hiện lại bình thường.
+ *
+ * CHỈ áp cho type_import = 'fg_receipt_production' (luồng sản lượng của dashboard). Các loại
+ * khác chưa có hàm gỡ tương đương nên trả về 0 và luồng gọi sẽ ghi thêm như cũ.
+ *
+ * @return int số sản phẩm đã dọn
+ */
+function im_overwrite_clear_previous($product_ids, $date, $type_import = 'fg_receipt_production')
+{
+    if (im_normalize_type_import($type_import) !== 'fg_receipt_production') return 0;
+    if (!is_array($product_ids) || empty($product_ids)) return 0;
+    $d = im_sanitize_date($date);
+    if ($d === null) return 0;
+
+    $n = 0;
+    foreach ($product_ids as $id) {
+        $pid = (int) $id;
+        if ($pid <= 0) continue;
+        $r = im_remove_day_product($pid, $d);
+        if (!empty($r['success'])) {
+            im_clear_dismissed_product($pid, $d . ' 00:00:00');
+            $n++;
+        }
+    }
+    return $n;
+}
+
 /* ============================================================
  *  SALES RETURN — page sales_return_receipt
  *  Hàng bán bị KH trả lại, đẩy vào kho tạm và xử lý sau.

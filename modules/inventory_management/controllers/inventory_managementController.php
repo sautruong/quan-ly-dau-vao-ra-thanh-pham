@@ -202,6 +202,18 @@ function record_stockAction()
         exit;
     }
 
+    /* GHI ĐÈ (anh Sáu chốt 11/8/2026): người dùng đã bấm "Ghi đè" ở hộp cảnh báo trùng.
+       Dọn sạch bản ghi CŨ của các sản phẩm trong ngày TRƯỚC khi ghi, để số mới THAY THẾ số cũ
+       thay vì cộng thêm một bản ghi thứ hai. */
+    if (!empty($_POST['overwrite'])) {
+        $pids = [];
+        foreach ($items as $it) {
+            $p = (int) ($it['product_id'] ?? 0);
+            if ($p > 0) $pids[$p] = $p;
+        }
+        im_overwrite_clear_previous(array_values($pids), $ca !== null ? $ca : date('Y-m-d'), $type_import);
+    }
+
     $count        = 0;
     $first_si_id  = 0;
     $sum_total    = 0.0;
