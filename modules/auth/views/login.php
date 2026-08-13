@@ -8,7 +8,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập tài khoản hệ thống Safeking</title>
-    <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
+    <link rel="icon" href="public/images/logo/icon-192.png" type="image/png">
+
+    <?php /* PWA — phải khai NGAY Ở ĐÂY chứ không nhờ app_shell.js được: trang đăng
+             nhập không nạp file đó. Mà đây lại chính là trang người dùng nhìn thấy
+             đầu tiên, tức là nơi họ bấm "Thêm vào Màn hình chính". Thiếu mấy dòng
+             dưới thì iOS lấy ảnh chụp màn hình làm icon thay vì logo. */ ?>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="public/images/logo/apple-touch-icon.png">
+    <meta name="theme-color" content="#16a34a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vua An Toàn">
+
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
     <link rel="stylesheet" href="public/css/style_login.css?v=<?php echo filemtime(__DIR__ . '/../../../public/css/style_login.css'); ?>">
     <!-- Responsive -->

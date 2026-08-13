@@ -2231,6 +2231,9 @@
         function setBadge(n) {
             n = parseInt(n, 10) || 0;
             lastUnread = n;
+            // Góp phần "tin nhắn" vào con số trên icon app (xem window.appBadge
+            // trong app_shell.js). Chat và chuông đếm riêng, gom lại ở đó.
+            if (window.appBadge) window.appBadge.set('msg', n);
             if (n > 0) { badge.style.display = ''; badge.textContent = n > 99 ? '99+' : n; }
             else badge.style.display = 'none';
             syncDockBadge();

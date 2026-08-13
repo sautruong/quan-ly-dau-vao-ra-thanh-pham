@@ -13,6 +13,9 @@ if (date_default_timezone_get() !== 'Asia/Ho_Chi_Minh') {
     date_default_timezone_set('Asia/Ho_Chi_Minh');
 }
 
+// Thông báo đẩy xuống điện thoại khi có thông báo mới (xem cuối notify_create).
+require_once __DIR__ . '/push.php';
+
 if (!function_exists('notify_ensure_table')) {
 
     /** Tạo bảng notifications nếu chưa có (1 lần / request). */
@@ -45,7 +48,7 @@ if (!function_exists('notify_ensure_table')) {
         $uid = (int) $user_id;
         if ($uid <= 0) return 0;
         notify_ensure_table();
-        return (int) db_insert('notifications', [
+        $id = (int) db_insert('notifications', [
             'user_id'    => $uid,
             'actor_id'   => (int) $actor_id,
             'type'       => (string) $type,
@@ -55,6 +58,15 @@ if (!function_exists('notify_ensure_table')) {
             'is_read'    => 0,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
+
+        /* Đẩy xuống điện thoại. Đây là chỗ DUY NHẤT ghi vào bảng notifications
+           (47 nơi trong repo đều gọi qua đây), nên móc ở đây là phủ hết.
+           Hỏng thì im lặng — không được làm vỡ nghiệp vụ đang chạy. */
+        if ($id > 0 && function_exists('push_on_notification')) {
+            push_on_notification($uid, $title, $message, $link, $type);
+        }
+
+        return $id;
     }
 
     /** Lấy id các tài khoản admin (để đẩy thông báo / gửi mail). */

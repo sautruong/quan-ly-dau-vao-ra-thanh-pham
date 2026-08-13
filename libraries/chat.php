@@ -20,6 +20,8 @@ if (date_default_timezone_get() !== 'Asia/Ho_Chi_Minh') {
 require_once __DIR__ . '/crypto.php';
 // Cấu hình dọn tin nhắn (system_settings.chat_retention_mode) — Cài đặt hệ thống ở sidebar.
 require_once __DIR__ . '/system_settings.php';
+// Thông báo đẩy xuống điện thoại khi có tin nhắn mới (xem cuối chat_insert_message).
+require_once __DIR__ . '/push.php';
 
 if (!function_exists('chat_ensure_tables')) {
 
@@ -824,6 +826,17 @@ if (!function_exists('chat_ensure_tables')) {
             'created_at'      => $now,
         ]);
         db_update('chat_conversations', ['updated_at' => $now], "id = {$cid}");
+
+        /* Đẩy thông báo xuống điện thoại người nhận (kể cả khi họ đã thoát app).
+           Đặt ở đây vì đây là chỗ DUY NHẤT ghi vào chat_messages — mọi đường gửi
+           tin (người dùng, bot, module khác) đều đi qua hàm này.
+           push_on_chat_message() tự bỏ qua tin hệ thống, tin admin_only, người
+           gửi, và người đang tắt thông báo; hỏng thì im lặng, không ảnh hưởng
+           việc gửi tin. */
+        if (function_exists('push_on_chat_message')) {
+            push_on_chat_message($cid, $uid, $body, $type, $admin_only);
+        }
+
         return $mid;
     }
 

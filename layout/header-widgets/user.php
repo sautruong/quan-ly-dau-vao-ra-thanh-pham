@@ -51,6 +51,12 @@ $__phone_cur  = (string) ($__hd_user['phone'] ?? '');
             <button type="button" class="app-user-action" id="app-open-change-pw">
                 <i class="fa-solid fa-key"></i> Thay đổi mật khẩu
             </button>
+            <?php /* Thông báo đẩy xuống điện thoại — nhãn tự đổi theo trạng thái máy
+                     đang dùng, xem khối "THÔNG BÁO ĐẨY" trong app_shell.js. Ẩn sẵn,
+                     chỉ hiện khi trình duyệt có hỗ trợ. */ ?>
+            <button type="button" class="app-user-action" id="app-push-toggle" style="display:none;">
+                <i class="fa-solid fa-mobile-screen-button"></i> <span id="app-push-label">Thông báo trên điện thoại</span>
+            </button>
             <button type="button" class="app-user-action danger" id="app-open-leave">
                 <i class="fa-solid fa-user-xmark"></i> Xóa tài khoản
             </button>

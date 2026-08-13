@@ -9,6 +9,7 @@ config/config.php
 config/database.php
 config/crypto.php
 config/email.php
+config/push.php
 
 # ---- Dữ liệu do người dùng tải lên / do app quản lý (nguồn thật ở MÁY CHỦ) ----
 public/uploads/

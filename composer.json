@@ -1,6 +1,8 @@
 {
     "require": {
         "phpoffice/phpspreadsheet": "^5.5",
-        "phpmailer/phpmailer": "^7.1"
+        "phpmailer/phpmailer": "^7.1",
+        "minishlink/web-push": "^11.0",
+        "guzzlehttp/guzzle": "^8.0"
     }
 }

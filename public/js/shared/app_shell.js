@@ -426,6 +426,8 @@
 
             function setBadge(n) {
                 n = parseInt(n, 10) || 0;
+                // Góp phần "thông báo" vào con số trên icon app (xem window.appBadge).
+                if (window.appBadge) window.appBadge.set('noti', n);
                 if (!badge) return;
                 if (n > 0) { badge.style.display = ''; badge.textContent = n > 99 ? '99+' : String(n); }
                 else { badge.style.display = 'none'; badge.textContent = '0'; }
@@ -3125,10 +3127,278 @@
     addMeta('apple-mobile-web-app-capable', 'yes');
     addMeta('apple-mobile-web-app-status-bar-style', 'black-translucent');
     addMeta('apple-mobile-web-app-title', 'Vua An Toàn');
-    addLink('apple-touch-icon', base + 'public/images/logo/logo_vat_png.png');
+    /* apple-touch-icon phải là ảnh VUÔNG và có NỀN ĐẶC: iOS không hiểu nền trong
+       suốt, chỗ nào trong suốt nó tô đen. Trước đây chỗ này trỏ vào logo gốc
+       548x470 nền trong suốt nên icon trên màn hình chính vừa méo vừa nền đen. */
+    addLink('apple-touch-icon', base + 'public/images/logo/apple-touch-icon.png');
 
     window.addEventListener('load', function () {
         navigator.serviceWorker.register(base + 'sw.js', { scope: base || './' }).catch(function () {});
+    });
+
+    // Cho các khối khác (push) dùng lại đường dẫn gốc đã suy ra được.
+    window.appBaseUrl = base;
+})();
+
+/* =====================================================================
+ *  THÔNG BÁO ĐẨY TỚI ĐIỆN THOẠI (Web Push) — phía trình duyệt
+ *  ---------------------------------------------------------------------
+ *  Cho phép nhận thông báo KỂ CẢ KHI ĐÃ THOÁT APP, và gắn con số chưa đọc
+ *  lên icon app ngoài màn hình chính.
+ *
+ *  Điều kiện bắt buộc, thiếu cái nào là hỏng cái đó:
+ *    - HTTPS (localhost được miễn).
+ *    - RIÊNG iPhone/iPad: PHẢI mở từ icon đã "Thêm vào Màn hình chính".
+ *      Trong Safari thường, iOS không cho đăng ký push — không có cách vá,
+ *      nên ở trường hợp đó ta báo cho người dùng biết phải làm gì.
+ *
+ *  Dùng từ nơi khác:
+ *      appPush.status()  -> Promise, cho biết hỗ trợ/đã bật/mấy máy
+ *      appPush.enable()  -> Promise, xin quyền rồi đăng ký máy này
+ *      appPush.disable() -> Promise, bỏ đăng ký máy này
+ * ===================================================================== */
+(function () {
+    var API = '?mod=push&controllers=push&action=';
+
+    function post(action, data) {
+        var body = new URLSearchParams();
+        for (var k in data) if (Object.prototype.hasOwnProperty.call(data, k)) body.append(k, data[k]);
+        return fetch(API + action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body.toString()
+        }).then(function (r) { return r.json(); });
+    }
+
+    function get(action) {
+        return fetch(API + action, { credentials: 'same-origin' }).then(function (r) { return r.json(); });
+    }
+
+    /* Khóa VAPID gửi xuống dạng base64url, còn pushManager.subscribe() đòi
+       Uint8Array — không đổi kiểu là subscribe ném lỗi InvalidCharacterError. */
+    function urlB64ToUint8(b64) {
+        var pad = '='.repeat((4 - (b64.length % 4)) % 4);
+        var raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+        var out = new Uint8Array(raw.length);
+        for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+        return out;
+    }
+
+    function b64FromBuffer(buf) {
+        var bytes = new Uint8Array(buf), s = '';
+        for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+        return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+    function isStandalone() {
+        return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+               navigator.standalone === true;
+    }
+
+    var supported = ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+
+    function currentSub() {
+        if (!supported) return Promise.resolve(null);
+        return navigator.serviceWorker.ready.then(function (reg) {
+            return reg.pushManager.getSubscription();
+        });
+    }
+
+    window.appPush = {
+        supported: supported,
+        isIOS: isIOS,
+        isStandalone: isStandalone,
+
+        /** Trạng thái hiện tại: có hỗ trợ không, máy chủ cấu hình chưa, máy này bật chưa. */
+        status: function () {
+            var out = {
+                supported:  supported,
+                permission: supported ? Notification.permission : 'unsupported',
+                standalone: isStandalone(),
+                iosNeedsInstall: isIOS() && !isStandalone(),
+                subscribed: false,
+                configured: false,
+                devices: 0
+            };
+            if (!supported) return Promise.resolve(out);
+
+            return currentSub().then(function (sub) {
+                out.subscribed = !!sub;
+                return get('status').catch(function () { return null; });
+            }).then(function (res) {
+                if (res && res.ok) { out.configured = !!res.configured; out.devices = res.devices || 0; }
+                return out;
+            });
+        },
+
+        /** Xin quyền + đăng ký máy này. Trả {ok:true} hoặc {ok:false, msg:'...'}. */
+        enable: function () {
+            if (!supported) {
+                return Promise.resolve({ ok: false, msg: 'Trình duyệt này không hỗ trợ thông báo đẩy.' });
+            }
+            if (isIOS() && !isStandalone()) {
+                return Promise.resolve({
+                    ok: false,
+                    msg: 'Trên iPhone/iPad, bấm nút Chia sẻ trong Safari rồi chọn "Thêm vào Màn hình chính". '
+                       + 'Sau đó mở app từ icon vừa tạo và bật lại — iOS không cho bật thông báo từ Safari thường.'
+                });
+            }
+
+            return get('status').then(function (res) {
+                if (!res || !res.ok) throw new Error('Chưa đăng nhập hoặc máy chủ không phản hồi.');
+                if (!res.configured || !res.publicKey) {
+                    throw new Error('Máy chủ chưa cấu hình khóa VAPID (config/push.php).');
+                }
+                return Notification.requestPermission().then(function (perm) {
+                    if (perm !== 'granted') {
+                        throw new Error(perm === 'denied'
+                            ? 'Bạn đã chặn thông báo cho trang này. Vào Cài đặt trình duyệt để bỏ chặn rồi thử lại.'
+                            : 'Chưa cấp quyền thông báo.');
+                    }
+                    return navigator.serviceWorker.ready;
+                }).then(function (reg) {
+                    return reg.pushManager.getSubscription().then(function (old) {
+                        // Đăng ký cũ có thể gắn với khóa VAPID khác (khóa máy chủ đã đổi)
+                        // -> phải bỏ rồi đăng ký lại, nếu không sẽ nhận lỗi 403 khi gửi.
+                        return old ? old.unsubscribe().then(function () { return reg; }) : reg;
+                    });
+                }).then(function (reg) {
+                    return reg.pushManager.subscribe({
+                        userVisibleOnly: true,          // iOS bắt buộc, Chrome cũng đòi
+                        applicationServerKey: urlB64ToUint8(res.publicKey)
+                    });
+                }).then(function (sub) {
+                    return post('subscribe', {
+                        endpoint: sub.endpoint,
+                        p256dh:   b64FromBuffer(sub.getKey('p256dh')),
+                        auth:     b64FromBuffer(sub.getKey('auth'))
+                    });
+                }).then(function (r) {
+                    return r && r.ok
+                        ? { ok: true, devices: r.devices }
+                        : { ok: false, msg: (r && r.msg) || 'Máy chủ không lưu được đăng ký.' };
+                });
+            }).catch(function (e) {
+                return { ok: false, msg: e && e.message ? e.message : 'Không bật được thông báo.' };
+            });
+        },
+
+        /** Bỏ đăng ký máy này. */
+        disable: function () {
+            if (!supported) return Promise.resolve({ ok: true });
+            return currentSub().then(function (sub) {
+                if (!sub) return { ok: true };
+                var ep = sub.endpoint;
+                return sub.unsubscribe().then(function () { return post('unsubscribe', { endpoint: ep }); });
+            }).then(function () {
+                if ('clearAppBadge' in navigator) { try { navigator.clearAppBadge(); } catch (e) {} }
+                return { ok: true };
+            }).catch(function () { return { ok: false, msg: 'Không tắt được, thử lại sau.' } });
+        },
+
+        /** Gửi thử cho chính mình. */
+        test: function () { return post('test', {}); }
+    };
+
+    /* -----------------------------------------------------------------
+     *  Con số trên icon app khi ĐANG MỞ trang
+     *  -----------------------------------------------------------------
+     *  Service worker lo phần lúc app đã đóng. Còn khi app đang mở thì trang
+     *  tự cập nhật, để người dùng đọc xong tin là số trên icon tụt ngay chứ
+     *  không phải chờ lượt push kế tiếp.
+     *
+     *  Hai nguồn đếm chạy độc lập (chat 6 giây, chuông 8 giây) nên gom qua
+     *  đây rồi mới cộng — xem appBadge.set() được gọi ở khối chuông trong
+     *  file này và ở setBadge() của chat.js.
+     * ----------------------------------------------------------------- */
+    var counts = { msg: 0, noti: 0 };
+
+    window.appBadge = {
+        set: function (key, n) {
+            n = parseInt(n, 10) || 0;
+            if (counts[key] === n) return;
+            counts[key] = n;
+            this.apply();
+        },
+        total: function () { return (counts.msg || 0) + (counts.noti || 0); },
+        apply: function () {
+            if (!('setAppBadge' in navigator)) return;
+            var t = this.total();
+            try {
+                if (t > 0) navigator.setAppBadge(t);
+                else navigator.clearAppBadge();
+            } catch (e) {}
+        }
+    };
+
+    /* -----------------------------------------------------------------
+     *  Nút "Thông báo trên điện thoại" trong menu người dùng
+     * ----------------------------------------------------------------- */
+    document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('app-push-toggle');
+        if (!btn) return;
+
+        var label = document.getElementById('app-push-label');
+        var note  = document.createElement('div');
+        note.id = 'app-push-note';
+        note.style.cssText = 'display:none;padding:8px 14px;font-size:12px;line-height:1.5;color:#6b7280;';
+        if (btn.parentNode) btn.parentNode.insertBefore(note, btn.nextSibling);
+
+        var busy = false, on = false;
+
+        function say(msg, isError) {
+            note.textContent = msg || '';
+            note.style.color = isError ? '#dc2626' : '#6b7280';
+            note.style.display = msg ? 'block' : 'none';
+        }
+
+        function paint(st) {
+            /* Máy chủ chưa cấu hình khóa VAPID -> ẩn hẳn nút. Đây là trạng thái
+               BÌNH THƯỜNG ngay sau khi deploy code mà chưa tạo config/push.php:
+               tính năng nằm im, người dùng không thấy gì cả. Hiện một cái nút bấm
+               vào chỉ để báo lỗi cấu hình thì chỉ tổ làm người dùng hoang mang. */
+            if (!st.configured) { btn.style.display = 'none'; say('', false); return; }
+
+            on = !!st.subscribed;
+            if (label) label.textContent = on ? 'Tắt thông báo trên điện thoại' : 'Bật thông báo trên điện thoại';
+            btn.style.display = '';
+            if (st.iosNeedsInstall) say('Trên iPhone: bấm Chia sẻ → "Thêm vào Màn hình chính", rồi mở app từ icon đó và bật.', false);
+            else if (on && st.devices > 1) say('Đang bật trên ' + st.devices + ' thiết bị.', false);
+            else say('', false);
+        }
+
+        appPush.status().then(function (st) {
+            if (!st.supported) return;      // giữ nguyên display:none
+            paint(st);
+        }).catch(function () {});
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();            // đừng để menu đóng lại giữa chừng
+            if (busy) return;
+            busy = true;
+            say(on ? 'Đang tắt…' : 'Đang bật…', false);
+
+            (on ? appPush.disable() : appPush.enable()).then(function (r) {
+                busy = false;
+                if (!r || !r.ok) { say((r && r.msg) || 'Không thực hiện được.', true); return; }
+                return appPush.status().then(function (st) {
+                    paint(st);
+                    if (st.subscribed) {
+                        say('Đã bật. Đang gửi một thông báo thử…', false);
+                        return appPush.test().then(function (t) {
+                            say(t && t.ok ? 'Xong — kiểm tra thông báo vừa hiện trên máy.'
+                                          : ((t && t.msg) || 'Đã bật, nhưng gửi thử không thành công.'), !(t && t.ok));
+                        });
+                    }
+                    say('Đã tắt thông báo trên máy này.', false);
+                });
+            }).catch(function () { busy = false; say('Có lỗi, thử lại sau.', true); });
+        });
     });
 })();
 
