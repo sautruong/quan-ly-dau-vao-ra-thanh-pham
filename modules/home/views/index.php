@@ -77,7 +77,9 @@ $bg_slides    = isset($bg_slides) && is_array($bg_slides) ? $bg_slides : [];
             })
             .catch(function () {});
         }
-        setInterval(poll, 5000);
+        // Kiểm tra quyền: 30s, tự giãn khi rỗi và dừng khi tab bị ẩn (AppPoll — app_shell.js).
+        if (window.AppPoll) window.AppPoll.every('home-perm', poll, { interval: 30000, maxInterval: 60000 });
+        else setInterval(poll, 30000);
         setTimeout(poll, 2000);
     })();
     </script>

@@ -302,7 +302,9 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
                 });
             });
         }
-        setInterval(refreshStatuses, 5000);
+        // 20s + tự giãn khi rỗi + dừng khi tab bị ẩn (AppPoll — app_shell.js); trước đây 5s.
+        if (window.AppPoll) window.AppPoll.every('ofh-status', refreshStatuses, { interval: 20000, maxInterval: 60000 });
+        else setInterval(refreshStatuses, 20000);
     })(jQuery);
     </script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>

@@ -517,7 +517,10 @@ window.PMX = window.PMX || {};
                 X.handleReminders(res.reminders);
             });
     }
-    setInterval(poll, POLL_MS);
+    // Nhịp nhanh khi đang mở phòng làm việc (chat + canvas), nhưng DỪNG khi tab bị ẩn
+    // — xem AppPoll ở đầu public/js/shared/app_shell.js.
+    if (window.AppPoll) window.AppPoll.every('pm-room', poll, { interval: POLL_MS, maxInterval: POLL_MS });
+    else setInterval(poll, POLL_MS);
 
     /* ---------- Boot ---------- */
     renderSessionName();

@@ -307,6 +307,9 @@
     // thêm cho chắc phòng khi sau này ai đó nhúng nhầm chỗ.
     if (document.getElementById('ltp-board')) {
         setTimeout(poll, 5000);
-        setInterval(poll, POLL_MS);
+        // Việc HẸN GIỜ thay cron (xuất KHSX tự động) -> vẫn chạy khi tab ẩn (hiddenInterval),
+        // xem AppPoll ở đầu public/js/shared/app_shell.js.
+        if (window.AppPoll) window.AppPoll.every('plan-auto-export', poll, { interval: POLL_MS, maxInterval: POLL_MS, hiddenInterval: POLL_MS });
+        else setInterval(poll, POLL_MS);
     }
 })();

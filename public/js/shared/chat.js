@@ -501,10 +501,12 @@
                 msgsBox.scrollTop = msgsBox.scrollHeight - prevH;
             }).catch(function () { loadingMore = false; });
         }
+        // Trả về Promise<boolean>: true = có tin mới (AppPoll dùng để đặt lại chu kỳ nhanh).
         function pollNew() {
-            if (!current) return;
-            api('messages&conversation_id=' + current.id + '&after_id=' + newestId + '&limit=50').then(function (res) {
-                if (!res || !res.ok) return;
+            if (!current) return false;
+            return api('messages&conversation_id=' + current.id + '&after_id=' + newestId + '&limit=50').then(function (res) {
+                if (!res || !res.ok) return false;
+                var coTinMoi = !!(res.messages && res.messages.length);
                 if (res.messages && res.messages.length) {
                     var atBottom = isAtBottom();
                     renderMessages(res.messages, 'append');
@@ -516,7 +518,8 @@
                 applyUpdates(res.updates);                 // đồng bộ cảm xúc/thu hồi 2 phía
                 lastReaders = res.readers || lastReaders;
                 renderSeen();
-            }).catch(function () {});
+                return coTinMoi;
+            }).catch(function () { return false; });
         }
 
         function reactionsHtml(m) {
@@ -2225,9 +2228,23 @@
             applyDockState();
         }
 
-        /* ============ poll ============ */
-        function startPoll() { stopPoll(); pollTimer = setInterval(pollNew, 4000); }
-        function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+        /* ============ poll ============
+           Đã có Web Push lo real-time nên poll chỉ còn là dự phòng: chu kỳ 10s (trước 4s),
+           tự giãn tới 30s khi không có tin mới, DỪNG HẲN khi tab/PWA bị ẩn và chạy lại ngay
+           khi quay lại màn hình (xem AppPoll ở đầu public/js/shared/app_shell.js). */
+        var pollJob = null;
+        function startPoll() {
+            stopPoll();
+            if (window.AppPoll) {
+                pollJob = window.AppPoll.every('chat-room', pollNew, { interval: 10000, maxInterval: 30000 });
+            } else {
+                pollTimer = setInterval(pollNew, 10000);
+            }
+        }
+        function stopPoll() {
+            if (pollJob) { pollJob.stop(); pollJob = null; }
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
         function setBadge(n) {
             n = parseInt(n, 10) || 0;
             lastUnread = n;
@@ -2241,9 +2258,12 @@
         function refreshBadge() { api('unread').then(function (res) { if (res && res.ok) setBadge(res.unread_total); }).catch(function () {}); }
 
         // Poll toàn cục: badge + tự bung khi có tin mới + nhắc hẹn tới hạn.
-        function globalPoll() {
-            api('poll').then(function (res) {
-                if (!res || !res.ok) return;
+        // Dữ liệu nay do request GỘP của app-shell mang về (AppPoll.hub, phần 'chat'),
+        // không còn tự gọi endpoint riêng mỗi 6s. Trả true khi CÓ CÁI MỚI để hub biết
+        // đặt lại chu kỳ nhanh (xem AppPoll trong app_shell.js).
+        function applyGlobalPoll(res) {
+                if (!res || !res.ok) return false;
+                var coMoi = false;
                 setBadge(res.unread_total);
                 if (res.notif) notif = res.notif;   // đồng bộ trạng thái thông báo
 
@@ -2253,6 +2273,7 @@
                         lastIncomingId = res.latest.message_id; // lần đầu: chỉ ghi mốc
                     } else if (res.latest.message_id > lastIncomingId) {
                         lastIncomingId = res.latest.message_id;
+                        coMoi = true;
                         var viewingThis = panel.classList.contains('is-open')
                             && current && current.id === res.latest.conversation_id
                             && roomView.style.display !== 'none';
@@ -2283,20 +2304,29 @@
                 // Giống khi nhận TIN MỚI: nếu có nhắc hẹn tới hạn mà chưa mở đúng hội
                 // thoại (hoặc đang ẩn khung chat) → tự bung khung chat tới tin được nhắc.
                 if (due.length && !hideBubble) {
+                    coMoi = true;
                     var last = due[due.length - 1];
                     var viewingThis = panel.classList.contains('is-open')
                         && current && current.id === last.conversation_id
                         && roomView.style.display !== 'none';
                     if (!viewingThis) openConversationById(last.conversation_id, last.message_id);
                 }
-            }).catch(function () {});
+                return coMoi;
         }
 
         // Áp dụng trạng thái "ẩn bóng chat" đã lưu (nếu có) trước khi poll.
         applyDockState();
 
-        // Khởi động poll toàn cục (luôn chạy, kể cả khi panel đóng).
-        globalPoll();
-        globalTimer = setInterval(globalPoll, 6000);
+        /* Đồng bộ toàn cục (badge + tin mới + nhắc hẹn): đi nhờ request GỘP của app-shell.
+           Trước đây tự bắn ?action=poll mỗi 6s trên MỌI trang; nay 1 request chung 15s,
+           tự giãn khi rỗi và dừng khi tab bị ẩn. Trang nào không nạp app_shell.js thì
+           rơi về nhánh dự phòng tự poll 20s. */
+        if (window.AppPoll && window.AppPoll.hub) {
+            window.AppPoll.hub.subscribe('chat', applyGlobalPoll);
+        } else {
+            var globalPoll = function () { api('poll').then(applyGlobalPoll).catch(function () {}); };
+            globalPoll();
+            globalTimer = setInterval(globalPoll, 20000);
+        }
     });
 })();

@@ -1,3 +1,202 @@
+/* =====================================================================================
+   AppPoll — LỊCH CHẠY CHUNG CHO MỌI POLL NỀN (anh Sáu chốt 13/8/2026)
+   -------------------------------------------------------------------------------------
+   Từ khi có Web Push, poll chỉ còn là DỰ PHÒNG (đồng bộ badge / trạng thái), không còn
+   là đường real-time chính -> phải nhẹ tay lại. Bộ lịch này lo 4 việc:
+
+   1) DỪNG KHI TAB/PWA BỊ ẨN (thắng lớn nhất). Rất nhiều tab mở suốt ngày không dùng mà
+      vẫn poll. Job mặc định ngưng hẳn khi document ẩn; hiện lại thì chạy NGAY 1 lượt rồi
+      tiếp tục. Job nào là "việc hẹn giờ thay cron" (quét lời nhắc, gửi báo cáo tự động)
+      thì khai hiddenInterval để vẫn chạy nền nhưng thưa hơn.
+   2) NỚI CHU KỲ: mặc định 15s thay cho 4-6s như trước.
+   3) BACKOFF KHI RỖI: mỗi lượt không có gì mới thì giãn chu kỳ x1.5 tới maxInterval;
+      có thay đổi (job trả về true) hoặc người dùng thao tác -> đặt lại chu kỳ gốc.
+   4) KHÔNG CHỒNG REQUEST: hẹn lượt sau bằng setTimeout SAU KHI lượt trước xong, thay vì
+      setInterval bắn đè lên nhau lúc mạng chậm.
+
+   Dùng:
+       var job = AppPoll.every('ten-job', function (isHidden) {
+           return fetch(...).then(function (res) { return coThayDoi; }); // true = có mới
+       }, { interval: 15000, maxInterval: 60000, hiddenInterval: 0 });
+       job.stop(); job.start(); job.runNow(); job.reset();
+
+   AppPoll.hub gộp NHIỀU poll của app-shell vào MỘT request (xem app_pollAction trong
+   modules/home/controllers/indexController.php).
+   ===================================================================================== */
+(function () {
+    'use strict';
+    if (window.AppPoll) return;
+
+    var jobs = [];
+    function isHidden() { return document.visibilityState === 'hidden'; }
+
+    function Job(name, fn, opt) {
+        opt = opt || {};
+        this.name = name;
+        this.fn = fn;
+        this.base = Math.max(1000, opt.interval || 15000);
+        this.max = Math.max(this.base, opt.maxInterval || this.base * 4);
+        this.hiddenInterval = opt.hiddenInterval || 0; // 0 = ngưng hẳn khi tab ẩn
+        this.cur = this.base;
+        this.timer = null;
+        this.busy = false;
+        this.stopped = false;
+        this.lastRun = 0;
+        jobs.push(this);
+        this.schedule();
+    }
+    Job.prototype.delay = function () {
+        if (isHidden()) return this.hiddenInterval;             // 0 -> không hẹn lượt nào
+        return this.cur;
+    };
+    Job.prototype.schedule = function () {
+        clearTimeout(this.timer);
+        this.timer = null;
+        if (this.stopped) return;
+        var d = this.delay();
+        if (!d) return;
+        var self = this;
+        this.timer = setTimeout(function () { self.runNow(); }, d);
+    };
+    Job.prototype.runNow = function () {
+        if (this.stopped) return;
+        if (this.busy) { this.schedule(); return; }             // lượt trước chưa xong
+        var self = this;
+        this.busy = true;
+        this.lastRun = Date.now();
+        var out;
+        try { out = this.fn(isHidden()); } catch (e) { out = null; }
+        Promise.resolve(out).then(function (changed) {
+            self.busy = false;
+            if (changed === true) self.cur = self.base;          // có cái mới -> nhanh trở lại
+            else self.cur = Math.min(self.max, Math.round(self.cur * 1.5));
+            self.schedule();
+        }, function () {
+            self.busy = false;
+            self.cur = Math.min(self.max, Math.round(self.cur * 1.5));
+            self.schedule();
+        });
+    };
+    Job.prototype.reset = function () { this.cur = this.base; this.schedule(); };
+    Job.prototype.stop = function () {
+        this.stopped = true;
+        clearTimeout(this.timer); this.timer = null;
+        var i = jobs.indexOf(this);
+        if (i >= 0) jobs.splice(i, 1);      // gỡ hẳn: mở/đóng hội thoại nhiều lần không dồn job chết
+    };
+    Job.prototype.start = function () {
+        if (!this.stopped) return;
+        this.stopped = false;
+        this.cur = this.base;
+        if (jobs.indexOf(this) < 0) jobs.push(this);
+        this.schedule();
+    };
+
+    document.addEventListener('visibilitychange', function () {
+        var vis = !isHidden();
+        var now = Date.now();
+        jobs.forEach(function (j) {
+            if (j.stopped) return;
+            clearTimeout(j.timer); j.timer = null;
+            j.cur = j.base;
+            // Quay lại nhìn màn hình -> đồng bộ NGAY. Trừ khi vừa chạy xong dưới 3s
+            // (bấm qua bấm lại giữa 2 tab thì đừng bắn dồn request).
+            if (vis && now - j.lastRun > 3000) j.runNow();
+            else j.schedule();
+        });
+    });
+
+    // Người dùng đang thao tác -> coi như "có hoạt động", trả các job về chu kỳ nhanh.
+    var lastWake = 0;
+    function wake() {
+        var now = Date.now();
+        if (now - lastWake < 5000) return;   // chặn bớt, đừng đụng vào là reset liên tục
+        lastWake = now;
+        jobs.forEach(function (j) { if (!j.stopped) j.reset(); });
+    }
+    ['pointerdown', 'keydown'].forEach(function (ev) {
+        document.addEventListener(ev, wake, { passive: true });
+    });
+
+    window.AppPoll = {
+        every: function (name, fn, opt) { return new Job(name, fn, opt); },
+        wake: wake,
+        isHidden: isHidden,
+        jobs: jobs
+    };
+
+    /* ---------------------------------------------------------------------------------
+       HUB — gom các poll nền của app-shell vào MỘT request mỗi chu kỳ.
+       Widget đăng ký "phần" của mình:
+           AppPoll.hub.subscribe('notif', function (data) { ...; return coThayDoi; },
+                                 { params: function () { return { limit: 10 }; } });
+       Tham số gửi lên dạng p_<part>_<key>. Phần nào không đăng ký thì server không tính.
+       --------------------------------------------------------------------------------- */
+    var HUB_URL = '?mod=home&controllers=index&action=app_poll';
+    var subs = [];
+    var hubJob = null;
+
+    function hubTick(hidden) {
+        var use = subs.filter(function (s) { return !hidden || s.keepHidden; });
+        if (!use.length) return false;
+
+        var body = 'parts=' + encodeURIComponent(use.map(function (s) { return s.part; }).join(','));
+        use.forEach(function (s) {
+            var p = null;
+            try { p = s.params ? s.params() : null; } catch (e) { p = null; }
+            if (!p) return;
+            Object.keys(p).forEach(function (k) {
+                body += '&' + encodeURIComponent('p_' + s.part + '_' + k) + '=' + encodeURIComponent(p[k] == null ? '' : p[k]);
+            });
+        });
+
+        return fetch(HUB_URL, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body,
+            appBusy: false
+        }).then(function (r) { return r.json(); }).then(function (res) {
+            if (!res) return false;
+            // Mất phiên đăng nhập -> báo cho phần 'account' xử lý (hiện modal + logout).
+            if (!res.ok) {
+                var acc = use.filter(function (s) { return s.part === 'account'; })[0];
+                if (acc) { try { acc.handler({ ok: true, active: false, reason: 'gone' }); } catch (e) {} }
+                return false;
+            }
+            var changed = false;
+            use.forEach(function (s) {
+                var data = res.parts && res.parts[s.part];
+                if (data === undefined) return;
+                try { if (s.handler(data) === true) changed = true; } catch (e) {}
+            });
+            return changed;
+        }).catch(function () { return false; });
+    }
+
+    window.AppPoll.hub = {
+        /** part: tên phần server hiểu ('notif'|'todo'|'perm'|'account'|'evcal'|'chat').
+         *  opt.keepHidden = true -> vẫn chạy khi tab ẩn (việc hẹn giờ thay cron). */
+        subscribe: function (part, handler, opt) {
+            opt = opt || {};
+            subs.push({ part: part, handler: handler, params: opt.params, keepHidden: !!opt.keepHidden });
+            if (!hubJob) {
+                hubJob = window.AppPoll.every('hub', hubTick, {
+                    interval: 15000,        // trước đây 5-8s cho TỪNG widget
+                    maxInterval: 60000,     // rỗi lâu thì giãn dần tới 60s
+                    hiddenInterval: 60000   // ẩn: 60s và CHỈ chạy phần keepHidden
+                });
+                // Lượt ĐẦU chạy sớm (1.2s) để badge chuông/việc/tin nhắn hiện ngay khi vào
+                // trang — đợi 1 nhịp cho mọi widget kịp subscribe rồi mới bắn 1 request.
+                setTimeout(function () { if (hubJob) hubJob.runNow(); }, 1200);
+            }
+            return hubJob;
+        },
+        /** Ép đồng bộ ngay (sau khi người dùng vừa ghi gì đó). */
+        refresh: function () { if (hubJob) { hubJob.cur = hubJob.base; hubJob.runNow(); } }
+    };
+})();
+
 /* =====================================================================
    APP SHELL — tương tác sidebar trái + header.
    - Xổ/đóng menu cha.
@@ -811,22 +1010,29 @@
                     .catch(function () { clearBtn.disabled = false; });
             });
 
-            /* ---- Real-time: poll chuông để thấy thông báo mới mà không cần reload ---- */
+            /* ---- Đồng bộ chuông: đi nhờ request GỘP của AppPoll.hub (trước đây tự poll 8s) ----
+               Push mới là đường real-time; poll giờ chỉ để cập nhật badge/danh sách khi đang xem. */
             (function () {
-                function pollBell() {
-                    var keep = Math.max(PAGE, items.length);
-                    fetchNotis(keep, 0).then(function (res) {
-                        if (!res || !res.ok) return;
-                        setBadge(res.unread); total = res.total || 0;
-                        var sig = sigOf(res.unread, total, res.data);
-                        // chỉ render lại khi dropdown mở VÀ danh sách thực sự đổi (tránh phá thao tác đang bấm)
-                        if (bell.classList.contains('is-open') && sig !== lastSig) {
-                            items = res.data || []; render(); lastSig = sig;
-                        }
-                    }).catch(function () {});
+                var pollSig = null;   // chữ ký lần poll gần nhất — để biết CÓ MỚI (đặt lại backoff)
+                function applyBell(res) {
+                    if (!res || !res.ok) return false;
+                    setBadge(res.unread); total = res.total || 0;
+                    var sig = sigOf(res.unread, total, res.data);
+                    var changed = pollSig !== null && sig !== pollSig;
+                    pollSig = sig;
+                    // chỉ render lại khi dropdown mở VÀ danh sách thực sự đổi (tránh phá thao tác đang bấm)
+                    if (bell.classList.contains('is-open') && sig !== lastSig) {
+                        items = res.data || []; render(); lastSig = sig;
+                    }
+                    return changed;
                 }
-                setInterval(pollBell, 8000);
-                setTimeout(pollBell, 2500); // kiểm tra sớm để bắt lời mời/kết quả vừa đến
+                if (window.AppPoll && window.AppPoll.hub) {
+                    window.AppPoll.hub.subscribe('notif', applyBell, {
+                        params: function () { return { limit: Math.max(PAGE, items.length), offset: 0 }; }
+                    });
+                } else { // dự phòng nếu trang không nạp AppPoll
+                    setInterval(function () { fetchNotis(Math.max(PAGE, items.length), 0).then(applyBell).catch(function () {}); }, 20000);
+                }
             })();
         })();
 
@@ -1445,34 +1651,40 @@
                 }).catch(function () {});
             });
 
-            /* ---------- Real-time: polling ---------- */
+            /* ---------- Đồng bộ định kỳ: đi nhờ request GỘP của AppPoll.hub (trước đây tự poll 5s) ----------
+               Dropdown ĐÓNG: chỉ cần con số badge (đã có sẵn trong phần trả về) — không tải
+               thêm gì nữa. Dropdown MỞ: mới đồng bộ đủ danh sách + task như cũ. */
             (function () {
-                function poll() {
-                    // Dropdown đóng: vẫn cập nhật BADGE để con số giảm theo thời gian thực
-                    // (vd: người gửi tích xong 1 việc đã chia sẻ -> badge bên nhận tự giảm).
-                    if (!root.classList.contains('is-open')) {
-                        fetch(API + 'todoLists', { credentials: 'same-origin' })
-                            .then(function (r) { return r.json(); })
-                            .then(function (res) { if (res && res.ok) { state.lists = res.lists || state.lists; setBadge(res.pending); } })
-                            .catch(function () {});
-                        return;
-                    }
+                var lastPollSig = null;
+                function applyTodo(res) {
+                    if (!res || !res.ok) return false;
+                    setBadge(res.pending);
+                    var sig = String(res.pending) + '|' + itemsSig(res.data || []);
+                    var changed = lastPollSig !== null && sig !== lastPollSig;
+                    lastPollSig = sig;
+                    if (!root.classList.contains('is-open')) return changed;
+
                     loadLists(true).then(function () {
                         if (!activeList()) { switchTo(state.lists.length ? state.lists[0].id : 0); return; }
                         // Đang sửa task/tên hoặc panel chia sẻ mở → đừng vẽ lại để không phá thao tác.
                         if (list.querySelector('.app-todo-edit') || root.querySelector('.app-todo-title-edit')) return;
                         if (sharePanel && sharePanel.style.display !== 'none') { loadMembers(shareSearch ? shareSearch.value.trim() : ''); }
-                        fetch(API + 'todos&list_id=' + state.activeId, { credentials: 'same-origin' })
-                            .then(function (r) { return r.json(); })
-                            .then(function (res) {
-                                if (!res || !res.ok) return;
-                                setBadge(res.pending);
-                                var sig = itemsSig(res.data || []);
-                                if (sig !== lastItemsSig) { applyRole(); render(res.data || []); lastItemsSig = sig; }
-                            }).catch(function () {});
+                        if (parseInt(res.list_id, 10) !== parseInt(state.activeId, 10)) return; // vừa đổi danh sách -> chờ lượt sau
+                        var isig = itemsSig(res.data || []);
+                        if (isig !== lastItemsSig) { applyRole(); render(res.data || []); lastItemsSig = isig; }
                     });
+                    return changed;
                 }
-                setInterval(poll, 5000);
+                if (window.AppPoll && window.AppPoll.hub) {
+                    window.AppPoll.hub.subscribe('todo', applyTodo, {
+                        params: function () { return { list_id: state.activeId || 0 }; }
+                    });
+                } else {
+                    setInterval(function () {
+                        fetch(API + 'todos&list_id=' + (state.activeId || 0), { credentials: 'same-origin' })
+                            .then(function (r) { return r.json(); }).then(applyTodo).catch(function () {});
+                    }, 20000);
+                }
             })();
         })();
 
@@ -1797,11 +2009,17 @@
                 window.location.href = '?mod=home&controllers=index&action=calendar_full';
             });
 
-            /* ---------- Nhắc lời nhắc bằng chuông: quét định kỳ, độc lập dropdown ---------- */
+            /* ---------- Nhắc lời nhắc bằng chuông: quét định kỳ, độc lập dropdown ----------
+               Đây là VIỆC HẸN GIỜ chạy nhờ poll (hệ thống không có cron, xem memory
+               scheduled-jobs-no-cron) nên khai keepHidden: tab ẩn vẫn quét, chỉ thưa hơn
+               (60s) — nếu dừng hẳn thì lời nhắc sẽ không nổ khi người dùng để tab chạy nền. */
             (function () {
-                function checkReminders() { post('evcalCheck', {}).catch(function () {}); }
-                setInterval(checkReminders, 25000);
-                setTimeout(checkReminders, 3000);
+                function applyEvcal(res) { return !!(res && res.fired); }
+                if (window.AppPoll && window.AppPoll.hub) {
+                    window.AppPoll.hub.subscribe('evcal', applyEvcal, { keepHidden: true });
+                } else {
+                    setInterval(function () { post('evcalCheck', {}).catch(function () {}); }, 30000);
+                }
             })();
 
             /* Cho view Lịch phóng to (calendar_full.js) và menu "Nhắc lại" trên chuông
@@ -2590,11 +2808,8 @@
         if (forcedModal) {
             var AUTH3 = '?mod=auth&controllers=index&action=';
             var forcedTriggered = false;
-            var checkAccountState = function () {
-                if (forcedTriggered || window.__leftSystem) return;
-                fetch(AUTH3 + 'account_state', { credentials: 'same-origin' })
-                .then(function (r) { return r.json(); })
-                .then(function (res) {
+            var applyAccountState = function (res) {
+                    if (forcedTriggered || window.__leftSystem) return false;
                     if (res && res.ok && res.active === false && !forcedTriggered && !window.__leftSystem) {
                         forcedTriggered = true;
                         var txt = document.getElementById('app-forced-text');
@@ -2609,11 +2824,20 @@
                             n--; if (cEl) cEl.textContent = n;
                             if (n <= 0) { clearInterval(iv); window.location.href = AUTH3 + 'logout'; }
                         }, 1000);
+                        return true;
                     }
-                })
-                .catch(function () {});
+                    return false;
             };
-            setInterval(checkAccountState, 6000);
+            // Đi nhờ request GỘP của AppPoll.hub (trước đây tự poll 6s một endpoint riêng).
+            if (window.AppPoll && window.AppPoll.hub) {
+                window.AppPoll.hub.subscribe('account', applyAccountState);
+            } else {
+                setInterval(function () {
+                    if (forcedTriggered || window.__leftSystem) return;
+                    fetch(AUTH3 + 'account_state', { credentials: 'same-origin' })
+                        .then(function (r) { return r.json(); }).then(applyAccountState).catch(function () {});
+                }, 20000);
+            }
         }
 
         /* ---- 11. Phân quyền real-time: đổi quyền -> render lại menu + thông báo nổi;
@@ -2688,37 +2912,44 @@
             }
 
             var lastSig = null, redirecting = false;
-            function pollPerm() {
-                if (redirecting) return;
-                fetch(PSTATE + '&cur_mod=' + encodeURIComponent(curMod)
-                        + '&cur_ctl=' + encodeURIComponent(curCtl)
-                        + '&cur_act=' + encodeURIComponent(curAct),
-                    { credentials: 'same-origin' })
-                .then(function (r) { return r.json(); })
-                .then(function (res) {
-                    if (!res || !res.ok) return;
-                    // Mất quyền view đang xem -> báo + đẩy về trang chủ.
-                    if (res.current_allowed === false && !redirecting) {
-                        redirecting = true;
-                        permToast('Bạn vừa bị thu hồi quyền truy cập chức năng này. Đang chuyển về trang chủ…', 'warn');
-                        setTimeout(function () { window.location.href = HOME; }, 2200);
-                        return;
+            function applyPerm(res) {
+                if (redirecting) return false;
+                if (!res || !res.ok) return false;
+                // Mất quyền view đang xem -> báo + đẩy về trang chủ.
+                if (res.current_allowed === false && !redirecting) {
+                    redirecting = true;
+                    permToast('Bạn vừa bị thu hồi quyền truy cập chức năng này. Đang chuyển về trang chủ…', 'warn');
+                    setTimeout(function () { window.location.href = HOME; }, 2200);
+                    return true;
+                }
+                // Lần đầu: ghi nhận chữ ký, không báo.
+                if (lastSig === null) { lastSig = res.sig; return false; }
+                // Quyền đổi -> render lại menu + thông báo nổi.
+                if (res.sig !== lastSig) {
+                    lastSig = res.sig;
+                    if (!res.is_admin) {
+                        renderMenu(res.groups || []);
+                        permToast('Quyền truy cập của bạn vừa được cập nhật.');
                     }
-                    // Lần đầu: ghi nhận chữ ký, không báo.
-                    if (lastSig === null) { lastSig = res.sig; return; }
-                    // Quyền đổi -> render lại menu + thông báo nổi.
-                    if (res.sig !== lastSig) {
-                        lastSig = res.sig;
-                        if (!res.is_admin) {
-                            renderMenu(res.groups || []);
-                            permToast('Quyền truy cập của bạn vừa được cập nhật.');
-                        }
-                    }
-                })
-                .catch(function () {});
+                    return true;
+                }
+                return false;
             }
-            setInterval(pollPerm, 5000);
-            setTimeout(pollPerm, 2000);
+            // Đi nhờ request GỘP của AppPoll.hub (trước đây tự poll 5s).
+            if (window.AppPoll && window.AppPoll.hub) {
+                window.AppPoll.hub.subscribe('perm', applyPerm, {
+                    params: function () { return { cur_mod: curMod, cur_ctl: curCtl, cur_act: curAct }; }
+                });
+            } else {
+                setInterval(function () {
+                    if (redirecting) return;
+                    fetch(PSTATE + '&cur_mod=' + encodeURIComponent(curMod)
+                            + '&cur_ctl=' + encodeURIComponent(curCtl)
+                            + '&cur_act=' + encodeURIComponent(curAct),
+                        { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); }).then(applyPerm).catch(function () {});
+                }, 30000);
+            }
         })();
 
         /* ---- 4f. Điểm nhắc: 3 loại nhắc độc lập (nhập SX / KHSX / bốc hàng) ---- */
@@ -3405,10 +3636,17 @@
 /* =====================================================================================
    HIỆU ỨNG "ĐANG GHI" DÙNG CHUNG (anh Sáu chốt 7/8/2026)
    -------------------------------------------------------------------------------------
-   Vòng xoay giữa màn hình khi một thao tác GHI dữ liệu chạy lâu. Nạp toàn cục qua
-   app_shell.js nên MỌI trang app đều có, không phải sửa từng view.
+   Vòng xoay giữa màn hình khi một thao tác GHI dữ liệu chạy lâu.
 
-   Nguyên tắc:
+   *** MẶC ĐỊNH TẮT TRÊN MỌI VIEW (anh Sáu chốt 13/8/2026) ***
+   Trước đây nạp toàn cục nên trang nào cũng có — overlay che giữa màn hình gây vướng.
+   Nay là "chọn thì mới có": view nào muốn dùng thì TỰ GẮN, bằng 1 trong 2 cách:
+     - <body data-app-busy="1">  (trong view đó)
+     - window.APP_BUSY_ON = true (script chạy trước khi có request ghi)
+   Hoặc bật cho ĐÚNG 1 lệnh: fetch(url, { method:'POST', appBusy:true }).
+   API gọi tay AppBusy.show()/hide() vẫn chạy ở mọi trang (không phụ thuộc cờ trên).
+
+   Nguyên tắc (khi view đã bật):
    - Chỉ tính request GHI (POST/PUT/PATCH/DELETE). GET là đọc, không hiện.
    - Chỉ hiện khi vượt NGUONG ms (1.5s). Thao tác ghi bình thường xong trước mốc đó thì người
      dùng không thấy gì cả — đúng ý: chỉ việc THẬT SỰ lâu mới cần báo.
@@ -3441,6 +3679,13 @@
        kho tích liên tục hàng chục dòng. `toggle` để trần nên bắt luôn itemToggle, star_toggle,
        wall_pin_toggle, ajax_toggle_*... */
     var BO_QUA = /(action=)?(poll|chatPoll|unread|presence|notif|evcalCheck|auto_report_due_check|auto_report_send|touch|heartbeat|send|react|markRead|typing|toggle|set_picked|set_item_picked|set_confirmed|set_lock|set_item_group|set_item_qty|set_item_removed|save_kien|save_note)\b/i;
+
+    /* View hiện tại có "gắn" overlay tự động không (mặc định KHÔNG — xem chú thích đầu khối). */
+    function viewDaGan() {
+        if (window.APP_BUSY_ON === true) return true;
+        var b = document.body;
+        return !!(b && b.getAttribute('data-app-busy') === '1');
+    }
 
     function dung() {
         if (lop) return lop;
@@ -3496,8 +3741,9 @@
             var pt  = (init && init.method) || (input && input.method) || 'GET';
             var laGhi = /^(POST|PUT|PATCH|DELETE)$/i.test(pt);
             var tat   = init && init.appBusy === false;
+            var bat   = (init && init.appBusy === true) || viewDaGan();
 
-            if (!laGhi || tat || BO_QUA.test(url)) return fetchGoc.apply(this, arguments);
+            if (!laGhi || tat || !bat || BO_QUA.test(url)) return fetchGoc.apply(this, arguments);
 
             batDau(init && init.appBusyText);
             return fetchGoc.apply(this, arguments).then(
@@ -3512,6 +3758,7 @@
         window.jQuery(document).on('ajaxSend', function (e, xhr, cfg) {
             var pt = (cfg && cfg.type) || 'GET';
             if (!/^(POST|PUT|PATCH|DELETE)$/i.test(pt)) return;
+            if (!viewDaGan()) return;
             if (BO_QUA.test((cfg && cfg.url) || '')) return;
             xhr.__appBusy = true;
             batDau();

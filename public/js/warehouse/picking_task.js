@@ -840,7 +840,7 @@
      *  nhịp để không giật mất con trỏ.
      * ===================================================================== */
     var POLL_MS = 4000;
-    var pollTimer = null;
+    var pollTimer = null, pollJob = null;
 
     function dangGo() {
         var el = document.activeElement;
@@ -887,6 +887,13 @@
     }
     function batPoll() {
         clearInterval(pollTimer);
+        // Dừng khi tab bị ẩn, chạy lại ngay khi quay lại màn hình
+        // (AppPoll — xem đầu public/js/shared/app_shell.js).
+        if (window.AppPoll) {
+            if (pollJob) pollJob.stop();
+            pollJob = window.AppPoll.every('picking-task', nhipPoll, { interval: POLL_MS, maxInterval: POLL_MS });
+            return;
+        }
         pollTimer = setInterval(nhipPoll, POLL_MS);
     }
 

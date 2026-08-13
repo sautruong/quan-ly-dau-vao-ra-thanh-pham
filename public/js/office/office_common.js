@@ -250,7 +250,10 @@
                 api('poll', { id: self.docId }, function (j) { if (j && j.success) self._applyPoll(j); });
             }
             tick();
-            setInterval(tick, 3000);
+            // Giữ nhịp 3s khi đang mở tài liệu (cần cho "đang nhập"/khóa mềm), nhưng DỪNG
+            // khi tab bị ẩn — xem AppPoll ở đầu public/js/shared/app_shell.js.
+            if (window.AppPoll) window.AppPoll.every('office-presence', tick, { interval: 3000, maxInterval: 3000 });
+            else setInterval(tick, 3000);
         },
 
         /* ---------------- Chia sẻ ---------------- */

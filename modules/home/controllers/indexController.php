@@ -212,6 +212,18 @@ function permissionStateAction()
         echo json_encode(['ok' => false, 'message' => 'Chưa đăng nhập.']);
         return;
     }
+    echo json_encode(home_permission_state_payload(
+        $user,
+        (string) ($_GET['cur_mod'] ?? $_POST['cur_mod'] ?? ''),
+        (string) ($_GET['cur_ctl'] ?? $_POST['cur_ctl'] ?? ''),
+        (string) ($_GET['cur_act'] ?? $_POST['cur_act'] ?? '')
+    ), JSON_UNESCAPED_UNICODE);
+}
+
+/** Nội dung trả về của permissionState — tách riêng để endpoint gộp app_poll dùng lại
+ *  (xem app_pollAction). */
+function home_permission_state_payload($user, $cur_mod = '', $cur_ctl = '', $cur_act = '')
+{
     $is_admin  = permission_is_admin($user);
     $is_deputy = function_exists('permission_is_deputy') && permission_is_deputy($user);
 
@@ -275,9 +287,9 @@ function permissionStateAction()
     $sig = md5(json_encode([$is_admin, $is_deputy, array_keys($allowed_keys)]));
 
     // View hiện tại còn được phép không? (admin / view không-gate / view được gán).
-    $cur_mod = (string) ($_GET['cur_mod'] ?? $_POST['cur_mod'] ?? '');
-    $cur_ctl = (string) ($_GET['cur_ctl'] ?? $_POST['cur_ctl'] ?? '');
-    $cur_act = (string) ($_GET['cur_act'] ?? $_POST['cur_act'] ?? '');
+    $cur_mod = (string) $cur_mod;
+    $cur_ctl = (string) $cur_ctl;
+    $cur_act = (string) $cur_act;
     $current_allowed = true;
     if (!$is_admin && $cur_mod !== '' && $cur_mod !== 'home' && $cur_mod !== 'auth') {
         // Admin phó được vào màn phân quyền/quản lý user dù không nằm trong tbl_views.
@@ -291,13 +303,127 @@ function permissionStateAction()
         }
     }
 
-    echo json_encode([
+    return [
         'ok'              => true,
         'is_admin'        => $is_admin,
         'sig'             => $sig,
         'groups'          => $out_groups,
         'current_allowed' => $current_allowed,
-    ], JSON_UNESCAPED_UNICODE);
+    ];
+}
+
+/* ============================================================
+ *  ENDPOINT GỘP CHO MỌI POLL NỀN (anh Sáu chốt 13/8/2026)
+ *  ---------------------------------------------------------
+ *  Trước đây mỗi widget của app-shell tự poll 1 endpoint riêng
+ *  (chuông 8s, việc cần làm 5s, phân quyền 5s, trạng thái tài
+ *  khoản 6s, lịch 25s, chat 6s) => ~7 request nền / 6 giây / tab.
+ *  Nay JS gom hết vào MỘT request duy nhất mỗi chu kỳ:
+ *      POST ?mod=home&controllers=index&action=app_poll
+ *           parts=notif,todo,perm,account,evcal,chat
+ *  Tham số riêng của từng phần đi kèm tiền tố p_<part>_<key>
+ *  (vd p_todo_list_id, p_perm_cur_mod) — xem AppPoll.hub trong
+ *  public/js/shared/app_shell.js.
+ *  Phần nào không đăng ký thì KHÔNG tính -> không tốn truy vấn.
+ * ============================================================ */
+function app_pollAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $user = permission_current_user();
+    if (!$user) { echo json_encode(['ok' => false, 'message' => 'Chưa đăng nhập.']); return; }
+    $uid = (int) $user['id'];
+
+    $raw   = (string) ($_POST['parts'] ?? $_GET['parts'] ?? '');
+    $parts = array_values(array_filter(array_map('trim', explode(',', $raw))));
+    $arg = function ($part, $key, $default = '') {
+        $k = 'p_' . $part . '_' . $key;
+        return isset($_POST[$k]) ? $_POST[$k] : (isset($_GET[$k]) ? $_GET[$k] : $default);
+    };
+
+    $out = [];
+    foreach ($parts as $part) {
+        switch ($part) {
+            case 'notif':
+                $limit  = (int) $arg('notif', 'limit', 10);
+                $offset = (int) $arg('notif', 'offset', 0);
+                if ($limit < 1)  $limit = 10;
+                if ($limit > 50) $limit = 50;
+                $out['notif'] = [
+                    'ok'     => true,
+                    'unread' => notify_unread_count($uid),
+                    'total'  => notify_total_count($uid),
+                    'offset' => $offset,
+                    'data'   => notify_list($uid, $limit, $offset),
+                ];
+                break;
+
+            case 'todo':
+                $lid = (int) $arg('todo', 'list_id', 0);
+                if ($lid <= 0) $lid = todo_default_list_id($uid);
+                $role = todo_user_role_in_list($uid, $lid);
+                if ($role === null) {
+                    $out['todo'] = ['ok' => false, 'message' => 'Không có quyền xem danh sách.'];
+                    break;
+                }
+                $list = todo_list_get($lid);
+                $owner_real = $list ? (string) (($list['owner_fullname'] ?? '') ?: ($list['owner_username'] ?? '')) : '';
+                $alias_map  = todo_viewer_alias_map($uid);
+                $out['todo'] = [
+                    'ok'         => true,
+                    'list_id'    => $lid,
+                    'role'       => $role,
+                    'title'      => $list ? (string) $list['title'] : '',
+                    'owner_name' => $list ? ($alias_map[(int) $list['owner_id']] ?? $owner_real) : '',
+                    'can_edit'   => todo_can_edit_content($uid, $lid),
+                    'data'       => todo_list_items($uid, $lid),
+                    'pending'    => todo_pending_count($uid),
+                    'clear_mode' => todo_get_clear_mode($uid),
+                ];
+                break;
+
+            case 'perm':
+                $out['perm'] = home_permission_state_payload(
+                    $user,
+                    (string) $arg('perm', 'cur_mod'),
+                    (string) $arg('perm', 'cur_ctl'),
+                    (string) $arg('perm', 'cur_act')
+                );
+                break;
+
+            case 'account':
+                // Bị buộc rời / bị đóng băng -> client hiện modal + tự logout.
+                $status = (string) ($user['status'] ?? '');
+                $active = !in_array($status, ['left', 'inactive'], true);
+                $out['account'] = [
+                    'ok'     => true,
+                    'active' => $active,
+                    'reason' => $active ? '' : ($status === 'inactive' ? 'inactive' : 'left'),
+                ];
+                break;
+
+            case 'evcal':
+                // Quét lời nhắc tới giờ -> đẩy chuông. Đây là việc HẸN GIỜ chạy nhờ poll
+                // (hệ thống không có cron) nên vẫn chạy cả khi tab bị ẩn, xem keepHidden
+                // trong app_shell.js.
+                $out['evcal'] = ['ok' => true, 'fired' => evcal_check_due_reminders($uid)];
+                break;
+
+            case 'chat':
+                require_once LIBPATH . DIRECTORY_SEPARATOR . 'chat.php';
+                chat_ensure_tables();
+                chat_touch_presence($uid);   // heartbeat: đánh dấu đang online
+                $out['chat'] = [
+                    'ok'            => true,
+                    'unread_total'  => chat_unread_total($uid),
+                    'latest'        => chat_latest_incoming($uid),
+                    'due_reminders' => chat_due_reminders($uid),
+                    'notif'         => chat_notif_state($uid),
+                ];
+                break;
+        }
+    }
+
+    echo json_encode(['ok' => true, 'parts' => $out], JSON_UNESCAPED_UNICODE);
 }
 
 /* ============================================================

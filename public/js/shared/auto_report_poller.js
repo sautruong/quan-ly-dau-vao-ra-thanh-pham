@@ -100,20 +100,35 @@
 
     /* ---------- Poll ---------- */
     function poll() {
-        if (firing) return;
-        fetch(API + 'auto_report_due_check', { credentials: 'same-origin' })
+        if (firing) return false;
+        return fetch(API + 'auto_report_due_check', { credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                if (!res || !res.ok || !res.due || !res.due.length) return;
+                if (!res || !res.ok || !res.due || !res.due.length) return false;
                 var due = res.due[0];
                 var seen = false;
                 try { seen = sessionStorage.getItem(skey(due.config_id, due.date)) === '1'; } catch (e) {}
-                if (seen) return;               // đã nổ/đã huỷ trong tab này hôm nay
+                if (seen) return false;         // đã nổ/đã huỷ trong tab này hôm nay
                 startCountdown(due);
+                return true;
             })
-            .catch(function () {});
+            .catch(function () { return false; });
     }
 
     setTimeout(poll, 5000);        // kiểm tra sớm sau khi trang tải
-    setInterval(poll, POLL_MS);
+
+    // Đây là VIỆC HẸN GIỜ thay cron (không có cron phía máy chủ) nên KHÔNG dừng khi tab
+    // bị ẩn — chỉ 1 request/phút, và nếu dừng thì báo cáo tự động sẽ không gửi khi người
+    // dùng để tab chạy nền. Xem AppPoll ở đầu public/js/shared/app_shell.js.
+    // Đăng ký sau DOMContentLoaded vì file này được nạp TRƯỚC app_shell.js (chat-widget.php
+    // nằm trong sidebar) — lúc chạy dòng đầu file thì window.AppPoll chưa tồn tại.
+    function dangKyPoll() {
+        if (window.AppPoll) {
+            window.AppPoll.every('auto-report', poll, { interval: POLL_MS, maxInterval: POLL_MS, hiddenInterval: POLL_MS });
+        } else {
+            setInterval(poll, POLL_MS);
+        }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dangKyPoll);
+    else dangKyPoll();
 })();

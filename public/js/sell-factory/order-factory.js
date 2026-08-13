@@ -595,7 +595,10 @@
     function scheduleInvCheck() { clearTimeout(invCheckTimer); invCheckTimer = setTimeout(runInventoryCheck, 400); }
     $(document).on('input', '.qt-input', scheduleInvCheck);
     $(document).on('click', '.btn-remove-row', scheduleInvCheck);
-    setInterval(function () { if (collectOrderProducts().length) runInventoryCheck(); }, 20000);
+    // Kiểm tồn định kỳ: dừng khi tab bị ẩn (AppPoll — public/js/shared/app_shell.js).
+    var invTick = function () { if (collectOrderProducts().length) runInventoryCheck(); };
+    if (window.AppPoll) window.AppPoll.every('of-inventory', invTick, { interval: 20000, maxInterval: 60000 });
+    else setInterval(invTick, 20000);
 
     /* --------------------------- Cài đặt thứ tự hiển thị --------------------------- */
     var settingLoaded = false;

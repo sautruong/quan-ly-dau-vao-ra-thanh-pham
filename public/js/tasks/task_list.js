@@ -746,7 +746,9 @@
     if (window.Notification && Notification.permission === 'default') {
         try { Notification.requestPermission(); } catch (e) {}
     }
-    setInterval(checkReminders, 30000);
+    // Nhắc việc tới hạn: giữ 30s nhưng dừng khi tab bị ẩn (AppPoll — app_shell.js).
+    if (window.AppPoll) window.AppPoll.every('task-reminders', checkReminders, { interval: 30000, maxInterval: 30000 });
+    else setInterval(checkReminders, 30000);
 
     /* ---------------- Khởi tạo ---------------- */
     renderBoard();
