@@ -106,7 +106,7 @@ $dew_boot = json_encode([
             <div class="dew-topbar">
                 <div class="dew-search-bar">
                     <i class="fa-solid fa-hashtag"></i>
-                    <input type="text" id="dew-hashtag-search" placeholder="Tìm bài theo #hashtag..." autocomplete="off">
+                    <input type="text" id="dew-hashtag-search" placeholder="Tìm kiếm bài viết..." autocomplete="off">
                     <button type="button" class="dew-search-clear" id="dew-hashtag-clear" style="display:none;" title="Xóa">
                         <i class="fa-solid fa-xmark"></i>
                     </button>

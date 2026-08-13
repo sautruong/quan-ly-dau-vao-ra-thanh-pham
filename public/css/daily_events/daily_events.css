@@ -574,7 +574,8 @@ body.dew-noscroll { overflow: hidden; }
     .app-header { margin-bottom: 0; }
     .dew-content { padding-left: 0; padding-right: 0; }
     .dew-post { padding: 12px 10px; border-radius: 10px; }
-    .dew-topbar { margin-bottom: 12px; }
+    /* Header đã bỏ margin dưới -> chừa lại 5px cho ô tìm + nút đăng bài khỏi dính mép. */
+    .dew-topbar { margin: 5px 0 12px; }
     .dew-composer { flex-direction: column; }
     .dew-modal { padding: 4vh 8px; }
     .dew-modal-body { padding: 14px 12px 16px; }
