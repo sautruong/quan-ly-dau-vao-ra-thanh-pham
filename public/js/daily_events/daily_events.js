@@ -492,10 +492,14 @@
             + tagsHtml
             + pinBar
             + reactionsHtml('post', p.id, p.reactions)
+            // Hàng thao tác CHỈ ICON (anh Sáu chốt 13/8/2026) — nhãn chữ chuyển vào title,
+            // riêng số bình luận vẫn hiện cạnh icon vì đó là dữ liệu, không phải nhãn.
             + '<div class="dew-post-actions">'
-                + '<button type="button" class="dew-post-reactbtn" data-tt="post" data-tid="' + p.id + '"><i class="fa-regular fa-face-smile"></i> Thích</button>'
-                + '<button type="button" class="dew-post-commentbtn"><i class="fa-regular fa-comment"></i> Bình luận (' + p.comment_count + ')</button>'
-                + '<button type="button" class="dew-post-sharebtn" data-id="' + p.id + '"><i class="fa-solid fa-share-nodes"></i> Chia sẻ</button>'
+                + '<button type="button" class="dew-post-reactbtn" data-tt="post" data-tid="' + p.id + '" title="Thích" aria-label="Thích"><i class="fa-regular fa-face-smile"></i></button>'
+                + '<button type="button" class="dew-post-commentbtn" title="Bình luận" aria-label="Bình luận"><i class="fa-regular fa-comment"></i>'
+                    + (p.comment_count ? '<span class="dew-act-count">' + p.comment_count + '</span>' : '')
+                + '</button>'
+                + '<button type="button" class="dew-post-sharebtn" data-id="' + p.id + '" title="Chia sẻ" aria-label="Chia sẻ"><i class="fa-solid fa-share-nodes"></i></button>'
             + '</div>'
             + '<div class="dew-comments">'
                 + moreToggle
