@@ -50,26 +50,21 @@
 .dew-avatar-fallback i { font-size: inherit; }
 .dew-avatar-sm.dew-avatar-fallback { font-size: 32px; }
 
-/* ---------- Ô soạn bài gọn (avatar + input, click mở modal) ---------- */
-.dew-composer-mini {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #fff;
-    border: 1px solid #e6e8ec;
-    border-radius: 999px;
-    padding: 8px 16px 8px 8px;
-    margin: 16px 0;
-    cursor: pointer;
-    transition: box-shadow .15s ease, border-color .15s ease;
+/* ---------- Thanh trên: ô tìm #hashtag + nút đăng bài ----------
+   Ô soạn bài gọn kiểu Facebook (avatar + "Bạn đang nghĩ gì?") đã bỏ (anh Sáu chốt
+   13/8/2026): nay chỉ còn 1 nút icon nằm CÙNG HÀNG, sát phải ô tìm bài. */
+.dew-topbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.dew-topbar .dew-search-bar { flex: 1; min-width: 0; margin-bottom: 0; }
+.dew-composer-btn {
+    flex: 0 0 auto;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid #2e9e57; background: #2e9e57; color: #fff;
+    font-size: 16px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .15s ease, transform .1s ease;
 }
-.dew-composer-mini:hover { border-color: #2e9e57; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
-.dew-composer-trigger {
-    flex: 1; min-width: 0;
-    border: none; background: #f3f5f7; border-radius: 999px;
-    padding: 11px 16px; font: inherit; color: #374151; cursor: pointer;
-}
-.dew-composer-trigger::placeholder { color: #6b7280; }
+.dew-composer-btn:hover { background: #1f6f3d; }
+.dew-composer-btn:active { transform: scale(.94); }
 
 /* ---------- Modal đăng bài ---------- */
 .dew-modal {
@@ -151,6 +146,27 @@
 .dew-fmt-btn:hover { background: #f1f5f3; }
 .dew-fmt-color { font-weight: 700; }
 .dew-fmt-sep { width: 1px; height: 18px; background: #e6e8ec; margin: 0 4px; flex: 0 0 auto; }
+
+/* Nút định dạng ĐANG BẬT: tô nền + viền để biết chữ sắp gõ ra kiểu gì (bấm lại là tắt).
+   Riêng nút màu giữ nguyên màu chữ của chính nó (A đỏ vẫn đỏ, chỉ thêm nền). */
+.dew-fmt-btn.is-active {
+    background: #eaf6ee;
+    box-shadow: inset 0 0 0 1.5px #2e9e57;
+}
+.dew-fmt-btn.is-active:hover { background: #dcf0e4; }
+
+/* Nút "Chụp ảnh" cạnh "Chọn tệp" của dropzone (ô soạn bài / ô sửa bài).
+   .iu-dropzone i đang là display:block/26px -> phải kéo icon về inline cỡ chữ. */
+.dew-cam-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 16px; margin-left: 8px;
+    border: 1px solid #2e9e57; border-radius: 8px;
+    background: #fff; color: #1f6f3d;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background .2s ease;
+}
+.dew-cam-btn:hover { background: #eaf6ee; }
+.dew-dropzone .dew-cam-btn i { display: inline; font-size: 13px; color: inherit; margin: 0; }
 
 /* Định dạng áp lên nội dung bài/bình luận đã đăng (khớp với applyTextFormatDisplay() JS). */
 .dew-fmt-underline { text-decoration: underline; }
@@ -402,16 +418,23 @@
 
 .dew-reply-compose { margin-top: 8px; margin-left: 24px; }
 
-/* ---------- Khung soạn bình luận ---------- */
+/* ---------- Khung soạn bình luận ----------
+   KHÔNG còn avatar bên trái ô nhập (anh Sáu chốt 13/8/2026) -> ô nhập chiếm trọn bề
+   ngang khối chứa nó. Avatar chỉ còn ở bình luận đã đăng. */
 .dew-comment-compose { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
 .dew-comment-compose-wrap { flex: 1; min-width: 0; position: relative; }
 .dew-comment-compose-body {
-    display: flex; align-items: flex-end; gap: 6px;
+    display: flex; align-items: flex-end; gap: 6px; width: 100%;
     background: #f3f5f7; border-radius: 18px; padding: 6px 6px 6px 14px;
+    box-sizing: border-box;
 }
 .dew-comment-input {
     flex: 1; font: inherit; padding: 6px 0;
 }
+/* Cụm A / đính kèm / gửi giấu sau nút "..." — mặc định chỉ chừa icon camera cho gọn. */
+.dew-comment-tools { display: none; align-items: center; gap: 6px; }
+.dew-comment-compose-body.is-tools-open .dew-comment-tools { display: inline-flex; }
+.dew-comment-compose-body.is-tools-open .dew-comment-tools-toggle { color: #1f6f3d; background: #e5e7eb; }
 .dew-comment-input:focus { outline: none; }
 /* Ô bình luận = contenteditable (không phải textarea) để định dạng chữ (đậm/nghiêng/
    gạch chân/màu) hiển thị TRỰC TIẾP ngay khi gõ, giống ô soạn bài/ô soạn tin nhắn chat. */
@@ -423,11 +446,14 @@
     content: attr(data-placeholder); color: #9ca3af; pointer-events: none;
 }
 .dew-comment-filecount { font-size: 11.5px; color: #6b7280; white-space: nowrap; }
-.dew-comment-attach, .dew-comment-send, .dew-comment-fmt-toggle {
+.dew-comment-attach, .dew-comment-send, .dew-comment-fmt-toggle,
+.dew-comment-camera, .dew-comment-tools-toggle {
     border: none; background: none; cursor: pointer; color: #6b7280; width: 30px; height: 30px;
     border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.dew-comment-attach:hover, .dew-comment-fmt-toggle:hover { background: #e5e7eb; }
+.dew-comment-attach:hover, .dew-comment-fmt-toggle:hover,
+.dew-comment-camera:hover, .dew-comment-tools-toggle:hover { background: #e5e7eb; }
+.dew-comment-camera { color: #1f6f3d; }
 .dew-comment-send { color: #2e9e57; }
 .dew-comment-send:hover { background: #eaf6ee; }
 /* Popup định dạng chữ của ô bình luận — nổi phía trên ô, cùng kiểu .dew-format-pop. */
@@ -437,6 +463,78 @@
     padding: 6px 8px; border: 1px solid #e6e8ec; border-radius: 12px; background: #fff;
     box-shadow: 0 8px 24px rgba(0,0,0,.08);
 }
+
+/* Xóa bình luận: tan biến nhẹ nhàng (không hỏi xác nhận) — xem .dew-comment-del trong JS. */
+.dew-comment.is-vanishing {
+    opacity: 0;
+    transform: scale(.96) translateY(-4px);
+    transition: opacity .25s ease, transform .25s ease;
+    pointer-events: none;
+}
+
+/* =====================================================================
+   KHUNG XEM ẢNH (phóng to/thu nhỏ, xoay, tải xuống, chia sẻ qua chat)
+   ===================================================================== */
+body.dew-noscroll { overflow: hidden; }
+.dew-viewer {
+    display: none;
+    position: fixed; inset: 0; z-index: 3000;
+    background: rgba(9, 12, 18, .97);
+    flex-direction: column;
+}
+.dew-viewer.is-open { display: flex; }
+.dew-viewer-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px)); /* tránh tai thỏ / thanh trạng thái */
+    color: #e5e7eb; flex: 0 0 auto;
+    background: rgba(0,0,0,.35);
+}
+.dew-viewer-name {
+    flex: 1; min-width: 0; font-size: 13px; color: #cbd5e1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dew-viewer-tools { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.dew-viewer-tools button {
+    border: none; background: rgba(255,255,255,.08); color: #e5e7eb; cursor: pointer;
+    width: 38px; height: 38px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 15px;
+    transition: background .15s ease;
+}
+.dew-viewer-tools button:hover { background: rgba(255,255,255,.2); }
+.dew-viewer-zoom { font-size: 12px; color: #cbd5e1; min-width: 44px; text-align: center; }
+.dew-viewer-stage {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; touch-action: none;
+}
+.dew-viewer-stage img {
+    max-width: 100%; max-height: 100%;
+    transform-origin: center center;
+    transition: transform .06s linear;
+    cursor: grab; user-select: none; -webkit-user-drag: none;
+}
+.dew-viewer-stage img.is-dragging { cursor: grabbing; transition: none; }
+
+/* ---------- Modal chọn người để chia sẻ (bài viết / ảnh qua chat) ---------- */
+.dew-share-modal { z-index: 3200; }
+.dew-share-hint { margin: 0 0 10px; font-size: 13px; color: #6b7280; }
+.dew-share-list {
+    margin-top: 10px; max-height: 46vh; overflow-y: auto;
+    border: 1px solid #e6e8ec; border-radius: 10px; padding: 4px;
+}
+.dew-share-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; border: none; background: none; cursor: pointer; font: inherit; text-align: left;
+    padding: 10px 12px; border-radius: 8px; color: #374151;
+}
+.dew-share-item:hover { background: #f3f5f7; }
+.dew-share-item i { display: none; color: #2e9e57; }
+.dew-share-item.is-picked { background: #eaf6ee; color: #1f6f3d; font-weight: 600; }
+.dew-share-item.is-picked i { display: inline; }
+.dew-share-empty { padding: 16px; text-align: center; color: #9ca3af; font-size: 13px; }
+.dew-share-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+.dew-share-count { margin-right: auto; font-size: 13px; color: #6b7280; }
+.dew-share-submit:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ---------- Toast ---------- */
 .dew-toast {
@@ -448,7 +546,43 @@
 .dew-toast.is-err { background: #b91c1c; }
 .dew-toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-@media (max-width: 640px) {
-    .dew-content { padding-left: 8px; padding-right: 8px; }
+/* =====================================================================
+   MOBILE (anh Sáu chốt 13/8/2026) — breakpoint chuẩn 768px của dự án.
+   File CSS này CHỈ nạp ở view Thảo luận nên mọi rule dưới đây tự khoanh
+   vùng trong trang này, kể cả rule đụng tới khối dùng chung (.app-header,
+   #wrapper, bóng chat).
+   ===================================================================== */
+@media (max-width: 768px) {
+    /* 1. Vào trang này là ẩn bóng chat góc phải — nó che đúng ô viết bình luận. */
+    #chat-widget .chat-launcher { display: none !important; }
+
+    /* 10 + 12. Dạt sát 2 mép điện thoại: bỏ padding 2 bên của khung + thu padding thẻ bài,
+       và bỏ luôn khoảng hở 18px dưới header cho nội dung lên cao. */
+    #wrapper { padding-left: 2px; padding-right: 2px; }
+    .app-header { margin-bottom: 0; }
+    .dew-content { padding-left: 0; padding-right: 0; }
+    .dew-post { padding: 12px 10px; border-radius: 10px; }
+    .dew-topbar { margin-bottom: 12px; }
     .dew-composer { flex-direction: column; }
+    .dew-modal { padding: 4vh 8px; }
+    .dew-modal-body { padding: 14px 12px 16px; }
+
+    /* 9. Ô viết bình luận của BÀI: full width khối chứa + nằm sát mép dưới thẻ bài
+       (margin âm đúng bằng padding .dew-post ở trên). */
+    .dew-post > .dew-comments > .dew-comment-compose {
+        margin: 8px -10px -12px;
+        width: auto;
+    }
+    .dew-post > .dew-comments > .dew-comment-compose .dew-comment-compose-body {
+        border-radius: 12px 12px 10px 10px;
+    }
+
+    /* Nút "Chụp ảnh" của dropzone xuống dòng cho dễ bấm bằng ngón tay. */
+    .dew-cam-btn { margin-left: 0; margin-top: 8px; }
+    .iu-dropzone .iu-btn-choose { display: inline-flex; }
+
+    /* Khung xem ảnh: nút to hơn cho ngón tay, tên tệp thu gọn. */
+    .dew-viewer-tools button { width: 40px; height: 40px; font-size: 16px; }
+    .dew-viewer-name { font-size: 12px; }
+    .dew-viewer-zoom { display: none; }
 }

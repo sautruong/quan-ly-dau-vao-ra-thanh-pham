@@ -131,17 +131,70 @@
         document.execCommand('insertText', false, text);
     }
 
-    /** Áp định dạng THẬT (đậm/nghiêng/gạch chân/màu) ngay lên đoạn đang bôi đen trong ô
-     *  soạn (contenteditable) — dùng execCommand của trình duyệt để xử lý đúng mọi kiểu
-     *  vùng chọn, giống hệt cách ô soạn tin nhắn của chat làm (xem public/js/shared/chat.js). */
+    /* --- Trạng thái ĐANG BẬT của các nút định dạng (anh Sáu chốt 13/8/2026) ---
+       Nút nào đang áp dụng thì tô nền (.is-active) để biết chữ sắp gõ sẽ ra kiểu gì;
+       bấm lại chính nút đó là tắt (B/I/U tự toggle; màu thì đổi ngược về ĐEN). */
+    var rgbOfColorCache = null;
+    /** '#ef4444' -> 'rgb(239, 68, 68)' (chuẩn hóa qua getComputedStyle để so khớp với
+     *  giá trị queryCommandValue('foreColor') do trình duyệt trả về). */
+    function normalizeColor(raw) {
+        if (!raw) return '';
+        var probe = document.createElement('span');
+        probe.style.display = 'none';
+        probe.style.color = raw;
+        document.body.appendChild(probe);
+        var out = getComputedStyle(probe).color;
+        probe.remove();
+        return out;
+    }
+    function rgbOfColor(key) {
+        if (!rgbOfColorCache) {
+            rgbOfColorCache = {};
+            Object.keys(DEW_FMT_COLORS).forEach(function (k) { rgbOfColorCache[k] = normalizeColor(DEW_FMT_COLORS[k]); });
+        }
+        return rgbOfColorCache[key] || '';
+    }
+    function cmdState(name) {
+        try { return !!document.queryCommandState(name); } catch (e) { return false; }
+    }
+    function currentForeColor() {
+        try { return normalizeColor(document.queryCommandValue('foreColor')); } catch (e) { return ''; }
+    }
+    /** Vẽ lại trạng thái bật/tắt cho mọi nút trong 1 bảng định dạng, theo con trỏ hiện tại. */
+    function syncFormatButtons(pop) {
+        if (!pop) return;
+        var cur = currentForeColor();
+        var st = { b: cmdState('bold'), i: cmdState('italic'), u: cmdState('underline') };
+        $all('.dew-fmt-btn', pop).forEach(function (btn) {
+            var f = btn.getAttribute('data-fmt');
+            var on = f === 'color' ? (cur !== '' && cur === rgbOfColor(btn.getAttribute('data-color'))) : !!st[f];
+            btn.classList.toggle('is-active', on);
+        });
+    }
+    /** Bảng định dạng đang gắn với 1 ô soạn (ô bình luận có bảng riêng, ô soạn bài dùng #dew-format-pop). */
+    function formatPopOf(editable) {
+        if (!editable) return null;
+        if (editable.id === 'dew-compose-input') return $('#dew-format-pop');
+        var wrap = editable.closest('.dew-comment-compose-wrap');
+        return wrap ? wrap.querySelector('.dew-comment-fmt-pop') : null;
+    }
+
+    /** Áp định dạng THẬT (đậm/nghiêng/gạch chân/màu) lên đoạn đang bôi đen — hoặc lên
+     *  ĐOẠN CHỮ SẮP GÕ nếu chưa bôi đen gì (execCommand giữ trạng thái cho lần gõ kế
+     *  tiếp), giống hệt ô soạn tin nhắn của chat (xem public/js/shared/chat.js). */
     function applyTextFormat(editable, kind, color) {
         var sel = window.getSelection();
-        if (!sel || sel.isCollapsed || !editable.contains(sel.anchorNode)) return; // chưa bôi đen gì
-        editable.focus();
-        if (kind === 'color') document.execCommand('foreColor', false, DEW_FMT_COLORS[color]);
+        if (!sel || !sel.rangeCount || !editable.contains(sel.anchorNode)) moveCursorToEnd(editable);
+        else editable.focus();
+        if (kind === 'color') {
+            // Màu không tự toggle như B/I/U -> đang là màu đó mà bấm lại thì trả chữ về đen.
+            var isOn = currentForeColor() === rgbOfColor(color);
+            document.execCommand('foreColor', false, isOn ? '#000000' : DEW_FMT_COLORS[color]);
+        }
         else if (kind === 'b') document.execCommand('bold', false, null);
         else if (kind === 'i') document.execCommand('italic', false, null);
         else if (kind === 'u') document.execCommand('underline', false, null);
+        syncFormatButtons(formatPopOf(editable));
     }
 
     /** Đọc nội dung ô soạn (đã định dạng bằng thẻ HTML thật) ngược lại thành plain text
@@ -253,11 +306,13 @@
     }
 
     /* ---------------- Ảnh / file đính kèm ---------------- */
+    // data-att-id: id bản ghi de_wall_attachments — cần cho "Chia sẻ qua chat" ở khung xem ảnh.
     function renderAttachments(list) {
         if (!list || !list.length) return '';
         return '<div class="dew-media">' + list.map(function (a) {
             if (a.is_image) {
-                return '<div class="dew-media-item dew-media-img"><img src="' + esc(a.file_url) + '" data-view="' + esc(a.file_url) + '" alt=""></div>';
+                return '<div class="dew-media-item dew-media-img"><img src="' + esc(a.file_url) + '" data-view="' + esc(a.file_url) + '"'
+                    + ' data-att-id="' + (a.id || 0) + '" data-name="' + esc(a.name || '') + '" alt=""></div>';
             }
             return '<a class="dew-media-item dew-media-file" href="' + esc(a.file_url) + '" target="_blank" rel="noopener">' +
                 '<i class="fa-solid fa-file-lines"></i><span>' + esc(a.name || 'Tệp đính kèm') + '</span></a>';
@@ -336,19 +391,28 @@
             + '<button type="button" class="dew-fmt-btn dew-fmt-color" data-fmt="color" data-color="green" title="Xanh lá" style="color:#16a34a;">A</button>'
         + '</div>';
     }
+    /** Ô soạn bình luận / trả lời.
+     *  - KHÔNG có avatar bên trái (anh Sáu chốt 13/8/2026): avatar chỉ xuất hiện ở bình
+     *    luận ĐÃ đăng, còn ô nhập để trống cho rộng, nhất là trên điện thoại.
+     *  - Ngoài ô nhập chỉ chừa nút CHỤP ẢNH (mở thẳng camera điện thoại). Cụm A / đính
+     *    kèm / gửi nằm sau nút "..." — bấm mới xổ ra. */
     function composeRowHtml(key) {
         var n = (commentFiles[key] || []).length;
         return '<div class="dew-comment-compose" data-key="' + esc(key) + '">'
-            + avatarHtml(ME, 'dew-avatar-sm')
             + '<div class="dew-comment-compose-wrap">'
                 + commentFmtPopHtml()
                 + '<div class="dew-comment-compose-body">'
                     + '<div class="dew-comment-input dew-comment-input-editable" contenteditable="true" data-placeholder="Viết bình luận..."></div>'
                     + '<span class="dew-comment-filecount"' + (n ? '' : ' style="display:none;"') + '>' + n + ' tệp</span>'
-                    + '<button type="button" class="dew-comment-fmt-toggle" title="Định dạng chữ (bôi đen đoạn text trước)"><i class="fa-solid fa-font"></i></button>'
-                    + '<button type="button" class="dew-comment-attach" title="Đính kèm ảnh/file"><i class="fa-solid fa-paperclip"></i></button>'
+                    + '<button type="button" class="dew-comment-camera" title="Chụp ảnh"><i class="fa-solid fa-camera"></i></button>'
                     + '<input type="file" class="dew-comment-file-input" multiple hidden>'
-                    + '<button type="button" class="dew-comment-send" title="Gửi"><i class="fa-solid fa-paper-plane"></i></button>'
+                    + '<input type="file" class="dew-comment-cam-input" accept="image/*" capture="environment" hidden>'
+                    + '<div class="dew-comment-tools">'
+                        + '<button type="button" class="dew-comment-fmt-toggle" title="Định dạng chữ"><i class="fa-solid fa-font"></i></button>'
+                        + '<button type="button" class="dew-comment-attach" title="Đính kèm ảnh/file"><i class="fa-solid fa-paperclip"></i></button>'
+                        + '<button type="button" class="dew-comment-send" title="Gửi"><i class="fa-solid fa-paper-plane"></i></button>'
+                    + '</div>'
+                    + '<button type="button" class="dew-comment-tools-toggle" title="Thêm tùy chọn"><i class="fa-solid fa-ellipsis"></i></button>'
                 + '</div>'
             + '</div>'
         + '</div>';
@@ -400,7 +464,9 @@
                         + '<i class="fa-solid fa-paste"></i>'
                         + '<p>Dán ảnh (Ctrl+V) hoặc kéo thả ảnh/file vào đây</p>'
                         + '<button type="button" class="iu-btn-choose">Chọn tệp</button>'
+                        + '<button type="button" class="dew-cam-btn" title="Chụp ảnh từ điện thoại"><i class="fa-solid fa-camera"></i> Chụp ảnh</button>'
                         + '<input type="file" class="iu-input" multiple hidden>'
+                        + '<input type="file" class="dew-cam-input" accept="image/*" capture="environment" hidden>'
                     + '</div>'
                     + '<div class="iu-preview"></div>'
                 + '</div>'
@@ -429,6 +495,7 @@
             + '<div class="dew-post-actions">'
                 + '<button type="button" class="dew-post-reactbtn" data-tt="post" data-tid="' + p.id + '"><i class="fa-regular fa-face-smile"></i> Thích</button>'
                 + '<button type="button" class="dew-post-commentbtn"><i class="fa-regular fa-comment"></i> Bình luận (' + p.comment_count + ')</button>'
+                + '<button type="button" class="dew-post-sharebtn" data-id="' + p.id + '"><i class="fa-solid fa-share-nodes"></i> Chia sẻ</button>'
             + '</div>'
             + '<div class="dew-comments">'
                 + moreToggle
@@ -479,7 +546,15 @@
         $all('.dew-comment-compose', postEl).forEach(function (box) {
             var key = box.getAttribute('data-key');
             var input = box.querySelector('.dew-comment-input');
-            if (input && input.innerHTML) map[key] = { html: input.innerHTML, focused: document.activeElement === input };
+            var bodyEl = box.querySelector('.dew-comment-compose-body');
+            var toolsOpen = !!bodyEl && bodyEl.classList.contains('is-tools-open');
+            if ((input && input.innerHTML) || toolsOpen) {
+                map[key] = {
+                    html: input ? input.innerHTML : '',
+                    focused: document.activeElement === input,
+                    toolsOpen: toolsOpen
+                };
+            }
         });
         return map;
     }
@@ -489,6 +564,10 @@
             var input = box && box.querySelector('.dew-comment-input');
             if (!input) return;
             input.innerHTML = map[key].html;
+            if (map[key].toolsOpen) {
+                var bodyEl = box.querySelector('.dew-comment-compose-body');
+                if (bodyEl) bodyEl.classList.add('is-tools-open');
+            }
             if (map[key].focused) moveCursorToEnd(input);
         });
     }
@@ -536,13 +615,15 @@
     var lastLocalTouch = {};
     function touchLocal(postId) { lastLocalTouch[postId] = Date.now(); }
 
+    // Trả Promise<boolean>: true = có bài đổi (AppPoll dùng để đặt lại chu kỳ nhanh).
     function pollFeed() {
         var ids = state.rows.map(function (r) { return r.id; });
         if (BOOT.permalink) ids.push(BOOT.permalink.id);
-        if (!ids.length) return;
+        if (!ids.length) return false;
         var requestedAt = Date.now();
-        api('wall_poll', { ids: ids }).then(function (j) {
-            if (!j || !j.success) return;
+        return api('wall_poll', { ids: ids }).then(function (j) {
+            if (!j || !j.success) return false;
+            var coDoi = false;
             (j.rows || []).forEach(function (p) {
                 if (lastLocalTouch[p.id] && lastLocalTouch[p.id] > requestedAt) return; // đã có bản mới hơn rồi
                 if (postSignatures[p.id] === postSignature(p)) return; // không đổi gì -> khỏi vẽ lại
@@ -550,13 +631,24 @@
                 if (idx >= 0) state.rows[idx] = p;
                 if (BOOT.permalink && BOOT.permalink.id === p.id) BOOT.permalink = p;
                 updatePostInPlace(p);
+                coDoi = true;
             });
+            return coDoi;
         });
     }
 
-    var pollTimer = null;
-    function startPoll() { stopPoll(); pollTimer = setInterval(pollFeed, 5000); }
-    function stopPoll() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+    /* Chu kỳ 15s (trước 5s), tự giãn tới 45s khi cả Tường không có gì mới, và DỪNG HẲN
+       khi tab/PWA bị ẩn — quay lại màn hình là đồng bộ ngay 1 lượt (AppPoll, app_shell.js). */
+    var pollTimer = null, pollJob = null;
+    function startPoll() {
+        stopPoll();
+        if (window.AppPoll) pollJob = window.AppPoll.every('dew-feed', pollFeed, { interval: 15000, maxInterval: 45000 });
+        else pollTimer = setInterval(pollFeed, 15000);
+    }
+    function stopPoll() {
+        if (pollJob) { pollJob.stop(); pollJob = null; }
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
 
     /* ---------------- Tải trang / tìm theo hashtag ---------------- */
     function reloadFeed(page) {
@@ -866,12 +958,330 @@
         });
     }
 
+    /* =====================================================================
+     *  KHUNG XEM ẢNH (anh Sáu chốt 13/8/2026)
+     *  Phóng to / thu nhỏ (lăn chuột, chụm 2 ngón, chạm 2 lần, nút +/−), kéo
+     *  để xê dịch, xoay, TẢI XUỐNG và CHIA SẺ QUA CHAT. Viết riêng cho Tường
+     *  (không dùng InvoiceViewer của hóa đơn) vì cần thêm 2 nút cuối + thao
+     *  tác cảm ứng cho điện thoại.
+     * ===================================================================== */
+    var DewViewer = (function () {
+        var box = null, img = null, stage = null, zoomLabel = null, nameLabel = null;
+        var scale = 1, tx = 0, ty = 0, rot = 0;
+        var cur = { url: '', attId: 0, name: '' };
+        var MIN = 1, MAX = 8;
+        var drag = null;          // {x, y, tx, ty} khi đang kéo bằng chuột/1 ngón
+        var pinch = null;         // {dist, scale, cx, cy, tx, ty} khi đang chụm 2 ngón
+        var lastTap = 0;
+
+        function apply() {
+            img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ') rotate(' + rot + 'deg)';
+            if (zoomLabel) zoomLabel.textContent = Math.round(scale * 100) + '%';
+        }
+        function reset() { scale = 1; tx = 0; ty = 0; rot = 0; apply(); }
+        function zoomAt(next, cx, cy) {
+            next = Math.min(MAX, Math.max(MIN, next));
+            var rect = img.getBoundingClientRect();
+            var offX = cx - (rect.left + rect.width / 2);
+            var offY = cy - (rect.top + rect.height / 2);
+            if (next === MIN) { tx = 0; ty = 0; }
+            else {
+                var ratio = next / scale;
+                tx = (tx - offX) * ratio + offX;
+                ty = (ty - offY) * ratio + offY;
+            }
+            scale = next;
+            apply();
+        }
+        function centerZoom(next) {
+            var rect = stage.getBoundingClientRect();
+            zoomAt(next, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        }
+
+        function download() {
+            if (!cur.url) return;
+            var a = document.createElement('a');
+            a.href = cur.url;
+            a.download = cur.name || cur.url.split('/').pop() || 'hinh-anh';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        function share() {
+            if (!cur.attId) { toast('Ảnh này chưa lưu trên máy chủ nên không chia sẻ được.', false); return; }
+            DewShare.open({
+                mode: 'chat',
+                attachmentId: cur.attId,
+                title: 'Chia sẻ ảnh qua chat',
+                hint: 'Chọn người nhận — ảnh sẽ được gửi thành một tin nhắn.'
+            });
+        }
+
+        function ensure() {
+            if (box) return box;
+            box = document.createElement('div');
+            box.className = 'dew-viewer';
+            box.innerHTML =
+                '<div class="dew-viewer-bar">'
+                    + '<span class="dew-viewer-name"></span>'
+                    + '<div class="dew-viewer-tools">'
+                        + '<button type="button" data-act="zoomout" title="Thu nhỏ"><i class="fa-solid fa-magnifying-glass-minus"></i></button>'
+                        + '<span class="dew-viewer-zoom">100%</span>'
+                        + '<button type="button" data-act="zoomin" title="Phóng to"><i class="fa-solid fa-magnifying-glass-plus"></i></button>'
+                        + '<button type="button" data-act="rotate" title="Xoay"><i class="fa-solid fa-rotate-right"></i></button>'
+                        + '<button type="button" data-act="download" title="Tải xuống"><i class="fa-solid fa-download"></i></button>'
+                        + '<button type="button" data-act="share" title="Chia sẻ qua chat"><i class="fa-solid fa-share-nodes"></i></button>'
+                        + '<button type="button" data-act="close" title="Đóng (Esc)"><i class="fa-solid fa-xmark"></i></button>'
+                    + '</div>'
+                + '</div>'
+                + '<div class="dew-viewer-stage"><img src="" alt="" draggable="false"></div>';
+            document.body.appendChild(box);
+            img = box.querySelector('img');
+            stage = box.querySelector('.dew-viewer-stage');
+            zoomLabel = box.querySelector('.dew-viewer-zoom');
+            nameLabel = box.querySelector('.dew-viewer-name');
+
+            box.querySelector('.dew-viewer-tools').addEventListener('click', function (e) {
+                var btn = e.target.closest('button[data-act]');
+                if (!btn) return;
+                var act = btn.getAttribute('data-act');
+                if (act === 'zoomin') centerZoom(scale * 1.3);
+                else if (act === 'zoomout') centerZoom(scale / 1.3);
+                else if (act === 'rotate') { rot = (rot + 90) % 360; apply(); }
+                else if (act === 'download') download();
+                else if (act === 'share') share();
+                else if (act === 'close') hide();
+            });
+            // Bấm ra vùng nền (không trúng ảnh) = đóng.
+            stage.addEventListener('click', function (e) { if (e.target === stage) hide(); });
+            document.addEventListener('keydown', function (e) {
+                if (!box.classList.contains('is-open')) return;
+                if (e.key === 'Escape') hide();
+                else if (e.key === '+' || e.key === '=') centerZoom(scale * 1.3);
+                else if (e.key === '-') centerZoom(scale / 1.3);
+            });
+
+            /* --- Chuột: lăn để zoom, giữ + kéo để xê dịch --- */
+            stage.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                zoomAt(scale * (e.deltaY < 0 ? 1.15 : 1 / 1.15), e.clientX, e.clientY);
+            }, { passive: false });
+            img.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                drag = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+                img.classList.add('is-dragging');
+            });
+            document.addEventListener('mousemove', function (e) {
+                if (!drag) return;
+                tx = drag.tx + (e.clientX - drag.x);
+                ty = drag.ty + (e.clientY - drag.y);
+                apply();
+            });
+            document.addEventListener('mouseup', function () {
+                if (!drag) return;
+                drag = null;
+                img.classList.remove('is-dragging');
+            });
+            img.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                if (scale > 1.05) reset(); else zoomAt(2.5, e.clientX, e.clientY);
+            });
+
+            /* --- Cảm ứng: 1 ngón kéo, 2 ngón chụm để zoom, chạm 2 lần để phóng nhanh --- */
+            function dist(t) {
+                var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            stage.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 2) {
+                    pinch = { dist: dist(e.touches), scale: scale };
+                    drag = null;
+                } else if (e.touches.length === 1) {
+                    var t = e.touches[0];
+                    drag = { x: t.clientX, y: t.clientY, tx: tx, ty: ty };
+                    var now = Date.now();
+                    if (now - lastTap < 300) {
+                        if (scale > 1.05) reset(); else zoomAt(2.5, t.clientX, t.clientY);
+                        lastTap = 0;
+                    } else lastTap = now;
+                }
+            }, { passive: true });
+            stage.addEventListener('touchmove', function (e) {
+                if (pinch && e.touches.length === 2) {
+                    e.preventDefault();
+                    var d = dist(e.touches);
+                    if (pinch.dist > 0) {
+                        var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                        var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                        zoomAt(pinch.scale * (d / pinch.dist), cx, cy);
+                    }
+                } else if (drag && e.touches.length === 1 && scale > 1.02) {
+                    e.preventDefault(); // chỉ chặn cuộn khi đang phóng to (mới có gì để kéo)
+                    tx = drag.tx + (e.touches[0].clientX - drag.x);
+                    ty = drag.ty + (e.touches[0].clientY - drag.y);
+                    apply();
+                }
+            }, { passive: false });
+            stage.addEventListener('touchend', function (e) {
+                if (e.touches.length === 0) { drag = null; pinch = null; }
+            }, { passive: true });
+
+            return box;
+        }
+
+        function hide() {
+            if (!box) return;
+            box.classList.remove('is-open');
+            document.body.classList.remove('dew-noscroll');
+            drag = null; pinch = null;
+        }
+
+        /** el = thẻ <img data-view=... data-att-id=... data-name=...>, hoặc chuỗi URL. */
+        function open(el) {
+            ensure();
+            if (typeof el === 'string') cur = { url: el, attId: 0, name: '' };
+            else cur = {
+                url: el.getAttribute('data-view') || el.src,
+                attId: parseInt(el.getAttribute('data-att-id'), 10) || 0,
+                name: el.getAttribute('data-name') || ''
+            };
+            nameLabel.textContent = cur.name || '';
+            img.src = cur.url;
+            reset();
+            box.classList.add('is-open');
+            document.body.classList.add('dew-noscroll');
+        }
+
+        return { open: open, hide: hide };
+    })();
+
+    /* =====================================================================
+     *  MODAL CHỌN NGƯỜI — dùng chung cho 2 việc:
+     *   - mode 'post': chia sẻ lại BÀI ĐÃ ĐĂNG cho user khác (họ vào xem +
+     *     bình luận được, nhận chuông).
+     *   - mode 'chat': gửi ẢNH đang xem qua CHAT cho user khác.
+     * ===================================================================== */
+    var DewShare = (function () {
+        var box = null, listEl = null, searchEl = null, submitEl = null, titleEl = null, hintEl = null, countEl = null;
+        var opts = {}, picked = {}, items = [];
+
+        function render() {
+            listEl.innerHTML = items.length
+                ? items.map(function (u) {
+                    return '<button type="button" class="dew-share-item' + (picked[u.id] ? ' is-picked' : '') + '" data-id="' + u.id + '">'
+                        + '<span class="dew-share-item-name">' + esc(u.fullname) + '</span>'
+                        + '<i class="fa-solid fa-check"></i></button>';
+                }).join('')
+                : '<div class="dew-share-empty">Không tìm thấy người dùng.</div>';
+            var n = Object.keys(picked).length;
+            countEl.textContent = n ? 'Đã chọn ' + n + ' người' : '';
+            submitEl.disabled = !n;
+        }
+
+        var search = debounce(function () {
+            api('search_users', { keyword: searchEl.value.trim() }).then(function (j) {
+                items = (j && j.data) || [];
+                render();
+            });
+        }, 250);
+
+        function ensure() {
+            if (box) return box;
+            box = document.createElement('div');
+            box.className = 'dew-modal dew-share-modal';
+            box.innerHTML =
+                '<div class="dew-modal-overlay" data-share-close></div>'
+                + '<div class="dew-modal-box">'
+                    + '<div class="dew-modal-head">'
+                        + '<h3 class="dew-share-title">Chia sẻ</h3>'
+                        + '<button type="button" class="dew-modal-close" data-share-close aria-label="Đóng">&times;</button>'
+                    + '</div>'
+                    + '<div class="dew-modal-body">'
+                        + '<p class="dew-share-hint"></p>'
+                        + '<div class="dew-search-wrap">'
+                            + '<i class="fa-solid fa-magnifying-glass dew-search-icon"></i>'
+                            + '<input type="text" class="dew-search-input dew-share-search" placeholder="Tìm người dùng..." autocomplete="off" spellcheck="false">'
+                        + '</div>'
+                        + '<div class="dew-share-list"></div>'
+                        + '<div class="dew-share-foot">'
+                            + '<span class="dew-share-count"></span>'
+                            + '<button type="button" class="dew-btn dew-btn-primary dew-share-submit"><i class="fa-solid fa-paper-plane"></i> Chia sẻ</button>'
+                        + '</div>'
+                    + '</div>'
+                + '</div>';
+            document.body.appendChild(box);
+            listEl = box.querySelector('.dew-share-list');
+            searchEl = box.querySelector('.dew-share-search');
+            submitEl = box.querySelector('.dew-share-submit');
+            titleEl = box.querySelector('.dew-share-title');
+            hintEl = box.querySelector('.dew-share-hint');
+            countEl = box.querySelector('.dew-share-count');
+
+            $all('[data-share-close]', box).forEach(function (el) { el.addEventListener('click', close); });
+            searchEl.addEventListener('input', search);
+            listEl.addEventListener('click', function (e) {
+                var it = e.target.closest('.dew-share-item');
+                if (!it) return;
+                var id = parseInt(it.getAttribute('data-id'), 10);
+                if (picked[id]) delete picked[id]; else picked[id] = true;
+                render();
+            });
+            submitEl.addEventListener('click', submit);
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && box.classList.contains('is-open')) close();
+            });
+            return box;
+        }
+
+        function submit() {
+            var ids = Object.keys(picked).map(Number);
+            if (!ids.length) return;
+            submitEl.disabled = true;
+            var call = opts.mode === 'chat'
+                ? api('wall_share_to_chat', { attachment_id: opts.attachmentId, user_ids: ids })
+                : api('wall_share_add', { post_id: opts.postId, user_ids: ids });
+            call.then(function (res) {
+                submitEl.disabled = false;
+                if (!res || !res.success) { toast((res && res.message) || 'Không chia sẻ được.', false); return; }
+                toast(res.message || 'Đã chia sẻ.');
+                close();
+                if (opts.mode === 'post' && opts.postId) refreshPost(opts.postId);
+            });
+        }
+
+        function open(o) {
+            ensure();
+            opts = o || {};
+            opts.postId = opts.postId || 0;
+            picked = {};
+            items = [];
+            titleEl.textContent = opts.title || 'Chia sẻ';
+            hintEl.textContent = opts.hint || '';
+            searchEl.value = '';
+            render();
+            box.classList.add('is-open');
+            api('search_users', { keyword: '' }).then(function (j) {
+                items = (j && j.data) || [];
+                render();
+            });
+            setTimeout(function () { searchEl.focus(); }, 50);
+        }
+        function close() { if (box) box.classList.remove('is-open'); }
+
+        return { open: open, close: close };
+    })();
+
     /* ---------------- Sự kiện (event delegation) ---------------- */
     function wireGlobalEvents() {
-        // Lightbox ảnh (dùng chung InvoiceViewer).
+        // Xem ảnh của bài / bình luận -> khung xem riêng của Tường (zoom, tải, chia sẻ chat).
+        // Ảnh xem trước trong ô soạn (.iu-preview) KHÔNG đi đường này — vẫn do
+        // InvoiceDropzone tự mở bằng InvoiceViewer (ảnh tạm, chưa có trên máy chủ).
         document.addEventListener('click', function (e) {
+            if (!e.target.closest('#dew-feed, #dew-permalink')) return;
             var img = e.target.closest('img[data-view]');
-            if (img && window.InvoiceViewer) { window.InvoiceViewer.open(img.getAttribute('data-view'), true); }
+            if (img) DewViewer.open(img);
         });
 
         document.addEventListener('click', function (e) {
@@ -994,14 +1404,48 @@
             var attachBtn = e.target.closest('.dew-comment-attach');
             if (attachBtn) { attachBtn.closest('.dew-comment-compose').querySelector('.dew-comment-file-input').click(); return; }
 
+            // Chụp ảnh trực tiếp bằng camera điện thoại rồi đính kèm luôn vào bình luận.
+            var camBtn = e.target.closest('.dew-comment-camera');
+            if (camBtn) { camBtn.closest('.dew-comment-compose').querySelector('.dew-comment-cam-input').click(); return; }
+
+            // "..." xổ ra cụm A / đính kèm / gửi (mặc định giấu để ô nhập rộng).
+            var toolsBtn = e.target.closest('.dew-comment-tools-toggle');
+            if (toolsBtn) {
+                var bodyEl = toolsBtn.closest('.dew-comment-compose-body');
+                var willOpen = !bodyEl.classList.contains('is-tools-open');
+                $all('.dew-comment-compose-body.is-tools-open').forEach(function (b) { b.classList.remove('is-tools-open'); });
+                bodyEl.classList.toggle('is-tools-open', willOpen);
+                return;
+            }
+
+            // Xóa bình luận: KHÔNG hỏi xác nhận (anh Sáu chốt 13/8/2026) — bình luận tan
+            // biến nhẹ nhàng tại chỗ, vẽ lại bài sau khi hiệu ứng chạy xong.
             var delComment = e.target.closest('.dew-comment-del');
             if (delComment) {
-                if (!confirm('Xóa bình luận này?')) return;
                 var postEl2 = delComment.closest('.dew-post');
                 var postId2 = postEl2 ? parseInt(postEl2.getAttribute('data-id'), 10) : 0;
+                var cmtEl = delComment.closest('.dew-comment');
+                if (cmtEl) cmtEl.classList.add('is-vanishing');
+                $all('.dew-comment-more-menu.is-open').forEach(function (m) { m.classList.remove('is-open'); });
                 api('wall_comment_delete', { id: delComment.getAttribute('data-id') }).then(function (res) {
-                    if (!res || !res.success) { toast((res && res.message) || 'Không thể xóa.', false); return; }
-                    refreshPost(postId2);
+                    if (!res || !res.success) {
+                        if (cmtEl) cmtEl.classList.remove('is-vanishing');
+                        toast((res && res.message) || 'Không thể xóa.', false);
+                        return;
+                    }
+                    setTimeout(function () { refreshPost(postId2); }, 260); // chờ hiệu ứng tan biến
+                });
+                return;
+            }
+
+            // Chia sẻ lại bài (kể cả bài đăng từ lâu) cho user khác vào xem + bình luận.
+            var shareBtn = e.target.closest('.dew-post-sharebtn');
+            if (shareBtn) {
+                DewShare.open({
+                    mode: 'post',
+                    postId: parseInt(shareBtn.getAttribute('data-id'), 10),
+                    title: 'Chia sẻ bài viết',
+                    hint: 'Người được chọn sẽ nhận thông báo và vào xem, bình luận được bài này.'
                 });
                 return;
             }
@@ -1101,13 +1545,35 @@
             var cnt = box.querySelector('.dew-comment-filecount');
             cnt.textContent = commentFiles[key].length + ' tệp';
             cnt.style.display = '';
+            // Đã có tệp chờ gửi -> xổ luôn cụm nút để thấy nút Gửi (khỏi phải bấm "..." lần nữa).
+            var bodyEl = box.querySelector('.dew-comment-compose-body');
+            if (bodyEl) bodyEl.classList.add('is-tools-open');
         }
 
-        // Chọn tệp cho bình luận / trả lời.
+        // Chọn tệp (hoặc ảnh vừa chụp bằng camera) cho bình luận / trả lời.
         document.addEventListener('change', function (e) {
-            var input = e.target.closest('.dew-comment-file-input');
+            var input = e.target.closest('.dew-comment-file-input, .dew-comment-cam-input');
             if (!input || !input.files || !input.files.length) return;
             addCommentFiles(input.closest('.dew-comment-compose'), Array.prototype.slice.call(input.files));
+            input.value = '';
+        });
+
+        /* ---- Nút "Chụp ảnh" cạnh "Chọn tệp" của ô soạn bài / ô sửa bài ----
+           Mở thẳng camera điện thoại (accept=image/* + capture), ảnh chụp xong đẩy vào
+           đúng hàng chờ của dropzone dùng chung qua hook __iuAddFiles (invoice_dropzone.js). */
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.dew-cam-btn');
+            if (!btn) return;
+            e.preventDefault();
+            var zone = btn.closest('.dew-dropzone');
+            var camInput = zone && zone.querySelector('.dew-cam-input');
+            if (camInput) camInput.click();
+        });
+        document.addEventListener('change', function (e) {
+            var input = e.target.closest('.dew-cam-input');
+            if (!input || !input.files || !input.files.length) return;
+            var zone = input.closest('.dew-dropzone');
+            if (zone && zone.__iuAddFiles) zone.__iuAddFiles(input.files);
             input.value = '';
         });
 
@@ -1203,10 +1669,10 @@
 
     function init() {
         myAvatarUrl = (ME.avatar || '');
-        setAvatarEl('#dew-my-avatar');
         setAvatarEl('#dew-my-avatar-2');
 
-        $('#dew-composer-mini').addEventListener('click', openComposeModal);
+        // Ô soạn bài gọn đã đổi thành nút icon nằm ngay cạnh ô tìm bài theo #hashtag.
+        $('#dew-composer-btn').addEventListener('click', openComposeModal);
         $('#dew-compose-modal-overlay').addEventListener('click', closeComposeModal);
         $('#dew-compose-modal-close').addEventListener('click', closeComposeModal);
         document.addEventListener('keydown', function (e) {
@@ -1250,7 +1716,9 @@
             e.preventDefault();
             e.stopPropagation();
             var pop = $('#dew-format-pop');
-            pop.style.display = pop.style.display === 'none' ? 'flex' : 'none';
+            var willShow = pop.style.display === 'none';
+            pop.style.display = willShow ? 'flex' : 'none';
+            if (willShow) syncFormatButtons(pop); // vẽ đúng nút nào đang bật tại vị trí con trỏ
         });
         $('#dew-format-pop').addEventListener('mousedown', function (e) {
             var btn = e.target.closest('.dew-fmt-btn');
@@ -1275,7 +1743,9 @@
                 var wrap = toggleBtn.closest('.dew-comment-compose-wrap');
                 var pop = wrap.querySelector('.dew-comment-fmt-pop');
                 $all('.dew-comment-fmt-pop').forEach(function (p) { if (p !== pop) p.style.display = 'none'; });
-                pop.style.display = pop.style.display === 'none' ? 'flex' : 'none';
+                var willShowPop = pop.style.display === 'none';
+                pop.style.display = willShowPop ? 'flex' : 'none';
+                if (willShowPop) syncFormatButtons(pop);
                 return;
             }
             var fmtBtn = e.target.closest('.dew-comment-fmt-pop .dew-fmt-btn');
@@ -1290,6 +1760,16 @@
             if (!e.target.closest('.dew-comment-fmt-pop') && !e.target.closest('.dew-comment-fmt-toggle')) {
                 $all('.dew-comment-fmt-pop').forEach(function (p) { p.style.display = 'none'; });
             }
+        });
+
+        // Con trỏ nhảy chỗ / bôi đen đoạn khác -> vẽ lại trạng thái bật của bảng định dạng
+        // đang mở (nút nào đang áp dụng cho vị trí hiện tại thì có nền).
+        document.addEventListener('selectionchange', function () {
+            var el = document.activeElement;
+            if (!el || !el.classList) return;
+            if (!el.classList.contains('dew-comment-input') && el.id !== 'dew-compose-input') return;
+            var pop = formatPopOf(el);
+            if (pop && pop.style.display !== 'none') syncFormatButtons(pop);
         });
 
         $('#dew-load-more').addEventListener('click', function () { reloadFeed(state.page + 1); });

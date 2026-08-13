@@ -235,6 +235,28 @@ function wall_post_deleteAction()
     de_json(dew_post_delete($id, $me['id'], $me['is_admin']));
 }
 
+/** Chia sẻ lại một bài ĐÃ ĐĂNG cho user khác (không giới hạn 60 phút như sửa bài). */
+function wall_share_addAction()
+{
+    $me = de_ctl_user();
+    $id = (int) ($_POST['post_id'] ?? 0);
+    $users = $_POST['user_ids'] ?? [];
+    if (!is_array($users)) $users = [];
+    de_json(dew_post_share_add($id, $users, $me['id'], $me['is_admin']));
+}
+
+/** Chia sẻ 1 ảnh/tệp đính kèm của Tường qua CHAT (gửi thành tin nhắn thật). */
+function wall_share_to_chatAction()
+{
+    $me = de_ctl_user();
+    $att = (int) ($_POST['attachment_id'] ?? 0);
+    $users = $_POST['user_ids'] ?? [];
+    $convs = $_POST['conversation_ids'] ?? [];
+    if (!is_array($users)) $users = [];
+    if (!is_array($convs)) $convs = [];
+    de_json(dew_attachment_share_to_chat($att, $users, $convs, $me['id'], $me['is_admin']));
+}
+
 function wall_pin_toggleAction()
 {
     $me = de_ctl_user();

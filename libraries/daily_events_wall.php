@@ -703,6 +703,140 @@ if (!function_exists('dew_ensure_tables')) {
         return ['success' => true];
     }
 
+    /** CHIA SẺ LẠI một bài ĐÃ ĐĂNG cho user khác (anh Sáu chốt 13/8/2026).
+     *  Khác dew_post_update(): KHÔNG bị bó trong cửa sổ sửa 60 phút và chỉ THÊM người,
+     *  không gỡ ai — bài cũ tới đâu cũng chia sẻ lại được. Người nhận được đẩy chuông,
+     *  mở link permalink vào xem + bình luận ngay (chưa cần bấm "Gắn vào tường").
+     *  Quyền: ai đang xem được bài thì chia sẻ tiếp được (tác giả, người đã được gắn
+     *  thẻ, hoặc admin) — giống chuyển tiếp tin nhắn của chat. */
+    function dew_post_share_add($post_id, array $user_ids, $actor_id, $is_admin = false)
+    {
+        dew_ensure_tables();
+        $post_id = (int) $post_id;
+        $actor_id = (int) $actor_id;
+        $row = dew_post_row($post_id);
+        if (!$row) return ['success' => false, 'message' => 'Không tìm thấy bài viết.'];
+        if (!$is_admin && !dew_can_view_post($post_id, $actor_id)) {
+            return ['success' => false, 'message' => 'Bạn không có quyền chia sẻ bài viết này.'];
+        }
+
+        $author_id = (int) $row['user_id'];
+        $uids = array_values(array_unique(array_filter(array_map('intval', $user_ids), function ($v) use ($author_id) {
+            return $v > 0 && $v !== $author_id; // tác giả luôn thấy bài của mình, khỏi gắn thẻ lại
+        })));
+        if (!$uids) return ['success' => false, 'message' => 'Chưa chọn người nhận.'];
+
+        $cur_rows = db_fetch_array("SELECT tagged_user_id FROM de_wall_shares WHERE post_id = $post_id") ?: [];
+        $cur_uids = array_map(function ($r) { return (int) $r['tagged_user_id']; }, $cur_rows);
+
+        $actor   = dew_user_brief($actor_id);
+        $preview = mb_substr(dew_dec($row['content'] ?? ''), 0, 120, 'UTF-8');
+        $added = 0;
+        foreach ($uids as $tuid) {
+            if (in_array($tuid, $cur_uids, true)) continue; // đã được chia sẻ trước đó
+            db_insert('de_wall_shares', [
+                'post_id'        => $post_id,
+                'tagged_user_id' => $tuid,
+                'tagged_by'      => $actor_id,
+                'pinned'         => 0,
+                'created_at'     => date('Y-m-d H:i:s'),
+            ]);
+            $added++;
+            if (function_exists('notify_create')) {
+                notify_create(
+                    $tuid,
+                    $actor['fullname'] . ' đã chia sẻ một bài viết với bạn',
+                    $preview,
+                    '?mod=daily_events&controllers=daily_events&action=daily_events&post=' . $post_id,
+                    'wall_tag',
+                    $actor_id
+                );
+            }
+        }
+        return [
+            'success' => true,
+            'added'   => $added,
+            'message' => $added ? ('Đã chia sẻ cho ' . $added . ' người.') : 'Những người này đã được chia sẻ bài viết rồi.',
+        ];
+    }
+
+    /** CHIA SẺ 1 ẢNH/TỆP ĐÍNH KÈM CỦA TƯỜNG QUA CHAT (anh Sáu chốt 13/8/2026).
+     *  Sao chép file sang kho của chat (public/uploads/chat) rồi gửi như một tin nhắn
+     *  bình thường — KHÔNG dùng lại đường dẫn cũ, để bài viết bị xóa (kèm file) thì
+     *  tin nhắn đã gửi vẫn còn ảnh. */
+    function dew_attachment_share_to_chat($attachment_id, array $user_ids, array $conversation_ids, $actor_id, $is_admin = false)
+    {
+        dew_ensure_tables();
+        $id = (int) $attachment_id;
+        $actor_id = (int) $actor_id;
+        if ($actor_id <= 0) return ['success' => false, 'message' => 'Chưa đăng nhập.'];
+
+        $att = db_fetch_row("SELECT * FROM de_wall_attachments WHERE id = $id LIMIT 1");
+        if (!$att) return ['success' => false, 'message' => 'Không tìm thấy tệp.'];
+
+        // Quyền xem tệp = quyền xem bài chứa nó.
+        $owner_type = (string) $att['owner_type'];
+        $post_id = $owner_type === 'comment'
+            ? (int) (dew_comment_row((int) $att['owner_id'])['post_id'] ?? 0)
+            : (int) $att['owner_id'];
+        if (!$is_admin && !dew_can_view_post($post_id, $actor_id)) {
+            return ['success' => false, 'message' => 'Bạn không có quyền chia sẻ tệp này.'];
+        }
+
+        require_once __DIR__ . '/chat.php';
+        chat_ensure_tables();
+
+        // Gom hội thoại đích: hội thoại có sẵn (phải là thành viên) + chat 1-1 với từng user.
+        $targets = [];
+        foreach ($conversation_ids as $cid) {
+            $cid = (int) $cid;
+            if ($cid > 0 && chat_is_participant($cid, $actor_id)) $targets[$cid] = true;
+        }
+        foreach ($user_ids as $uid) {
+            $uid = (int) $uid;
+            if ($uid <= 0 || $uid === $actor_id) continue;
+            $cid = chat_get_or_create_direct($actor_id, $uid);
+            if ($cid > 0) $targets[$cid] = true;
+        }
+        if (!$targets) return ['success' => false, 'message' => 'Chưa chọn nơi nhận.'];
+
+        // Chép file sang kho chat.
+        $rel_src = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, (string) $att['file_url']);
+        $abs_src = APPPATH . DIRECTORY_SEPARATOR . $rel_src;
+        if (!is_file($abs_src)) return ['success' => false, 'message' => 'Tệp gốc không còn trên máy chủ.'];
+
+        $chat_dir = APPPATH . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'chat';
+        if (!is_dir($chat_dir)) @mkdir($chat_dir, 0775, true);
+        $ext = strtolower(pathinfo($abs_src, PATHINFO_EXTENSION));
+        $safe_ext = preg_replace('/[^a-z0-9]/', '', $ext);
+        $filename = 'c' . time() . '_' . substr(md5($att['file_url'] . uniqid('', true)), 0, 10)
+                  . ($safe_ext !== '' ? '.' . $safe_ext : '');
+        if (!@copy($abs_src, $chat_dir . DIRECTORY_SEPARATOR . $filename)) {
+            return ['success' => false, 'message' => 'Không sao chép được tệp.'];
+        }
+
+        $is_image = (int) $att['is_image'] === 1;
+        $orig = dew_dec($att['original_name'] ?? '');
+        if ($orig === '') $orig = basename($rel_src);
+        $size = (int) @filesize($abs_src);
+
+        $count = 0;
+        foreach (array_keys($targets) as $cid) {
+            $mid = chat_insert_message($cid, $actor_id, '', $is_image ? 'image' : 'file');
+            db_insert('chat_attachments', [
+                'message_id'    => $mid,
+                'file_name'     => $filename,
+                'original_name' => mb_substr($orig, 0, 250, 'UTF-8'),
+                'mime'          => '',
+                'size'          => $size,
+                'is_image'      => $is_image ? 1 : 0,
+            ]);
+            chat_mark_read($cid, $actor_id, $mid);
+            $count++;
+        }
+        return ['success' => true, 'count' => $count, 'message' => 'Đã gửi tới ' . $count . ' cuộc trò chuyện.'];
+    }
+
     /** Chỉ user đã được gắn thẻ ở bài này mới gọi được — bật/tắt ghim vào tường mình. */
     function dew_pin_toggle($post_id, $user_id)
     {

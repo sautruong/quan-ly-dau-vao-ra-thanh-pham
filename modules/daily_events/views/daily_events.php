@@ -32,13 +32,6 @@ $dew_boot = json_encode([
 
         <div class="content dew-content">
 
-            <!-- ===== Ô soạn bài (gọn) — click mở modal đăng bài ===== -->
-            <div class="dew-composer-mini" id="dew-composer-mini">
-                <img class="dew-avatar" id="dew-my-avatar" src="" alt="">
-                <input type="text" class="dew-composer-trigger" id="dew-composer-trigger" readonly
-                    placeholder="Đăng bài thảo luận... (#hagtag - Để tạo chủ đề)">
-            </div>
-
             <!-- ===== Modal đăng bài ===== -->
             <div class="dew-modal" id="dew-compose-modal" aria-hidden="true">
                 <div class="dew-modal-overlay" id="dew-compose-modal-overlay"></div>
@@ -77,7 +70,12 @@ $dew_boot = json_encode([
                                         <i class="fa-solid fa-paste"></i>
                                         <p>Dán ảnh (Ctrl+V) hoặc kéo thả ảnh/file vào đây</p>
                                         <button type="button" class="iu-btn-choose">Chọn tệp</button>
+                                        <!-- Chụp thẳng bằng camera điện thoại (accept + capture) — xem .dew-cam-btn trong daily_events.js -->
+                                        <button type="button" class="dew-cam-btn" title="Chụp ảnh từ điện thoại">
+                                            <i class="fa-solid fa-camera"></i> Chụp ảnh
+                                        </button>
                                         <input type="file" class="iu-input" multiple hidden>
+                                        <input type="file" class="dew-cam-input" accept="image/*" capture="environment" hidden>
                                     </div>
                                     <div class="iu-preview"></div>
                                 </div>
@@ -104,12 +102,17 @@ $dew_boot = json_encode([
                 </div>
             </div>
 
-            <!-- ===== Tìm theo #hashtag ===== -->
-            <div class="dew-search-bar">
-                <i class="fa-solid fa-hashtag"></i>
-                <input type="text" id="dew-hashtag-search" placeholder="Tìm bài theo #hashtag..." autocomplete="off">
-                <button type="button" class="dew-search-clear" id="dew-hashtag-clear" style="display:none;" title="Xóa">
-                    <i class="fa-solid fa-xmark"></i>
+            <!-- ===== Thanh trên: tìm theo #hashtag + nút đăng bài (icon, nằm cạnh phải) ===== -->
+            <div class="dew-topbar">
+                <div class="dew-search-bar">
+                    <i class="fa-solid fa-hashtag"></i>
+                    <input type="text" id="dew-hashtag-search" placeholder="Tìm bài theo #hashtag..." autocomplete="off">
+                    <button type="button" class="dew-search-clear" id="dew-hashtag-clear" style="display:none;" title="Xóa">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <button type="button" class="dew-composer-btn" id="dew-composer-btn" title="Đăng bài thảo luận (#hashtag để tạo chủ đề)">
+                    <i class="fa-solid fa-pen-to-square"></i>
                 </button>
             </div>
 
