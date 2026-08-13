@@ -359,7 +359,8 @@
                 + '<div class="dew-comment-bubble-row">'
                     + '<div class="dew-comment-bubble">'
                         + '<div class="dew-comment-name">' + esc(c.user.fullname) + '</div>'
-                        + '<div class="dew-comment-text">' + linkify(c.content) + '</div>'
+                        // Bình luận chỉ có ảnh (chụp từ camera) -> không vẽ dòng chữ rỗng.
+                        + (c.content ? '<div class="dew-comment-text">' + linkify(c.content) + '</div>' : '')
                     + '</div>'
                     + moreMenu
                 + '</div>'
@@ -856,7 +857,12 @@
         var files = commentFiles[key] || [];
         if (!content && !files.length) return;
 
-        api('wall_comment_add', { post_id: postId, content: content, parent_id: parentId }).then(function (res) {
+        // has_attachments: báo trước cho máy chủ là sẽ có ảnh gửi kèm ngay sau (upload là
+        // request thứ 2) -> bình luận CHỈ CÓ ẢNH, không gõ chữ, vẫn gửi được.
+        api('wall_comment_add', {
+            post_id: postId, content: content, parent_id: parentId,
+            has_attachments: files.length ? 1 : 0
+        }).then(function (res) {
             if (!res || !res.success) { toast((res && res.message) || 'Không thể gửi bình luận.', false); return; }
             var afterUpload = files.length ? uploadFiles('comment', res.id, files) : Promise.resolve();
             afterUpload.then(function () {

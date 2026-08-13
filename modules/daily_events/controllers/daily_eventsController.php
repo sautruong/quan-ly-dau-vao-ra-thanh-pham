@@ -270,7 +270,9 @@ function wall_comment_addAction()
     $post_id = (int) ($_POST['post_id'] ?? 0);
     $content = (string) ($_POST['content'] ?? '');
     $parent_id = (int) ($_POST['parent_id'] ?? 0);
-    de_json(dew_comment_add($post_id, $content, $me['id'], $parent_id));
+    // Chỉ có ảnh (chụp từ camera), không gõ chữ -> vẫn gửi được.
+    $has_attachments = !empty($_POST['has_attachments']);
+    de_json(dew_comment_add($post_id, $content, $me['id'], $parent_id, $has_attachments));
 }
 
 function wall_comment_deleteAction()

@@ -443,7 +443,10 @@ if (!function_exists('dew_ensure_tables')) {
         notify_create($rid, $actor['fullname'] . ' đã thả cảm xúc ' . $emoji . ' vào bình luận của bạn', '', $link, 'wall_react', $user_id);
     }
 
-    function dew_comment_add($post_id, $content, $user_id, $parent_id = 0)
+    /** $has_attachments = sẽ có ảnh/tệp đính kèm gửi kèm ngay sau (upload ở request thứ 2,
+     *  xem wall_upload_add). Cho phép bình luận CHỈ CÓ ẢNH, không có chữ — nút camera ở ô
+     *  bình luận chụp xong là gửi luôn, bắt gõ thêm chữ mới cho gửi là vô lý. */
+    function dew_comment_add($post_id, $content, $user_id, $parent_id = 0, $has_attachments = false)
     {
         dew_ensure_tables();
         $post_id = (int) $post_id;
@@ -453,7 +456,9 @@ if (!function_exists('dew_ensure_tables')) {
         if (!dew_can_view_post($post_id, $user_id)) {
             return ['success' => false, 'message' => 'Bạn không có quyền xem bài viết này.'];
         }
-        if ($content === '') return ['success' => false, 'message' => 'Vui lòng nhập nội dung.'];
+        if ($content === '' && !$has_attachments) {
+            return ['success' => false, 'message' => 'Vui lòng nhập nội dung hoặc đính kèm ảnh.'];
+        }
 
         if ($parent_id > 0) {
             $parent = db_fetch_row("SELECT id, post_id, parent_id FROM de_wall_comments WHERE id = $parent_id LIMIT 1");
@@ -472,13 +477,21 @@ if (!function_exists('dew_ensure_tables')) {
             'created_at' => date('Y-m-d H:i:s'),
         ]);
         if ($id <= 0) return ['success' => false, 'message' => 'Không thể lưu bình luận.'];
-        dew_notify_comment($post_id, $parent_id, $content, $user_id);
+        dew_notify_comment($post_id, $parent_id, ($content !== '' ? $content : '[Hình ảnh]'), $user_id);
         return ['success' => true, 'id' => $id];
     }
 
-    define('DEW_COMMENT_RECALL_SECONDS', 60); // chủ bình luận chỉ "thu hồi" được trong 1 phút đầu
+    // Cửa sổ thu hồi bình luận — 15 phút (anh Sáu chốt 13/8/2026, trước đây 60 giây).
+    // 60s quá ngắn: gửi ảnh chụp từ điện thoại xong nhìn lại thấy mờ/nhầm là đã hết hạn xóa.
+    define('DEW_COMMENT_RECALL_SECONDS', 900);
+    /** "15 phút" / "60 giây" — để câu báo lỗi luôn khớp với hằng số ở trên. */
+    function dew_comment_recall_window_label()
+    {
+        $s = DEW_COMMENT_RECALL_SECONDS;
+        return $s % 60 === 0 ? (($s / 60) . ' phút') : ($s . ' giây');
+    }
 
-    /** Chủ bình luận (không phải admin) chỉ xóa được chính bình luận của mình, trong 1 phút đầu. */
+    /** Chủ bình luận (không phải admin) chỉ xóa được chính bình luận của mình, trong cửa sổ thu hồi. */
     function dew_comment_can_recall($row, $user_id)
     {
         if (!$row || (int) $row['user_id'] !== (int) $user_id) return false;
@@ -500,7 +513,7 @@ if (!function_exists('dew_ensure_tables')) {
             'attachments'=> dew_list_attachments('comment', $cid),
             'reactions'  => [],
             'replies'    => [],
-            // Chỉ chính chủ mới xóa được (thu hồi trong 1 phút) — không có ngoại lệ cho admin.
+            // Chỉ chính chủ mới xóa được (thu hồi trong cửa sổ trên) — không ngoại lệ cho admin.
             'can_delete' => $canRecall,
             'recall_seconds_left' => $secondsLeft,
         ];
@@ -532,7 +545,7 @@ if (!function_exists('dew_ensure_tables')) {
         return $out;
     }
 
-    /** Chỉ chính chủ bình luận mới xóa được, trong 1 phút đầu — không có ngoại lệ cho admin
+    /** Chỉ chính chủ bình luận mới xóa được, trong cửa sổ thu hồi — không có ngoại lệ cho admin
      *  (khác bài viết: xem dew_post_delete, admin vẫn kiểm duyệt được bài đăng). */
     function dew_comment_delete($comment_id, $user_id)
     {
@@ -543,7 +556,7 @@ if (!function_exists('dew_ensure_tables')) {
             return ['success' => false, 'message' => 'Bạn không có quyền xóa bình luận này.'];
         }
         if (!dew_comment_can_recall($row, $user_id)) {
-            return ['success' => false, 'message' => 'Đã quá 1 phút, không thể thu hồi bình luận này.'];
+            return ['success' => false, 'message' => 'Đã quá ' . dew_comment_recall_window_label() . ', không thể thu hồi bình luận này.'];
         }
         // cascade replies con (nếu comment_id là bình luận gốc)
         $children = db_fetch_array("SELECT id FROM de_wall_comments WHERE parent_id = $comment_id") ?: [];

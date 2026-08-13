@@ -396,10 +396,17 @@
 }
 .dew-reactbtn-wrap:hover .dew-react-pop { display: flex; }
 
-/* "..." nằm ngang hàng với bubble, chỉ hiện khi hover đúng bubble đó (không lan sang bình luận khác). */
-.dew-comment-more-wrap { position: relative; opacity: 0; transition: opacity .15s ease; flex-shrink: 0; margin-top: 2px; }
-.dew-comment-bubble-row:hover .dew-comment-more-wrap,
-.dew-comment-more-wrap:focus-within { opacity: 1; }
+/* "..." nằm ngang hàng với bubble.
+   Máy có chuột: ẩn đi, rê vào đúng bubble đó mới hiện (không lan sang bình luận khác).
+   Máy CẢM ỨNG: LUÔN hiện — không có :hover nên trước đây trên điện thoại không tài nào
+   bấm được nút xóa (anh Sáu báo 13/8/2026). Rule ẩn phải nằm TRONG media hover, đừng đè
+   ngược lại ở media mobile — xem memory mobile-responsive-convention (bẫy 2a). */
+.dew-comment-more-wrap { position: relative; opacity: 1; transition: opacity .15s ease; flex-shrink: 0; margin-top: 2px; }
+@media (hover: hover) and (pointer: fine) {
+    .dew-comment-more-wrap { opacity: 0; }
+    .dew-comment-bubble-row:hover .dew-comment-more-wrap,
+    .dew-comment-more-wrap:focus-within { opacity: 1; }
+}
 .dew-comment-more-btn {
     border: none; background: none; cursor: pointer; color: #9ca3af; padding: 4px 6px; border-radius: 6px;
 }
