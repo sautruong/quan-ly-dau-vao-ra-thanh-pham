@@ -1371,22 +1371,23 @@
     transform: translateY(-2px);
 }
 
-/* flex-wrap: khi cột hẹp (bố cục desktop 3 cột) mà tên + số liệu không đủ chỗ thì XUỐNG DÒNG,
-   đừng bóp cụm tên lại. Trước đây cụm tên co xuống 47px trong khi chữ "PLHCM:" rộng 58px và
-   nowrap -> chữ tràn ra ngoài, ĐÈ LÊN cụm số liệu bên phải (thấy rõ trên cả màn hình lẫn ảnh chụp). */
+/* Dòng 1 = [tên viết tắt + tuổi đơn] canh TRÁI, [% đang có] canh PHẢI.
+   KHÔNG cho xuống dòng (nowrap): card phải giữ đúng 2 dòng thì 4 đơn mới cùng lọt trong
+   khối. Hết chỗ thì cụm trái tự cắt bằng dấu "..." (min-width:0 + ellipsis bên dưới),
+   không bao giờ đẩy % xuống dòng. */
 .dd2-branch-line1 {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 6px;
+    flex-wrap: nowrap;
+    gap: 8px;
     min-width: 0;
 }
 
 .dd2-branch-name-group {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    align-items: baseline;
+    gap: 8px;
     min-width: 0;
     overflow: hidden;
 }
@@ -1398,21 +1399,14 @@
     flex: 0 0 auto;
 }
 
-.dd2-branch-bullet {
-    flex: 0 0 auto;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--dd2-accent, #16a34a);
-}
-
 .dd2-branch-name {
     font-size: 15px;
     font-weight: 600;
     color: var(--dd2-accent, #1f2937);
     white-space: nowrap;
-    /* Chốt chặn cuối: hết chỗ thì cắt bằng dấu ... thay vì tràn đè sang cụm bên cạnh. */
-    min-width: 0;
+    /* KHÔNG co: tên chi nhánh là thứ quan trọng nhất, thiếu chỗ thì cắt bớt chữ tuổi đơn
+       bên cạnh (nó mới có flex-shrink) chứ đừng cắt "PLHCM" thành "PL...". */
+    flex: 0 0 auto;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -1434,21 +1428,27 @@
     color: var(--dd2-accent, #1f2937);
 }
 
+/* Dòng 2 = khối lượng - thành tiền (đứng riêng cho dễ đọc số). */
 .dd2-branch-line2 {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
+    min-width: 0;
 }
 
 .dd2-branch-age {
     font-size: 13px;
     font-weight: 500;
+    white-space: nowrap;
+    min-width: 0;        /* hết chỗ thì CHỮ NÀY co lại trước, không đụng tới tên chi nhánh */
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .dd2-branch-fulfill {
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    flex: 0 0 auto;      /* luôn nằm sát mép phải, không bị bóp */
 }
 
 /* Giải thích SP thiếu tồn do thiếu NVL nào (chỉ hiện khi ≤2 đơn — xem rp_dd_item_shortage_materials()). */

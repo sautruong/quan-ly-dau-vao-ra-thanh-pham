@@ -40,15 +40,19 @@ function dd2_hex_to_rgba($hex, $alpha)
 /** Nhãn thời gian đặt hàng cho card "Chi nhánh đặt hàng" (2026-07-17): Hôm nay/Hôm qua/N ngày
  *  trước (2-6)/tuần trước (7+, mirror format_time_ago_vi() nhưng KHÔNG kèm giờ vì card chật).
  *  Màu: hôm nay=xanh lá, 1-3 ngày=xanh dương, từ 4 ngày trở lên (kể cả tuần trước)=đỏ. */
+/** Tuổi đơn hàng. 'text' để NGẮN ("2 ngày", "1 tuần") vì nay nằm cùng dòng với tên chi
+ *  nhánh + % trong card 2 dòng — chữ dài làm cắt mất tên chi nhánh; 'full' giữ nguyên câu
+ *  đầy đủ, đẩy vào title để rê chuột vẫn đọc được. */
 function dd2_branch_age($created_at)
 {
     $days = (int) floor((strtotime(date('Y-m-d')) - strtotime(date('Y-m-d', strtotime($created_at)))) / 86400);
-    if ($days <= 0) return ['text' => 'Hôm nay', 'color' => 'today'];
-    if ($days === 1) return ['text' => 'Hôm qua', 'color' => 'blue'];
-    if ($days <= 3) return ['text' => $days . ' ngày trước', 'color' => 'blue'];
-    if ($days <= 6) return ['text' => $days . ' ngày trước', 'color' => 'danger'];
-    if ($days <= 13) return ['text' => 'Tuần trước', 'color' => 'danger'];
-    return ['text' => (int) floor($days / 7) . ' tuần trước', 'color' => 'danger'];
+    if ($days <= 0) return ['text' => 'Hôm nay', 'full' => 'Hôm nay', 'color' => 'today'];
+    if ($days === 1) return ['text' => 'Hôm qua', 'full' => 'Hôm qua', 'color' => 'blue'];
+    if ($days <= 3) return ['text' => $days . ' ngày', 'full' => $days . ' ngày trước', 'color' => 'blue'];
+    if ($days <= 6) return ['text' => $days . ' ngày', 'full' => $days . ' ngày trước', 'color' => 'danger'];
+    if ($days <= 13) return ['text' => '1 tuần', 'full' => 'Tuần trước', 'color' => 'danger'];
+    $w = (int) floor($days / 7);
+    return ['text' => $w . ' tuần', 'full' => $w . ' tuần trước', 'color' => 'danger'];
 }
 
 /* ---- Khối "Theo dõi tồn kho": pin dung lượng 10 vạch (xem rp_dd_sw_metrics()) ----
@@ -392,20 +396,22 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                                         }, $o['items'] ?? []);
                                     ?>
                                         <div class="dd2-branch-card" data-order-id="<?php echo (int) $o['id']; ?>" data-shortage="<?php echo dd2_esc(json_encode($o['shortage_lines'] ?? [], JSON_UNESCAPED_UNICODE)); ?>" data-items="<?php echo dd2_esc(json_encode($fullItems, JSON_UNESCAPED_UNICODE)); ?>" style="--dd2-accent: <?php echo dd2_esc($color); ?>; --dd2-accent-glow: <?php echo dd2_esc(dd2_hex_to_rgba($color, 0.22)); ?>; --dd2-accent-soft: <?php echo dd2_esc(dd2_hex_to_rgba($color, 0.1)); ?>;">
+                                            <!-- Card gọn còn ĐÚNG 2 DÒNG (anh Sáu chốt 13/8/2026) để 4 đơn cùng lọt trong khối:
+                                                 dòng 1 = tên viết tắt + tuổi đơn (trái) / % đang có (phải, bỏ chữ "Đang có:"),
+                                                 dòng 2 = khối lượng - thành tiền. Bỏ luôn chấm tròn cạnh tên. -->
                                             <div class="dd2-branch-line1">
                                                 <span class="dd2-branch-name-group">
-                                                    <span class="dd2-branch-bullet"></span>
-                                                    <b class="dd2-branch-name"><?php echo dd2_esc($custLabel); ?>:</b>
+                                                    <b class="dd2-branch-name"><?php echo dd2_esc($custLabel); ?></b>
+                                                    <span class="dd2-branch-age dd2-color-<?php echo $age['color']; ?>" title="<?php echo dd2_esc($age['full'] ?? $age['text']); ?>"><?php echo dd2_esc($age['text']); ?></span>
                                                 </span>
+                                                <span class="dd2-branch-fulfill dd2-color-<?php echo $pctColor; ?>" title="Đang có <?php echo number_format($pct, 0); ?>% hàng cho đơn này"><?php echo number_format($pct, 0); ?>%</span>
+                                            </div>
+                                            <div class="dd2-branch-line2">
                                                 <span class="dd2-branch-stats-group">
                                                     <span class="dd2-branch-weight"><?php echo dd2_num(round($o['stats']['weight_total'] ?? 0)); ?>kg</span>
                                                     <span class="dd2-branch-sep">-</span>
                                                     <span class="dd2-branch-value"><?php echo dd2_money($o['stats']['value_total'] ?? 0); ?></span>
                                                 </span>
-                                            </div>
-                                            <div class="dd2-branch-line2">
-                                                <span class="dd2-branch-age dd2-color-<?php echo $age['color']; ?>"><?php echo dd2_esc($age['text']); ?></span>
-                                                <span class="dd2-branch-fulfill dd2-color-<?php echo $pctColor; ?>">Đang có: <?php echo number_format($pct, 0); ?>%</span>
                                             </div>
                                         </div>
                                     <?php endforeach; endif; ?>
