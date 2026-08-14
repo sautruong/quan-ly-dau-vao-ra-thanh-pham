@@ -77,9 +77,25 @@ self.addEventListener('push', function (e) {
     );
 });
 
+/* Đổi link thông báo thành URL TUYỆT ĐỐI trước khi điều hướng.
+ *
+ * BẮT BUỘC, không phải cho đẹp: trong service worker, openWindow()/navigate()
+ * phân giải URL tương đối theo địa chỉ CỦA CHÍNH FILE sw.js chứ không theo gốc
+ * app. Link thông báo của hệ thống lại là dạng chỉ-có-query ('?mod=...&action=...'),
+ * ghép vào 'https://host/sw.js' sẽ ra 'https://host/sw.js?mod=...' -> điện thoại
+ * mở ra mã nguồn sw.js thay vì trang cần tới (chữ còn méo vì .js phục vụ không
+ * kèm charset=utf-8). Lấy registration.scope làm mốc thì luôn ra gốc app, đúng cả
+ * khi app nằm trong thư mục con.
+ */
+function swAbsUrl(url) {
+    var base = self.registration.scope;   // vd 'https://nvsxvat.vn/' (luôn có / cuối)
+    if (!url) return base;
+    try { return new URL(url, base).href; } catch (err) { return base; }
+}
+
 self.addEventListener('notificationclick', function (e) {
     e.notification.close();
-    var url = (e.notification.data && e.notification.data.url) || '';
+    var url = swAbsUrl((e.notification.data && e.notification.data.url) || '');
 
     // Đang mở sẵn thì nhảy vào tab đó, chưa mở thì mở tab mới.
     e.waitUntil(
@@ -87,11 +103,11 @@ self.addEventListener('notificationclick', function (e) {
             for (var i = 0; i < list.length; i++) {
                 var c = list[i];
                 if ('focus' in c) {
-                    if (url && 'navigate' in c) { try { c.navigate(url); } catch (err) {} }
+                    if ('navigate' in c) { try { c.navigate(url); } catch (err) {} }
                     return c.focus();
                 }
             }
-            if (self.clients.openWindow) return self.clients.openWindow(url || './');
+            if (self.clients.openWindow) return self.clients.openWindow(url);
         }).catch(function () {})
     );
 });
