@@ -20,16 +20,23 @@
     --app-trans: all 0.22s ease;
     --app-header-h: 64px;
 
-    /* Giao diện sidebar cá nhân hóa (nền + màu chữ) — đổi qua dropdown "Giao diện",
-       ghi đè bằng inline style trên <body> (xem app_shell.js mục 2a2). Mặc định = giao
-       diện sáng gốc, chưa cá nhân hóa gì. */
+    /* Bảng màu sidebar — TÔNG SÁNG (mặc định). Không còn cá nhân hóa màu nền/màu chữ:
+       sidebar đi theo đúng nút Sáng/Tối trên header (body.app-view-dark ghi đè lại đúng
+       bộ biến này ở cuối file). Nền trắng, viền xám nhạt, icon xám, chữ #374151;
+       mục đang chọn = nền xám rất nhạt + chữ đậm + icon màu thương hiệu. */
     --app-sb-bg: #ffffff;
-    --app-sb-text: var(--app-gray-700);
-    --app-sb-text-icon: var(--app-gray-500);
-    --app-sb-text-faint: var(--app-gray-300);
-    --app-sb-hover-bg: var(--app-gray-100);
-    --app-sb-hover-text: var(--app-navy);
-    --app-sb-border: var(--app-gray-200);
+    --app-sb-text: #374151;
+    --app-sb-text-icon: #6b7280;
+    --app-sb-text-faint: #9ca3af;
+    --app-sb-hover-bg: #f3f4f6;
+    --app-sb-hover-text: #111827;
+    --app-sb-border: #e5e7eb;
+    --app-sb-active-bg: #f3f4f6;
+    --app-sb-active-text: #111827;
+    --app-sb-active-icon: var(--app-green);
+    --app-sb-field-bg: var(--app-gray-50);
+    --app-sb-scroll: var(--app-gray-300);
+    --app-sb-rail: #e5e7eb;      /* đường kẻ dọc chạy bên trái cụm menu cấp 2 */
 }
 
 /* ---- Hiệu ứng "bay vào Lịch sử" thay cho alert() xác nhận khi ghi dữ liệu — dùng chung
@@ -114,8 +121,8 @@ body.app-has-sidebar.app-sidebar-collapsed #wrapper {
     display: flex;
     flex-direction: column;
     z-index: 1000;
-    box-shadow: 0 0 24px rgba(0, 0, 0, 0.04);
-    transition: width 0.22s ease, transform 0.22s ease;
+    box-shadow: none;   /* phẳng, chỉ dựa vào border-right để tách khỏi nội dung */
+    transition: width 0.22s ease, transform 0.22s ease, background-color 0.22s ease;
 }
 body.app-sidebar-collapsed .app-sidebar { width: var(--app-sb-w-collapsed); }
 
@@ -149,12 +156,12 @@ body.app-sidebar-collapsed .app-sidebar { width: var(--app-sb-w-collapsed); }
     gap: 8px;
     margin: 10px 14px 2px;
     padding: 8px 12px;
-    background: var(--app-gray-50);
-    border: 1px solid var(--app-gray-200);
+    background: var(--app-sb-field-bg);
+    border: 1px solid var(--app-sb-border);
     border-radius: 10px;
     flex-shrink: 0;
 }
-.app-sb-search i { font-size: 13px; color: rgb(0 0 0 / 85%); flex-shrink: 0; }
+.app-sb-search i { font-size: 13px; color: var(--app-sb-text-icon); flex-shrink: 0; }
 .app-sb-search input {
     flex: 1;
     min-width: 0;
@@ -162,7 +169,7 @@ body.app-sidebar-collapsed .app-sidebar { width: var(--app-sb-w-collapsed); }
     background: transparent;
     outline: none;
     font-size: 13.5px;
-    color: rgb(0 0 0 / 85%);
+    color: var(--app-sb-text);
     font-family: inherit;
 }
 .app-sb-search input::placeholder { color: var(--app-sb-text-faint); }
@@ -184,7 +191,7 @@ body.app-sidebar-collapsed .app-sb-search { display: none; }
 .app-sb-group.sb-search-hidden,
 .app-sb-child.sb-search-hidden { display: none !important; }
 .app-sb-nav::-webkit-scrollbar { width: 5px; }
-.app-sb-nav::-webkit-scrollbar-thumb { background: var(--app-gray-300); border-radius: 8px; }
+.app-sb-nav::-webkit-scrollbar-thumb { background: var(--app-sb-scroll); border-radius: 8px; }
 
 /* Hàng "Trang chủ" + nút cha */
 .app-sb-home,
@@ -200,7 +207,9 @@ body.app-sidebar-collapsed .app-sb-search { display: none; }
     cursor: pointer;
     color: var(--app-sb-text);
     font-size: 14px;
-    font-weight: 400;
+    /* MỌI menu cấp 1 đều 600 (kể cả chưa chọn): nhóm đang chọn đã có nền mờ + icon xanh
+       làm dấu nhận diện rồi, không cần đậm/nhạt để phân biệt nữa. */
+    font-weight: 600;
     text-decoration: none;
     text-align: left;
     transition: var(--app-trans);
@@ -222,29 +231,28 @@ body.app-sidebar-collapsed .app-sb-search { display: none; }
 }
 .app-sb-home:hover .app-sb-ic,
 .app-sb-parent:hover .app-sb-ic { color: var(--app-green); }
-/* Icon menu cha active đi theo cùng cặp đảo màu với chữ (xem .app-sb-group.is-active > .app-sb-parent). */
-.app-sb-group.is-active > .app-sb-parent .app-sb-ic { color: var(--app-sb-bg); }
+/* Nhóm đang chọn: icon lấy màu thương hiệu (xem .app-sb-group.is-active > .app-sb-parent). */
+.app-sb-group.is-active > .app-sb-parent .app-sb-ic { color: var(--app-sb-active-icon); }
 
-/* Mặc định txt 400; hover & active mới 600, đổi xanh giống icon */
+/* Menu cấp 1 luôn 600 (khai ở .app-sb-parent) — hover chỉ đổi màu xanh giống icon,
+   KHÔNG đổi độ đậm nữa để chữ không bị "nhảy" khi rê chuột. */
 .app-sb-home:hover .app-sb-txt,
-.app-sb-parent:hover .app-sb-txt { color: var(--app-green); font-weight: 600; }
-/* Cha (.app-sb-parent) được chọn vẫn in đậm 600; chỉ mục con giữ 400. */
-.app-sb-group.is-active > .app-sb-parent .app-sb-txt { font-weight: 600; }
+.app-sb-parent:hover .app-sb-txt { color: var(--app-green); }
 .app-sb-child a:hover .app-sb-txt { color: var(--app-green); font-weight: 600; }
 
 .app-sb-txt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .app-sb-caret { font-size: 11px; color: var(--app-sb-text-faint); transition: transform 0.22s ease; flex-shrink: 0; }
 .app-sb-group.is-open .app-sb-caret { transform: rotate(180deg); color: var(--app-sb-text-icon); }
-/* Caret menu cha active đi theo cùng cặp đảo màu với chữ (xem .app-sb-group.is-active > .app-sb-parent). */
-.app-sb-group.is-active > .app-sb-parent .app-sb-caret { color: var(--app-sb-bg); }
+.app-sb-group.is-active > .app-sb-parent .app-sb-caret { color: var(--app-sb-text-icon); }
 
-/* Đảo màu: nền lấy màu chữ hiện tại (Sáng=trắng/Tối=đen/mặc định xám), chữ lấy ngược lại
-   màu nền sidebar đang chỉnh — badge luôn tương phản dù cá nhân hóa màu gì. */
-.app-sb-group.is-active > .app-sb-parent { background: var(--app-sb-text); color: var(--app-sb-bg); }
+/* Nhóm đang chọn: nền xám rất nhạt (tối = trắng mờ), chữ đậm, icon màu thương hiệu —
+   nhẹ nhàng thay cho pill đảo màu cũ. */
+.app-sb-group.is-active > .app-sb-parent { background: var(--app-sb-active-bg); color: var(--app-sb-active-text); }
 
 /* Menu con */
 .app-sb-children {
+    position: relative;      /* mốc cho đường kẻ dọc ::before bên dưới */
     list-style: none;
     margin: 2px 0 4px;
     padding: 0 0 0 6px;
@@ -253,6 +261,21 @@ body.app-sidebar-collapsed .app-sb-search { display: none; }
     transition: max-height 0.25s ease;
 }
 .app-sb-group.is-open .app-sb-children { max-height: 600px; }
+
+/* Đường kẻ dọc nối các mục cấp 2 (thay cho dãy bullet mờ trước đây). Đặt đúng TÂM chỗ
+   bullet đứng — 6px (padding của <ul>) + 14px (padding-left của <a>) + 7px (nửa bề rộng
+   .app-sb-dot) = 27px — để bullet của mục đang chọn nằm gọn trên đường kẻ.
+   Bị cắt sẵn khi nhóm đóng vì <ul> có overflow:hidden + max-height:0. */
+.app-sb-children::before {
+    content: '';
+    position: absolute;
+    left: 27px;
+    top: 4px;
+    bottom: 6px;
+    width: 1px;
+    transform: translateX(-50%);   /* canh đúng tâm 27px, không lệch nửa pixel */
+    background: var(--app-sb-rail);
+}
 
 .app-sb-child a {
     display: flex;
@@ -269,91 +292,42 @@ body.app-sidebar-collapsed .app-sb-search { display: none; }
     transition: var(--app-trans);
 }
 .app-sb-child a:hover { background: var(--app-sb-hover-bg); color: var(--app-sb-hover-text); }
-.app-sb-dot { font-size: 5px; width: 14px; display: flex; justify-content: center; color: var(--app-sb-text-faint); flex-shrink: 0; }
-/* Active: chữ/bullet đều lấy var(--app-sb-text) (đúng màu "chữ" hiện tại của sidebar —
-   trắng nếu đang Sáng, đen nếu đang Tối). Vạch trái dùng ::before thấp hơn cả khối (60%
-   chiều cao, canh giữa dọc) thay vì border-left kéo dài hết khối — không cần bù padding vì
-   ::before nằm ngoài luồng, không ảnh hưởng bề rộng nội dung. Opacity đầy đủ (100%) để nổi
-   bật hẳn so với các mục chưa active (opacity .68). */
+/* Bullet CHỈ hiện ở mục đang chọn (và mục đang rê bằng bàn phím) — các mục còn lại chỉ có
+   đường kẻ dọc. Dùng visibility chứ không display:none để ô 14px vẫn chiếm chỗ, giữ mọi
+   dòng chữ thẳng hàng nhau. */
+.app-sb-dot {
+    /* position:relative BẮT BUỘC: đường kẻ ::before của <ul> đã được định vị nên mặc định
+       vẽ ĐÈ lên bullet (nằm trong luồng) — kẻ 1px sẽ cắt ngang chấm trông như bị đứt.
+       Cho bullet cũng "được định vị" thì nó đứng sau ::before trong cây -> vẽ chồng lên. */
+    position: relative;
+    font-size: 5px;
+    width: 14px;
+    display: flex;
+    justify-content: center;
+    color: var(--app-sb-text-faint);
+    flex-shrink: 0;
+    visibility: hidden;
+}
+/* Active: chữ đậm + bullet to hơn nằm trên đường kẻ — KHÔNG còn vạch trái (::before) như
+   trước. Opacity đầy đủ (100%) để nổi bật hẳn so với các mục chưa active (opacity .68). */
 .app-sb-child a:hover,
 .app-sb-child.is-active a,
 .app-sb-child.is-kbd-active a { opacity: 1; }
 .app-sb-child.is-active a {
-    position: relative;
     background: transparent;
-    color: var(--app-sb-text);
+    color: var(--app-sb-active-text);
     font-weight: 700;
-    border-radius: 0;
 }
-.app-sb-child.is-active a::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    width: 6px;
-    height: 60%;
-    transform: translateY(-50%);
-    background: var(--app-sb-text);
-    border-radius: 0 3px 3px 0;
+.app-sb-child.is-active .app-sb-dot {
+    visibility: visible;
+    font-size: 7px;
+    color: var(--app-sb-active-text);
 }
-.app-sb-child.is-active .app-sb-dot { color: var(--app-sb-text); }
 .app-sb-child.is-kbd-active a { background: var(--app-green-soft); color: var(--app-green-dark); }
-.app-sb-child.is-kbd-active .app-sb-dot { color: var(--app-green); }
+.app-sb-child.is-kbd-active .app-sb-dot { visibility: visible; font-size: 7px; color: var(--app-green); }
 
-/* Nút "Giao diện" cho sidebar — giống hàng menu cha, xổ dropdown cá nhân hóa màu */
-.app-sb-theme { position: relative; flex-shrink: 0; }
-.app-sb-theme-btn {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: calc(100% - 20px);
-    margin: 4px 10px 0;
-    padding: 10px 12px;
-    border: 0;
-    background: transparent;
-    border-radius: 9px;
-    cursor: pointer;
-    color: var(--app-sb-text);
-    font-size: 14px;
-    font-family: inherit;
-    text-align: left;
-    flex-shrink: 0;
-    border-top: 1px solid var(--app-sb-border);
-    transition: var(--app-trans);
-}
-.app-sb-theme-btn:hover { background: var(--app-sb-hover-bg); color: var(--app-sb-hover-text); }
-.app-sb-theme-btn:hover .app-sb-ic { color: var(--app-green); }
-body.app-sidebar-collapsed .app-sb-theme-btn { justify-content: center; gap: 0; padding: 11px 8px; width: 100%; margin: 0; }
-
-/* Dropdown cá nhân hóa: màu nền sidebar (color input tự do) + màu chữ Sáng/Tối
-   (trắng/đen) — panel luôn nền trắng cố định, không ăn theo màu sidebar đang chỉnh. */
-.app-sb-theme-dropdown {
-    /* Xổ lên trên + lệch phải (không dùng top/left) để không bị 2 khối bên dưới
-       ("Cài đặt hệ thống" + nút thu gọn) che mất. */
-    position: absolute; bottom: calc(100% + 6px); top: auto; right: 0; left: auto; width: 260px;
-    background: #fff; border: 1px solid var(--app-gray-200); border-radius: 12px;
-    box-shadow: var(--app-shadow); padding: 14px; z-index: 1200;
-    opacity: 0; visibility: hidden; transform: translateY(6px);
-    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
-}
-.app-sb-theme.is-open .app-sb-theme-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-body.app-sidebar-collapsed .app-sb-theme-dropdown { left: calc(100% + 8px); right: auto; top: auto; bottom: 0; width: 230px; }
-.app-sb-theme-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-.app-sb-theme-lab { font-size: 13px; font-weight: 600; color: var(--app-gray-700); display: block; margin-bottom: 8px; }
-.app-sb-theme-row .app-sb-theme-lab { margin-bottom: 0; }
-.app-sb-color-input { width: 42px; height: 30px; border: 1px solid var(--app-gray-200); border-radius: 6px; padding: 2px; cursor: pointer; background: #fff; }
-.app-sb-text-toggle { display: flex; border: 1px solid var(--app-gray-200); border-radius: 8px; overflow: hidden; }
-.app-sb-text-opt {
-    border: 0; border-left: 1px solid var(--app-gray-200); background: #fff; color: var(--app-gray-700);
-    font-size: 12.5px; font-weight: 600; padding: 6px 12px; cursor: pointer; font-family: inherit; transition: var(--app-trans);
-}
-.app-sb-text-opt:first-child { border-left: 0; }
-.app-sb-text-opt.is-active { background: var(--app-green); color: #fff; }
-.app-sb-theme-reset {
-    width: 100%; border: 1px solid var(--app-gray-200); background: var(--app-gray-50); color: var(--app-gray-700);
-    font-size: 12.5px; font-weight: 600; padding: 7px; border-radius: 8px; cursor: pointer; font-family: inherit; transition: var(--app-trans);
-}
-.app-sb-theme-reset:hover { background: var(--app-gray-100); }
+/* (Đã gỡ nút "Giao diện" của sidebar — sidebar sáng/tối theo nút trên header,
+   xem body.app-view-dark ở cuối file.) */
 
 /* Nút "Cài đặt hệ thống" — giống hàng menu cha */
 .app-sb-settings-btn {
@@ -387,7 +361,7 @@ body.app-sidebar-collapsed .app-sb-settings-btn { justify-content: center; gap: 
     width: 100%;
     padding: 10px 14px;
     border: 0;
-    border-top: 1px solid var(--app-gray-100);
+    border-top: 1px solid var(--app-sb-border);
     background: transparent;
     cursor: pointer;
     flex-shrink: 0;
@@ -397,10 +371,10 @@ body.app-sidebar-collapsed .app-sb-settings-btn { justify-content: center; gap: 
     height: 38px;
     border-radius: 50%;
     align-items: center;
-    color: var(--app-gray-500);
+    color: var(--app-sb-text-icon);
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.22s ease;
 }
-.app-sb-collapse:hover .app-sb-ic { background: var(--app-gray-100); color: var(--app-navy); }
+.app-sb-collapse:hover .app-sb-ic { background: var(--app-sb-hover-bg); color: var(--app-sb-hover-text); }
 body.app-sidebar-collapsed .app-sb-collapse .app-sb-ic { transform: rotate(180deg); }
 
 /* ---- Trạng thái thu gọn: chỉ còn icon ---- */
@@ -433,6 +407,9 @@ body.app-sidebar-collapsed .app-sb-group { position: relative; }
     z-index: 1100;
 }
 .app-sb-children.app-sb-flyout .app-sb-txt { display: inline; }
+/* Flyout có padding riêng (8px) nên mốc 27px của đường kẻ dọc không còn khớp tâm bullet —
+   bỏ hẳn đường kẻ trong popup, chỉ giữ bullet của mục đang chọn. */
+.app-sb-children.app-sb-flyout::before { display: none; }
 
 /* =====================================================================
    HEADER
@@ -1653,22 +1630,43 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
    đổi theo dark mode nội dung).
    =================================================================== */
 body.app-view-dark { background: #181818; }
+/* ---- Sidebar đi theo nút Sáng/Tối trên header ----
+   Sidebar KHÔNG nằm trong vùng áp filter (bị loại trừ ở selector bên dưới) nên phải tự
+   đổi màu: ghi đè đúng bộ biến --app-sb-* đã khai ở :root. Cùng tông với nền nội dung tối
+   (#181818) nhưng nhạt hơn 1 bậc để vẫn tách khỏi vùng nội dung. */
+body.app-view-dark {
+    --app-sb-bg: #1f1f1f;
+    --app-sb-text: #e5e7eb;
+    --app-sb-text-icon: #9ca3af;
+    --app-sb-text-faint: #6b7280;
+    --app-sb-hover-bg: rgba(255, 255, 255, .07);
+    --app-sb-hover-text: #ffffff;
+    --app-sb-border: #333333;
+    --app-sb-active-bg: rgba(255, 255, 255, .09);
+    --app-sb-active-text: #ffffff;
+    --app-sb-active-icon: #4ade80;   /* xanh thương hiệu sáng lên cho nền tối */
+    --app-sb-field-bg: rgba(255, 255, 255, .05);
+    --app-sb-scroll: #4b5563;
+    --app-sb-rail: #3a3a3a;
+}
+/* Nút "Cài đặt hệ thống" hover dùng --app-green cố định cho icon: trên nền tối vẫn đọc được,
+   giữ nguyên. Logo giữ vòng tròn sáng để ảnh logo (màu sẫm) không chìm. */
 /* #wrapper (global.css) có sẵn background-color: white — bản thân #wrapper KHÔNG nằm trong
    vùng áp filter (để sidebar/header không bị đảo màu theo) nên nền trắng đó lộ ra ngoài các
    khối nội dung. Ghi đè thẳng màu nền (không qua filter) tông tối hơn khối chi tiết 1 chút,
    giống quan hệ editor.background/sideBar.background của VS Code Dark Modern. */
 body.app-view-dark #wrapper { background-color: #181818; }
 body.app-view-dark #wrapper > *:not(.app-sidebar):not(.app-header):not(.app-subtabs):not(.app-modal):not(.app-ava-lightbox):not(.chat-widget),
-body.app-view-dark > *:not(#wrapper):not(.app-perm-toast):not(.app-sb-flyout) {
+body.app-view-dark > *:not(#wrapper):not(.app-sidebar):not(.app-perm-toast):not(.app-sb-flyout) {
     filter: invert(88%) hue-rotate(180deg);
 }
 /* Ảnh/video thật (không phải icon font) trong nội dung view: đảo lại để không ra âm bản. */
 body.app-view-dark #wrapper > *:not(.app-sidebar):not(.app-header):not(.app-subtabs):not(.app-modal):not(.app-ava-lightbox):not(.chat-widget) img,
 body.app-view-dark #wrapper > *:not(.app-sidebar):not(.app-header):not(.app-subtabs):not(.app-modal):not(.app-ava-lightbox):not(.chat-widget) video,
 body.app-view-dark #wrapper > *:not(.app-sidebar):not(.app-header):not(.app-subtabs):not(.app-modal):not(.app-ava-lightbox):not(.chat-widget) canvas,
-body.app-view-dark > *:not(#wrapper):not(.app-perm-toast):not(.app-sb-flyout) img,
-body.app-view-dark > *:not(#wrapper):not(.app-perm-toast):not(.app-sb-flyout) video,
-body.app-view-dark > *:not(#wrapper):not(.app-perm-toast):not(.app-sb-flyout) canvas {
+body.app-view-dark > *:not(#wrapper):not(.app-sidebar):not(.app-perm-toast):not(.app-sb-flyout) img,
+body.app-view-dark > *:not(#wrapper):not(.app-sidebar):not(.app-perm-toast):not(.app-sb-flyout) video,
+body.app-view-dark > *:not(#wrapper):not(.app-sidebar):not(.app-perm-toast):not(.app-sb-flyout) canvas {
     filter: invert(1) hue-rotate(180deg);
 }
 /* .app-header không nằm trong vùng filter (giữ nguyên, không đảo màu) nhưng bản thân nó

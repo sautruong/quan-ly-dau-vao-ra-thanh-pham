@@ -375,87 +375,13 @@
             });
         }
 
-        /* ---- 2a2. Giao diện sidebar (sở thích cá nhân, lưu localStorage): dropdown xổ ra khi
-           bấm "Giao diện" gồm 2 tùy biến độc lập — màu nền tự chọn và màu chữ Sáng(trắng)/Tối(đen).
-           Áp dụng qua CSS custom property --app-sb-* (xem app_shell.css) để không phải hard-code lại
-           từng phần tử; chống nháy giao diện khi tải trang bằng script inline ngay sau <aside>
-           (sidebar-app.php) + trong header-home.php áp lại y hệt trước DOMContentLoaded. */
-        var sbTheme = document.getElementById('app-sb-theme');
-        var sbThemeBtn = document.getElementById('app-sb-theme-btn');
-        var sbThemeDropdown = document.getElementById('app-sb-theme-dropdown');
-        if (sbTheme && sbThemeBtn && sbThemeDropdown) {
-            var SB_BG_KEY = 'app_sb_bg_color', SB_TEXT_KEY = 'app_sb_text_mode';
+        /* ---- 2a2. (ĐÃ GỠ 2026-08) Nút "Giao diện" cá nhân hóa màu sidebar.
+           Sidebar nay dùng bảng màu chuẩn khai trong :root và tự đảo sáng/tối theo
+           body.app-view-dark — cùng một nút Sáng/Tối trên header ở mục 2a3 bên dưới.
+           Việc dọn localStorage + inline style cũ làm ở script inline trong sidebar-app.php. */
 
-            var bgPicker  = document.getElementById('app-sb-bg-picker');
-            var textOpts  = sbThemeDropdown.querySelectorAll('.app-sb-text-opt');
-            var resetBtn  = document.getElementById('app-sb-theme-reset');
-
-            function applyBg(hex) {
-                if (hex) body.style.setProperty('--app-sb-bg', hex);
-                else body.style.removeProperty('--app-sb-bg');
-                if (bgPicker) bgPicker.value = hex || '#ffffff';
-            }
-            function applyTextMode(mode) {
-                if (mode === 'light') {
-                    body.style.setProperty('--app-sb-text', '#fff');
-                    body.style.setProperty('--app-sb-text-icon', '#fff');
-                    body.style.setProperty('--app-sb-text-faint', 'rgba(255,255,255,.55)');
-                    body.style.setProperty('--app-sb-hover-bg', 'rgba(255,255,255,.14)');
-                    body.style.setProperty('--app-sb-hover-text', '#fff');
-                    body.style.setProperty('--app-sb-border', 'rgba(255,255,255,.18)');
-                } else if (mode === 'dark') {
-                    body.style.setProperty('--app-sb-text', '#000');
-                    body.style.setProperty('--app-sb-text-icon', '#000');
-                    body.style.setProperty('--app-sb-text-faint', 'rgba(0,0,0,.55)');
-                    body.style.setProperty('--app-sb-hover-bg', 'rgba(0,0,0,.06)');
-                    body.style.setProperty('--app-sb-hover-text', '#000');
-                    body.style.setProperty('--app-sb-border', 'rgba(0,0,0,.12)');
-                } else {
-                    ['--app-sb-text', '--app-sb-text-icon', '--app-sb-text-faint', '--app-sb-hover-bg', '--app-sb-hover-text', '--app-sb-border']
-                        .forEach(function (v) { body.style.removeProperty(v); });
-                }
-                textOpts.forEach(function (b) { b.classList.toggle('is-active', b.getAttribute('data-text-mode') === mode); });
-            }
-
-            var savedBg = null, savedText = null;
-            try {
-                savedBg = localStorage.getItem(SB_BG_KEY);
-                savedText = localStorage.getItem(SB_TEXT_KEY);
-            } catch (e) {}
-            applyBg(savedBg);
-            applyTextMode(savedText);
-
-            sbThemeBtn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                sbTheme.classList.toggle('is-open');
-            });
-            sbThemeDropdown.addEventListener('click', function (e) { e.stopPropagation(); });
-            document.addEventListener('click', function (e) {
-                if (!sbTheme.contains(e.target)) sbTheme.classList.remove('is-open');
-            });
-
-            if (bgPicker) bgPicker.addEventListener('input', function () {
-                applyBg(bgPicker.value);
-                try { localStorage.setItem(SB_BG_KEY, bgPicker.value); } catch (e) {}
-            });
-            textOpts.forEach(function (b) {
-                b.addEventListener('click', function () {
-                    var mode = b.getAttribute('data-text-mode');
-                    applyTextMode(mode);
-                    try { localStorage.setItem(SB_TEXT_KEY, mode); } catch (e) {}
-                });
-            });
-            if (resetBtn) resetBtn.addEventListener('click', function () {
-                applyBg(null); applyTextMode(null);
-                try {
-                    localStorage.removeItem(SB_BG_KEY);
-                    localStorage.removeItem(SB_TEXT_KEY);
-                } catch (e) {}
-            });
-        }
-
-        /* ---- 2a3. Sáng / Tối cho NỘI DUNG trang chi tiết (nút riêng trên header,
-           khác nút "Giao diện" của sidebar ở trên — xem body.app-view-dark trong CSS) ---- */
+        /* ---- 2a3. Sáng / Tối cho NỘI DUNG trang + sidebar (nút trên header;
+           xem body.app-view-dark trong CSS) ---- */
         var viewThemeBtn = document.getElementById('app-view-theme-btn');
         if (viewThemeBtn) {
             var viewThemeIcon = viewThemeBtn.querySelector('i');

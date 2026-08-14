@@ -150,26 +150,8 @@ if ($__sb_admin || $__sb_is_deputy) {
         <?php endforeach; ?>
     </nav>
 
-    <div class="app-sb-theme" id="app-sb-theme">
-        <button type="button" class="app-sb-theme-btn" id="app-sb-theme-btn" title="Giao diện">
-            <span class="app-sb-ic"><i class="fa-solid fa-palette"></i></span>
-            <span class="app-sb-txt">Giao diện</span>
-        </button>
-        <div class="app-sb-theme-dropdown" id="app-sb-theme-dropdown">
-            <div class="app-sb-theme-row">
-                <span class="app-sb-theme-lab">Màu nền sidebar</span>
-                <input type="color" id="app-sb-bg-picker" class="app-sb-color-input" value="#ffffff" title="Chọn màu nền">
-            </div>
-            <div class="app-sb-theme-row">
-                <span class="app-sb-theme-lab">Màu chữ</span>
-                <div class="app-sb-text-toggle">
-                    <button type="button" class="app-sb-text-opt" data-text-mode="light">Sáng</button>
-                    <button type="button" class="app-sb-text-opt" data-text-mode="dark">Tối</button>
-                </div>
-            </div>
-            <button type="button" class="app-sb-theme-reset" id="app-sb-theme-reset">Đặt lại mặc định</button>
-        </div>
-    </div>
+    <?php /* Nút "Giao diện" (cá nhân hóa màu nền/màu chữ sidebar) đã gỡ 2026-08:
+             sidebar dùng nền trắng chuẩn và tự đổi sáng/tối theo nút trên header. */ ?>
 
     <?php if ($__sb_admin): ?>
     <button type="button" class="app-sb-settings-btn" id="app-sb-settings-btn" title="Cài đặt hệ thống">
@@ -185,11 +167,11 @@ if ($__sb_admin || $__sb_is_deputy) {
 <script>document.body.classList.add('app-has-sidebar');
 (function(){try{
     if(localStorage.getItem('app_sb_collapsed')==='1')document.body.classList.add('app-sidebar-collapsed');
-    var __bg=localStorage.getItem('app_sb_bg_color'), __tm=localStorage.getItem('app_sb_text_mode');
-    if(__bg===null&&__tm===null&&localStorage.getItem('app_sb_theme')==='dark'){__bg='#1a2029';__tm='light';localStorage.setItem('app_sb_bg_color',__bg);localStorage.setItem('app_sb_text_mode',__tm);localStorage.removeItem('app_sb_theme');}
-    if(__bg)document.body.style.setProperty('--app-sb-bg',__bg);
-    if(__tm==='light'){document.body.style.setProperty('--app-sb-text','#fff');document.body.style.setProperty('--app-sb-text-icon','#fff');document.body.style.setProperty('--app-sb-text-faint','rgba(255,255,255,.55)');document.body.style.setProperty('--app-sb-hover-bg','rgba(255,255,255,.14)');document.body.style.setProperty('--app-sb-hover-text','#fff');document.body.style.setProperty('--app-sb-border','rgba(255,255,255,.18)');}
-    else if(__tm==='dark'){document.body.style.setProperty('--app-sb-text','#000');document.body.style.setProperty('--app-sb-text-icon','#000');document.body.style.setProperty('--app-sb-text-faint','rgba(0,0,0,.55)');document.body.style.setProperty('--app-sb-hover-bg','rgba(0,0,0,.06)');document.body.style.setProperty('--app-sb-hover-text','#000');document.body.style.setProperty('--app-sb-border','rgba(0,0,0,.12)');}
+    /* Dọn tồn dư của tính năng "Giao diện sidebar" đã gỡ — inline style cũ vẫn nằm trên
+       <body> ở phiên trước sẽ đè lên bảng màu mới, nên phải xóa cả key lẫn biến. */
+    ['app_sb_bg_color','app_sb_text_mode','app_sb_theme'].forEach(function(k){localStorage.removeItem(k);});
+    ['--app-sb-bg','--app-sb-text','--app-sb-text-icon','--app-sb-text-faint','--app-sb-hover-bg','--app-sb-hover-text','--app-sb-border']
+        .forEach(function(v){document.body.style.removeProperty(v);});
     if(localStorage.getItem('app_view_theme')==='dark')document.body.classList.add('app-view-dark');
 }catch(e){}})();</script>
 <?php if ($__sb_admin): ?>

@@ -184,27 +184,9 @@ $__hn_js_v  = is_file($__hn_js)  ? filemtime($__hn_js)  : time();
 <script>
 (function () {
     try {
-        var __bg = localStorage.getItem('app_sb_bg_color'), __tm = localStorage.getItem('app_sb_text_mode');
-        if (__bg === null && __tm === null && localStorage.getItem('app_sb_theme') === 'dark') {
-            __bg = '#1a2029'; __tm = 'light';
-            localStorage.setItem('app_sb_bg_color', __bg); localStorage.setItem('app_sb_text_mode', __tm); localStorage.removeItem('app_sb_theme');
-        }
-        if (__bg) document.body.style.setProperty('--app-sb-bg', __bg);
-        if (__tm === 'light') {
-            document.body.style.setProperty('--app-sb-text', '#fff');
-            document.body.style.setProperty('--app-sb-text-icon', '#fff');
-            document.body.style.setProperty('--app-sb-text-faint', 'rgba(255,255,255,.55)');
-            document.body.style.setProperty('--app-sb-hover-bg', 'rgba(255,255,255,.14)');
-            document.body.style.setProperty('--app-sb-hover-text', '#fff');
-            document.body.style.setProperty('--app-sb-border', 'rgba(255,255,255,.18)');
-        } else if (__tm === 'dark') {
-            document.body.style.setProperty('--app-sb-text', '#000');
-            document.body.style.setProperty('--app-sb-text-icon', '#000');
-            document.body.style.setProperty('--app-sb-text-faint', 'rgba(0,0,0,.55)');
-            document.body.style.setProperty('--app-sb-hover-bg', 'rgba(0,0,0,.06)');
-            document.body.style.setProperty('--app-sb-hover-text', '#000');
-            document.body.style.setProperty('--app-sb-border', 'rgba(0,0,0,.12)');
-        }
+        /* Tính năng "Giao diện sidebar" đã gỡ (2026-08) — dọn nốt key cũ để trang có
+           sidebar không bị inline style của phiên trước đè lên bảng màu mới. */
+        ['app_sb_bg_color', 'app_sb_text_mode', 'app_sb_theme'].forEach(function (k) { localStorage.removeItem(k); });
         var header = document.getElementById('home-header');
         if (header && localStorage.getItem('home_header_text_mode') === 'light') {
             header.classList.add('is-light-text');
