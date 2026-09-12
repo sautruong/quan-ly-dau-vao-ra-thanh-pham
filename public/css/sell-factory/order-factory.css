@@ -2199,3 +2199,324 @@ body {
     .of-tabs { position: static; }
     .of-page { padding-top: 14px; }
 }
+
+/* =====================================================================
+   VIEW "ĐƠN HIỆN TẠI" (#of-order-view) — thay modal giỏ hàng cũ (#modal-cart)
+   ---------------------------------------------------------------------
+   Khung 3 tầng .app-ov-* nằm trong app_shell.css; ở đây chỉ là phần riêng của
+   view đặt hàng: hàng ô Chi nhánh/Ghi chú, thanh nút trên bảng, bảng cuộn,
+   chân view (tổng + 3 nút gửi).
+   ===================================================================== */
+
+/* Modal MỞ TỪ TRONG view này phải cao hơn lớp view (z-index 1200), nếu không sẽ bị
+   phủ kín, tưởng như không mở ra (#modal-zalo/#modal-share-chat vốn đã 1400). */
+#modal-info { z-index: 1400; }
+
+/* Ngược lại, dropdown giỏ hàng (z-index 1250, xổ khi hover) phải BIẾN MẤT khi view đang mở:
+   bấm "Đơn hàng hiện tại" xong chuột vẫn nằm nguyên chỗ cũ nên nó tiếp tục xổ, nổi ĐÈ lên
+   view và nuốt cú bấm vào thanh nút góc phải bảng. */
+body.app-ov-open .of-cart-dropdown { display: none !important; }
+
+.of-order-view .of-ov-fields {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) 2fr;
+    gap: 18px;
+    align-items: end;
+}
+/* Ô chi nhánh vốn có margin-bottom 20px (kiểu modal cũ) -> bỏ để 2 ô thẳng hàng đáy. */
+.of-order-view .wp-search-branch input[type="text"] { margin-bottom: 0 !important; height: 40px; }
+.of-order-view .of-note-field textarea { min-height: 40px; }
+.of-order-view .of-note-field label { font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; }
+
+/* Thanh nút góc phải bảng: "Lấy số đặt gần đây" <-> cặp "Đồng ý / Hủy". */
+.of-ov-tablebar { flex: 0 0 auto; display: flex; justify-content: flex-end; gap: 8px; }
+.of-recent-confirm { display: inline-flex; gap: 8px; }
+.of-recent-confirm[hidden] { display: none; }
+.of-ov-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 14px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+    background: var(--color-white);
+    color: var(--color-gray-700);
+    font-size: 13.5px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: var(--transition);
+}
+.of-ov-btn:hover { border-color: var(--color-green); color: var(--color-green-dark); }
+.of-ov-btn:disabled { opacity: .6; cursor: default; }
+.of-ov-btn.is-ok { background: var(--color-green); border-color: var(--color-green); color: #fff; }
+.of-ov-btn.is-ok:hover { background: var(--color-green-dark); color: #fff; }
+.of-ov-btn.is-cancel:hover { border-color: var(--color-red); color: var(--color-red); }
+
+/* Bảng hàng: vùng cuộn duy nhất của view; tiêu đề cột dính trên khi cuộn. */
+.of-order-view .wp-list-order { padding: 0; }
+.of-order-view #order-table thead td {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--color-green); color: var(--color-white);
+}
+
+/* Ảnh tròn 18px cạnh tên sản phẩm. KHÔNG dùng display:flex trên <td> (sẽ phá chiều cao
+   hàng), chỉ canh giữa theo dòng bằng vertical-align. */
+.of-row-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 7px;
+    vertical-align: middle;
+    background: var(--color-gray-100);
+    border: 1px solid var(--color-gray-200);
+}
+.of-row-thumb.is-empty {
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--color-gray-500); font-size: 9px;
+}
+.of-row-name { vertical-align: middle; }
+
+/* Số "đặt gần đây" gán tạm: xám cho tới khi bấm Đồng ý (hoặc user gõ đè). */
+.qt-input.is-suggested { color: var(--color-gray-500); font-style: italic; }
+
+/* Tình hình đơn hàng: nằm dưới bảng, không đẩy chân view đi mất. */
+.of-order-view .order-inv-status { flex: 0 0 auto; max-height: 26vh; overflow-y: auto; }
+
+/* Chân view: tổng bên trái, 3 nút gửi bên phải. */
+.of-ov-totals { margin-right: auto; display: flex; flex-wrap: wrap; gap: 6px 22px; }
+.of-ov-totals > div { display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 700; }
+.of-ov-totals p { font-weight: 600; color: var(--color-gray-500); font-size: 13px; }
+.of-ov-totals .value-total { color: var(--color-green-dark); }
+.of-order-view .wp-button { margin: 0; gap: 10px; }
+
+@media (max-width: 768px) {
+    .of-order-view .of-ov-fields { grid-template-columns: 1fr; gap: 10px; }
+    .of-order-view #order-table { min-width: 480px; }
+    .of-ov-totals { width: 100%; justify-content: space-between; }
+    /* .wp-button trên mobile vốn xếp dọc 100% chiều ngang (modal cũ) -> ở chân view cho
+       nằm ngang chia đều, tránh chiếm nửa màn hình. */
+    .of-order-view .wp-button { flex-direction: row; width: 100%; }
+    .of-order-view .wp-button button { flex: 1 1 0; width: auto; padding: 10px 6px; font-size: 13px; }
+}
+
+/* =====================================================================
+   VIEW "ĐƠN HIỆN TẠI" — bản 2 cột (12/9/2026)
+   Trái: tồn kho nhà máy dạng dọc (bấm 1 dòng là bắn sang đơn bên phải).
+   Phải: chi nhánh / ghi chú / thanh công cụ / bảng đơn / tình hình đơn.
+   ===================================================================== */
+/* Phải "nặng" hơn .app-ov-body (flex column) của app_shell.css — file đó nạp SAU file này. */
+.app-ov-body.of-ov-2col {
+    display: grid;
+    grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+}
+/* Tiêu đề cột bảng đơn không xuống dòng ("Số lượng đặt", "Khối lượng (kg)"…). */
+#order-table thead td { white-space: nowrap; }
+.of-ov-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+/* ---- Cột trái: tồn kho ---- */
+.of-ov-stock {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    overflow: hidden;
+}
+.of-ov-stock-head { flex: 0 0 auto; }
+.of-ov-stock-search { position: relative; }
+.of-ov-stock-search input {
+    width: 100%;
+    padding: 9px 34px 9px 34px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 10px;
+    background: var(--color-gray-50);
+    font-size: 13.5px;
+    outline: none;
+}
+.of-ov-stock-search input:focus { border-color: var(--color-green); background: #fff; }
+.of-ov-stock-search > i {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--color-gray-500); font-size: 13px;
+}
+.of-ov-stock-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.of-stock-group + .of-stock-group { margin-top: 12px; }
+.of-stock-group-title {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--color-white);
+    padding: 4px 0 5px;
+    font-size: 12px; font-weight: 700; letter-spacing: .6px;
+    color: var(--color-green-dark); text-transform: uppercase;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+/* Dòng tồn: tên - tồn ....... quy đổi bao/gói (dấu chấm nối do .of-stock-lead vẽ). */
+.of-stock-row {
+    display: flex; align-items: baseline; gap: 6px;
+    padding: 5px 6px; border-radius: 8px;
+    font-size: 13px; color: var(--color-gray-900);
+    cursor: pointer; transition: background .15s ease;
+}
+.of-stock-row:hover { background: var(--color-green-soft); }
+.of-stock-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.of-stock-name b { color: var(--color-green-dark); }
+.of-stock-lead {
+    flex: 1 1 auto; min-width: 12px;
+    border-bottom: 1px dotted var(--color-gray-300);
+    transform: translateY(-3px);
+}
+.of-stock-inv { flex: 0 0 auto; font-size: 12px; color: var(--color-gray-500); white-space: nowrap; }
+.of-stock-empty { padding: 14px; text-align: center; color: var(--color-gray-500); font-style: italic; font-size: 13px; }
+
+/* ---- Thanh công cụ trên bảng: ô tìm (trái) + các nút (phải) ---- */
+.of-ov-tablebar {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.of-ov-tablebar .wp-search-goods { flex: 1 1 260px; min-width: 200px; }
+.of-ov-tablebar .wp-search-goods input { padding: 9px 34px 9px 38px; border-radius: 10px; font-size: 13.5px; }
+.of-ov-tablebar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.of-ov-btn.of-col-show { color: var(--color-gray-500); border-style: dashed; }
+.of-ov-btn.of-col-show:hover { color: var(--color-green-dark); border-style: solid; }
+/* Đã lấy số 1 lần -> nút chìm xuống nhưng vẫn bấm lại được (bấm lại = nạp đè số mới). */
+.of-ov-btn.is-used { background: var(--color-gray-50); color: var(--color-gray-500); border-color: var(--color-gray-200); }
+.of-ov-btn.is-used:hover { color: var(--color-green-dark); border-color: var(--color-green); }
+
+/* Nút × xóa từ khóa trong ô tìm — chỉ hiện khi hover/focus vào ô. */
+.of-input-clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 20px; padding: 0;
+    border: 0; border-radius: 50%;
+    background: var(--color-gray-100); color: var(--color-gray-500);
+    font-size: 14px; line-height: 1; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+}
+.wp-search-goods:hover .of-input-clear,
+.of-ov-stock-search:hover .of-input-clear,
+.wp-search-goods input:focus ~ .of-input-clear,
+.of-ov-stock-search input:focus ~ .of-input-clear { display: inline-flex; }
+.of-input-clear:hover { background: var(--color-red); color: #fff; }
+
+/* ---- Bảng đơn ---- */
+/* Ô số lượng: canh giữa, không mũi tên tăng/giảm, chỉ hiện viền khi hover/focus. */
+.qt-input {
+    width: 74px;
+    text-align: center;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+.qt-input:hover { border-color: var(--color-gray-300); background: #fff; }
+.qt-input:focus { border-color: var(--color-green); background: #fff; box-shadow: 0 0 0 3px rgba(34, 197, 94, .15); }
+.qt-input::-webkit-outer-spin-button,
+.qt-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* Đặt vượt tồn nhà máy -> số đỏ (chỉ cảnh báo, vẫn đặt được). */
+.qt-input.is-over { color: var(--color-red); font-weight: 700; }
+
+/* Nút ẩn cột nằm trong ô tiêu đề, chỉ hiện khi hover vào tiêu đề đó. */
+#order-table thead td { position: relative; }
+.of-col-hide {
+    margin-left: 6px; padding: 0;
+    width: 20px; height: 20px;
+    border: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, .25); color: #fff;
+    font-size: 11px; line-height: 1; cursor: pointer;
+    opacity: 0; transition: opacity .15s ease, background-color .15s ease;
+    vertical-align: middle;
+}
+#order-table thead td:hover .of-col-hide { opacity: 1; }
+.of-col-hide:hover { background: rgba(255, 255, 255, .45); }
+
+/* Dòng vừa được bắn từ khối tồn sang -> chớp sáng rồi tắt. */
+@keyframes ofRowFlash {
+    0%   { background: var(--color-green); }
+    35%  { background: var(--color-green-soft); }
+    100% { background: transparent; }
+}
+#order-table tbody tr.of-row-flash { animation: ofRowFlash 1.2s ease; }
+
+/* Xóa dòng: mờ dần + thu chiều cao thay vì biến mất đột ngột. */
+#order-table tbody tr.is-vanishing {
+    opacity: 0;
+    transform: translateX(14px);
+    transition: opacity .24s ease, transform .24s ease;
+}
+
+/* ---- Tình hình đơn hàng dạng FAQ (đơn > 10 SP) ---- */
+.order-inv-status.is-faq { padding: 8px 12px; }
+.order-inv-status.is-faq .ois-title { margin-bottom: 0; }
+.order-inv-status.is-faq .ois-content { display: none; padding-top: 10px; }
+.order-inv-status.is-faq.is-open .ois-content { display: block; }
+.order-inv-status.is-faq.is-open .ois-toggle i { transform: rotate(90deg); }
+.ois-toggle {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 4px 0;
+    border: 0; background: transparent;
+    font: inherit; font-weight: 700; color: var(--color-gray-900);
+    cursor: pointer; text-align: left;
+}
+.ois-toggle i { transition: transform .18s ease; color: var(--color-gray-500); font-size: 12px; }
+.ois-badge {
+    padding: 1px 9px; border-radius: 999px;
+    background: #fee2e2; color: #b91c1c; font-size: 12px; font-weight: 700;
+}
+.ois-badge.is-ok { background: var(--color-green-soft); color: var(--color-green-dark); }
+
+@media (max-width: 1100px) {
+    /* Màn hẹp: khối tồn xuống dưới, cao vừa phải để bảng đơn vẫn là phần chính. */
+    .app-ov-body.of-ov-2col { grid-template-columns: minmax(0, 1fr); }
+    .of-ov-stock { order: 2; max-height: 38vh; }
+    .of-ov-main { order: 1; }
+}
+
+/* =====================================================================
+   LỊCH SỬ ĐẶT HÀNG (order_history) — chọn nhiều dòng + xóa hàng loạt
+   ===================================================================== */
+.ofh-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.ofh-head-tools { display: flex; align-items: center; gap: 16px; }
+.ofh-perpage { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-gray-500); }
+.ofh-perpage select {
+    padding: 6px 10px; border: 1px solid var(--color-gray-300); border-radius: 8px;
+    background: #fff; font-size: 13px; font-family: inherit; color: var(--color-gray-900); cursor: pointer;
+}
+.ofh-count { font-size: 13px; color: var(--color-gray-500); }
+.ofh-count b { color: var(--color-green-dark); }
+
+.of-history-table th.ofh-tick-col,
+.of-history-table td.ofh-tick-col { width: 44px; text-align: center; }
+.of-history-table td.ofh-date { white-space: nowrap; }
+
+/* Thanh hành động nổi ở đáy — chỉ hiện khi có dòng được tick. */
+.ofh-bulkbar {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    z-index: 1100;
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 16px;
+    background: #111827; color: #fff;
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+    font-size: 13.5px;
+}
+.ofh-bulkbar[hidden] { display: none; }
+.ofh-bulk-count b { color: #4ade80; }
+.ofh-bulk-clear {
+    border: 0; background: transparent; color: #cbd5e1;
+    font: inherit; cursor: pointer; text-decoration: underline;
+}
+.ofh-bulk-clear:hover { color: #fff; }
+.ofh-bulk-del {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 0; border-radius: 999px; padding: 8px 18px;
+    background: #dc2626; color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+}
+.ofh-bulk-del:hover { background: #b91c1c; }
+.ofh-bulk-del:disabled { opacity: .6; cursor: default; }

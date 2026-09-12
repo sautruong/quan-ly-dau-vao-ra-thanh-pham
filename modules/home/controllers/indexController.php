@@ -868,6 +868,18 @@ function evcalDeleteAction()
     echo json_encode(['ok' => true, 'today' => evcal_today_count($uid)], JSON_UNESCAPED_UNICODE);
 }
 
+/** Xóa CẢ CHUỖI sự kiện lặp (POST id = bất kỳ lượt nào trong chuỗi): gốc + mọi dòng tự sinh. */
+function evcalDeleteSeriesAction()
+{
+    $uid = evcal_current_uid_or_fail();
+    if (!$uid) return;
+    $deleted = evcal_delete_series($uid, (int) ($_POST['id'] ?? 0));
+    echo json_encode(
+        ['ok' => $deleted > 0, 'deleted' => $deleted, 'today' => evcal_today_count($uid)],
+        JSON_UNESCAPED_UNICODE
+    );
+}
+
 /**
  * "Nhắc lại" từ chuông (POST evcal_id, notif_id, days HOẶC minutes): dịch lời nhắc lịch
  * sang ngày hiện tại + days (giữ giờ gốc) hoặc NOW() + minutes (đổi cả giờ, dùng cho mốc

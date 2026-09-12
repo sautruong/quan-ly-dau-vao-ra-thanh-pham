@@ -407,6 +407,14 @@
             // Click bất kỳ đâu trong khung (icon, khoảng đệm) cũng focus thẳng vào ô nhập —
             // không cần click trúng chính xác thẻ input mới gõ được.
             if (sbSearchWrap) sbSearchWrap.addEventListener('click', function () { sbSearchInput.focus(); });
+            // Nút × xóa từ khóa (bấm vào nút thì KHÔNG để click bong bóng lên wrap gây focus 2 lần).
+            var sbSearchClear = document.getElementById('app-sb-search-clear');
+            if (sbSearchClear) sbSearchClear.addEventListener('click', function (e) {
+                e.stopPropagation();
+                sbSearchInput.value = '';
+                sbSearchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                sbSearchInput.focus();
+            });
             var sbActiveIdx = -1;
             function sbVisibleItems() {
                 return Array.prototype.filter.call(sbNav.querySelectorAll('.app-sb-child'), function (c) {

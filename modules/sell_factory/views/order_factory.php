@@ -189,70 +189,9 @@ if (!function_exists('of_render_product')) {
 
     </div>
 
-    <!-- ============ MODAL : ĐƠN HIỆN TẠI (order-factory) ============ -->
-    <div class="modal-mask of-cart-modal" id="modal-cart" style="display:none;">
-        <div class="modal-box of-cart-box">
-            <span class="modal-close" data-close="modal-cart">&times;</span>
-            <div class="of-cart-head">
-                <h3><i class="fa-solid fa-cart-shopping"></i> Đơn hiện tại</h3>
-            </div>
-
-            <div class="of-cart-body">
-                <div class="wp-search-branch">
-                    <label for="brand">Chi nhánh:</label>
-                    <input type="text" id="brand" autocomplete="off" placeholder="Tìm tên chi nhánh..."
-                           value="<?= htmlspecialchars((string) ($last_branch['name'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
-                    <input type="hidden" id="brand_id" value="<?= (int) ($last_branch['id'] ?? 0) ?: '' ?>">
-                    <ul class="dropdown-suggest" id="brand-suggest"></ul>
-                </div>
-
-                <div class="of-note-field">
-                    <label for="order-note">Ghi chú đơn hàng:</label>
-                    <textarea id="order-note" rows="2" placeholder="Ghi chú cho nhà máy"></textarea>
-                </div>
-
-                <div class="wp-search-goods">
-                    <i class="fa-brands fa-sistrix"></i>
-                    <input type="text" id="search-goods" autocomplete="off" placeholder="Thêm sản phẩm cần đặt">
-                    <ul class="dropdown-suggest" id="goods-suggest"></ul>
-                </div>
-
-                <div class="wp-list-order">
-                    <table id="order-table">
-                        <thead>
-                            <tr>
-                                <td>Tên sản phẩm</td>
-                                <td>Đơn vị</td>
-                                <td>Số lượng</td>
-                                <td>Khối lượng (kg)</td>
-                                <td></td>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-
-                    <div class="wp-total">
-                        <div class="weight-total">
-                            <div class="label"><p>Tổng khối lượng:</p></div>
-                            <div class="result"><span id="weight-total-result">0 kg</span></div>
-                        </div>
-                        <div class="value-total">
-                            <div class="label"><p>GTHH:</p></div>
-                            <div class="result"><span id="value-total-result">0 đ</span></div>
-                        </div>
-                    </div>
-
-                    <div class="wp-button">
-                        <button class="share-factory" id="btn-share-factory">Gửi nhà máy</button>
-                        <button class="share-zalo" id="btn-share-zalo">Share Zalo</button>
-                        <button class="share-chat" id="btn-share-chat"><i class="fa-regular fa-comments"></i> Gửi qua chat</button>
-                    </div>
-
-                    <div class="order-inv-status" id="order-inv-status" hidden></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- View chồng lên "Đơn hiện tại" — markup dùng CHUNG với order_history (chế độ sửa đơn),
+         xem modules/sell_factory/views/_order_panel.php -->
+    <?php $panel_mode = 'order'; include __DIR__ . '/_order_panel.php'; ?>
 
     <!-- ============ MODAL : CÀI ĐẶT THỨ TỰ HIỂN THỊ ============ -->
     <div class="modal-mask of-setting-modal" id="modal-setting" style="display:none;">

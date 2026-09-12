@@ -3058,6 +3058,7 @@ function im_edit_sales_issue_batch($group_key, $customer_id, $items, $total_qty,
 
     $validated = [];
     $shortages = [];
+    $need = []; // tổng SL cộng dồn theo (type, id) — 1 hàng hóa có thể nằm nhiều dòng
     foreach ($items as $it) {
         $id     = (int) ($it['id'] ?? 0);
         $type   = trim((string) ($it['type'] ?? 'product'));
@@ -3076,18 +3077,20 @@ function im_edit_sales_issue_batch($group_key, $customer_id, $items, $total_qty,
             $row = db_fetch_row("SELECT quantity FROM finished_goods_inventory WHERE product_id = $id LIMIT 1");
         }
         $available = $row ? (float) $row['quantity'] : 0.0;
+        $key = $type . ':' . $id;
+        $need[$key] = ($need[$key] ?? 0.0) + $qty;
 
         $validated[] = [
             'id'    => $id, 'type' => $type, 'qty' => $qty,
             'price' => $price, 'total' => $total, 'interp' => $interp,
             'available' => $available,
         ];
-        if ($available < $qty) {
+        if ($available < $need[$key]) {
             $shortages[] = [
                 'id'        => $id,
                 'type'      => $type,
                 'available' => $available,
-                'requested' => $qty,
+                'requested' => $need[$key],
             ];
         }
     }
@@ -3375,6 +3378,23 @@ function im_sii_write_item($item, $customer_id, $created_at)
     $is_material = ($type === 'material');
     $id_col      = $is_material ? 'material_id' : 'product_id';
     $cid_cond    = $cid > 0 ? "AND customer_id = $cid" : '';
+
+    /* Bảng này giữ 1 row / (hàng hóa, khách, NGÀY): ghi lại cùng ngày = xoá row cũ rồi insert row
+       mới (đúng ý đồ "phiếu ghi sau thay phiếu ghi trước trong ngày"). Nhưng 1 PHIẾU nay có thể có
+       NHIỀU dòng cùng một hàng hóa (đơn nhà máy cho nhập trùng) -> nếu cứ xoá-rồi-insert thì dòng
+       sau nuốt mất dòng trước, bảng chỉ còn SL của dòng cuối trong khi tồn đã trừ đủ cả hai.
+       Vì vậy chỉ xoá ở LẦN ĐẦU của mỗi (hàng hóa, khách, ngày) TRONG CÙNG MỘT REQUEST; các lần sau
+       cộng dồn vào row vừa ghi. Request sau vẫn xoá-ghi đè như cũ. */
+    static $written = [];
+    $memo = $id_col . '|' . $id . '|' . $cid . '|' . $date;
+    if (isset($written[$memo])) {
+        db_query("UPDATE sales_inventory_issue_data
+                  SET quantity = quantity + " . (float) $qty . ",
+                      amount   = amount   + " . (float) $amount . "
+                  WHERE $id_col = $id $cid_cond AND created_at = '$date_safe'");
+        return;
+    }
+    $written[$memo] = true;
 
     db_query("DELETE FROM sales_inventory_issue_data
               WHERE $id_col = $id $cid_cond AND created_at = '$date_safe'");

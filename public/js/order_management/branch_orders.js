@@ -104,7 +104,9 @@
         runConfirmOutbound(p.$card, p.$btn);
     });
 
-    /* ---------- Xem đơn + sửa số lượng ---------- */
+    /* ---------- Xem đơn + sửa số lượng ----------
+     * Mở dạng VIEW CHỒNG LÊN (#om-order-view, khung .app-ov-* của app_shell.css) thay cho modal:
+     * phủ vùng nội dung, nút × trên thanh đầu đưa về danh sách card. */
     var curId = 0, curItems = [], curRemoved = [];
     $(document).on('click', '.om-view-order', function () {
         var data = $(this).closest('.om-card').data('order');
@@ -116,7 +118,9 @@
         renderModal();
         $('#om-add-search').val('');
         $('#om-add-suggest').empty().hide();
-        $('#om-order-modal').fadeIn(120);
+        $('#om-order-view').scrollTop(0).find('.app-ov-scroll').scrollTop(0);
+        $('body').addClass('app-ov-open');
+        $('#om-order-view').fadeIn(120);
     });
 
     /* ---------- Thêm sản phẩm vào đơn (autocomplete + điều khiển bằng phím) ---------- */
@@ -166,9 +170,10 @@
         var type = String($li.data('type') || 'product'), id = $li.data('id');
         $('#om-add-search').val(''); $('#om-add-suggest').empty().hide(); omAddIdx = -1;
         var refocus = function () { setTimeout(function () { $('#om-add-search').focus(); }, 30); };
-        // Đã có trong đơn -> không thêm trùng.
+        // Đã có trong đơn -> CHỈ cảnh báo, vẫn thêm dòng thứ 2 (1 SP được phép nằm nhiều dòng với số
+        // khác nhau; xuất kho trừ tồn từng dòng). Dòng trùng được gắn nhãn "Trùng SP" qua markDupes().
         if ($('#om-modal-body tr[data-pid="' + id + '"][data-type="' + type + '"]').length) {
-            alert('Sản phẩm này đã có trong đơn.'); refocus(); return;
+            omToast('Sản phẩm này đã có trong đơn — vẫn thêm thành dòng mới.', 'warn');
         }
         $.getJSON(BASE + 'product_slip_info', { product_id: id, type: type }, function (res) {
             if (!res || !res.ok || !res.data) { alert('Không lấy được thông tin hàng hóa.'); refocus(); return; }
@@ -188,9 +193,10 @@
                 + '<td class="om-status-cell"></td>'
                 + '</tr>');
             $('#om-modal-body').append($tr);
-            updateStatus($tr);
-            updateWarn();
-            recalc();
+            refreshRows();
+            // Dòng mới nằm cuối bảng -> cuộn vùng bảng xuống cho thấy ngay.
+            var sc = $('#om-order-view .app-ov-scroll')[0];
+            if (sc) sc.scrollTop = sc.scrollHeight;
             refocus(); // chọn xong -> sẵn sàng nhập thêm
         });
     }
@@ -201,8 +207,7 @@
         var idx = $tr.attr('data-idx');
         if (!$tr.attr('data-new') && idx !== '' && idx != null) curRemoved.push(Number(idx));
         $tr.remove();
-        updateWarn();
-        recalc();
+        refreshRows();
     });
 
     // Ẩn gợi ý khi click ra ngoài.
@@ -242,15 +247,36 @@
                   + '</tr>';
         });
         $('#om-modal-body').html(rows);
-        $('#om-modal-body tr').each(function () { updateStatus($(this)); });
-        updateWarn();
+        refreshRows();
+    }
+
+    /* 1 sản phẩm có thể nằm NHIỀU dòng -> mọi phép so tồn phải cộng dồn SL các dòng cùng
+     * (loại, id): 2 dòng 6 + 6 với tồn 10 là thiếu 2, dù từng dòng riêng lẻ vẫn "đủ". */
+    function rowKey($tr) { return ($tr.attr('data-type') || 'product') + ':' + ($tr.attr('data-pid') || ''); }
+
+    function qtyTotals() {
+        var tot = {};
+        $('#om-modal-body tr').each(function () {
+            var $tr = $(this), k = rowKey($tr);
+            tot[k] = (tot[k] || 0) + (Number($tr.find('.om-qty-input').val()) || 0);
+        });
+        return tot;
+    }
+
+    // Làm mới trạng thái mọi dòng + nhãn trùng + banner + tổng — gọi sau MỌI thay đổi dòng/SL,
+    // vì đổi SL 1 dòng làm đổi trạng thái của các dòng trùng sản phẩm với nó.
+    function refreshRows() {
+        var tot = qtyTotals();
+        $('#om-modal-body tr').each(function () { updateStatus($(this), tot); });
+        markDupes();
+        updateWarn(tot);
         recalc();
     }
 
-    // Trạng thái 1 dòng: so SL hiện tại với tồn (data-stock). NVL/không có tồn -> "Đủ".
-    function updateStatus($tr) {
+    // Trạng thái 1 dòng: so TỔNG SL của sản phẩm (mọi dòng) với tồn (data-stock). NVL/không có tồn -> "Đủ".
+    function updateStatus($tr, tot) {
         var stockAttr = $tr.attr('data-stock');
-        var qty = Number($tr.find('.om-qty-input').val()) || 0;
+        var qty = (tot || qtyTotals())[rowKey($tr)] || 0;
         var html, lack = 0;
         if (stockAttr !== '' && stockAttr != null) {
             var stock = Number(stockAttr);
@@ -267,15 +293,34 @@
         $tr.find('.om-status-cell').html(html);
     }
 
-    // Banner cảnh báo tổng hợp các dòng vượt tồn.
-    function updateWarn() {
-        var lines = [];
+    // Nhãn "Trùng SP" (chỉ để chú ý, không chặn) trên các dòng cùng sản phẩm; không vào ảnh Chụp.
+    function markDupes() {
+        var count = {};
+        var $rows = $('#om-modal-body tr');
+        $rows.each(function () { var k = rowKey($(this)); count[k] = (count[k] || 0) + 1; });
+        $rows.each(function () {
+            var $tr = $(this), dupe = count[rowKey($tr)] > 1;
+            var $cell = $tr.children('td').eq(0);
+            $tr.toggleClass('is-dupe', dupe);
+            if (dupe && !$cell.children('.om-dupe-tag').length) {
+                $cell.append(' <span class="om-dupe-tag no-capture" title="Sản phẩm này có nhiều dòng trong đơn — xuất kho trừ tồn từng dòng">Trùng SP</span>');
+            } else if (!dupe) {
+                $cell.children('.om-dupe-tag').remove();
+            }
+        });
+    }
+
+    // Banner cảnh báo tổng hợp các sản phẩm vượt tồn (mỗi sản phẩm 1 dòng, SL đã cộng dồn).
+    function updateWarn(tot) {
+        tot = tot || qtyTotals();
+        var lines = [], seen = {};
         $('#om-modal-body tr').each(function () {
-            var $tr = $(this);
+            var $tr = $(this), k = rowKey($tr);
             var stockAttr = $tr.attr('data-stock');
-            if (stockAttr === '' || stockAttr == null) return;
+            if (seen[k] || stockAttr === '' || stockAttr == null) return;
+            seen[k] = true;
             var stock = Number(stockAttr);
-            var qty = Number($tr.find('.om-qty-input').val()) || 0;
+            var qty = tot[k] || 0;
             if (qty > stock) {
                 lines.push({ name: $tr.attr('data-name') || '', unit: $tr.attr('data-unit') || '',
                              stock: stock, lack: Math.round((qty - stock) * 100) / 100 });
@@ -298,9 +343,7 @@
         var weight = Number($tr.data('weight')) || 0;
         $tr.find('.om-line-value').text(money(qty * price));
         $tr.find('.om-line-weight').text(wt(qty * weight));
-        updateStatus($tr);
-        updateWarn();
-        recalc();
+        refreshRows();
     });
 
     function recalc() {
@@ -351,28 +394,53 @@
         }).fail(function () { alert('Lỗi mạng/Server.'); $btn.prop('disabled', false); });
     });
 
-    /* ---------- Đóng modal ---------- */
-    function close() { $('#om-order-modal').fadeOut(120); }
+    /* ---------- Đóng view "Xem đơn hàng" -> về danh sách card ---------- */
+    function close() {
+        $('#om-add-suggest').empty().hide();
+        $('#om-order-view').fadeOut(120, function () { $('body').removeClass('app-ov-open'); });
+    }
     $(document).on('click', '#om-order-close', close);
-    $(document).on('click', '#om-order-modal', function (e) { if (e.target === this) close(); });
 
-    /* ---------- "Chụp" đơn hàng -> copy ảnh vào clipboard để gửi khách (giống Chụp hàng thiếu) ---------- */
+    /* ---------- "Chụp" đơn hàng -> copy ảnh vào clipboard để gửi khách (giống Chụp hàng thiếu) ----------
+     * Bảng giờ nằm trong vùng cuộn có chiều cao cố định, chụp thẳng thì đơn dài bị cắt theo khung.
+     * Nên dựng BẢN SAO đầy đủ (tiêu đề + cảnh báo + bảng) vào #om-order-capture — nằm trong sân
+     * khấu vô hình .om-capture-stage — rồi chụp khối đó. Bản sao bỏ sẵn phần .no-capture (nút xoá
+     * dòng, cột Trạng thái, nhãn Trùng SP) và thay ô nhập SL bằng chữ; gỡ id để không trùng id thật. */
+    function buildOrderCapture() {
+        var $cap = $('#om-order-capture').empty();
+        $('<h3 class="om-modal-title"><i class="fa-solid fa-receipt"></i> </h3>')
+            .append(document.createTextNode($('#om-modal-cust').text()))
+            .appendTo($cap);
+        if ($('#om-modal-warn').is(':visible')) {
+            $('#om-modal-warn').clone().removeAttr('id').removeAttr('style').appendTo($cap);
+        }
+        var $tbl = $('#om-order-table').clone();
+        // .clone() không mang theo giá trị ô nhập user vừa gõ (chỉ thuộc tính value ban đầu) -> đọc từ bảng thật theo thứ tự.
+        var qtys = $('#om-order-table .om-qty-input').map(function () { return this.value; }).get();
+        $tbl.find('.om-qty-input').each(function (i) {
+            $(this).replaceWith($('<span class="om-cap-qty"></span>').text(qtys[i] != null ? qtys[i] : ''));
+        });
+        $tbl.find('.no-capture').remove();
+        $tbl.find('tr.is-dupe').removeClass('is-dupe'); // nền vàng "trùng SP" là dấu nhắc nội bộ, không gửi khách
+        $tbl.removeAttr('id').find('[id]').removeAttr('id');
+        $cap.append($tbl);
+        return $cap[0];
+    }
+
     $(document).on('click', '#om-order-capture-btn', function () {
         var $btn = $(this).prop('disabled', true);
-        var el = document.getElementById('om-order-capture');
-        html2canvas(el, {
-            backgroundColor: '#fff', scale: 2,
-            ignoreElements: function (node) { return node.classList && node.classList.contains('no-capture'); }
-        }).then(function (canvas) {
+        var el = buildOrderCapture();
+        var done = function () { $('#om-order-capture').empty(); $btn.prop('disabled', false); };
+        html2canvas(el, { backgroundColor: '#fff', scale: 2 }).then(function (canvas) {
             canvas.toBlob(function (blob) {
                 if (navigator.clipboard && window.ClipboardItem) {
                     navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function () {
                         alert('Đã copy ảnh đơn hàng vào clipboard. Dán (Ctrl+V) để gửi cho khách hàng.');
                     }).catch(function () { downloadOrderCanvas(canvas); });
                 } else { downloadOrderCanvas(canvas); }
-                $btn.prop('disabled', false);
+                done();
             }, 'image/png');
-        });
+        }, function () { done(); alert('Không chụp được ảnh đơn hàng.'); });
     });
     function downloadOrderCanvas(canvas) {
         var a = document.createElement('a');
@@ -474,8 +542,9 @@
         if (String(id) === String($tr.attr('data-pid')) && type === $tr.attr('data-type')) {
             omRestoreSwapName($wrap, origName); return; // chọn lại đúng SP đang có -> không đổi gì
         }
+        // Trùng SP đã có ở dòng khác -> chỉ cảnh báo, vẫn đổi (giống "+ Thêm sản phẩm").
         var dupe = $('#om-modal-body tr').not($tr).filter('[data-pid="' + id + '"][data-type="' + type + '"]');
-        if (dupe.length) { alert('Sản phẩm này đã có trong đơn.'); omRestoreSwapName($wrap, origName); return; }
+        if (dupe.length) omToast('Sản phẩm này đã có ở dòng khác trong đơn — vẫn đổi, đơn sẽ có 2 dòng.', 'warn');
 
         $inp.prop('disabled', true);
         $.getJSON(BASE + 'product_slip_info', { product_id: id, type: type }, function (res) {
@@ -500,9 +569,7 @@
             $tr.find('.om-line-value').text(money(qty * price));
             $tr.find('.om-line-weight').text(wt(qty * weight));
             omRestoreSwapName($wrap, name);
-            updateStatus($tr);
-            updateWarn();
-            recalc();
+            refreshRows();
         }).fail(function () {
             alert('Lỗi mạng/Server.'); omRestoreSwapName($wrap, origName);
         });
@@ -552,11 +619,21 @@
     }
 
     $(document).on('click', '#om-view-shortage-btn', function () {
-        shortageItems = (curItems || []).filter(function (it) { return it.short; }).map(function (it) {
-            return {
-                pid: it.pid, name: it.name, unit: it.unit, qty: it.qty, stock: it.stock, lack: it.lack,
-                is_material: !!it.is_material, planDate: ''
-            };
+        // Gộp các dòng cùng sản phẩm (đơn cho phép 1 SP nhiều dòng): thiếu = tổng SL − tồn, mỗi SP 1 dòng.
+        var byKey = {}, order = [];
+        $.each(curItems || [], function (i, it) {
+            var k = (it.type || 'product') + ':' + it.pid;
+            if (!byKey[k]) {
+                byKey[k] = { pid: it.pid, name: it.name, unit: it.unit, qty: 0, stock: Number(it.stock) || 0,
+                             is_material: !!it.is_material, planDate: '' };
+                order.push(k);
+            }
+            byKey[k].qty += Number(it.qty) || 0;
+        });
+        shortageItems = order.map(function (k) { return byKey[k]; }).filter(function (it) {
+            if (it.is_material) return false; // NVL không so tồn (giống cờ is_short phía server)
+            it.lack = Math.round((it.qty - it.stock) * 100) / 100;
+            return it.lack > 0;
         });
         $('#om-shortage-cust').text($('#om-modal-cust').text());
         renderShortageTable();
@@ -1005,13 +1082,17 @@
      * ===================================================================== */
     var pickingSlip = null;
 
-    /** Báo xong việc rồi tự tắt — không bắt bấm OK cho một việc đã chắc chắn thành công. */
-    function omToast(msg) {
+    /** Báo xong việc rồi tự tắt — không bắt bấm OK cho một việc đã chắc chắn thành công.
+     *  kind = 'warn' -> icon tam giác vàng, dùng cho cảnh báo chỉ để chú ý (không chặn thao tác). */
+    function omToast(msg, kind) {
         var $t = $('#om-toast');
         if (!$t.length) $t = $('<div id="om-toast" class="om-toast"></div>').appendTo('body');
-        $t.html('<i class="fa-solid fa-circle-check"></i> ' + esc(msg)).addClass('is-on');
+        var warn = (kind === 'warn');
+        $t.toggleClass('is-warn', warn)
+          .html('<i class="fa-solid ' + (warn ? 'fa-triangle-exclamation' : 'fa-circle-check') + '"></i> ' + esc(msg))
+          .addClass('is-on');
         clearTimeout(omToast._t);
-        omToast._t = setTimeout(function () { $t.removeClass('is-on'); }, 2600);
+        omToast._t = setTimeout(function () { $t.removeClass('is-on'); }, warn ? 3200 : 2600);
     }
 
     $(document).on('click', '.om-send-picking', function () {

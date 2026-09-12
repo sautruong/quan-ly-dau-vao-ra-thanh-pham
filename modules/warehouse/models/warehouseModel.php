@@ -314,6 +314,63 @@ function wh_list_slips_for_staff()
     return $rows;
 }
 
+/* =====================================================================
+ *  PHẠM VI "CHỦ ĐƠN" — chi nhánh đặt hàng được XEM (không thao tác) phiếu soạn
+ *  của chính đơn mình, để biết kho đang soạn tới đâu.
+ * ===================================================================== */
+
+/** user_id của người đã đặt đơn gắn với phiếu soạn này (0 nếu không có). */
+function wh_slip_owner_uid($slip_id)
+{
+    $sid = (int) $slip_id;
+    if ($sid <= 0) return 0;
+    wh_ensure_tables();
+    $row = db_fetch_row(
+        "SELECT h.user_id FROM wh_picking_slips s
+         INNER JOIN factory_order_sales_history h ON h.id = s.order_id
+         WHERE s.id = $sid LIMIT 1"
+    );
+    return $row ? (int) $row['user_id'] : 0;
+}
+
+/** User này có phiếu soạn nào (của đơn mình đặt) không — dùng để mở quyền XEM trang Soạn hàng. */
+function wh_user_has_any_slip($user_id)
+{
+    $uid = (int) $user_id;
+    if ($uid <= 0) return false;
+    wh_ensure_tables();
+    return db_num_rows(
+        "SELECT s.id FROM wh_picking_slips s
+         INNER JOIN factory_order_sales_history h ON h.id = s.order_id
+         WHERE h.user_id = $uid LIMIT 1"
+    ) > 0;
+}
+
+/** Phiếu đang soạn / vừa soạn xong CỦA CÁC ĐƠN do user này đặt (chip chọn phiếu, chế độ chỉ xem). */
+function wh_list_slips_for_owner($user_id)
+{
+    $uid = (int) $user_id;
+    if ($uid <= 0) return [];
+    wh_ensure_tables();
+    $rows = db_fetch_array(
+        "SELECT s.id, s.order_id, s.customer_name, s.customer_short, s.status, s.sent_at, s.done_at, s.accent,
+                (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0) AS total_items,
+                (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0 AND i.picked = 1) AS picked_items
+         FROM wh_picking_slips s
+         INNER JOIN factory_order_sales_history h ON h.id = s.order_id
+         WHERE h.user_id = $uid
+           AND (s.status IN ('new','doing')
+                OR (s.status = 'done' AND s.done_at >= DATE_SUB(NOW(), INTERVAL 3 DAY)))
+         ORDER BY (s.status = 'done') ASC, s.sent_at DESC, s.id DESC"
+    ) ?: [];
+    foreach ($rows as &$r) {
+        $r['label'] = trim((string) $r['customer_short']) !== ''
+            ? (string) $r['customer_short'] : (string) $r['customer_name'];
+    }
+    unset($r);
+    return $rows;
+}
+
 /** Phiếu mới nhất của 1 đơn (cho trạng thái nút trên card đơn hàng). */
 function wh_latest_slip_for_order($order_id)
 {
@@ -718,22 +775,30 @@ function wh_slip_pickers($slip_id, $done_by = 0)
  * Lọc theo done_at (ngày báo xong) chứ không phải sent_at — người tra cứu nghĩ theo
  * "hôm đó soạn cái gì", không phải "hôm đó admin gửi cái gì".
  */
-function wh_history_slips($from = '', $to = '', $page = 1, $per_page = 10)
+/**
+ * Lịch sử phiếu đã soạn xong.
+ * $owner_uid > 0: CHỈ phiếu của các đơn do user đó đặt (chi nhánh xem lịch sử soạn đơn của mình).
+ */
+function wh_history_slips($from = '', $to = '', $page = 1, $per_page = 10, $owner_uid = 0)
 {
     wh_ensure_tables();
     $page = max(1, (int) $page);
     $per  = max(1, min(100, (int) $per_page));
     $off  = ($page - 1) * $per;
+    $owner_uid = (int) $owner_uid;
 
     $where = ["s.status = 'done'", 's.done_at IS NOT NULL'];
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $from)) $where[] = "s.done_at >= '" . escape_string($from) . " 00:00:00'";
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $to))   $where[] = "s.done_at <= '" . escape_string($to) . " 23:59:59'";
+    if ($owner_uid > 0) $where[] = "h.user_id = $owner_uid";
     $w = implode(' AND ', $where);
+    $join = $owner_uid > 0 ? 'INNER JOIN factory_order_sales_history h ON h.id = s.order_id' : '';
 
     $rows = db_fetch_array(
         "SELECT s.id, s.order_id, s.customer_name, s.customer_short, s.accent, s.done_at, s.done_by,
                 s.synced, s.synced_at, s.finish_snapshot
          FROM wh_picking_slips s
+         $join
          WHERE $w
          ORDER BY s.done_at DESC, s.id DESC
          LIMIT $per OFFSET $off"
@@ -768,7 +833,7 @@ function wh_history_slips($from = '', $to = '', $page = 1, $per_page = 10)
     }
     unset($r);
 
-    $total = (int) db_num_rows("SELECT s.id FROM wh_picking_slips s WHERE $w");
+    $total = (int) db_num_rows("SELECT s.id FROM wh_picking_slips s $join WHERE $w");
     return [
         'rows'        => $rows,
         'total'       => $total,

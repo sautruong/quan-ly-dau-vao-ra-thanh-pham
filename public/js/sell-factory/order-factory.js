@@ -24,14 +24,72 @@
     $(document).on('click', '.modal-close', function () { closeModal($(this).data('close')); });
     $(document).on('click', '.modal-mask', function (e) { if (e.target === this) $(this).fadeOut(120); });
 
+    /* --------------------------- View "Đơn hiện tại" ---------------------------
+     * Không còn là modal: #of-order-view phủ vùng nội dung (khung .app-ov-* của app_shell.css),
+     * nút × trả về view "Tồn thành phẩm nhà máy". body.app-ov-open khoá cuộn trang nền (view này
+     * cho cuộn body — xem cuối order-factory.css). */
+    function openOrderView() {
+        $('body').addClass('app-ov-open');
+        $('#of-order-view').fadeIn(120);
+        if (typeof applyColVisibility === 'function') applyColVisibility();
+    }
+    function closeOrderView() {
+        $('#brand-suggest, #goods-suggest').hide();
+        $('#of-order-view').fadeOut(120, function () { $('body').removeClass('app-ov-open'); });
+    }
+    $(document).on('click', '#of-order-close', closeOrderView);
+
+    /* --------------------------- Chế độ SỬA ĐƠN (order_history) ---------------------------
+     * Panel là cùng một markup (_order_panel.php); ở order_history nó mang data-mode="edit":
+     * mở từ nút "Chỉnh sửa" của 1 dòng lịch sử, chân view là "Lưu thay đổi" thay vì "Gửi nhà máy".
+     * window.ofEditingOrderId để khối realtime của order_history biết đừng vẽ đè dòng đang sửa. */
+    function panelIsEdit() { return $('#of-order-view').attr('data-mode') === 'edit'; }
+
+    $(document).on('click', '.ofh-edit', function (e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        $.getJSON(BASE + 'history_detail', { id: id }, function (res) {
+            if (!res.ok || !res.data) { alert('Không tải được đơn hàng.'); return; }
+            var d = res.data;
+            if (Number(d.picked) === 1 || Number(d.locked) === 1) {
+                alert('Đơn đã bị khóa hoặc đã bốc, không thể sửa.');
+                return;
+            }
+            window.ofEditingOrderId = d.id;
+            loadHistoryIntoForm(d);
+            $('#of-order-title').text('Chỉnh sửa đơn hàng');
+            openOrderView();
+            setTimeout(runInventoryCheck, 400);   // báo ngay SP nào vượt tồn nhà máy
+        }).fail(function () { alert('Lỗi mạng/Server.'); });
+    });
+
+    $(document).on('click', '#btn-save-edit', function () {
+        var payload = collectOrderPayload();
+        if (!payload.items.length) { alert('Đơn phải có ít nhất 1 sản phẩm.'); return; }
+        if (!window.ofEditingOrderId) { alert('Không xác định được đơn đang sửa.'); return; }
+        if (recentPending) { commitSuggestInput($('#order-table .qt-input.is-suggested')); setRecentButtons(false); }
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({
+            url: BASE + 'update_order', method: 'POST', contentType: 'application/json',
+            data: JSON.stringify({
+                id: window.ofEditingOrderId, items: payload.items,
+                weight_total: payload.weight_total, value_total: payload.value_total,
+                note: payload.note || ''
+            }), dataType: 'json'
+        }).done(function (res) {
+            if (res && res.ok) { alert('Đã lưu và gửi thông báo cho nhà máy.'); location.reload(); }
+            else { alert((res && res.msg) || 'Không lưu được.'); $btn.prop('disabled', false); }
+        }).fail(function () { alert('Lỗi mạng/Server.'); $btn.prop('disabled', false); });
+    });
+
     /* --------------------------- Cart badge --------------------------- */
     function updateCartCount() {
         var n = $('#order-table tbody tr').length;
         $('#of-cart-count').text(n);
         $('#of-cart-cur-count').text(n);
     }
-    // Hover xổ dropdown (CSS). Click "Đơn hàng hiện tại" -> mở modal đơn.
-    $(document).on('click', '#of-cart-current', function () { openModal('modal-cart'); });
+    // Hover xổ dropdown (CSS). Click "Đơn hàng hiện tại" -> mở view đơn.
+    $(document).on('click', '#of-cart-current', openOrderView);
 
     /* --------------------------- Search lọc tức thì --------------------------- */
     // Bỏ dấu tiếng Việt để tìm không phụ thuộc dấu ("hong tra" khớp "Hồng Trà").
@@ -114,8 +172,8 @@
                 if (!res.ok) return;
                 var html = '';
                 $.each(res.data, function (i, c) {
-                    html += '<li data-id="' + c.id + '" data-name="' + c.name + '">'
-                          + c.name + (c.short_name ? ' <span class="muted">(' + c.short_name + ')</span>' : '')
+                    html += '<li data-id="' + c.id + '" data-name="' + escHtml(c.name) + '" data-short="' + escHtml(c.short_name || '') + '">'
+                          + escHtml(c.name) + (c.short_name ? ' <span class="muted">(' + escHtml(c.short_name) + ')</span>' : '')
                           + '</li>';
                 });
                 $('#brand-suggest').html(html).toggle(html !== '');
@@ -124,7 +182,10 @@
     });
     $(document).on('click', '#brand-suggest li', function () {
         var name = $(this).data('name'), id = $(this).data('id');
-        $('#brand').val(name);
+        var short = String($(this).data('short') || '').trim();
+        // Ô chi nhánh hiển thị TÊN VIẾT TẮT (PLHCM, PLDN…); tên đầy đủ giữ ở #brand_full để gửi server.
+        $('#brand').val(short !== '' ? short : name);
+        $('#brand_full').val(name);
         $('#brand_id').val(id);
         $('#brand-suggest').empty().hide();
         rememberBranch();
@@ -133,17 +194,32 @@
     function rememberBranch() {
         $.post(BASE + 'set_branch', {
             customer_id: $('#brand_id').val() || '',
-            customer_name: $('#brand').val() || ''
+            customer_name: branchFullName()
         });
     }
     $(document).on('change', '#brand', rememberBranch);
 
+    /** Tên đầy đủ của chi nhánh (gửi lên server); chưa chọn từ gợi ý thì lấy đúng chữ user gõ. */
+    function branchFullName() {
+        return String($('#brand_full').val() || $('#brand').val() || '').trim();
+    }
+    /** Tên hiển thị cho khách xem (hoá đơn Zalo/chat): ưu tiên tên viết tắt đang hiện trong ô. */
+    function branchLabel() {
+        return String($('#brand').val() || '').trim();
+    }
+
+    /* --------------------------- Nút × xóa nhanh từ khóa trong ô tìm --------------------------- */
+    $(document).on('click', '.of-input-clear', function () {
+        var $inp = $('#' + $(this).data('clear'));
+        $inp.val('').trigger('input').focus();
+    });
+
     /* --------------------------- Autocomplete: Sản phẩm --------------------------- */
-    var goodsTimer = null;
+    var goodsTimer = null, goodsIdx = -1;
     $(document).on('input', '#search-goods', function () {
         clearTimeout(goodsTimer);
         var kw = String($(this).val() || '').trim();
-        if (kw.length === 0) { $('#goods-suggest').empty().hide(); return; }
+        if (kw.length === 0) { $('#goods-suggest').empty().hide(); goodsIdx = -1; return; }
         goodsTimer = setTimeout(function () {
             $.getJSON(BASE + 'search_product', { keyword: kw }, function (res) {
                 if (!res.ok) return;
@@ -151,20 +227,44 @@
                 $.each(res.data, function (i, p) {
                     var tag = p.type === 'material' ? ' · NVL' : '';
                     html += '<li data-type="' + p.type + '" data-id="' + p.ref_id + '">'
-                          + p.name + ' <span class="muted">(' + (p.unit || '') + tag + ')</span>'
+                          + escHtml(p.name) + ' <span class="muted">(' + escHtml(p.unit || '') + tag + ')</span>'
                           + '</li>';
                 });
+                goodsIdx = -1;
                 $('#goods-suggest').html(html).toggle(html !== '');
             });
         }, 250);
     });
-    $(document).on('click', '#goods-suggest li', function () {
-        var type = $(this).data('type'), id = $(this).data('id');
-        $('#search-goods').val('');
+
+    // Mũi tên lên/xuống chọn, Tab/Enter xác nhận, Esc đóng (cùng mẫu với các ô tìm khác trong app).
+    $(document).on('keydown', '#search-goods', function (e) {
+        var $items = $('#goods-suggest li');
+        if (!$items.length || $('#goods-suggest').is(':hidden')) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault(); goodsIdx = (goodsIdx + 1) % $items.length;
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault(); goodsIdx = (goodsIdx - 1 + $items.length) % $items.length;
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            chooseGoods($items.eq(goodsIdx >= 0 ? goodsIdx : 0));
+            return;
+        } else if (e.key === 'Escape') {
+            $('#goods-suggest').hide(); return;
+        } else { return; }
+        $items.removeClass('active');
+        $items.eq(goodsIdx).addClass('active')[0].scrollIntoView({ block: 'nearest' });
+    });
+
+    function chooseGoods($li) {
+        if (!$li || !$li.length) return;
+        var type = $li.data('type'), id = $li.data('id');
+        $('#search-goods').val('').focus();
         $('#goods-suggest').empty().hide();
+        goodsIdx = -1;
         if (type === 'material') addMaterialToOrder(id);
         else addProductToOrder(id);
-    });
+    }
+    $(document).on('click', '#goods-suggest li', function () { chooseGoods($(this)); });
 
     /* --------------------------- Click sản phẩm trên lưới tồn = thêm vào giỏ --------------------------- */
     $(document).on('click', '.btn-order-product', function () {
@@ -212,23 +312,49 @@
             appendOrderRow(res.data, true);
         });
     }
+    /* Ảnh tròn 18px cạnh tên SP. NVL và SP chưa có ảnh dùng ô tròn xám có icon để cột tên
+       vẫn thẳng hàng (ảnh thật lấy từ products.image_url, server đã ghép sẵn đường dẫn). */
+    function thumbHtml(src) {
+        return src
+            ? '<img class="of-row-thumb" src="' + escHtml(src) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<span class=&quot;of-row-thumb is-empty&quot;><i class=&quot;fa-solid fa-image&quot;></i></span>\'">'
+            : '<span class="of-row-thumb is-empty"><i class="fa-solid fa-image"></i></span>';
+    }
+
     function appendOrderRow(d, isMaterial, qtyVal, lineWeight) {
         var idAttr = isMaterial
             ? 'data-material-id="' + (d.material_id != null ? d.material_id : d.product_id) + '"'
             : 'data-product-id="' + d.product_id + '"';
         var nameSuffix = isMaterial ? ' <span class="muted">(NVL)</span>' : '';
+        var thumb = thumbHtml(isMaterial ? '' : (d.image_url || ''));
+        var stock = Number(d.stock) || 0;
+        // Ô số lượng: type=text + inputmode để KHÔNG có mũi tên tăng/giảm của input[number].
         var tr = '<tr ' + idAttr
                + ' data-weight-kg="' + d.weight_kg + '"'
-               + ' data-system-price="' + d.system_price + '">'
-               + '<td class="text-left">' + d.product_name + nameSuffix + '</td>'
-               + '<td>' + (d.unit || '') + '</td>'
-               + '<td><input type="number" class="qt-input" min="0" step="1" value="' + (qtyVal != null ? qtyVal : '') + '"></td>'
-               + '<td class="td-weight">' + (lineWeight != null ? fmtWeight(lineWeight) : '0') + '</td>'
+               + ' data-system-price="' + d.system_price + '"'
+               + ' data-stock="' + stock + '">'
+               + '<td class="text-left">' + thumb + '<span class="of-row-name">' + escHtml(d.product_name) + nameSuffix + '</span></td>'
+               + '<td>' + escHtml(d.unit || '') + '</td>'
+               + '<td><input type="text" inputmode="decimal" class="qt-input" value="' + (qtyVal != null ? qtyVal : '') + '"></td>'
+               + '<td class="td-weight of-col-weight">' + (lineWeight != null ? fmtWeight(lineWeight) : '0') + '</td>'
+               + '<td class="td-stock of-col-stock" title="' + escHtml(d.stock_text || '') + '">' + fmtWeight(stock) + '</td>'
                + '<td class="text-center"><span class="btn-remove-row" title="Xóa">&times;</span></td>'
                + '</tr>';
-        $('#order-table tbody').append(tr);
+        var $tr = $(tr);
+        $('#order-table tbody').append($tr);
+        applyColVisibility($tr);
+        markOverStock($tr);
         recalcTotal();
         updateCartCount();
+        return $tr;
+    }
+
+    /** SL đặt vượt tồn nhà máy -> tô đỏ số để user chú ý (không chặn đặt). */
+    function markOverStock($tr) {
+        var qty = parseFloat($tr.find('.qt-input').val()) || 0;
+        var stock = parseFloat($tr.attr('data-stock'));
+        var over = !isNaN(stock) && qty > stock;
+        $tr.toggleClass('is-over-stock', over);
+        $tr.find('.qt-input').toggleClass('is-over', over);
     }
 
     /* --------------------------- Tính tổng --------------------------- */
@@ -237,12 +363,22 @@
         var qty = parseFloat($(this).val()) || 0;
         var wkg = parseFloat($tr.data('weight-kg')) || 0;
         $tr.find('.td-weight').text(fmtWeight(qty * wkg));
+        markOverStock($tr);
         recalcTotal();
     });
+    // Xóa dòng: mờ + thu lại rồi mới gỡ khỏi DOM (đỡ giật so với biến mất đột ngột).
     $(document).on('click', '.btn-remove-row', function () {
-        $(this).closest('tr').remove();
-        recalcTotal();
-        updateCartCount();
+        var $tr = $(this).closest('tr');
+        if ($tr.hasClass('is-vanishing')) return;
+        $tr.addClass('is-vanishing');
+        setTimeout(function () {
+            $tr.remove();
+            recalcTotal();
+            updateCartCount();
+            scheduleInvCheck();
+            // Xóa hết dòng đang mang số tạm -> thu cặp "Đồng ý / Hủy" về lại 1 nút.
+            if (recentPending && !$('#order-table .qt-input.is-suggested').length) setRecentButtons(false);
+        }, 260);
     });
     function recalcTotal() {
         var wTotal = 0, vTotal = 0;
@@ -257,6 +393,175 @@
         $('#weight-total-result').text(fmtWeight(wTotal) + ' kg');
         $('#value-total-result').text(fmtMoney(vTotal) + ' đ');
     }
+
+    /* =================================================================================
+       KHỐI TỒN KHO NHÀ MÁY (cột trái của view "Đơn hiện tại")
+       ---------------------------------------------------------------------------------
+       Danh sách dọc theo nhóm, lọc tức thì không dấu. Bấm 1 dòng = thêm thẳng vào đơn bên
+       phải, kèm icon bay từ dòng tồn sang dòng vừa thêm + dòng đó chớp sáng, để khách đang
+       xem đơn đặt thêm hàng mà không phải đóng view ra lưới tồn.
+       ================================================================================= */
+    $(document).on('input', '#of-stock-search', function () {
+        var kw = noAccent(String($(this).val() || '').trim());
+        var shown = 0;
+        $('#of-ov-stock-list .of-stock-row').each(function () {
+            var ok = kw === '' || noAccent($(this).attr('data-search')).indexOf(kw) !== -1;
+            $(this).toggle(ok);
+            if (ok) shown++;
+        });
+        $('#of-ov-stock-list .of-stock-group').each(function () {
+            $(this).toggle(kw === '' || $(this).find('.of-stock-row:visible').length > 0);
+        });
+        $('#of-stock-empty').prop('hidden', shown !== 0);
+    });
+
+    $(document).on('click', '.of-stock-row', function () {
+        var $src = $(this);
+        var pid = $src.data('product-id');
+        if (!pid) return;
+        var $exist = $('#order-table tbody tr[data-product-id="' + pid + '"]');
+        if ($exist.length) {                       // đã có trong đơn -> chỉ nhấn mạnh dòng cũ
+            flyToOrderRow($src, $exist);
+            $exist.find('.qt-input').focus().select();
+            return;
+        }
+        $.getJSON(BASE + 'product_order_info', { product_id: pid }, function (res) {
+            if (!res.ok || !res.data) return;
+            var $tr = appendOrderRow(res.data, false);
+            flyToOrderRow($src, $tr);
+            scheduleInvCheck();
+        });
+    });
+
+    /** Icon tròn bay từ dòng tồn sang dòng trong đơn, tới nơi thì dòng đó chớp sáng. */
+    function flyToOrderRow($from, $to) {
+        if (!$from || !$from.length || !$to || !$to.length) { if ($to) $to.addClass('of-row-flash'); return; }
+        var a = $from[0].getBoundingClientRect(), b = $to[0].getBoundingClientRect();
+        var $dot = $('<div class="app-fly-history"><i class="fa-solid fa-cart-plus"></i></div>')
+            .css({ left: (a.left + a.width / 2 - 17) + 'px', top: (a.top + a.height / 2 - 17) + 'px' })
+            .appendTo('body');
+        // Ép trình duyệt tính layout trước khi gắn class đích, nếu không transition không chạy.
+        $dot[0].getBoundingClientRect();
+        $dot.css({
+            '--fh-dx': (b.left + 24 - (a.left + a.width / 2)) + 'px',
+            '--fh-dy': (b.top + b.height / 2 - (a.top + a.height / 2)) + 'px'
+        }).addClass('is-arrived');
+        setTimeout(function () {
+            $dot.remove();
+            $to.addClass('of-row-flash');
+            setTimeout(function () { $to.removeClass('of-row-flash'); }, 1200);
+        }, 560);
+    }
+
+    /* =================================================================================
+       ẨN / HIỆN TẠM CỘT "Khối lượng (kg)" và "Tồn nhà máy"
+       Nút mắt gạch nằm trong ô tiêu đề (hiện khi hover); ẩn rồi thì nút mở lại nằm cùng
+       hàng với "Lấy số đặt gần đây".
+       ================================================================================= */
+    var hiddenCols = {};
+    function applyColVisibility($scope) {
+        $.each(['weight', 'stock'], function (i, col) {
+            var hide = !!hiddenCols[col];
+            ($scope || $('#of-order-view')).find('.of-col-' + col).toggle(!hide);
+            $('#of-order-view .of-col-show[data-col="' + col + '"]').prop('hidden', !hide);
+        });
+    }
+    $(document).on('click', '.of-col-hide', function (e) {
+        e.stopPropagation();
+        hiddenCols[$(this).data('col')] = true;
+        applyColVisibility();
+    });
+    $(document).on('click', '.of-col-show', function () {
+        hiddenCols[$(this).data('col')] = false;
+        applyColVisibility();
+    });
+
+    /* =================================================================================
+       LẤY SỐ ĐẶT GẦN ĐÂY (góc phải bảng hàng)
+       ---------------------------------------------------------------------------------
+       Nguồn số liệu là DỮ LIỆU XUẤT KHO của nhà máy cho chi nhánh này (`stock_exports`), tức số
+       lượng chi nhánh THỰC SỰ lấy hàng lần gần nhất — không phải số đã đặt.
+
+       Bấm nút -> điền số vào cột "Số lượng đặt" bằng màu xám (tạm), hàng chưa từng lấy để trống;
+       nút đổi thành cặp "Đồng ý / Hủy":
+         - Đồng ý -> số xám thành số thật (đen), sửa tiếp được trước khi gửi. Nút trở lại
+                     "Lấy số đặt gần đây" nhưng ở dạng CHÌM (.is-used) để user biết đã lấy 1 lần.
+         - Hủy    -> trả các ô về giá trị trước khi bấm (thường là rỗng) để nhập tay.
+       Bấm LẠI (kể cả khi nút đang chìm) = nạp lại số mới nhất, GHI ĐÈ mọi số đang có — đúng ý
+       "load lại rồi chỉnh sửa tiếp".
+       ================================================================================= */
+    var recentPending = false, recentUsed = false, recentBackup = null;
+
+    function setRecentButtons(pending) {
+        recentPending = pending;
+        $('#of-recent-qty-btn').prop('hidden', pending).toggleClass('is-used', recentUsed);
+        $('#of-recent-confirm').prop('hidden', !pending);
+    }
+
+    /** Chốt các ô xám thành số thật (dùng cho "Đồng ý" và khi user tự gõ đè). */
+    function commitSuggestInput($inp) {
+        $inp.removeClass('is-suggested');
+    }
+
+    $(document).on('click', '#of-recent-qty-btn', function () {
+        var $rows = $('#order-table tbody tr');
+        if (!$rows.length) { alert('Chưa có sản phẩm nào trong đơn để lấy số.'); return; }
+        var cid = $('#brand_id').val() || '';
+        if (!cid) { alert('Chọn chi nhánh từ danh sách gợi ý trước để lấy số mua gần đây.'); $('#brand').focus(); return; }
+
+        var $btn = $(this).prop('disabled', true);
+        $.getJSON(BASE + 'recent_quantities', { customer_id: cid }, function (res) {
+            $btn.prop('disabled', false);
+            if (!res || !res.ok) { alert((res && res.msg) || 'Không lấy được số mua gần đây.'); return; }
+            var map = res.data || {};
+            var filled = 0;
+            recentBackup = [];   // để nút "Hủy" trả lại đúng số đang có trước khi nạp
+            $rows.each(function () {
+                var $tr = $(this);
+                var mid = $tr.data('material-id'), pid = $tr.data('product-id');
+                var key = (mid != null ? 'material:' + mid : 'product:' + pid);
+                var $inp = $tr.find('.qt-input');
+                recentBackup.push({ $inp: $inp, val: $inp.val() });
+                var qty = map[key];
+                if (qty == null) { $inp.val('').removeClass('is-suggested'); }   // chưa từng lấy -> bỏ trống
+                else { $inp.val(qty).addClass('is-suggested'); filled++; }
+                $tr.find('.td-weight').text(fmtWeight((Number(qty) || 0) * (parseFloat($tr.data('weight-kg')) || 0)));
+                markOverStock($tr);
+            });
+            if (!filled) {
+                alert('Chi nhánh này chưa từng lấy các mặt hàng đang có trong đơn (không có dữ liệu xuất kho).');
+            }
+            recalcTotal();
+            scheduleInvCheck();
+            setRecentButtons(true);
+        }).fail(function () { $btn.prop('disabled', false); alert('Lỗi mạng/Server.'); });
+    });
+
+    $(document).on('click', '#of-recent-qty-ok', function () {
+        commitSuggestInput($('#order-table .qt-input.is-suggested'));
+        recentUsed = true;               // nút trở lại dạng chìm: đã lấy số 1 lần
+        recentBackup = null;
+        setRecentButtons(false);
+    });
+
+    $(document).on('click', '#of-recent-qty-cancel', function () {
+        $.each(recentBackup || [], function (i, b) {
+            var $tr = b.$inp.closest('tr');
+            b.$inp.val(b.val).removeClass('is-suggested');
+            $tr.find('.td-weight').text(fmtWeight((parseFloat(b.val) || 0) * (parseFloat($tr.data('weight-kg')) || 0)));
+            markOverStock($tr);
+        });
+        recentBackup = null;
+        recalcTotal();
+        scheduleInvCheck();
+        setRecentButtons(false);
+    });
+
+    // User tự sửa 1 ô đang là số tạm -> ô đó thành số thật; hết ô tạm thì thu lại về 1 nút.
+    $(document).on('input', '.qt-input.is-suggested', function () {
+        commitSuggestInput($(this));
+        if (!$('#order-table .qt-input.is-suggested').length) { recentUsed = true; setRecentButtons(false); }
+    });
 
     /* --------------------------- Payload --------------------------- */
     function collectOrderPayload() {
@@ -286,7 +591,8 @@
         });
         return {
             customer_id: $('#brand_id').val() || null,
-            customer_name: $('#brand').val(),
+            customer_name: branchFullName(),
+            customer_label: branchLabel(),   // tên viết tắt — chỉ dùng để hiển thị/hoá đơn
             note: $('#order-note').val() || '',
             items: items,
             weight_total: wTotal,
@@ -296,6 +602,8 @@
 
     /* --------------------------- Gửi nhà máy --------------------------- */
     $(document).on('click', '#btn-share-factory', function () {
+        // Gửi đơn = coi như đã đồng ý các số tạm còn sót lại (số vẫn đang hiện trên bảng).
+        if (recentPending) { commitSuggestInput($('#order-table .qt-input.is-suggested')); setRecentButtons(false); }
         var payload = collectOrderPayload();
         if (payload.items.length === 0) { alert('Bạn chưa thêm sản phẩm nào để đặt.'); return; }
         if (!payload.customer_name) { alert('Vui lòng chọn/nhập chi nhánh.'); $('#brand').focus(); return; }
@@ -313,6 +621,7 @@
             recalcTotal();
             updateCartCount();
             $('#order-inv-status').attr('hidden', '').empty();
+            closeOrderView(); // đơn đã gửi -> trả về view "Tồn thành phẩm nhà máy"
         }).fail(function () { alert('Lỗi mạng/Server.'); });
     });
 
@@ -345,12 +654,14 @@
         $.getJSON(BASE + 'history_detail', { id: id }, function (res) {
             if (!res.ok || !res.data) return;
             loadHistoryIntoForm(res.data);
-            openModal('modal-cart');
+            openOrderView();
             setTimeout(runInventoryCheck, 500);
         });
     }
     function loadHistoryIntoForm(row) {
-        $('#brand').val(row.customer_name || '');
+        var short = String(row.customer_short || '').trim();
+        $('#brand').val(short !== '' ? short : (row.customer_name || ''));
+        $('#brand_full').val(row.customer_name || '');
         $('#brand_id').val(row.customer_id || '');
         $('#order-note').val(row.note || '');
         $('#order-table tbody').empty();
@@ -362,7 +673,10 @@
                     product_name: it.product_name,
                     unit: it.unit,
                     weight_kg: it.weight_kg,
-                    system_price: it.system_price
+                    system_price: it.system_price,
+                    // image_url + stock do server gắn thêm trong sf_get_history_row()
+                    image_url: it.image_url,
+                    stock: it.stock
                 }, !!it.material_id, it.qt_order, it.line_weight);
             });
         }
@@ -454,14 +768,15 @@
     function fillInvoicePreview() {
         var payload = collectOrderPayload();
         if (payload.items.length === 0) return null;
-        $('#zalo-customer-name').text(payload.customer_name || '________');
+        // Hoá đơn gửi khách: tên chi nhánh viết tắt, tổng khối lượng làm tròn số nguyên.
+        $('#zalo-customer-name').text(payload.customer_label || payload.customer_name || '________');
         var rows = '';
         $.each(payload.items, function (i, it) {
-            rows += '<tr><td>' + it.product_name + '</td><td>' + (it.unit || '') + '</td>'
+            rows += '<tr><td>' + escHtml(it.product_name) + '</td><td>' + escHtml(it.unit || '') + '</td>'
                   + '<td>' + it.qt_order + '</td><td>' + fmtWeight(it.line_weight) + '</td></tr>';
         });
         $('#zalo-body').html(rows);
-        $('#zalo-weight-total-value').text(fmtWeight(payload.weight_total));
+        $('#zalo-weight-total-value').text(Math.round(Number(payload.weight_total) || 0).toLocaleString('vi-VN'));
         return payload;
     }
 
@@ -562,19 +877,33 @@
         });
         return items;
     }
+    /* Đơn dài (>10 SP) thì khối này chiếm hết màn hình -> gập lại kiểu FAQ, bấm tiêu đề mới xổ.
+       Đơn ngắn giữ nguyên kiểu cũ (luôn mở) cho khỏi phải bấm thêm 1 nhịp. */
+    var FAQ_FROM = 10;
     function renderInvStatus(data) {
         var $box = $('#order-inv-status');
-        var html = '<div class="ois-title">Tình hình đơn hàng:</div>';
+        var rowCount = $('#order-table tbody tr').length;
+        var faq = rowCount > FAQ_FROM;
+        var wasOpen = $box.hasClass('is-open');
+        var shortCount = (data.all_enough || !data.lines) ? 0 : data.lines.length;
+
+        var head = 'Tình hình đơn hàng:';
+        if (faq) {
+            head = '<button type="button" class="ois-toggle"><i class="fa-solid fa-chevron-right"></i> Tình hình đơn hàng'
+                 + (shortCount ? ' <span class="ois-badge">' + shortCount + ' SP thiếu</span>'
+                               : ' <span class="ois-badge is-ok">đủ tồn</span>') + '</button>';
+        }
+        var html = '<div class="ois-title">' + head + '</div><div class="ois-content">';
         if (data.all_enough) {
             html += '<div class="ois-ok"><i class="fa-solid fa-circle-check"></i> Đơn hàng đủ tồn để nhà máy xuất</div>';
         } else {
             html += '<ul class="ois-list">';
             $.each(data.lines, function (i, l) {
                 var unit = l.unit ? (' ' + l.unit) : '';
-                var line = '<strong>' + l.product_name + '</strong>: Thiếu ' +
+                var line = '<strong>' + escHtml(l.product_name) + '</strong>: Thiếu ' +
                            fmtWeight(l.shortage) + unit + ' (order ' + fmtWeight(l.order_qty) + ')';
                 if (l.plan) {
-                    line += ' - <span class="ois-plan">Sẽ được sản xuất vào ' + l.plan.weekday + ' (' + l.plan.display + ')</span>';
+                    line += ' - <span class="ois-plan">Sẽ được sản xuất vào ' + escHtml(l.plan.weekday) + ' (' + escHtml(l.plan.display) + ')</span>';
                 } else {
                     line += ' - <span class="ois-noplan">Chưa có lịch sản xuất</span>';
                 }
@@ -582,8 +911,14 @@
             });
             html += '</ul>';
         }
-        $box.html(html).removeAttr('hidden');
+        html += '</div>';
+        $box.html(html).removeAttr('hidden')
+            .toggleClass('is-faq', faq)
+            .toggleClass('is-open', faq ? wasOpen : true);
     }
+    $(document).on('click', '.ois-toggle', function () {
+        $('#order-inv-status').toggleClass('is-open');
+    });
     function runInventoryCheck() {
         var items = collectOrderProducts();
         if (!items.length) { $('#order-inv-status').attr('hidden', '').empty(); return; }
@@ -594,7 +929,7 @@
     }
     function scheduleInvCheck() { clearTimeout(invCheckTimer); invCheckTimer = setTimeout(runInventoryCheck, 400); }
     $(document).on('input', '.qt-input', scheduleInvCheck);
-    $(document).on('click', '.btn-remove-row', scheduleInvCheck);
+    // (Xóa dòng gọi scheduleInvCheck trong handler .btn-remove-row — phải đợi dòng biến mất hẳn.)
     // Kiểm tồn định kỳ: dừng khi tab bị ẩn (AppPoll — public/js/shared/app_shell.js).
     var invTick = function () { if (collectOrderProducts().length) runInventoryCheck(); };
     if (window.AppPoll) window.AppPoll.every('of-inventory', invTick, { interval: 20000, maxInterval: 60000 });

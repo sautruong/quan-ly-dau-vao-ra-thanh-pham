@@ -61,11 +61,20 @@ if (!function_exists('om_money')) {
                     $rel     = format_time_ago_vi($o['created_at']);
                     $pickup_val = !empty($o['pickup_time']) ? date('Y-m-d\TH:i', strtotime($o['pickup_time'])) : '';
 
+                    // 1 sản phẩm có thể nằm nhiều dòng trong đơn -> so TỔNG SL các dòng với tồn,
+                    // mỗi sản phẩm liệt kê 1 lần (cờ is_short từng dòng của om_enrich_item không đủ).
                     $shorts = [];
                     foreach ($o['items'] as $it) {
-                        if (!empty($it['is_short'])) {
-                            $shorts[] = ['name' => (string) $it['product_name'], 'lack' => $it['qt_order'] - $it['stock'], 'unit' => (string) $it['unit']];
+                        $pid = (int) ($it['product_id'] ?? 0);
+                        if ($pid <= 0) continue; // NVL không so tồn
+                        if (!isset($shorts[$pid])) {
+                            $shorts[$pid] = ['name' => (string) $it['product_name'], 'qty' => 0.0, 'stock' => (float) $it['stock'], 'unit' => (string) $it['unit']];
                         }
+                        $shorts[$pid]['qty'] += (float) $it['qt_order'];
+                    }
+                    foreach ($shorts as $pid => $s) {
+                        if ($s['qty'] > $s['stock']) $shorts[$pid]['lack'] = $s['qty'] - $s['stock'];
+                        else unset($shorts[$pid]);
                     }
                     // Tên hiển thị: ưu tiên tên viết tắt (PLHCM, PLDN...) — style theo màu thứ cấp.
                     $cust_short = trim((string) ($o['cust_short'] ?? ''));
@@ -212,19 +221,24 @@ if (!function_exists('om_money')) {
         </div>
     </div>
 
-    <!-- ====== MODAL: XEM ĐƠN HÀNG (sửa số lượng được) ====== -->
-    <div class="om-modal-mask" id="om-order-modal" style="display:none;">
-        <div class="om-modal-box om-order-box">
-            <span class="om-modal-close" id="om-order-close">&times;</span>
-            <div id="om-order-capture">
-                <div class="om-modal-title-row">
-                    <h3 class="om-modal-title"><i class="fa-solid fa-receipt"></i> <span id="om-modal-cust"></span></h3>
-                    <button type="button" class="om-btn om-btn-ghost om-btn-sm no-capture" id="om-view-shortage-btn">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Xem hàng thiếu
-                    </button>
-                </div>
-                <div class="om-modal-warn" id="om-modal-warn" style="display:none;"></div>
-                <table class="om-items">
+    <!-- ====== VIEW CHỒNG LÊN: XEM ĐƠN HÀNG (sửa số lượng được) ======
+         Trước là modal hộp nhỏ; nay là view riêng phủ vùng nội dung (khung .app-ov-* trong
+         app_shell.css), nút × đưa về danh sách card. Chỉ bảng cuộn — tiêu đề, ô thêm SP,
+         "Chụp" và "Lưu & gửi bán hàng" đứng yên. Ảnh "Chụp" KHÔNG chụp thẳng vùng cuộn (bị
+         cắt theo khung) mà dựng bản sao đầy đủ ở #om-order-capture (xem branch_orders.js). -->
+    <div class="app-ov-view om-order-view" id="om-order-view" style="display:none;">
+        <div class="app-ov-head">
+            <h2 class="app-ov-title"><i class="fa-solid fa-receipt"></i> <span id="om-modal-cust"></span></h2>
+            <button type="button" class="om-btn om-btn-ghost om-btn-sm" id="om-view-shortage-btn">
+                <i class="fa-solid fa-triangle-exclamation"></i> Xem hàng thiếu
+            </button>
+            <button type="button" class="app-ov-close" id="om-order-close" title="Đóng, về danh sách đơn (Esc)">&times;</button>
+        </div>
+
+        <div class="app-ov-body">
+            <div class="om-modal-warn" id="om-modal-warn" style="display:none;"></div>
+            <div class="app-ov-scroll">
+                <table class="om-items om-order-table" id="om-order-table">
                     <thead>
                         <tr>
                             <th class="text-left">Tên sản phẩm</th>
@@ -243,23 +257,30 @@ if (!function_exists('om_money')) {
                             <td><b id="om-modal-weight"></b></td>
                             <td></td>
                             <td><b id="om-modal-value"></b></td>
-                            <td></td>
+                            <td class="no-capture"></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            <div class="om-modal-add">
+            <div class="om-modal-add om-ov-add">
                 <div class="om-search-box">
                     <input type="text" id="om-add-search" class="om-add-input" autocomplete="off"
                            placeholder="+ Thêm sản phẩm / NVL — gõ tên hoặc mã rồi chọn...">
                     <ul class="om-suggest" id="om-add-suggest"></ul>
                 </div>
             </div>
-            <div class="om-modal-foot">
-                <button type="button" class="om-btn om-btn-ghost" id="om-order-capture-btn" title="Chụp đơn hàng gửi khách"><i class="fa-solid fa-camera"></i> Chụp</button>
-                <button type="button" class="om-btn om-btn-primary" id="om-save-qty"><i class="fa-solid fa-floppy-disk"></i> Lưu &amp; gửi bán hàng</button>
-            </div>
         </div>
+
+        <div class="app-ov-foot">
+            <button type="button" class="om-btn om-btn-ghost" id="om-order-capture-btn" title="Chụp đơn hàng gửi khách"><i class="fa-solid fa-camera"></i> Chụp</button>
+            <button type="button" class="om-btn om-btn-primary" id="om-save-qty"><i class="fa-solid fa-floppy-disk"></i> Lưu &amp; gửi bán hàng</button>
+        </div>
+    </div>
+
+    <!-- Sân khấu dựng ảnh "Chụp" đơn hàng: vô hình (opacity trên lớp ngoài), JS đổ bản sao
+         tiêu đề + cảnh báo + bảng đầy đủ vào #om-order-capture rồi html2canvas đúng khối này. -->
+    <div class="om-capture-stage" aria-hidden="true">
+        <div id="om-order-capture"></div>
     </div>
 
     <!-- ====== MODAL: XEM HÀNG THIẾU ====== -->

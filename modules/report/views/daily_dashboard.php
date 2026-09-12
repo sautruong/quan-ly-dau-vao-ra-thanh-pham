@@ -884,6 +884,15 @@ $exportQtyOverrideMonths[] = ['ym' => $d_exports['series_qty']['current_ym'], 'l
                 <h3 id="dd2-full-list-title">Danh sách</h3>
                 <div class="dd2-full-list-head-actions">
                     <input type="text" class="dd2-full-list-search" id="dd2-full-list-search" placeholder="Tìm kiếm..." hidden>
+                    <!-- Kỳ xem nhanh (chỉ bật cho danh sách có lọc ngày, vd "Xuất kho"): đổi kỳ là
+                         đổi luôn 2 ô "từ ngày → đến ngày" bên dưới, và cụm tổng cũng tính theo kỳ. -->
+                    <select class="dd2-full-list-period" id="dd2-full-list-period" hidden>
+                        <option value="this_month">Tháng này</option>
+                        <option value="last_month">Tháng trước</option>
+                        <option value="ytd">Từ đầu năm đến nay</option>
+                        <option value="custom">Khoảng ngày chọn</option>
+                        <option value="all">Tất cả</option>
+                    </select>
                     <select class="dd2-full-list-filter" id="dd2-full-list-filter" hidden>
                         <option value="">Tất cả</option>
                         <option value="Thu">Thu</option>

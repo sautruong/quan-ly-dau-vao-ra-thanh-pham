@@ -647,6 +647,10 @@ function record_sales_issueAction()
     // KHÔNG đụng bảng nào trong phase này — chỉ đọc tồn hiện tại.
     $validated = [];
     $shortages = [];
+    // 1 hàng hóa có thể nằm NHIỀU dòng (đơn nhà máy cho nhập trùng) -> so tồn theo TỔNG SL đã
+    // cộng dồn tới dòng hiện tại. So từng dòng riêng thì 6 + 6 với tồn 10 vẫn lọt phase 1, rồi
+    // dòng thứ 2 bị im_record_sales_issue() từ chối -> phiếu ghi được một nửa.
+    $need = [];
     foreach ($items as $it) {
         $id     = (int) ($it['id'] ?? $it['product_id'] ?? 0);
         $type   = trim((string) ($it['type'] ?? 'product'));
@@ -662,18 +666,20 @@ function record_sales_issueAction()
             $row = db_fetch_row("SELECT quantity FROM finished_goods_inventory WHERE product_id = $id LIMIT 1");
         }
         $available = $row ? (float) $row['quantity'] : 0.0;
+        $key = $type . ':' . $id;
+        $need[$key] = ($need[$key] ?? 0.0) + $qty;
 
         $validated[] = [
             'id'    => $id, 'type' => $type, 'qty' => $qty,
             'price' => $price, 'total' => $total, 'interp' => $interp,
             'available' => $available,
         ];
-        if ($available < $qty) {
+        if ($available < $need[$key]) {
             $shortages[] = [
                 'id'        => $id,
                 'type'      => $type,
                 'available' => $available,
-                'requested' => $qty,
+                'requested' => $need[$key],
             ];
         }
     }

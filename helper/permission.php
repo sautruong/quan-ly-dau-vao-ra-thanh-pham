@@ -928,6 +928,23 @@ function permission_guard()
         }
     }
 
+    // 4c) Chi nhánh ĐẶT HÀNG xem phiếu soạn của chính đơn mình: nhà máy gửi phiếu xuống kho là
+    //     đẩy chuông cho người đặt, bấm vào phải xem được tiến độ soạn. Chỉ mở quyền XEM — mọi
+    //     endpoint ghi của module kho vẫn chặn qua wh_guard_json(), và view tự khoá thao tác.
+    //     KHÔNG require warehouseModel.php ở đây: load_model() của core dùng `require` TRẦN nên
+    //     model sẽ bị nạp 2 lần -> "Cannot redeclare wh_*". Hỏi thẳng CSDL 1 câu là đủ.
+    if ($module === 'warehouse' && $controller === 'warehouse' && $action === 'picking_task') {
+        $uid = (int) $user['id'];
+        if ($uid > 0 && db_fetch_row("SHOW TABLES LIKE 'wh_picking_slips'")) {
+            $own = db_num_rows(
+                "SELECT s.id FROM wh_picking_slips s
+                 INNER JOIN factory_order_sales_history h ON h.id = s.order_id
+                 WHERE h.user_id = $uid LIMIT 1"
+            );
+            if ($own > 0) return;
+        }
+    }
+
     // 5) Action không nằm trong danh mục view (AJAX/phụ trợ): cho qua.
     $view = permission_find_view($module, $controller, $action);
     if (!$view) {

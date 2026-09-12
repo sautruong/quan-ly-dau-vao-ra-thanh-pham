@@ -2290,11 +2290,21 @@ function rp_dd_exports_month_total($customer_id = null)
     ];
 }
 
-/** Giá trị xuất kho THỰC TÍNH (không qua override) của 1 tháng bất kỳ — nguồn sales_inventory_issue_data
- *  (SL x đơn giá theo từng dòng SP). KHÔNG dùng SUM(goods_value) ở sales_warehouse_export_invoices
- *  vì cột đó nhập tay, đã xác minh có dòng lệch đơn vị (vd ghi 496 thay vì 0.496) khiến tổng bị thổi phồng gấp đôi.
- *  2026-07-18: bỏ điều kiện warehouse='Kho TP' — 1 đơn hàng bán có thể có dòng xuất thẳng từ Kho NVL
- *  (bán nguyên liệu, xem get_item_defaultsAction 'type'=material), lọc riêng Kho TP làm sót giá trị. */
+/**
+ * Giá trị xuất kho THỰC TÍNH (không qua override) của 1 tháng bất kỳ =
+ * TỔNG GIÁ TRỊ CỦA TỪNG PHIẾU trong tháng, dùng đúng hàm rp_dd_export_invoice_value() mà modal
+ * "Xuất kho" đang hiển thị — nên số tổng luôn khớp với danh sách phiếu bên dưới nó.
+ *
+ * 2026-09-12 — SỬA NGUỒN: trước đây cộng thẳng SUM(amount) của `sales_inventory_issue_data`.
+ * Bảng đó giữ 1 dòng / (hàng hóa, khách, NGÀY) nên khi 1 phiếu có NHIỀU DÒNG CÙNG SẢN PHẨM
+ * (đơn nhà máy cho phép nhập trùng) thì dòng sau ghi đè dòng trước -> tổng bị thiếu. Số thật:
+ * phiếu PLHCM 12/9/2026 là 158.397.000 đ (27 dòng stock_exports) nhưng bảng tổng chỉ còn 23 dòng
+ * = 126.267.000 đ, đúng bằng con số dashboard hiển thị sai. Xem thêm im_sii_write_item() đã được
+ * vá để không mất dòng về sau; hàm này sửa cho cả dữ liệu CŨ đã lỡ ghi thiếu.
+ *
+ * Vẫn giữ 3 lớp ưu tiên cũ (stock_exports theo phiếu -> bảng tổng theo ngày -> goods_value) nên
+ * dữ liệu cũ chưa có stock_exports không bị về 0.
+ */
 function rp_dd_exports_real_value_for_month($year, $month, $customer_id = null)
 {
     $cid = (int) $customer_id;
@@ -2302,10 +2312,23 @@ function rp_dd_exports_real_value_for_month($year, $month, $customer_id = null)
     $to   = date('Y-m-t', strtotime($from));
     $cond = rp_dd_range_cond('created_at', $from, $to);
     $extra = $cid > 0 ? " AND customer_id = $cid" : '';
-    $rv = db_fetch_row("SELECT COALESCE(SUM(amount), 0) AS value
-                         FROM sales_inventory_issue_data
-                         WHERE $cond$extra");
-    return $rv ? (float) $rv['value'] : 0.0;
+
+    $rows = db_fetch_array(
+        "SELECT id, customer_id, created_at, goods_value
+         FROM sales_warehouse_export_invoices
+         WHERE $cond$extra"
+    ) ?: [];
+    if (!$rows) return 0.0;
+
+    $batchMap  = rp_dd_export_batch_value_map($rows);
+    $dayMap    = rp_dd_export_invoice_value_map($rows);
+    $dayCounts = rp_dd_export_day_invoice_counts($rows);
+
+    $sum = 0.0;
+    foreach ($rows as $r) {
+        $sum += rp_dd_export_invoice_value($r, $batchMap, $dayMap, $dayCounts);
+    }
+    return (float) $sum;
 }
 
 /** Giá trị xuất kho của 1 tháng: ưu tiên giá trị tạm đã thiết lập (metric='export'), không có thì tính thực. */
@@ -2637,44 +2660,47 @@ function rp_dd_exports_recent($page = 1, $per_page = 3, $customer_id = null)
     return ['rows' => $out, 'page' => $page, 'per_page' => $per_page, 'total' => $total, 'total_pages' => max(1, (int) ceil($total / $per_page))];
 }
 
-/** Đơn xuất bán HÔM NAY, gộp theo khách hàng — khối nổi trên biểu đồ Xuất kho (daily_dashboard.php,
- *  "+ {khách hàng viết tắt}: {giá trị}"). Giá trị lấy từ sales_inventory_issue_data (chính xác hơn
- *  goods_value đã làm tròn 2 số thập phân/triệu) qua rp_dd_export_invoice_value_map() — cùng cơ chế
- *  đã fix cho rp_dd_exports_recent()/rp_dd_exports_all() (xem "Bug 3" trong memory dashboard). */
+/**
+ * Đơn xuất bán HÔM NAY, gộp theo khách hàng — khối nổi trên biểu đồ Xuất kho (daily_dashboard.php,
+ * "+ {khách hàng viết tắt}: {giá trị}").
+ *
+ * 2026-09-12 — cộng giá trị theo TỪNG PHIẾU bằng rp_dd_export_invoice_value() (ưu tiên stock_exports)
+ * thay vì lấy thẳng SUM(amount) của sales_inventory_issue_data: bảng tổng đó mất dòng khi 1 phiếu có
+ * nhiều dòng cùng sản phẩm, làm PLHCM 12/9 hiện 126.267.000 đ thay vì 158.397.000 đ.
+ */
 function rp_dd_exports_today_by_customer()
 {
     $today = date('Y-m-d');
-    $rows = db_fetch_array(
-        "SELECT e.customer_id, SUM(e.quantity) AS qty, SUM(e.goods_value) AS goods_value_sum,
+    $invoices = db_fetch_array(
+        "SELECT e.id, e.customer_id, e.quantity, e.goods_value, e.created_at,
                 COALESCE(NULLIF(c.short_name, ''), c.name) AS customer_label, c.secondary_color
          FROM sales_warehouse_export_invoices e
          LEFT JOIN customers c ON c.id = e.customer_id
          WHERE DATE(e.created_at) = '$today'
-         GROUP BY e.customer_id
-         ORDER BY e.customer_id ASC"
+         ORDER BY e.customer_id ASC, e.created_at ASC"
     ) ?: [];
-    if (!$rows) return [];
+    if (!$invoices) return [];
 
-    // rp_dd_export_invoice_value_map() khớp theo (customer_id, ngày) rồi SUM(amount) — đưa cả nhóm
-    // qua 1 lượt, không cần lặp từng khách hàng.
-    $probeRows = array_map(function ($r) use ($today) {
-        return ['customer_id' => $r['customer_id'], 'created_at' => $today];
-    }, $rows);
-    $valueMap = rp_dd_export_invoice_value_map($probeRows);
+    $batchMap  = rp_dd_export_batch_value_map($invoices);
+    $dayMap    = rp_dd_export_invoice_value_map($invoices);
+    $dayCounts = rp_dd_export_day_invoice_counts($invoices);
 
-    $out = [];
-    foreach ($rows as $r) {
+    $agg = [];
+    foreach ($invoices as $r) {
         $cid = (int) $r['customer_id'];
-        $key = $cid . '|' . $today;
-        $out[] = [
-            'customer_id'    => $cid,
-            'customer_label' => (string) ($r['customer_label'] ?: ('#' . $cid)),
-            'color'          => (string) ($r['secondary_color'] ?: ''),
-            'quantity'       => (float) $r['qty'],
-            'value'          => $valueMap[$key] ?? ((float) $r['goods_value_sum'] * rp_dd_goods_value_scale()),
-        ];
+        if (!isset($agg[$cid])) {
+            $agg[$cid] = [
+                'customer_id'    => $cid,
+                'customer_label' => (string) ($r['customer_label'] ?: ('#' . $cid)),
+                'color'          => (string) ($r['secondary_color'] ?: ''),
+                'quantity'       => 0.0,
+                'value'          => 0.0,
+            ];
+        }
+        $agg[$cid]['quantity'] += (float) $r['quantity'];
+        $agg[$cid]['value']    += rp_dd_export_invoice_value($r, $batchMap, $dayMap, $dayCounts);
     }
-    return $out;
+    return array_values($agg);
 }
 
 /** Danh sách ĐẦY ĐỦ (mọi thời gian) cho modal sidebar/"Sales Order" — mirror rp_dd_exports_recent() bỏ điều kiện tháng.

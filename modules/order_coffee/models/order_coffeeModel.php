@@ -395,10 +395,15 @@ function oc_clean_groups($groups)
             ];
         }
         if (empty($items)) continue;
+        // kind = phân loại RIÊNG của dòng ('process' đặt gia công / 'material' đặt nguyên liệu).
+        // Trước đây cả đơn dùng chung 1 lựa chọn; nay mỗi dòng tự chọn, thiếu thì theo loại của đơn.
+        $kind = (string) ($g['kind'] ?? '');
+        if (!in_array($kind, ['process', 'material'], true)) $kind = '';
         $clean[] = [
             'product_id'   => (int) ($g['product_id'] ?? 0),
             'product_name' => (string) ($g['product_name'] ?? ''),
             'order_qty'    => (float) ($g['order_qty'] ?? 0),
+            'kind'         => $kind,
             'note'         => (string) ($g['note'] ?? ''),
             'items'        => $items,
         ];
@@ -414,6 +419,9 @@ function oc_save_order($payload, $user_id = 0)
 
     $type = (string) ($payload['order_type'] ?? 'process');
     if (!in_array($type, ['process', 'material'], true)) $type = 'process';
+    // Mọi dòng cùng chọn 1 loại -> loại đó cũng là loại của cả đơn (nhãn hiển thị trong "Đơn đã lưu").
+    $kinds = array_unique(array_filter(array_map(static fn($g) => (string) ($g['kind'] ?? ''), $groups)));
+    if (count($kinds) === 1) $type = (string) reset($kinds);
 
     $data = [
         'user_id'       => (int) $user_id > 0 ? (int) $user_id : null,
@@ -425,7 +433,7 @@ function oc_save_order($payload, $user_id = 0)
         'status'        => 'new',
         // Chốt giá trị dự kiến NGAY LÚC LƯU để đối soát cố định về sau —
         // không tính lại theo giá nhập mới (giá có thể đổi sau khi nhập phiếu).
-        'expected_value' => round(oc_expected_import_value($groups), 2),
+        'expected_value' => round(oc_expected_import_value($groups, null, $type), 2),
     ];
     return (int) db_insert('oc_orders', $data);
 }
@@ -462,17 +470,78 @@ function oc_price_including_tax_at($product_id, $at)
     return oc_latest_price_including_tax($pid);
 }
 
-/** Giá trị nhập kho dự kiến của cả đơn = Σ(order_qty của từng nhóm SP × giá nhập của SP đó).
- *  $at = null: giá gần nhất (dùng lúc LƯU đơn mới); $at = datetime: giá tại thời điểm đó
- *  (tái dựng cho đơn cũ chưa có snapshot). */
-function oc_expected_import_value($groups, $at = null)
+/** Giá nhập gần nhất của 1 NGUYÊN LIỆU (ưu tiên giá đã gồm chi phí mua hàng). 0 nếu chưa có. */
+function oc_latest_material_price($material_id)
+{
+    $mid = (int) $material_id;
+    if ($mid <= 0) return 0.0;
+    $row = db_fetch_row(
+        "SELECT purchase_price, purchase_price_includes_purchase_cost
+         FROM material_purchase_prices
+         WHERE material_id = $mid
+         ORDER BY last_updated_at DESC, id DESC LIMIT 1"
+    );
+    if (!$row) return 0.0;
+    $inc = $row['purchase_price_includes_purchase_cost'];
+    return ($inc !== null && (float) $inc > 0) ? (float) $inc : (float) $row['purchase_price'];
+}
+
+/** Giá trị nguyên liệu của 1 nhóm = Σ(SL nguyên liệu × giá nhập nguyên liệu). */
+function oc_group_material_value($group)
+{
+    $sum = 0.0;
+    foreach ((array) ($group['items'] ?? []) as $it) {
+        $q = (float) ($it['qty'] ?? 0);
+        if ($q <= 0) continue;
+        $sum += $q * oc_latest_material_price((int) ($it['material_id'] ?? 0));
+    }
+    return $sum;
+}
+
+/**
+ * Giá trị nhập kho dự kiến của cả đơn — tính theo TỪNG DÒNG, mỗi dòng có phân loại riêng
+ * (`kind`: 'process' = đặt gia công / 'material' = đặt nguyên liệu; thiếu thì lấy order_type của đơn).
+ *
+ * 2026-09-12 — SỬA: trước đây luôn lấy `order_qty × giá nhập của THÀNH PHẨM`, nên sản phẩm chưa
+ * từng có giá nhập (product_purchase_prices trống, vd "Cà Phê Pha Phin Số 9 1Kg") bị tính 0 và
+ * biến mất khỏi tổng — đơn 12/9/2026 ra 22.843.200 đ vì chỉ cộng được 2/3 dòng. Nay:
+ *   - dòng ĐẶT NGUYÊN LIỆU  : hàng về là nguyên liệu -> Σ(SL nguyên liệu × giá nhập nguyên liệu)
+ *   - dòng ĐẶT GIA CÔNG     : order_qty × giá nhập thành phẩm; CHƯA có giá thành phẩm thì lùi về
+ *                             giá trị nguyên liệu của chính dòng đó (vẫn hơn là bỏ trắng).
+ * $at = null: giá gần nhất (lúc LƯU đơn mới); $at = datetime: giá tại thời điểm đó (tái dựng đơn cũ).
+ */
+/**
+ * Snapshot cũ có bị sót dòng không? = có nhóm ĐẶT GIA CÔNG mà thành phẩm không tra ra giá nhập
+ * tại thời điểm tạo đơn (công thức cũ cộng 0 cho nhóm đó nên tổng bị thiếu).
+ */
+function oc_snapshot_missing_line($groups, $row)
+{
+    $type = (string) ($row['order_type'] ?? 'process');
+    foreach ((array) $groups as $g) {
+        $kind = (string) ($g['kind'] ?? '') !== '' ? (string) $g['kind'] : $type;
+        if ($kind !== 'process') continue;                 // dòng nguyên liệu vốn không tính theo giá TP
+        $pid = (int) ($g['product_id'] ?? 0);
+        if ($pid <= 0 || (float) ($g['order_qty'] ?? 0) <= 0) continue;
+        if (oc_price_including_tax_at($pid, (string) ($row['created_at'] ?? '')) <= 0) return true;
+    }
+    return false;
+}
+
+function oc_expected_import_value($groups, $at = null, $order_type = 'process')
 {
     $total = 0.0;
     foreach ($groups as $g) {
-        $pid = (int) ($g['product_id'] ?? 0);
-        $qty = (float) ($g['order_qty'] ?? 0);
+        $kind = (string) ($g['kind'] ?? $order_type);
+        $qty  = (float) ($g['order_qty'] ?? 0);
+        $pid  = (int) ($g['product_id'] ?? 0);
+
+        if ($kind === 'material') {
+            $total += oc_group_material_value($g);
+            continue;
+        }
         if ($pid <= 0 || $qty <= 0) continue;
-        $total += $qty * ($at !== null ? oc_price_including_tax_at($pid, $at) : oc_latest_price_including_tax($pid));
+        $price = ($at !== null) ? oc_price_including_tax_at($pid, $at) : oc_latest_price_including_tax($pid);
+        $total += $price > 0 ? ($qty * $price) : oc_group_material_value($g);
     }
     return $total;
 }
@@ -487,7 +556,16 @@ function oc_decode_order_row($r)
     // Đơn cũ chưa có snapshot -> tái dựng theo giá TẠI thời điểm tạo đơn, không dùng giá mới nhất.
     $expected = ($r['expected_value'] ?? null) !== null
         ? (float) $r['expected_value']
-        : oc_expected_import_value($groups, $r['created_at']);
+        : oc_expected_import_value($groups, $r['created_at'], (string) $r['order_type']);
+    // Snapshot ghi bằng công thức CŨ có thể đã BỎ SÓT dòng (sản phẩm chưa có giá nhập -> tính 0);
+    // phát hiện thì tính lại đúng và ghi đè luôn cho lần sau khỏi lệch (xem oc_snapshot_missing_line).
+    if (($r['expected_value'] ?? null) !== null && oc_snapshot_missing_line($groups, $r)) {
+        $fixed = oc_expected_import_value($groups, $r['created_at'], (string) $r['order_type']);
+        if ($fixed > $expected) {
+            db_update('oc_orders', ['expected_value' => round($fixed, 2)], 'id = ' . (int) $r['id']);
+            $expected = $fixed;
+        }
+    }
     return [
         'id'            => (int) $r['id'],
         'supplier_id'   => $r['supplier_id'] !== null ? (int) $r['supplier_id'] : 0,
@@ -596,6 +674,8 @@ function oc_match_order_for_receipt($supplier_id, array $product_lines)
 
         $expected = ($r['expected_value'] ?? null) !== null
             ? (float) $r['expected_value']
+            // Truy vấn này không lấy cột order_type -> để oc_expected_import_value tự suy theo `kind`
+            // của từng dòng (mặc định 'process' như hành vi cũ).
             : oc_expected_import_value($groups, $r['created_at']);
         $actual = 0.0;
         foreach ($product_lines as $l) {

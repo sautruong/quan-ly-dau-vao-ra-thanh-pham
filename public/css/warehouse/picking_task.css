@@ -920,3 +920,15 @@
 
 /* Nháy sáng số chung kiện vừa đặt — cùng kiểu với ô số lượng. */
 .wpk-grp-badge.is-flash { animation: wpkFlashQty 1s ease; }
+
+/* ---- Chế độ CHỈ XEM cho chi nhánh đặt hàng (vào từ chuông "đơn đã gửi xuống kho") ---- */
+.wpk-guest-note {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px; padding: 10px 14px;
+    background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6;
+    border-radius: 10px; color: #1e40af; font-size: 13.5px;
+}
+.wpk-guest-note i { font-size: 15px; }
+/* Khoá hẳn tương tác trên danh sách hàng (server cũng chặn, đây chỉ để khỏi bấm nhầm). */
+.wpk-page.is-guest .wpk-list { pointer-events: none; }
+.wpk-page.is-guest .wpk-row { cursor: default; }

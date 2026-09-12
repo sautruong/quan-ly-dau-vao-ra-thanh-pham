@@ -9,7 +9,7 @@ $days = isset($days) && is_array($days) ? $days : [];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KHSX dự kiến</title>
+    <title>Kế hoạch sản xuất nhà máy</title>
     <link rel="icon" href="public/images/logo/logo_vat_png.png" type="image/png">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/reset.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/all.css'); ?>">
@@ -21,7 +21,7 @@ $days = isset($days) && is_array($days) ? $days : [];
         /* App shell: full width (order-factory.css đặt .inventory-factory = 50%) */
         #wrapper { display: block; background: #fff; }
         .inventory-factory { width: 100% !important; }
-        .pf-wrap { padding: 14px 18px; }
+        /* .pf-wrap { padding: 14px 18px; } */
         .pf-board .ltp-card { cursor: default; }
         /* Mobile: card ngày bị rút gọn còn tiêu đề (long_term_production_plan.css @media 768px)
            -> bấm để mở modal xem danh sách, nên phải trả lại con trỏ "bấm được". */
@@ -50,7 +50,7 @@ $days = isset($days) && is_array($days) ? $days : [];
             <?php /* Đã gỡ thanh tab — 3 view đã thành 3 mục menu cấp 2 ở sidebar. */ ?>
             <div class="pf-wrap">
                 <div class="ltp-page-head">
-                    <h1>KẾ HOẠCH SẢN XUẤT DỰ KIẾN</h1>
+                    <!-- <h1>KẾ HOẠCH SẢN XUẤT DỰ KIẾN</h1> -->
                     <p class="ltp-hint">Lịch sản xuất dự kiến của nhà máy thời gian tới</p>
                 </div>
 

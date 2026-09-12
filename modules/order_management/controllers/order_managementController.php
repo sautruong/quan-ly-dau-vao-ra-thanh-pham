@@ -319,10 +319,20 @@ function send_picking_slipAction()
     $meta  = om_get_order_meta($order_id);
     $label = (string) ($meta['customer_name'] ?? '');
     $link  = '?mod=warehouse&controllers=warehouse&action=picking_task&slip_id=' . (int) $r['id'];
+    $seen  = [];
     foreach (om_picking_receiver_ids() as $uid) {
-        if ((int) $uid === $actor) continue;
+        if ((int) $uid === $actor || isset($seen[(int) $uid])) continue;
+        $seen[(int) $uid] = true;
         notify_create((int) $uid, 'Có phiếu soạn mới',
             'Đơn "' . $label . '" đã được gửi xuống kho để soạn hàng.', $link, 'picking_slip', $actor);
+    }
+    // Báo luôn cho CHI NHÁNH đã đặt đơn: bấm vào là mở trang Soạn hàng ở chế độ chỉ xem, theo dõi
+    // realtime kho soạn tới đâu (quyền xem mở trong permission_guard, mọi endpoint ghi vẫn chặn).
+    $owner = (int) ($meta['user_id'] ?? 0);
+    if ($owner > 0 && $owner !== $actor && !isset($seen[$owner])) {
+        notify_create($owner, 'Đơn của bạn đã xuống kho soạn hàng',
+            'Đơn hàng "' . $label . '" đã được gửi xuống kho để soạn — bấm để xem tiến độ soạn.',
+            $link, 'picking_slip', $actor);
     }
     echo json_encode(['ok' => true, 'id' => (int) $r['id']], JSON_UNESCAPED_UNICODE);
 }

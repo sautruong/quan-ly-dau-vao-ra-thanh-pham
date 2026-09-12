@@ -32,9 +32,13 @@ defined('APPPATH') OR exit('Không được quyền truy cập phần này');
                     <button type="button" class="calfull-view-btn is-active" data-view="month">Theo tháng</button>
                     <button type="button" class="calfull-view-btn" data-view="year">Theo năm</button>
                 </div>
-                <button type="button" class="calfull-today-btn" id="calfull-today-btn">
-                    <i class="fa-solid fa-calendar-day"></i> Hôm nay
-                </button>
+                <div class="calfull-head-right">
+                    <button type="button" class="calfull-today-btn" id="calfull-today-btn">
+                        <i class="fa-solid fa-calendar-day"></i> Hôm nay
+                    </button>
+                    <!-- Đóng lịch: quay lại đúng trang vừa xem trước đó (không có lịch sử thì về Trang chủ). -->
+                    <button type="button" class="app-ov-close" id="calfull-close" title="Đóng lịch, về trang trước">&times;</button>
+                </div>
             </div>
 
             <div id="calfull-month-view">
@@ -77,6 +81,25 @@ defined('APPPATH') OR exit('Không được quyền truy cập phần này');
             </div>
             <div class="app-modal-body">
                 <div class="calfull-events calfull-day-modal-events" id="calfull-day-modal-events"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal hỏi cách xóa khi sự kiện thuộc một chuỗi lặp: chỉ lượt này hay cả chuỗi dài ngày. -->
+    <div class="app-modal" id="calfull-del-modal" aria-hidden="true">
+        <div class="app-modal-overlay" data-calfull-del-close></div>
+        <div class="app-modal-box calfull-del-box">
+            <div class="app-modal-head">
+                <h3>Xóa sự kiện lặp lại</h3>
+                <button type="button" class="app-modal-close" data-calfull-del-close aria-label="Đóng">&times;</button>
+            </div>
+            <div class="app-modal-body">
+                <p class="calfull-del-text" id="calfull-del-text"></p>
+                <div class="calfull-del-actions">
+                    <button type="button" class="app-btn app-btn-primary app-btn-block" id="calfull-del-one">Chỉ xóa ngày này</button>
+                    <button type="button" class="app-btn app-btn-block calfull-del-all" id="calfull-del-all">Xóa toàn bộ chuỗi lặp</button>
+                    <button type="button" class="app-btn-link" data-calfull-del-close>Hủy</button>
+                </div>
             </div>
         </div>
     </div>

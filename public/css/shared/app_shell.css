@@ -173,6 +173,18 @@ body.app-sidebar-collapsed .app-sidebar { width: var(--app-sb-w-collapsed); }
     font-family: inherit;
 }
 .app-sb-search input::placeholder { color: var(--app-sb-text-faint); }
+/* Nút × xóa từ khóa: chỉ hiện khi rê chuột vào khung tìm (hoặc đang gõ), khỏi chiếm chỗ lúc rảnh. */
+.app-sb-search-clear {
+    flex-shrink: 0;
+    width: 18px; height: 18px; padding: 0;
+    border: 0; border-radius: 50%;
+    background: var(--app-sb-hover-bg); color: var(--app-sb-text-icon);
+    font-size: 14px; line-height: 1; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+}
+.app-sb-search:hover .app-sb-search-clear,
+.app-sb-search:focus-within .app-sb-search-clear { display: inline-flex; }
+.app-sb-search-clear:hover { background: #fee2e2; color: #dc2626; }
 body.app-sidebar-collapsed .app-sb-search { display: none; }
 
 .app-sb-nav {
@@ -1756,4 +1768,131 @@ body.app-view-dark .app-user-btn:hover {
 @media (prefers-reduced-motion: reduce) {
     .app-busy-spin { animation: none; border-top-color: var(--app-green, #16a34a); }
     .app-busy-box { animation: none; }
+}
+
+/* =====================================================================
+   VIEW CHỒNG LÊN (.app-ov-view) — màn làm việc riêng mở đè lên vùng nội dung
+   ---------------------------------------------------------------------
+   Thay cho modal hộp nhỏ ở những chỗ bảng dữ liệu dài: "Xem đơn hàng"
+   (order_management/branch_orders) và "Đơn hiện tại" (sell_factory/order_factory).
+   Chừa sidebar bên trái để vẫn là một view trong app; nút × trên thanh đầu đưa về
+   view chính.
+
+   Bố cục 3 tầng: .app-ov-head cố định / .app-ov-body (chỉ .app-ov-scroll cuộn) /
+   .app-ov-foot cố định.
+
+   - Đặt thẻ là CON TRỰC TIẾP của body (ngoài #wrapper) giống các modal: dark mode tự
+     áp filter đảo màu như modal (xem body.app-view-dark > *:not(#wrapper) ở trên).
+   - Modal mở TỪ TRONG view phải có z-index > 1200.
+   - body.app-ov-open khoá cuộn trang phía sau (sell_factory mở lại cuộn body).
+   ===================================================================== */
+.app-ov-view {
+    --app-ov-max: 1180px;
+    /* Lề 2 bên: tối thiểu 20px, màn rộng thì dồn nội dung vào giữa khung --app-ov-max.
+       Head/body/foot cùng dùng biến này nên 3 tầng luôn thẳng mép với nhau. */
+    --app-ov-pad: max(20px, calc((100% - var(--app-ov-max)) / 2));
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    background: var(--app-gray-100);
+    transition: left 0.22s ease;
+}
+body.app-has-sidebar .app-ov-view { left: var(--app-sb-w); }
+body.app-has-sidebar.app-sidebar-collapsed .app-ov-view { left: var(--app-sb-w-collapsed); }
+body.app-ov-open { overflow: hidden !important; }
+
+.app-ov-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 62px;
+    padding: 10px;
+    background: #fff;
+    border-bottom: 1px solid var(--app-gray-200);
+}
+.app-ov-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--app-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.app-ov-title i { color: var(--app-green); }
+.app-ov-close {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--app-gray-100);
+    color: var(--app-gray-700);
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.app-ov-close:hover { background: #fee2e2; color: #dc2626; }
+
+.app-ov-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    overflow: hidden;
+}
+.app-ov-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: #fff;
+    border: 1px solid var(--app-gray-200);
+    border-radius: 12px;
+}
+
+/* Chừa chỗ cho bong bóng chat (.chat-launcher, fixed góc phải dưới, z-index rất cao) — nếu không,
+   nút cuối cùng của chân view nằm ngay dưới bong bóng và bấm không trúng. */
+.app-ov-foot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 20px 10px 450px;
+    /* padding: 12px max(var(--app-ov-pad), 84px) calc(12px + env(safe-area-inset-bottom, 0px)) var(--app-ov-pad); */
+    background: #fff;
+    border-top: 1px solid var(--app-gray-200);
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 900px) {
+    body.app-has-sidebar .app-ov-view,
+    body.app-has-sidebar.app-sidebar-collapsed .app-ov-view { left: 0; }
+}
+@media (max-width: 768px) {
+    .app-ov-view { --app-ov-pad: 12px; }
+    .app-ov-head { min-height: 54px; padding-top: calc(env(safe-area-inset-top, 0px) + 8px); }
+    .app-ov-title { font-size: 16px; gap: 8px; }
+    .app-ov-close { width: 36px; height: 36px; }
+    .app-ov-body { padding-top: 12px; padding-bottom: 12px; gap: 10px; }
 }

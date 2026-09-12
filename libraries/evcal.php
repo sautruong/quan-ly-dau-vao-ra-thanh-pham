@@ -84,6 +84,11 @@ if (!function_exists('evcal_ensure_tables')) {
         $r['id']         = (int) $r['id'];
         $r['has_recur']  = !empty($r['recur_rule']);
         $r['done']       = !empty($r['is_done']);
+        /* recur_id = id của sự kiện GỐC giữ cấu hình lặp: chính nó (dòng gốc) hoặc recur_parent_id
+           (dòng tự sinh). 0 = sự kiện lẻ. Nhờ vậy mọi lượt lặp — kể cả các dòng ở tháng sau —
+           đều sửa/xóa được cả chuỗi, không phải đi tìm lại ngày của sự kiện gốc. */
+        $parent = (int) ($r['recur_parent_id'] ?? 0);
+        $r['recur_id'] = $r['has_recur'] ? $r['id'] : ($parent > 0 ? $parent : 0);
         unset($r['user_id'], $r['notified'], $r['recur_rule'], $r['recur_parent_id'], $r['is_done']);
         return $r;
     }
@@ -217,15 +222,60 @@ if (!function_exists('evcal_ensure_tables')) {
         return true;
     }
 
-    /** Xóa 1 sự kiện (chỉ chủ). */
+    /**
+     * Xóa ĐÚNG 1 lượt (chỉ chủ) — các lượt còn lại của chuỗi lặp giữ nguyên.
+     *
+     * Nếu lượt bị xóa đang là GỐC (giữ recur_rule) thì trao lại vai trò gốc cho lượt kế tiếp:
+     * chép recur_rule sang lượt đó và trỏ các lượt còn lại về nó. Không làm vậy thì phần chuỗi
+     * còn lại thành mồ côi — mất luôn đường sửa/xóa cả chuỗi về sau.
+     */
     function evcal_delete($user_id, $id)
     {
         $uid = (int) $user_id;
         $eid = (int) $id;
         if ($uid <= 0 || $eid <= 0) return false;
         evcal_ensure_tables();
+        $row = db_fetch_row("SELECT id, recur_rule FROM calendar_events WHERE id = $eid AND user_id = $uid");
+        if (!$row) return false;
+
+        if (!empty($row['recur_rule'])) {
+            $next = db_fetch_row("SELECT id FROM calendar_events
+                                  WHERE recur_parent_id = $eid AND user_id = $uid
+                                  ORDER BY event_date ASC, id ASC LIMIT 1");
+            if ($next) {
+                $nid = (int) $next['id'];
+                db_update('calendar_events', [
+                    'recur_rule'      => $row['recur_rule'],
+                    'recur_parent_id' => null,
+                ], "id = $nid AND user_id = $uid");
+                db_update('calendar_events', ['recur_parent_id' => $nid],
+                    "recur_parent_id = $eid AND user_id = $uid AND id <> $nid");
+            }
+        }
         db_delete('calendar_events', "id = $eid AND user_id = $uid");
         return true;
+    }
+
+    /**
+     * Xóa CẢ CHUỖI lặp của 1 sự kiện (bấm × trên bất kỳ lượt nào rồi chọn "Xóa toàn bộ chuỗi"):
+     * sự kiện gốc + mọi dòng tự sinh. $id có thể là dòng gốc HOẶC một dòng tự sinh.
+     * Trả số dòng đã xóa (0 nếu không phải chủ / không tìm thấy).
+     */
+    function evcal_delete_series($user_id, $id)
+    {
+        $uid = (int) $user_id;
+        $eid = (int) $id;
+        if ($uid <= 0 || $eid <= 0) return 0;
+        evcal_ensure_tables();
+        $row = db_fetch_row("SELECT id, recur_parent_id FROM calendar_events WHERE id = $eid AND user_id = $uid");
+        if (!$row) return 0;
+        $root = (int) ($row['recur_parent_id'] ?? 0) > 0 ? (int) $row['recur_parent_id'] : $eid;
+
+        $n = (int) db_num_rows("SELECT id FROM calendar_events
+                                WHERE user_id = $uid AND (id = $root OR recur_parent_id = $root)");
+        db_delete('calendar_events', "recur_parent_id = $root AND user_id = $uid");
+        db_delete('calendar_events', "id = $root AND user_id = $uid");
+        return $n;
     }
 
     /**

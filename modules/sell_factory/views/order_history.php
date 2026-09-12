@@ -1,7 +1,11 @@
 <?php
 
 /** @var array $history */
-$history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page' => 1];
+/** @var array $product_groups */
+$history        = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page' => 1, 'per_page' => 20, 'total' => 0];
+$product_groups = isset($product_groups) && is_array($product_groups) ? $product_groups : [];
+$per_page       = (int) ($history['per_page'] ?? 20);
+$page           = (int) ($history['page'] ?? 1);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -25,12 +29,30 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
         <?php get_header('app'); ?>
 
         <div class="of-page">
-            <?php /* Đã gỡ thanh tab — 3 view đã thành 3 mục menu cấp 2 ở sidebar. */ ?>
             <div class="of-history-wrap">
-                <h2 class="of-block-title">Lịch sử đặt hàng của tôi</h2>
+                <div class="ofh-head">
+                    <h2 class="of-block-title">Lịch sử đặt hàng của tôi</h2>
+                    <div class="ofh-head-tools">
+                        <label class="ofh-perpage">Số dòng
+                            <select id="ofh-per-page">
+                                <?php foreach ([10, 20, 50, 100] as $opt): ?>
+                                    <option value="<?= $opt ?>" <?= $per_page === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <span class="ofh-count">Tổng <b><?= (int) ($history['total'] ?? 0) ?></b> đơn</span>
+                    </div>
+                </div>
+
                 <table class="of-history-table">
                     <thead>
                         <tr>
+                            <th class="ofh-tick-col">
+                                <label class="app-round-check" title="Chọn tất cả dòng trên trang này">
+                                    <input type="checkbox" id="ofh-check-all">
+                                    <span class="app-round-check-mark"><i class="fa-solid fa-check"></i></span>
+                                </label>
+                            </th>
                             <th>Ngày</th>
                             <th>Chi nhánh</th>
                             <th>Diễn giải</th>
@@ -46,10 +68,20 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
                             $skipped = !empty($h['factory_hidden']) && !$picked; // nhà máy đã bỏ qua
                             $editable = !$picked && !$locked && empty($h['factory_hidden']);
                             $can_redo = $picked || !empty($h['factory_hidden']);   // đã bốc / nhà máy đã xử lý
+                            $cust_short = trim((string) ($h['customer_short'] ?? ''));
+                            $cust_full  = (string) ($h['customer_name'] ?? '');
                         ?>
                             <tr data-id="<?= (int) $h['id'] ?>">
-                                <td><?= date('d/m/Y H:i', strtotime($h['created_at'])) ?></td>
-                                <td><?= htmlspecialchars((string) ($h['customer_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                <td class="ofh-tick-col">
+                                    <label class="app-round-check">
+                                        <input type="checkbox" class="ofh-tick" value="<?= (int) $h['id'] ?>">
+                                        <span class="app-round-check-mark"><i class="fa-solid fa-check"></i></span>
+                                    </label>
+                                </td>
+                                <td class="ofh-date"><?= date('H:i d/m/Y', strtotime($h['created_at'])) ?></td>
+                                <td title="<?= htmlspecialchars($cust_full, ENT_QUOTES, 'UTF-8') ?>">
+                                    <?= htmlspecialchars($cust_short !== '' ? $cust_short : $cust_full, ENT_QUOTES, 'UTF-8') ?>
+                                </td>
                                 <td><?= htmlspecialchars((string) $h['description'], ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><?= htmlspecialchars((string) ($h['note'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td>
@@ -74,16 +106,16 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
                             </tr>
                         <?php endforeach; ?>
                         <?php if (empty($history['rows'])): ?>
-                            <tr><td colspan="6" style="text-align:center;color:gray;padding:24px;">Bạn chưa có đơn đặt hàng nào.</td></tr>
+                            <tr><td colspan="7" style="text-align:center;color:gray;padding:24px;">Bạn chưa có đơn đặt hàng nào.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
 
-                <div class="of-history-pagination">
-                    <?php if ($history['total_pages'] > 1): ?>
+                <div class="of-history-pagination" id="ofh-pager">
+                    <?php if (($history['total_pages'] ?? 0) > 1): ?>
                         <?php for ($i = 1; $i <= $history['total_pages']; $i++): ?>
-                            <a href="?mod=sell_factory&controllers=sell_factory&action=order_history&page=<?= $i ?>"
-                               class="page-link <?= $i === $history['page'] ? 'active' : '' ?>"><?= $i ?></a>
+                            <a href="?mod=sell_factory&controllers=sell_factory&action=order_history&page=<?= $i ?>&per=<?= $per_page ?>"
+                               class="page-link <?= $i === $page ? 'active' : '' ?>"><?= $i ?></a>
                         <?php endfor; ?>
                     <?php endif; ?>
                 </div>
@@ -91,176 +123,128 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
         </div>
     </div>
 
-    <!-- ====== MODAL: CHỈNH SỬA ĐƠN HÀNG ====== -->
-    <div class="modal-mask of-cart-modal" id="modal-edit" style="display:none;">
-        <div class="modal-box of-cart-box">
-            <span class="modal-close" data-close="modal-edit">&times;</span>
-            <div class="of-cart-head"><h3><i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa đơn hàng</h3></div>
-            <div class="of-cart-body">
-                <div class="of-note-field">
-                    <label>Chi nhánh:</label>
-                    <div id="edit-cust" style="font-weight:600;"></div>
-                </div>
-                <div class="wp-search-goods">
-                    <i class="fa-brands fa-sistrix"></i>
-                    <input type="text" id="edit-search-goods" autocomplete="off" placeholder="Thêm sản phẩm...">
-                    <ul class="dropdown-suggest" id="edit-goods-suggest"></ul>
-                </div>
-                <div class="wp-list-order">
-                    <table id="edit-order-table">
-                        <thead>
-                            <tr><td>Tên sản phẩm</td><td>Đơn vị</td><td>Số lượng</td><td>Khối lượng (kg)</td><td></td></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    <div class="wp-total">
-                        <div class="weight-total"><div class="label"><p>Tổng khối lượng:</p></div><div class="result"><span id="edit-weight-total">0 kg</span></div></div>
-                        <div class="value-total"><div class="label"><p>GTHH:</p></div><div class="result"><span id="edit-value-total">0 đ</span></div></div>
-                    </div>
-                </div>
-                <div class="of-note-field">
-                    <label for="edit-note">Ghi chú đơn hàng:</label>
-                    <textarea id="edit-note" rows="2"></textarea>
-                </div>
-                <div class="wp-button">
-                    <button class="share-factory" id="btn-save-edit">Lưu thay đổi</button>
+    <!-- Thanh xóa hàng loạt: chỉ hiện khi có dòng được tick. -->
+    <div class="ofh-bulkbar" id="ofh-bulkbar" hidden>
+        <span class="ofh-bulk-count"><b id="ofh-bulk-n">0</b> đơn đang chọn</span>
+        <button type="button" class="ofh-bulk-clear" id="ofh-bulk-clear">Bỏ chọn</button>
+        <button type="button" class="ofh-bulk-del" id="ofh-bulk-del"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+    </div>
+
+    <!-- View chồng lên "Chỉnh sửa đơn hàng" — CÙNG markup/JS với "Đơn hiện tại" bên order_factory. -->
+    <?php $panel_mode = 'edit'; include __DIR__ . '/_order_panel.php'; ?>
+
+    <!-- 3 modal phụ trợ mà panel dùng tới (xem ảnh SP / Share Zalo / Gửi qua chat) -->
+    <div class="modal-mask" id="modal-info" style="display:none;">
+        <div class="modal-box">
+            <span class="modal-close" data-close="modal-info">&times;</span>
+            <div class="modal-info-body">
+                <div class="modal-img"><img id="m-info-image" src="" alt=""></div>
+                <div class="modal-info-detail">
+                    <h3 id="m-info-name"></h3>
+                    <p><strong>Đơn vị:</strong> <span id="m-info-unit"></span></p>
+                    <p><strong>Tồn kho:</strong> <span id="m-info-qty"></span></p>
+                    <p><strong>Quy cách trong:</strong> <span id="m-info-inner"></span></p>
+                    <p><strong>Quy cách ngoài:</strong> <span id="m-info-outer"></span></p>
+                    <p><strong>Giá hệ thống:</strong> <span id="m-info-price"></span></p>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="modal-mask" id="modal-zalo" style="display:none;">
+        <div class="modal-box">
+            <span class="modal-close" data-close="modal-zalo">&times;</span>
+            <div id="zalo-capture" class="zalo-capture">
+                <div class="zalo-customer"><strong>Tên khách hàng:</strong> <span id="zalo-customer-name"></span></div>
+                <div class="zalo-title">ĐẶT HÀNG NHÀ MÁY</div>
+                <table class="zalo-table">
+                    <thead>
+                        <tr><th>Tên sản phẩm</th><th>Đơn vị</th><th>Số lượng</th><th>Khối lượng (kg)</th></tr>
+                    </thead>
+                    <tbody id="zalo-body"></tbody>
+                </table>
+                <div class="zalo-weight-total">Tổng khối lượng: <span id="zalo-weight-total-value">0</span> kg</div>
+            </div>
+            <div class="modal-zalo-footer">
+                <button class="btn-capture-zalo" id="btn-capture-zalo">Chụp hóa đơn</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-mask of-chat-modal" id="modal-share-chat" style="display:none;">
+        <div class="modal-box of-chat-box">
+            <span class="modal-close" data-close="modal-share-chat">&times;</span>
+            <div class="of-chat-head">
+                <h3><i class="fa-regular fa-comments"></i> Gửi đơn qua chat</h3>
+                <p class="of-chat-hint">Chọn người nhận — ảnh hoá đơn sẽ được gửi vào hộp thoại chat với họ.</p>
+            </div>
+            <input type="text" class="of-chat-filter" id="of-chat-filter" autocomplete="off" placeholder="Tìm tên người nhận...">
+            <div class="of-chat-list" id="of-chat-list"><div class="of-chat-loading">Đang tải danh bạ…</div></div>
+            <input type="text" class="of-chat-note" id="of-chat-note" autocomplete="off" placeholder="Lời nhắn (tuỳ chọn)">
+            <div class="of-chat-foot">
+                <span class="of-chat-status" id="of-chat-status"></span>
+                <button type="button" class="of-chat-send" id="of-chat-send">Gửi</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
     (function ($) {
         var BASE = '?mod=sell_factory&controllers=sell_factory&action=';
-        var editId = 0;
-        function money(n){ return (Number(n)||0).toLocaleString('vi-VN',{maximumFractionDigits:0}); }
-        function wt(n){ return (Number(n)||0).toLocaleString('vi-VN',{maximumFractionDigits:2}); }
-        function openM(id){ $('#'+id).fadeIn(120); }
-        function closeM(id){ $('#'+id).fadeOut(120); }
-        $(document).on('click', '.modal-close', function(){ closeM($(this).data('close')); });
-        $(document).on('click', '.modal-mask', function(e){ if(e.target===this) $(this).fadeOut(120); });
 
-        // Xóa đơn.
+        /* ---------- Xóa 1 đơn ---------- */
         $(document).on('click', '.ofh-del', function (e) {
             e.preventDefault();
             var id = $(this).data('id');
             if (!confirm('Xóa đơn này khỏi lịch sử? Thao tác không thể hoàn tác.')) return;
             var $row = $(this).closest('tr');
             $.post(BASE + 'delete_history', { id: id }, function (res) {
-                if (res && res.ok) $row.remove();
+                if (res && res.ok) { $row.remove(); syncBulkBar(); }
                 else alert((res && res.msg) || 'Không xóa được.');
             }, 'json').fail(function () { alert('Lỗi mạng/Server.'); });
         });
-        // Đặt lại.
+
+        /* ---------- Đặt lại ---------- */
         $(document).on('click', '.ofh-redo', function (e) {
             e.preventDefault();
-            var id = $(this).data('id');
-            try { sessionStorage.setItem('sf_reorder_id', id); } catch (err) {}
+            try { sessionStorage.setItem('sf_reorder_id', $(this).data('id')); } catch (err) {}
             window.location.href = $(this).attr('href');
         });
 
-        /* ---------- Chỉnh sửa đơn ---------- */
-        $(document).on('click', '.ofh-edit', function (e) {
-            e.preventDefault();
-            var id = $(this).data('id');
-            $.getJSON(BASE + 'history_detail', { id: id }, function (res) {
-                if (!res.ok || !res.data) return;
-                var d = res.data;
-                if (Number(d.picked) === 1 || Number(d.locked) === 1) { alert('Đơn đã bị khóa hoặc đã bốc, không thể sửa.'); return; }
-                editId = d.id;
-                $('#edit-cust').text(d.customer_name || '');
-                $('#edit-note').val(d.note || '');
-                $('#edit-order-table tbody').empty();
-                (d.order_items || []).forEach(function (it) {
-                    appendRow(it, !!it.material_id, it.qt_order, it.line_weight);
-                });
-                recalc();
-                openM('modal-edit');
-            });
-        });
-
-        function appendRow(d, isMat, qtyVal, lineW) {
-            var idAttr = isMat ? 'data-material-id="' + (d.material_id||d.product_id) + '"' : 'data-product-id="' + d.product_id + '"';
-            var suffix = isMat ? ' <span class="muted">(NVL)</span>' : '';
-            var tr = '<tr ' + idAttr + ' data-weight-kg="' + d.weight_kg + '" data-system-price="' + d.system_price + '">'
-                   + '<td class="text-left">' + d.product_name + suffix + '</td>'
-                   + '<td>' + (d.unit || '') + '</td>'
-                   + '<td><input type="number" class="qt-input" min="0" step="1" value="' + (qtyVal!=null?qtyVal:'') + '"></td>'
-                   + '<td class="td-weight">' + (lineW!=null?wt(lineW):'0') + '</td>'
-                   + '<td class="text-center"><span class="btn-remove-row" title="Xóa">&times;</span></td>'
-                   + '</tr>';
-            $('#edit-order-table tbody').append(tr);
+        /* ---------- Tick chọn nhiều + xóa hàng loạt ---------- */
+        function syncBulkBar() {
+            var n = $('#ofh-body .ofh-tick:checked').length;
+            $('#ofh-bulk-n').text(n);
+            $('#ofh-bulkbar').prop('hidden', n === 0);
+            var total = $('#ofh-body .ofh-tick').length;
+            $('#ofh-check-all').prop('checked', total > 0 && n === total);
         }
-        $(document).on('input', '#edit-order-table .qt-input', function () {
-            var $tr = $(this).closest('tr');
-            var qty = parseFloat($(this).val())||0, wkg = parseFloat($tr.data('weight-kg'))||0;
-            $tr.find('.td-weight').text(wt(qty*wkg)); recalc();
+        $(document).on('change', '#ofh-check-all', function () {
+            $('#ofh-body .ofh-tick').prop('checked', $(this).is(':checked'));
+            syncBulkBar();
         });
-        $(document).on('click', '#edit-order-table .btn-remove-row', function(){ $(this).closest('tr').remove(); recalc(); });
-        function recalc() {
-            var w=0,v=0;
-            $('#edit-order-table tbody tr').each(function(){
-                var $t=$(this), q=parseFloat($t.find('.qt-input').val())||0;
-                w += q*(parseFloat($t.data('weight-kg'))||0);
-                v += q*(parseFloat($t.data('system-price'))||0);
-            });
-            $('#edit-weight-total').text(wt(w)+' kg'); $('#edit-value-total').text(money(v)+' đ');
-        }
+        $(document).on('change', '.ofh-tick', syncBulkBar);
+        $(document).on('click', '#ofh-bulk-clear', function () {
+            $('#ofh-body .ofh-tick, #ofh-check-all').prop('checked', false);
+            syncBulkBar();
+        });
+        $(document).on('click', '#ofh-bulk-del', function () {
+            var ids = $('#ofh-body .ofh-tick:checked').map(function () { return this.value; }).get();
+            if (!ids.length) return;
+            if (!confirm('Xóa ' + ids.length + ' đơn đã chọn khỏi lịch sử? Thao tác không thể hoàn tác.')) return;
+            var $btn = $(this).prop('disabled', true);
+            $.post(BASE + 'delete_history_bulk', { ids: ids.join(',') }, function (res) {
+                $btn.prop('disabled', false);
+                if (!res || !res.ok) { alert((res && res.msg) || 'Không xóa được.'); return; }
+                $.each(ids, function (i, id) { $('#ofh-body tr[data-id="' + id + '"]').remove(); });
+                syncBulkBar();
+            }, 'json').fail(function () { $btn.prop('disabled', false); alert('Lỗi mạng/Server.'); });
+        });
 
-        // Thêm SP vào đơn đang sửa.
-        var t=null;
-        $(document).on('input', '#edit-search-goods', function () {
-            clearTimeout(t);
-            var kw = String($(this).val()||'').trim();
-            if(!kw){ $('#edit-goods-suggest').empty().hide(); return; }
-            t = setTimeout(function(){
-                $.getJSON(BASE+'search_product',{keyword:kw},function(res){
-                    if(!res.ok) return;
-                    var html='';
-                    $.each(res.data,function(i,p){
-                        var tag = p.type==='material'?' · NVL':'';
-                        html += '<li data-type="'+p.type+'" data-id="'+p.ref_id+'">'+p.name+' <span class="muted">('+(p.unit||'')+tag+')</span></li>';
-                    });
-                    $('#edit-goods-suggest').html(html).toggle(html!=='');
-                });
-            },250);
-        });
-        $(document).on('click', '#edit-goods-suggest li', function () {
-            var type=$(this).data('type'), id=$(this).data('id');
-            $('#edit-search-goods').val(''); $('#edit-goods-suggest').empty().hide();
-            var action = type==='material'?'material_order_info':'product_order_info';
-            var key = type==='material'?'material_id':'product_id';
-            var q={}; q[key]=id;
-            if ($('#edit-order-table tbody tr['+(type==='material'?'data-material-id':'data-product-id')+'="'+id+'"]').length) return;
-            $.getJSON(BASE+action, q, function(res){
-                if(!res.ok||!res.data) return;
-                appendRow(res.data, type==='material'); recalc();
-            });
-        });
-        $(document).on('click', function(e){ if(!$(e.target).closest('.wp-search-goods').length) $('#edit-goods-suggest').hide(); });
-
-        // Lưu thay đổi.
-        $(document).on('click', '#btn-save-edit', function () {
-            var items=[], w=0, v=0;
-            $('#edit-order-table tbody tr').each(function(){
-                var $t=$(this), q=parseFloat($t.find('.qt-input').val())||0;
-                if(q<=0) return;
-                var wkg=parseFloat($t.data('weight-kg'))||0, price=parseFloat($t.data('system-price'))||0;
-                var mid=$t.data('material-id'), pid=$t.data('product-id');
-                items.push({ product_id: pid!=null?pid:null, material_id: mid!=null?mid:null,
-                    type: mid!=null?'material':'product', product_name: $t.find('td').eq(0).text(),
-                    unit: $t.find('td').eq(1).text(), qt_order:q, weight_kg:wkg, system_price:price,
-                    line_weight:q*wkg, line_value:q*price });
-                w+=q*wkg; v+=q*price;
-            });
-            if(!items.length){ alert('Đơn phải có ít nhất 1 sản phẩm.'); return; }
-            var $btn=$(this).prop('disabled',true);
-            $.ajax({ url:BASE+'update_order', method:'POST', contentType:'application/json',
-                data: JSON.stringify({ id:editId, items:items, weight_total:w, value_total:v, note:$('#edit-note').val()||'' }), dataType:'json'
-            }).done(function(res){
-                if(res&&res.ok){ alert('Đã lưu và gửi thông báo cho nhà máy.'); location.reload(); }
-                else { alert((res&&res.msg)||'Không lưu được.'); $btn.prop('disabled',false); }
-            }).fail(function(){ alert('Lỗi mạng/Server.'); $btn.prop('disabled',false); });
+        /* ---------- Số dòng hiển thị ---------- */
+        $(document).on('change', '#ofh-per-page', function () {
+            window.location.href = BASE + 'order_history&page=1&per=' + encodeURIComponent($(this).val());
         });
 
         /* ---------- Realtime: nhà máy khóa/bốc/xác nhận/bỏ qua -> cập nhật ngay ---------- */
@@ -278,8 +262,9 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
                     var id = Number(s.id);
                     var $row = $('#ofh-body tr[data-id="' + id + '"]');
                     if (!$row.length) return;
-                    // Đang mở modal sửa CHÍNH đơn này -> đừng đụng để không phá thao tác.
-                    if (editId && Number(editId) === id && $('#modal-edit').is(':visible')) return;
+                    // Đang mở view sửa CHÍNH đơn này -> đừng đụng để không phá thao tác.
+                    if (window.ofEditingOrderId && Number(window.ofEditingOrderId) === id
+                        && $('#of-order-view').is(':visible')) return;
 
                     var picked = Number(s.picked) === 1, locked = Number(s.locked) === 1,
                         confirmed = Number(s.confirmed) === 1, fhidden = Number(s.factory_hidden) === 1;
@@ -287,26 +272,24 @@ $history = isset($history) ? $history : ['rows' => [], 'total_pages' => 0, 'page
                     var editable = !picked && !locked && !fhidden;
                     var canRedo = picked || fhidden;
 
-                    // Cột Trạng thái (giữ lại dòng "Hẹn bốc" nếu có).
-                    var $st = $row.find('td').eq(4);
+                    var $st = $row.find('td').eq(5);           // +1 cột tick so với bản cũ
                     var $pickup = $st.find('.ofh-pickup');
                     $st.html(statusBadge(picked, locked, confirmed, skipped));
                     if ($pickup.length) $st.append($pickup);
 
-                    // Cột Thao tác.
                     var act = '';
                     if (editable) act += '<a href="#" class="ofh-edit" data-id="' + id + '">Chỉnh sửa</a> ';
                     if (canRedo)  act += '<a href="?mod=sell_factory&controllers=sell_factory&action=order_factory" class="ofh-redo" data-id="' + id + '">Đặt lại</a> ';
                     act += '<a href="#" class="btn-delete-history ofh-del" data-id="' + id + '">Xóa</a>';
-                    $row.find('td').eq(5).html(act);
+                    $row.find('td').eq(6).html(act);
                 });
             });
         }
-        // 20s + tự giãn khi rỗi + dừng khi tab bị ẩn (AppPoll — app_shell.js); trước đây 5s.
         if (window.AppPoll) window.AppPoll.every('ofh-status', refreshStatuses, { interval: 20000, maxInterval: 60000 });
         else setInterval(refreshStatuses, 20000);
     })(jQuery);
     </script>
+    <script src="<?php echo asset_ver('public/js/sell-factory/order-factory.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

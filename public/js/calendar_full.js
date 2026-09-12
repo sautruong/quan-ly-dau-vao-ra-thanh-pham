@@ -62,13 +62,21 @@
         return { cells: cells, from: cells[0].date, to: cells[cells.length - 1].date };
     }
 
+    /* data-recur-id = id sự kiện GỐC giữ cấu hình lặp (chính nó, hoặc sự kiện gốc nếu đây là
+       lượt tự sinh); 0 = sự kiện lẻ. Nhờ đó bấm lặp/xóa ở BẤT KỲ lượt nào cũng thao tác được
+       với cả chuỗi, không phải lần về tháng có sự kiện gốc. */
     function chipHtml(it) {
         var isAllDay = !it.event_time;
         var tm = isAllDay ? '·' : esc(it.event_time);
-        return '<div class="calfull-chip' + (isAllDay ? ' is-allday' : '') + (it.done ? ' is-done' : '') + '" draggable="true" data-id="' + it.id + '" data-date="' + it.event_date + '">'
+        var recurId = it.recur_id || 0;
+        var repeatTitle = it.has_recur ? 'Đã thiết lập lặp lại — bấm để sửa'
+                        : (recurId ? 'Một lượt của sự kiện lặp — bấm để sửa lặp lại' : 'Thiết lập lặp lại');
+        return '<div class="calfull-chip' + (isAllDay ? ' is-allday' : '') + (it.done ? ' is-done' : '')
+            + (recurId ? ' is-recur-part' : '') + '" draggable="true" data-id="' + it.id + '"'
+            + ' data-date="' + it.event_date + '" data-recur-id="' + recurId + '">'
             + '<span class="tm" data-time="' + esc(it.event_time || '') + '" title="Bấm để đổi giờ nhắc">' + tm + '</span>'
             + '<span class="tx" title="Bấm để sửa nội dung">' + esc(it.content) + '</span>'
-            + '<button type="button" class="calfull-chip-repeat' + (it.has_recur ? ' is-recur' : '') + '" title="' + (it.has_recur ? 'Đã thiết lập lặp lại — bấm để sửa' : 'Thiết lập lặp lại') + '"><i class="fa-solid fa-repeat"></i></button>'
+            + '<button type="button" class="calfull-chip-repeat' + (recurId ? ' is-recur' : '') + '" title="' + repeatTitle + '"><i class="fa-solid fa-repeat"></i></button>'
             + '<button type="button" class="calfull-chip-del" title="Xóa sự kiện"><i class="fa-solid fa-xmark"></i></button>'
             + '</div>';
     }
@@ -288,13 +296,9 @@
         var delBtn = e.target.closest('.calfull-chip-del');
         if (delBtn) {
             var chipD = delBtn.closest('.calfull-chip');
-            post('evcalDelete', { id: chipD.getAttribute('data-id') }).then(function (res) {
-                if (res && res.ok) {
-                    load();
-                    // Đồng bộ real-time số badge "hôm nay" trên mini lịch (app-cal) ở sidebar/header.
-                    if (typeof window.appCalSetBadge === 'function') window.appCalSetBadge(res.today);
-                }
-            }).catch(function () {});
+            // Sự kiện thuộc chuỗi lặp -> hỏi xóa 1 ngày hay cả chuỗi; sự kiện lẻ thì xóa thẳng.
+            if (parseInt(chipD.getAttribute('data-recur-id'), 10) > 0) { openDelModal(chipD); return true; }
+            deleteEvent('evcalDelete', chipD.getAttribute('data-id'));
             return true;
         }
         var tm = e.target.closest('.calfull-chip .tm');
@@ -307,6 +311,54 @@
         if (repeatBtn) { openRecurModal(repeatBtn.closest('.calfull-chip')); return true; }
         return false;
     }
+
+    /* ---------- Xóa sự kiện (1 lượt hoặc cả chuỗi lặp) ---------- */
+    function deleteEvent(action, id) {
+        return post(action, { id: id }).then(function (res) {
+            if (!res || !res.ok) return res;
+            load();
+            // Đồng bộ real-time số badge "hôm nay" trên mini lịch (app-cal) ở sidebar/header.
+            if (typeof window.appCalSetBadge === 'function') window.appCalSetBadge(res.today);
+            return res;
+        }).catch(function () {});
+    }
+
+    var delModal   = document.getElementById('calfull-del-modal');
+    var delModalTx = document.getElementById('calfull-del-text');
+    var delTargetId = 0;
+    function openDelModal(chip) {
+        delTargetId = chip.getAttribute('data-id');
+        if (!delModal) {                       // không có modal (view cũ) -> vẫn xóa được 1 lượt
+            deleteEvent('evcalDelete', delTargetId);
+            return;
+        }
+        var txEl = chip.querySelector('.tx');
+        if (delModalTx) {
+            delModalTx.textContent = '"' + (txEl ? txEl.textContent : '') + '" là một lượt của sự kiện lặp lại dài ngày ('
+                + dayTitleLabel(chip.getAttribute('data-date')) + ').';
+        }
+        delModal.classList.add('is-open'); delModal.setAttribute('aria-hidden', 'false');
+    }
+    function closeDelModal() {
+        if (!delModal) return;
+        delModal.classList.remove('is-open'); delModal.setAttribute('aria-hidden', 'true');
+        delTargetId = 0;
+    }
+    document.querySelectorAll('[data-calfull-del-close]').forEach(function (el) { el.addEventListener('click', closeDelModal); });
+
+    var delOneBtn = document.getElementById('calfull-del-one');
+    var delAllBtn = document.getElementById('calfull-del-all');
+    if (delOneBtn) delOneBtn.addEventListener('click', function () {
+        var id = delTargetId;
+        closeDelModal();
+        deleteEvent('evcalDelete', id);
+    });
+    if (delAllBtn) delAllBtn.addEventListener('click', function () {
+        var id = delTargetId;
+        closeDelModal();
+        // Xóa cả chuỗi: sự kiện gốc + mọi lượt đã tự sinh (evcal_delete_series ở libraries/evcal.php).
+        deleteEvent('evcalDeleteSeries', id);
+    });
 
     /* ---------- Modal xem đầy đủ sự kiện trong 1 ngày ---------- */
     var dayModal       = document.getElementById('calfull-day-modal');
@@ -432,7 +484,10 @@
 
     function openRecurModal(chip) {
         if (!recurModal) return;
-        recurEditId = chip.getAttribute('data-id');
+        /* Lượt tự sinh của một chuỗi -> thao tác trên SỰ KIỆN GỐC (data-recur-id), để "Lưu"/"Xóa
+           lặp lại" áp cho cả chuỗi thay vì đẻ ra một chuỗi thứ hai từ lượt đang bấm. */
+        var recurId = parseInt(chip.getAttribute('data-recur-id'), 10) || 0;
+        recurEditId = recurId > 0 ? recurId : chip.getAttribute('data-id');
         var dateStr = chip.getAttribute('data-date');
         var d   = new Date(dateStr + 'T00:00:00');
         var dow = ((d.getDay() + 6) % 7) + 1; // 1=Thứ 2 .. 7=CN
@@ -538,6 +593,18 @@
                 if (typeof window.appCalSetBadge === 'function') window.appCalSetBadge(res.today);
             }
         }).catch(function () { dragId = null; });
+    });
+
+    /* ---------- Nút × : đóng lịch, trở về trang đang xem trước đó ----------
+       Vào thẳng bằng link/refresh thì không có trang trước trong lịch sử -> về Trang chủ.
+       document.referrer chỉ dùng để chắc chắn trang trước là của chính app (không phải
+       trang ngoài / trang đăng nhập). */
+    var closeBtn = document.getElementById('calfull-close');
+    if (closeBtn) closeBtn.addEventListener('click', function () {
+        var sameSite = document.referrer && document.referrer.indexOf(location.origin) === 0;
+        var backToSelf = sameSite && document.referrer.indexOf('calendar_full') !== -1;
+        if (window.history.length > 1 && sameSite && !backToSelf) window.history.back();
+        else window.location.href = '?mod=home&controllers=index&action=index';
     });
 
     /* Cho mini dropdown lịch trên header (app_shell.js) gọi để đồng bộ real-time

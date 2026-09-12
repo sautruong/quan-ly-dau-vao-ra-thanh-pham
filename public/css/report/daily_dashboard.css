@@ -161,7 +161,7 @@
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
     cursor: pointer;
     max-width: 60%;
-    margin-left: -68px;
+    /* margin-left: -68px; */
 }
 
 .dd2-attendance-wrap i {
@@ -2064,6 +2064,7 @@
 }
 
 .dd2-full-list-search,
+.dd2-full-list-period,
 .dd2-full-list-filter {
     height: 34px;
     border: 1px solid #e5e7eb;
@@ -2073,6 +2074,9 @@
     color: #1f2937;
     background: #f9fafb;
 }
+/* Kỳ xem nhanh (Tháng này / Tháng trước / Từ đầu năm…) — đặt ngay cạnh ô tìm khách hàng. */
+.dd2-full-list-period { cursor: pointer; font-family: inherit; }
+.dd2-full-list-period:focus { outline: none; border-color: #0a741c; background: #fff; }
 
 .dd2-full-list-search {
     width: 200px;

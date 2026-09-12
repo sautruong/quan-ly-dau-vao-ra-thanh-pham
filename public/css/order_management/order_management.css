@@ -452,15 +452,44 @@ tr.ps-empty-row .ps-stt-badge { background: #e2e2e2; color: #b3b3b3; }
 .om-modal-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
 .om-modal-title-row .om-modal-title { margin-bottom: 0; }
 
-/* Rộng hơn .om-modal-box mặc định (720px) để cột "Tên sản phẩm" đủ chỗ hiện trọn 1 dòng,
-   không bị xuống dòng (bảng giờ có thêm cột Khối lượng, nhiều cột hơn các modal khác). */
-.om-order-box { width: min(940px, 96vw); }
-.om-order-box .om-items td.text-left,
-.om-order-box .om-items th.text-left { white-space: nowrap; }
+/* ----- View chồng lên "Xem đơn hàng" (#om-order-view, khung .app-ov-* ở app_shell.css) -----
+   Chỉ bảng cuộn: tiêu đề cột dính trên, dòng "Tổng cộng" dính dưới; banner vượt tồn + ô thêm
+   SP + footer (Chụp / Lưu) đứng yên. */
+.om-order-table td.text-left,
+.om-order-table th.text-left { white-space: nowrap; }
+.om-order-view .om-order-table thead th { position: sticky; top: 0; z-index: 2; }
+/* border-collapse không cho viền "dính" theo ô sticky -> vẽ lại vạch trên bằng box-shadow. */
+.om-order-view .om-order-table tfoot td {
+    position: sticky; bottom: 0; z-index: 2;
+    background: #fff; border-top: 0; box-shadow: inset 0 2px 0 var(--om-gray-300);
+}
+.om-order-view .om-modal-warn { flex: 0 0 auto; margin-bottom: 0; max-height: 132px; overflow-y: auto; }
+.om-order-view .om-ov-add { flex: 0 0 auto; margin-top: 0; }
+/* Ô thêm SP nằm sát footer -> danh sách gợi ý xổ LÊN trên (xổ xuống sẽ bị footer/đáy màn hình che). */
+.om-order-view .om-ov-add .om-suggest { top: auto; bottom: calc(100% + 4px); }
 
-/* Vùng đệm quanh nội dung khi "Chụp" (html2canvas chụp đúng #om-order-capture) —
-   không để nội dung sát mép ảnh khi gửi khách. */
-#om-order-capture { padding: 14px; background: #fff; }
+/* Nhãn "Trùng SP": 1 sản phẩm có nhiều dòng trong đơn — chỉ để chú ý, không chặn. */
+.om-dupe-tag {
+    display: inline-block; margin-left: 4px; padding: 0 7px; border-radius: 999px;
+    background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; line-height: 18px;
+    vertical-align: middle; white-space: nowrap;
+}
+.om-order-table tbody tr.is-dupe:not(.is-short) { background: #fffbeb; }
+
+/* Sân khấu dựng ảnh "Chụp": vô hình với người dùng (opacity trên lớp NGOÀI — html2canvas chỉ đọc
+   style của #om-order-capture trở xuống nên ảnh vẫn đục). Không dùng display:none/visibility vì
+   html2canvas sẽ đo ra 0x0. Đệm 14px để nội dung không sát mép ảnh gửi khách. */
+.om-capture-stage { position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none; z-index: -1; }
+#om-order-capture { width: 940px; padding: 14px; background: #fff; }
+#om-order-capture:empty { display: none; }
+#om-order-capture .om-modal-title { margin-bottom: 10px; }
+
+@media (max-width: 768px) {
+    /* Thanh đầu hẹp: "Xem hàng thiếu" chỉ còn icon (nhãn là text-node trần -> font-size:0). */
+    .om-order-view #om-view-shortage-btn { font-size: 0; gap: 0; padding: 8px 10px; }
+    .om-order-view #om-view-shortage-btn i { font-size: 14px; }
+    .om-order-view .app-ov-foot .om-btn { flex: 1 1 0; justify-content: center; }
+}
 
 /* ----- Modal "Xem hàng thiếu" ----- */
 .om-shortage-box { width: min(880px, 96vw); }
@@ -740,3 +769,4 @@ tr.ps-empty-row .ps-stt-badge { background: #e2e2e2; color: #b3b3b3; }
 }
 .om-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
 .om-toast i { color: #4ade80; }
+.om-toast.is-warn i { color: #fbbf24; }

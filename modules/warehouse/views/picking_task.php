@@ -38,8 +38,15 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
         <?php get_sidebar('app'); ?>
         <?php get_header('app'); ?>
 
-        <div class="wpk-page" style="--wpk-accent: <?php echo wpk_esc($accent); ?>;">
+        <div class="wpk-page<?php echo !empty($readonly) ? ' is-guest' : ''; ?>" style="--wpk-accent: <?php echo wpk_esc($accent); ?>;">
 
+            <?php if (!empty($readonly)): ?>
+                <!-- Chi nhánh đặt hàng vào từ chuông "đơn đã gửi xuống kho": chỉ theo dõi tiến độ. -->
+                <div class="wpk-guest-note">
+                    <i class="fa-solid fa-eye"></i>
+                    <span>Chế độ <b>chỉ xem</b> — bạn đang theo dõi kho soạn hàng cho đơn của mình (tự cập nhật theo thời gian thực).</span>
+                </div>
+            <?php endif; ?>
 
             <!-- Chọn phiếu đang soạn — JS dựng để bộ đếm "PLCT 3/9" cập nhật ngay khi tích,
                  và đổi phiếu không phải tải lại cả trang. -->

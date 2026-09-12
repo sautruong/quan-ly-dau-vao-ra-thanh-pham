@@ -34,19 +34,47 @@ function wh_actor_id()
     return (int) ($u['id'] ?? 0);
 }
 
-/** Chốt chặn cho mọi endpoint AJAX của module này. */
+/** Nhân viên kho (hoặc admin) — được THAO TÁC phiếu soạn. */
+function wh_is_staff($u = null)
+{
+    if ($u === null) $u = function_exists('permission_current_user') ? permission_current_user() : null;
+    if (!$u) return false;
+    if (function_exists('permission_is_admin') && permission_is_admin($u)) return true;
+    $ids = permission_user_ids_for_view('warehouse', 'warehouse', 'picking_task');
+    return in_array((int) $u['id'], $ids, true);
+}
+
+/** Chốt chặn cho mọi endpoint AJAX GHI của module này. */
 function wh_guard_json()
 {
     if (!function_exists('permission_current_user') || !permission_current_user()) {
         wh_json(['ok' => false, 'msg' => 'Chưa đăng nhập.']);
     }
     $u = permission_current_user();
-    if (function_exists('permission_is_admin') && permission_is_admin($u)) return $u;
-    $ids = permission_user_ids_for_view('warehouse', 'warehouse', 'picking_task');
-    if (!in_array((int) $u['id'], $ids, true)) {
+    if (!wh_is_staff($u)) {
         wh_json(['ok' => false, 'msg' => 'Bạn không có quyền thao tác phiếu soạn.']);
     }
     return $u;
+}
+
+/**
+ * Chốt chặn cho endpoint CHỈ ĐỌC: nhân viên kho xem tất cả; chi nhánh đặt hàng chỉ xem phiếu
+ * thuộc đơn do CHÍNH họ đặt (xem realtime kho soạn tới đâu, không thao tác gì được).
+ * Trả [$user, $is_staff].
+ */
+function wh_guard_json_view($slip_id = 0)
+{
+    if (!function_exists('permission_current_user') || !permission_current_user()) {
+        wh_json(['ok' => false, 'msg' => 'Chưa đăng nhập.']);
+    }
+    $u = permission_current_user();
+    if (wh_is_staff($u)) return [$u, true];
+
+    $uid = (int) ($u['id'] ?? 0);
+    $sid = (int) $slip_id;
+    if ($sid > 0 && wh_slip_owner_uid($sid) === $uid) return [$u, false];
+    if ($sid <= 0 && wh_user_has_any_slip($uid)) return [$u, false];
+    wh_json(['ok' => false, 'msg' => 'Bạn chỉ xem được phiếu soạn của đơn hàng do mình đặt.']);
 }
 
 /** Phiếu còn sửa được không — dùng chung cho các endpoint ghi. */
@@ -75,25 +103,36 @@ function picking_taskAction()
     wh_ensure_tables();
     wh_ensure_view_registered();
 
-    $slips = wh_list_slips_for_staff();
-    $sid   = isset($_GET['slip_id']) ? (int) $_GET['slip_id'] : 0;
+    $u   = permission_current_user();
+    $uid = (int) ($u['id'] ?? 0);
+
+    /* 2 chế độ:
+       - Nhân viên kho / admin: như cũ, thao tác đầy đủ mọi phiếu.
+       - Chi nhánh ĐẶT HÀNG (được đẩy chuông "đơn đã gửi xuống kho"): CHỈ XEM phiếu của đơn
+         do chính mình đặt — mọi thao tác bị khoá ở cả giao diện lẫn endpoint ghi. */
+    $staff = wh_is_staff($u);
+    $slips = $staff ? wh_list_slips_for_staff() : wh_list_slips_for_owner($uid);
+
+    $sid = isset($_GET['slip_id']) ? (int) $_GET['slip_id'] : 0;
+    if (!$staff && $sid > 0 && wh_slip_owner_uid($sid) !== $uid) $sid = 0;   // không phải đơn của mình
     if ($sid <= 0 && $slips) $sid = (int) $slips[0]['id'];
-    $slip  = $sid > 0 ? wh_get_slip($sid) : null;
+    $slip = $sid > 0 ? wh_get_slip($sid) : null;
 
     // Người đang đăng nhập — JS cần để biết dòng vừa được tích là do MÌNH hay đồng nghiệp
     // (chỉ bay avatar khi người khác tích).
-    $u = permission_current_user();
     $ten = trim((string) ($u['fullname'] ?? '')) !== '' ? (string) $u['fullname'] : (string) ($u['username'] ?? '');
 
     load_view('picking_task', [
-        'slips' => $slips,
-        'slip'  => $slip,
-        'me'    => [
-            'id'       => (int) ($u['id'] ?? 0),
+        'slips'    => $slips,
+        'slip'     => $slip,
+        'readonly' => $staff ? 0 : 1,
+        'me'       => [
+            'id'       => $uid,
             'name'     => $ten,
             'avatar'   => (string) ($u['avatar'] ?? ''),
             'initial'  => mb_strtoupper(mb_substr($ten, 0, 1, 'UTF-8'), 'UTF-8'),
             'is_admin' => (function_exists('permission_is_admin') && permission_is_admin($u)) ? 1 : 0,
+            'readonly' => $staff ? 0 : 1,
         ],
     ]);
 }
@@ -102,13 +141,15 @@ function picking_taskAction()
  *  AJAX — nhân viên thao tác
  * -------------------------------------------------------------------*/
 
-/** Nạp lại 1 phiếu (đổi phiếu bằng chip, hoặc F5 mềm). */
+/** Nạp lại 1 phiếu (đổi phiếu bằng chip, F5 mềm, hoặc poll realtime của chi nhánh xem nhờ). */
 function slip_dataAction()
 {
-    wh_guard_json();
     $sid = isset($_REQUEST['slip_id']) ? (int) $_REQUEST['slip_id'] : 0;
     if ($sid <= 0) wh_json(['ok' => false, 'msg' => 'Thiếu slip_id.']);
-    wh_json_slip($sid, ['slips' => wh_list_slips_for_staff()]);
+    list($u, $staff) = wh_guard_json_view($sid);
+    wh_json_slip($sid, [
+        'slips' => $staff ? wh_list_slips_for_staff() : wh_list_slips_for_owner((int) $u['id']),
+    ]);
 }
 
 /** Đổi số lượng thực bốc. */
@@ -240,17 +281,18 @@ function finish_slipAction()
  *  AJAX — Lịch sử soạn hàng
  * -------------------------------------------------------------------*/
 
-/** Danh sách phiếu đã soạn xong (lọc ngày + phân trang). */
+/** Danh sách phiếu đã soạn xong (lọc ngày + phân trang). Chi nhánh chỉ thấy phiếu đơn của mình. */
 function historyAction()
 {
-    wh_guard_json();
+    list($u, $staff) = wh_guard_json_view();
     wh_json([
         'ok'   => true,
         'data' => wh_history_slips(
             (string) ($_REQUEST['from'] ?? ''),
             (string) ($_REQUEST['to'] ?? ''),
             (int) ($_REQUEST['page'] ?? 1),
-            (int) ($_REQUEST['per'] ?? 10)
+            (int) ($_REQUEST['per'] ?? 10),
+            $staff ? 0 : (int) $u['id']
         ),
     ]);
 }
@@ -273,8 +315,9 @@ function delete_slipAction()
 /** Chi tiết 1 phiếu trong lịch sử (chỉ xem). */
 function history_detailAction()
 {
-    wh_guard_json();
-    $d = wh_history_detail((int) ($_REQUEST['slip_id'] ?? 0));
+    $sid = (int) ($_REQUEST['slip_id'] ?? 0);
+    wh_guard_json_view($sid);
+    $d = wh_history_detail($sid);
     if (!$d) wh_json(['ok' => false, 'msg' => 'Không tìm thấy phiếu soạn.']);
     wh_json(['ok' => true, 'data' => $d]);
 }

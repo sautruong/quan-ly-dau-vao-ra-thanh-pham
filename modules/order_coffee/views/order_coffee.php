@@ -327,7 +327,10 @@ $oc_today = 'Ngày ' . date('j') . ' tháng ' . date('m') . ' năm ' . date('Y')
             <span class="oc-modal-close" data-close="oc-modal-order">&times;</span>
             <h3 class="oc-modal-title"><i class="fa-solid fa-cart-plus"></i> Tạo đơn đặt hàng</h3>
 
+            <!-- Phân loại giờ chọn theo TỪNG DÒNG (cột "Phân loại" bên dưới). 2 nút này chỉ còn là
+                 cách đặt nhanh cho cả bảng — bấm là gán loại đó cho mọi dòng đang có. -->
             <div class="oc-ord-type">
+                <span class="oc-ord-type-label">Đặt nhanh cả đơn:</span>
                 <label class="oc-radio">
                     <input type="radio" name="oc-order-type" value="process" checked>
                     <span><i class="fa-solid fa-industry"></i> Đặt gia công</span>
@@ -343,6 +346,7 @@ $oc_today = 'Ngày ' . date('j') . ' tháng ' . date('m') . ' năm ' . date('Y')
                     <tr>
                         <th class="oc-ot-prod">Sản phẩm</th>
                         <th class="oc-ot-qty">SL thành phẩm</th>
+                        <th class="oc-ot-kind">Phân loại</th>
                         <th class="oc-ot-note">Ghi chú</th>
                         <th class="oc-ot-act"></th>
                     </tr>
@@ -561,6 +565,13 @@ $oc_today = 'Ngày ' . date('j') . ' tháng ' . date('m') . ' năm ' . date('Y')
                 </div>
             </td>
             <td class="oc-ot-qty"><input type="text" class="oc-input oc-ot-qty-in" inputmode="decimal" value="" placeholder="0"></td>
+            <!-- Phân loại RIÊNG cho từng dòng: 1 đơn có thể vừa đặt gia công vừa đặt nguyên liệu. -->
+            <td class="oc-ot-kind">
+                <select class="oc-input oc-ot-kind-in">
+                    <option value="process">Đặt gia công</option>
+                    <option value="material">Đặt nguyên liệu</option>
+                </select>
+            </td>
             <td class="oc-ot-note"><input type="text" class="oc-input oc-ot-note-in" placeholder="Ghi chú nhóm..."></td>
             <td class="oc-ot-act"><button type="button" class="oc-ord-del" title="Bỏ">&times;</button></td>
         </tr>

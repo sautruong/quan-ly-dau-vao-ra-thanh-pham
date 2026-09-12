@@ -283,15 +283,126 @@ function sf_get_product_order_info($product_id)
                 p.id          AS product_id,
                 COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
                 COALESCE(NULLIF(p.unit, ''), pib.unit) AS unit,
+                p.image_url,
                 COALESCE(pw.weight_kg, 0)    AS weight_kg,
-                COALESCE(pp.system_price, 0) AS system_price
+                COALESCE(pp.system_price, 0) AS system_price,
+                COALESCE(fgi.quantity, 0)    AS stock,
+                COALESCE(ops.quantity, 0)    AS ops_qty,
+                ops.outer_packaging_short_name AS ops_name
             FROM products p
             LEFT JOIN product_info_basic pib ON pib.product_id = p.id
             LEFT JOIN product_weights    pw  ON pw.product_id  = p.id
             LEFT JOIN product_prices     pp  ON pp.product_id  = p.id
+            LEFT JOIN finished_goods_inventory fgi ON fgi.product_id = p.id
+            LEFT JOIN outer_packaging_specifications ops ON ops.product_id = p.id
             WHERE p.id = $product_id
             LIMIT 1";
-    return db_fetch_row($sql);
+    $row = db_fetch_row($sql);
+    if ($row) {
+        $row['image_url'] = sf_product_image_src($row['image_url'] ?? '');
+        // Tồn nhà máy cho cột "Tồn nhà máy" trong bảng đơn: số thuần + bản quy đổi bao/thùng (tooltip).
+        $row['stock']      = (float) $row['stock'];
+        $row['stock_text'] = sf_format_inventory_convert(
+            (int) $row['stock'], (int) $row['ops_qty'], (string) $row['ops_name'], (string) $row['unit']
+        );
+    }
+    return $row;
+}
+
+/**
+ * Đường dẫn ảnh sản phẩm dùng cho <img> (products.image_url lưu tương đối với public/images/).
+ * Trả '' nếu sản phẩm chưa có ảnh — JS vẽ ô tròn xám thay thế.
+ */
+function sf_product_image_src($image_url)
+{
+    $image_url = trim((string) $image_url);
+    return $image_url === '' ? '' : 'public/images/' . $image_url;
+}
+
+/**
+ * Tồn hiện tại của các dòng hàng trong 1 đơn: ['product:12' => 50, 'material:3' => 8, ...].
+ * SP lấy finished_goods_inventory, NVL lấy material_inventory.
+ */
+function sf_stock_map(array $items)
+{
+    $pids = []; $mids = [];
+    foreach ($items as $it) {
+        if (!empty($it['material_id'])) $mids[] = (int) $it['material_id'];
+        elseif (!empty($it['product_id'])) $pids[] = (int) $it['product_id'];
+    }
+    $out = [];
+    $pids = array_values(array_unique(array_filter($pids)));
+    $mids = array_values(array_unique(array_filter($mids)));
+    if ($pids) {
+        foreach ((db_fetch_array("SELECT product_id, quantity FROM finished_goods_inventory
+                                  WHERE product_id IN (" . implode(',', $pids) . ")") ?: []) as $r) {
+            $out['product:' . (int) $r['product_id']] = (float) $r['quantity'];
+        }
+    }
+    if ($mids) {
+        foreach ((db_fetch_array("SELECT material_id, quantity FROM material_inventory
+                                  WHERE material_id IN (" . implode(',', $mids) . ")") ?: []) as $r) {
+            $out['material:' . (int) $r['material_id']] = (float) $r['quantity'];
+        }
+    }
+    return $out;
+}
+
+/** Ảnh của nhiều sản phẩm cùng lúc: [product_id => src] (bỏ qua SP không có ảnh). */
+function sf_product_image_map(array $product_ids)
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $product_ids), static fn($v) => $v > 0)));
+    if (!$ids) return [];
+    $rows = db_fetch_array(
+        "SELECT id, image_url FROM products WHERE id IN (" . implode(',', $ids) . ")"
+    ) ?: [];
+    $map = [];
+    foreach ($rows as $r) {
+        $src = sf_product_image_src($r['image_url'] ?? '');
+        if ($src !== '') $map[(int) $r['id']] = $src;
+    }
+    return $map;
+}
+
+/**
+ * "Số mua gần đây" của 1 chi nhánh — truy ngược từ DỮ LIỆU XUẤT KHO của nhà máy
+ * (`stock_exports`, `type_export = 'sales_issue'`), KHÔNG phải từ đơn đặt hàng:
+ * anh Sáu chốt phải lấy số lượng chi nhánh THỰC SỰ lấy hàng ở nhà máy.
+ *
+ * Với MỖI hàng hóa lấy số của LẦN XUẤT gần nhất có hàng hóa đó (không phải phiếu gần nhất
+ * nói chung); 1 phiếu có thể có nhiều dòng cùng hàng hóa nên cộng dồn trong cùng phiếu
+ * (phiếu = cùng `created_at`, xem [[export-invoice-batch-identity]] bên pos: ở đây là NGÀY GIỜ ghi).
+ * Hàng hóa chưa từng xuất cho chi nhánh này thì không có mặt trong kết quả -> giao diện để trống.
+ *
+ * Trả ['product:12' => 30, 'material:5' => 2, ...].
+ */
+function sf_get_recent_purchase_quantities($customer_id, $limit_rows = 4000)
+{
+    $customer_id = (int) $customer_id;
+    if ($customer_id <= 0) return [];
+    $limit_rows = max(1, (int) $limit_rows);
+
+    $rows = db_fetch_array(
+        "SELECT product_id, material_id, quantity, created_at
+         FROM stock_exports
+         WHERE customer_id = $customer_id AND type_export = 'sales_issue' AND quantity > 0
+         ORDER BY created_at DESC, id DESC
+         LIMIT $limit_rows"
+    ) ?: [];
+
+    $out = [];      // key => số lượng
+    $batch = [];    // key => created_at của phiếu gần nhất đã lấy
+    foreach ($rows as $r) {
+        $isMat = !empty($r['material_id']);
+        $id    = (int) ($isMat ? $r['material_id'] : $r['product_id']);
+        if ($id <= 0) continue;
+        $key = ($isMat ? 'material:' : 'product:') . $id;
+        $at  = (string) $r['created_at'];
+        if (!isset($out[$key])) { $out[$key] = 0.0; $batch[$key] = $at; }
+        if ($batch[$key] !== $at) continue;   // đã sang phiếu cũ hơn -> bỏ
+        $out[$key] += (float) $r['quantity'];
+    }
+    return $out;
 }
 
 /**
@@ -368,6 +479,7 @@ function sf_get_material_order_info($material_id)
                    m.material_name AS product_name,
                    m.unit,
                    0 AS weight_kg,
+                   COALESCE(mi.quantity, 0) AS stock,
                    COALESCE((
                        SELECT b.selling_price
                        FROM branch_material_selling_prices b
@@ -376,9 +488,15 @@ function sf_get_material_order_info($material_id)
                        LIMIT 1
                    ), 0) AS system_price
             FROM material_information m
+            LEFT JOIN material_inventory mi ON mi.material_id = m.id
             WHERE m.id = $material_id
             LIMIT 1";
-    return db_fetch_row($sql);
+    $row = db_fetch_row($sql);
+    if ($row) {
+        $row['stock']      = (float) $row['stock'];
+        $row['stock_text'] = rtrim(rtrim(number_format($row['stock'], 2, ',', '.'), '0'), ',') . ' ' . (string) $row['unit'];
+    }
+    return $row;
 }
 
 /* ---------------------------------------------------------------------
@@ -416,7 +534,14 @@ function sf_get_last_branch($user_id)
     $row = db_fetch_row("SELECT setting_value FROM app_settings WHERE setting_key = '$key' LIMIT 1");
     if (!$row || $row['setting_value'] === null || $row['setting_value'] === '') return null;
     $data = json_decode($row['setting_value'], true);
-    return is_array($data) ? $data : null;
+    if (!is_array($data)) return null;
+    // Tên viết tắt để hiển thị (PLHCM, PLDN...) — app_settings chỉ lưu id + tên đầy đủ.
+    $data['short'] = '';
+    if (!empty($data['id'])) {
+        $c = db_fetch_row("SELECT short_name FROM customers WHERE id = " . (int) $data['id'] . " LIMIT 1");
+        if ($c) $data['short'] = trim((string) $c['short_name']);
+    }
+    return $data;
 }
 
 /** Ghi nhớ chi nhánh của user (dùng nhiều lần đến khi đổi lại). */
@@ -515,18 +640,20 @@ function sf_get_history($page = 1, $per_page = 5, $user_id = 0)
     $offset   = ($page - 1) * $per_page;
     $user_id  = (int) $user_id;
     // Chỉ lịch sử của user + chưa bị bán hàng ẩn.
-    $where    = $user_id > 0 ? "WHERE user_id = $user_id AND seller_hidden = 0" : "WHERE 1=0";
+    $where    = $user_id > 0 ? "WHERE h.user_id = $user_id AND h.seller_hidden = 0" : "WHERE 1=0";
 
     $rows = db_fetch_array(
-        "SELECT id, customer_id, customer_name, order_items,
-                weight_total, value_total, description, note, status,
-                picked, locked, pickup_time, confirmed, factory_hidden, created_at
-         FROM factory_order_sales_history
+        "SELECT h.id, h.customer_id, h.customer_name, h.order_items,
+                h.weight_total, h.value_total, h.description, h.note, h.status,
+                h.picked, h.locked, h.pickup_time, h.confirmed, h.factory_hidden, h.created_at,
+                c.short_name AS customer_short
+         FROM factory_order_sales_history h
+         LEFT JOIN customers c ON c.id = h.customer_id
          $where
-         ORDER BY created_at DESC, id DESC
+         ORDER BY h.created_at DESC, h.id DESC
          LIMIT $per_page OFFSET $offset"
     );
-    $total = (int)db_num_rows("SELECT id FROM factory_order_sales_history $where");
+    $total = (int)db_num_rows("SELECT h.id FROM factory_order_sales_history h $where");
     return [
         'rows'        => $rows ?: [],
         'total'       => $total,
@@ -543,15 +670,35 @@ function sf_get_history_row($id, $user_id = 0)
 {
     $id  = (int)$id;
     $user_id = (int) $user_id;
-    $cond = "id = $id";
-    if ($user_id > 0) $cond .= " AND user_id = $user_id";
+    $cond = "h.id = $id";
+    if ($user_id > 0) $cond .= " AND h.user_id = $user_id";
     $row = db_fetch_row(
-        "SELECT id, customer_id, customer_name, order_items, weight_total, value_total,
-                description, note, status, picked, locked, pickup_time, created_at
-         FROM factory_order_sales_history WHERE $cond LIMIT 1"
+        "SELECT h.id, h.customer_id, h.customer_name, h.order_items, h.weight_total, h.value_total,
+                h.description, h.note, h.status, h.picked, h.locked, h.pickup_time, h.created_at,
+                c.short_name AS customer_short
+         FROM factory_order_sales_history h
+         LEFT JOIN customers c ON c.id = h.customer_id
+         WHERE $cond LIMIT 1"
     );
     if ($row && !empty($row['order_items'])) {
         $row['order_items'] = json_decode($row['order_items'], true);
+        // Gắn ảnh sản phẩm cho từng dòng để "Đặt lại" dựng bảng có sẵn ảnh tròn cạnh tên.
+        if (is_array($row['order_items'])) {
+            $pids = [];
+            foreach ($row['order_items'] as $it) {
+                if (empty($it['material_id']) && !empty($it['product_id'])) $pids[] = (int) $it['product_id'];
+            }
+            $imap = sf_product_image_map($pids);
+            $smap = sf_stock_map($row['order_items']);
+            foreach ($row['order_items'] as $k => $it) {
+                $isMat = !empty($it['material_id']);
+                $pid = (!$isMat && !empty($it['product_id'])) ? (int) $it['product_id'] : 0;
+                $key = ($isMat ? 'material:' . (int) $it['material_id'] : 'product:' . $pid);
+                $row['order_items'][$k]['image_url'] = $pid > 0 ? ($imap[$pid] ?? '') : '';
+                // Tồn nhà máy cho cột "Tồn nhà máy" + cảnh báo đặt vượt tồn khi sửa đơn.
+                $row['order_items'][$k]['stock'] = (float) ($smap[$key] ?? 0);
+            }
+        }
     }
     return $row;
 }

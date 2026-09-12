@@ -223,3 +223,21 @@
 /* ----- Modal xem đầy đủ sự kiện trong 1 ngày ----- */
 .calfull-day-box { width: 380px; max-width: 94vw; }
 .calfull-day-modal-events { max-height: 60vh; overflow-y: auto; }
+
+/* ---- Cụm phải thanh đầu: "Hôm nay" + nút × đóng lịch (về trang trước) ----
+   Nút × dùng lại .app-ov-close của app_shell.css (nạp trước file này). */
+.calfull-head-right { display: flex; align-items: center; gap: 10px; }
+
+/* ---- Sự kiện thuộc chuỗi lặp: viền trái mảnh để nhận ra ngay giữa các sự kiện lẻ ---- */
+.calfull-chip.is-recur-part { box-shadow: inset 3px 0 0 var(--app-green, #096926); }
+
+/* ---- Modal hỏi cách xóa sự kiện lặp ---- */
+.calfull-del-box { max-width: 420px; }
+.calfull-del-text { font-size: 13.5px; color: var(--app-gray-700); line-height: 1.6; margin-bottom: 14px; }
+.calfull-del-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+/* Xóa cả chuỗi = việc nặng tay hơn -> tông đỏ cảnh báo, khác nút xanh "chỉ ngày này". */
+.calfull-del-actions .calfull-del-all {
+    background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5;
+}
+.calfull-del-actions .calfull-del-all:hover { background: #dc2626; color: #fff; border-color: #dc2626; }
+.calfull-del-actions .app-btn-link { align-self: center; }

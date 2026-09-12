@@ -110,6 +110,8 @@ if ($__sb_admin || $__sb_is_deputy) {
     <div class="app-sb-search" id="app-sb-search">
         <i class="fa-solid fa-magnifying-glass"></i>
         <input type="text" id="app-sb-search-input" placeholder="Tìm menu..." autocomplete="off">
+        <!-- Hiện khi hover/có chữ (CSS) — bấm là xóa từ khóa, trả menu về đầy đủ. -->
+        <button type="button" class="app-sb-search-clear" id="app-sb-search-clear" title="Xóa từ khóa">&times;</button>
     </div>
 
     <nav class="app-sb-nav">

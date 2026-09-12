@@ -742,6 +742,32 @@
     }
     function closeFullListModal() { if (fullListModal) { fullListModal.classList.remove('is-open'); fullListModal.setAttribute('aria-hidden', 'true'); } }
 
+    var flPeriodSel = document.getElementById('dd2-full-list-period');
+
+    /** Khoảng ngày của 1 kỳ xem nhanh. Trả {from, to} dạng Y-m-d ('' = không giới hạn). */
+    function periodRange(period) {
+        var d = new Date(), y = d.getFullYear(), m = d.getMonth();
+        var iso = function (dt) {
+            return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+        };
+        if (period === 'this_month') return { from: iso(new Date(y, m, 1)), to: iso(new Date(y, m + 1, 0)) };
+        if (period === 'last_month') return { from: iso(new Date(y, m - 1, 1)), to: iso(new Date(y, m, 0)) };
+        if (period === 'ytd')        return { from: iso(new Date(y, 0, 1)), to: iso(d) };
+        return { from: '', to: '' };   // 'all' và 'custom' (custom giữ nguyên ô ngày user đang chọn)
+    }
+
+    /** Áp 1 kỳ vào 2 ô ngày + tham số gọi server. reload=false khi đang mở modal (loadFullListPage sẽ tự chạy sau). */
+    function applyPeriod(period, reload) {
+        if (period === 'custom') return;            // giữ nguyên ngày user tự chọn
+        var r = periodRange(period);
+        if (flFromInput) flFromInput.value = r.from;
+        if (flToInput) flToInput.value = r.to;
+        fullListParams.from = r.from;
+        fullListParams.to = r.to;
+        if (flRangeClear) flRangeClear.hidden = !(r.from || r.to);
+        if (reload) loadFullListPage(1);
+    }
+
     /** Bật/tắt + nối dây thanh lọc "từ ngày → đến ngày" và "số dòng/trang".
      *  Mọi thay đổi đều nạp lại từ trang 1 (đổi bộ lọc mà giữ trang cũ dễ ra trang trắng). */
     function wireFullListTools(opts) {
@@ -753,10 +779,12 @@
         if (pageBox) pageBox.hidden = !usePage;
 
         if (useRange && flFromInput && flToInput) {
-            flFromInput.value = '';
-            flToInput.value = '';
-            delete fullListParams.from;
-            delete fullListParams.to;
+            // Kỳ mặc định: THÁNG NÀY (trước đây mở ra là "tất cả", nhìn tổng không biết của kỳ nào).
+            if (flPeriodSel) {
+                flPeriodSel.hidden = false;
+                flPeriodSel.value = 'this_month';
+                flPeriodSel.onchange = function () { applyPeriod(flPeriodSel.value, true); };
+            }
             var onRange = function () {
                 var f = flFromInput.value, t = flToInput.value;
                 // Chặn khoảng ngược: chọn "đến ngày" trước "từ ngày" thì kéo đầu kia theo.
@@ -764,6 +792,8 @@
                 fullListParams.from = f;
                 fullListParams.to = t;
                 if (flRangeClear) flRangeClear.hidden = !(f || t);
+                // Tự gõ ngày = kỳ tùy chọn (không còn là "tháng này" nữa).
+                if (flPeriodSel && !flPeriodSel.hidden) flPeriodSel.value = (f || t) ? 'custom' : 'all';
                 loadFullListPage(1);
             };
             flFromInput.onchange = onRange;
@@ -771,16 +801,18 @@
             if (flRangeClear) {
                 flRangeClear.hidden = true;
                 flRangeClear.onclick = function () {
-                    flFromInput.value = ''; flToInput.value = '';
-                    fullListParams.from = ''; fullListParams.to = '';
-                    flRangeClear.hidden = true;
-                    loadFullListPage(1);
+                    if (flPeriodSel && !flPeriodSel.hidden) flPeriodSel.value = 'all';
+                    applyPeriod('all', true);
                 };
             }
+            applyPeriod('this_month', false);   // set from/to trước khi loadFullListPage() đầu tiên chạy
         } else {
             if (flFromInput) flFromInput.onchange = null;
             if (flToInput) flToInput.onchange = null;
             if (flRangeClear) flRangeClear.onclick = null;
+            if (flPeriodSel) { flPeriodSel.hidden = true; flPeriodSel.onchange = null; }
+            delete fullListParams.from;
+            delete fullListParams.to;
         }
 
         if (usePage && flPageSizeSel) {

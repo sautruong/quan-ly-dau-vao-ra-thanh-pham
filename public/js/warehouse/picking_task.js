@@ -28,6 +28,9 @@
     var SLIPS = window.WPK_SLIPS || [];
     var ME     = window.WPK_ME || { id: 0 };
     var CHIXEM = false;   // đang xem lại 1 phiếu trong lịch sử -> khoá mọi thao tác
+    /* KHACH = chi nhánh ĐẶT HÀNG vào xem tiến độ soạn đơn của mình (chuông "đã gửi xuống kho"):
+       chỉ xem, không thao tác gì — server cũng chặn mọi endpoint ghi (wh_guard_json). */
+    var KHACH  = !!Number(ME.readonly || 0);
 
     var rawMode   = {};   // {itemId: true} — dòng đang hiện SỐ thay vì quy đổi kiện
     var kienTimer = {};   // {group: timeoutId} — hẹn 2s mới báo sai định dạng
@@ -44,7 +47,7 @@
     }
     function slipId() { return SLIP ? Number(SLIP.id) : 0; }
     function editable() {
-        if (CHIXEM) return false;   // xem lại phiếu cũ: chỉ đọc, không sửa/xoá gì được
+        if (CHIXEM || KHACH) return false;   // xem lại phiếu cũ / chi nhánh xem nhờ: chỉ đọc
         return !!SLIP && !Number(SLIP.synced) && (SLIP.status === 'new' || SLIP.status === 'doing');
     }
     function dongSong() { return ((SLIP && SLIP.items) || []).filter(function (i) { return !i.removed; }); }
@@ -187,12 +190,13 @@
             }).join(''));
         }
 
-        $('#wpk-slip').toggleClass('is-locked', !editable()).toggleClass('is-readonly', CHIXEM);
-        // Xem lại phiếu cũ: giấu ô thêm hàng + khối đã gỡ, nút dưới đổi thành "Chi tiết".
-        $('#wpk-toolbar').toggle(!CHIXEM);
-        $('#wpk-note').prop('readonly', CHIXEM);
-        if (CHIXEM) $rm.attr('hidden', true);
+        $('#wpk-slip').toggleClass('is-locked', !editable()).toggleClass('is-readonly', CHIXEM || KHACH);
+        // Xem lại phiếu cũ / chi nhánh xem nhờ: giấu ô thêm hàng + khối đã gỡ, nút dưới đổi thành "Chi tiết".
+        $('#wpk-toolbar').toggle(!CHIXEM && !KHACH);
+        $('#wpk-note').prop('readonly', CHIXEM || KHACH);
+        if (CHIXEM || KHACH) $rm.attr('hidden', true);
         $('#wpk-finish')
+            .toggle(!KHACH)                       // chi nhánh không có quyền chốt phiếu
             .prop('disabled', CHIXEM ? false : !editable())
             .html(CHIXEM
                 ? '<i class="fa-solid fa-circle-info"></i> Chi tiết'
@@ -862,7 +866,9 @@
 
     function nhipPoll() {
         if (!SLIP || CHIXEM || document.hidden || dangGo()) return;
-        if (!editable()) return;
+        // Chi nhánh xem nhờ: editable() luôn false nhưng VẪN phải poll — họ vào đây chính là để
+        // nhìn kho soạn tới đâu theo thời gian thực.
+        if (!editable() && !KHACH) return;
         $.getJSON(BASE + 'slip_data', { slip_id: slipId() }, function (res) {
             if (!res || !res.ok || !res.slip) return;
             if (Number(res.slip.id) !== slipId() || CHIXEM) return;   // đã đổi phiếu giữa chừng

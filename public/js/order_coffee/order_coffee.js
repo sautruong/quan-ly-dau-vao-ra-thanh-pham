@@ -873,6 +873,18 @@
      * ===================================================================== */
     var ordTbody = $('oc-ord-tbody'), ordRowTpl = $('oc-ord-row-tpl');
 
+    /** Phân loại đang chọn ở cụm "Đặt nhanh cả đơn" (mặc định: đặt gia công). */
+    function currentQuickKind() {
+        return (document.querySelector('input[name="oc-order-type"]:checked') || {}).value || 'process';
+    }
+    // Bấm 1 trong 2 lựa chọn nhanh -> gán loại đó cho MỌI dòng đang có trong bảng.
+    Array.prototype.forEach.call(document.querySelectorAll('input[name="oc-order-type"]'), function (rd) {
+        rd.addEventListener('change', function () {
+            var k = currentQuickKind();
+            Array.prototype.forEach.call(ordTbody.querySelectorAll('.oc-ot-kind-in'), function (sel) { sel.value = k; });
+        });
+    });
+
     // Ghi chú nhập 1 lần dùng nhiều lần: lưu lại vào thiết lập SP để tái sử dụng.
     function persistRecipeNote(productId, note) {
         if (!productId) return;
@@ -889,6 +901,9 @@
         var prodDrop = tr.querySelector('.oc-ot-prod-dropdown');
         var qtyInp = tr.querySelector('.oc-ot-qty-in');
         var noteInp = tr.querySelector('.oc-ot-note-in');
+        // Dòng mới lấy theo phân loại đang chọn ở cụm "Đặt nhanh cả đơn" (người dùng đổi lại được từng dòng).
+        var kindSel = tr.querySelector('.oc-ot-kind-in');
+        if (kindSel) kindSel.value = currentQuickKind();
 
         attachLocalSearch(prodInp, prodDrop, function () { return recipes; }, function (r) {
             prodInp.value = r.product_name;
@@ -941,6 +956,8 @@
                 prodInp.setAttribute('data-pid', g.product_id);
                 tr.querySelector('.oc-ot-qty-in').value = num(g.order_qty, 2);
                 tr.querySelector('.oc-ot-note-in').value = g.note || '';
+                var kSel = tr.querySelector('.oc-ot-kind-in');
+                if (kSel) kSel.value = g.kind || docOrderType || 'process';
             });
         } else {
             docOrderType = (document.querySelector('input[name="oc-order-type"]:checked') || {}).value || 'process';
@@ -970,10 +987,12 @@
             });
             var typedNote = tr.querySelector('.oc-ot-note-in').value.trim();
             if (typedNote !== '') persistRecipeNote(pid, typedNote);   // lưu để tái dùng
+            var kindSel = tr.querySelector('.oc-ot-kind-in');
             groups.push({
                 product_id: pid,
                 product_name: r.product_name,
                 order_qty: oqty,
+                kind: (kindSel && kindSel.value) || type,   // phân loại riêng của DÒNG này
                 note: typedNote || (r.note || ''),
                 items: items
             });
@@ -1001,8 +1020,12 @@
 
             var hr = document.createElement('div');
             hr.className = 'oc-doc-grouphead';
+            var kind = g.kind || docOrderType || 'process';
             hr.innerHTML = 'Nhóm ' + (gi + 1) + ' — ' + esc(g.product_name)
-                + '<span class="oc-gh-badge">(đặt ' + num(g.order_qty, 0) + ' thành phẩm)</span>';
+                + '<span class="oc-gh-badge">(đặt ' + num(g.order_qty, 0) + ' thành phẩm)</span>'
+                // Mỗi dòng có phân loại riêng -> ghi rõ trên phiếu để NCC không hiểu nhầm.
+                + '<span class="oc-gh-kind' + (kind === 'material' ? ' is-material' : '') + '">'
+                + (kind === 'material' ? 'Đặt nguyên liệu' : 'Đặt gia công') + '</span>';
             group.appendChild(hr);
 
             g.items.forEach(function (it) {
@@ -1195,6 +1218,7 @@
             return {
                 product_id: g.product_id, product_name: g.product_name,
                 order_qty: parseFloat(g.order_qty) || 0, note: g.note || '',
+                kind: g.kind || o.order_type || 'process',
                 items: (g.items || []).map(function (it) {
                     return { material_id: it.material_id, name: it.name, unit: it.unit, qty: parseFloat(it.qty) || 0 };
                 })

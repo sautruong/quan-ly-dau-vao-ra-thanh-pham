@@ -39,10 +39,27 @@ function order_factoryAction()
 function order_historyAction()
 {
     $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+    $per  = isset($_GET['per']) ? (int) $_GET['per'] : 20;
+    if (!in_array($per, [10, 20, 50, 100], true)) $per = 20;
     load_view('order_history', [
-        'history'    => sf_get_history($page, 12, sf_current_user_id()),
+        'history'    => sf_get_history($page, $per, sf_current_user_id()),
+        // Cột tồn kho bên trái của view "Chỉnh sửa đơn hàng" (dùng chung _order_panel.php).
+        'product_groups' => sf_get_products_grouped_by_category(),
         'page_title' => 'Lịch Sử đặt hàng nhà máy',
     ]);
+}
+
+/* AJAX: xóa nhiều đơn khỏi lịch sử (tick nhiều dòng rồi bấm "Xóa"). POST ids = "1,2,3". */
+function delete_history_bulkAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $raw = isset($_POST['ids']) ? (string) $_POST['ids'] : '';
+    $ids = array_filter(array_map('intval', explode(',', $raw)), static fn($v) => $v > 0);
+    if (!$ids) { echo json_encode(['ok' => false, 'msg' => 'Chưa chọn đơn nào.'], JSON_UNESCAPED_UNICODE); return; }
+    $uid = sf_current_user_id();
+    $n = 0;
+    foreach ($ids as $id) { if (sf_delete_history_row($id, $uid)) $n++; }
+    echo json_encode(['ok' => $n > 0, 'deleted' => $n], JSON_UNESCAPED_UNICODE);
 }
 
 /* AJAX: danh bạ chat (cho hộp chọn người nhận của nút "Gửi qua chat").
@@ -308,6 +325,23 @@ function order_statusesAction()
 {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['ok' => true, 'data' => sf_get_order_statuses(sf_current_user_id())], JSON_UNESCAPED_UNICODE);
+}
+
+/* AJAX: "Lấy số đặt gần đây" — số lượng của LẦN XUẤT KHO gần nhất có từng hàng hóa cho chi nhánh
+   đang chọn (truy ngược từ stock_exports, không phải từ đơn đặt).
+   Trả { 'product:12': 30, 'material:5': 2, ... }; hàng hóa chưa từng lấy không có mặt -> để trống. */
+function recent_quantitiesAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $cid = isset($_GET['customer_id']) && $_GET['customer_id'] !== '' ? (int) $_GET['customer_id'] : 0;
+    if ($cid <= 0) {
+        echo json_encode(['ok' => false, 'msg' => 'Chọn chi nhánh từ danh sách gợi ý trước.'], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    echo json_encode(
+        ['ok' => true, 'data' => sf_get_recent_purchase_quantities($cid)],
+        JSON_UNESCAPED_UNICODE
+    );
 }
 
 // Lấy 1 đơn cũ để "Đặt lại"
