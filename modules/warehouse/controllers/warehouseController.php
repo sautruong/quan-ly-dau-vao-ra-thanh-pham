@@ -107,16 +107,25 @@ function picking_taskAction()
     $uid = (int) ($u['id'] ?? 0);
 
     /* 2 chế độ:
-       - Nhân viên kho / admin: như cũ, thao tác đầy đủ mọi phiếu.
-       - Chi nhánh ĐẶT HÀNG (được đẩy chuông "đơn đã gửi xuống kho"): CHỈ XEM phiếu của đơn
-         do chính mình đặt — mọi thao tác bị khoá ở cả giao diện lẫn endpoint ghi. */
+       - Nhân viên kho / admin: như cũ, thao tác đầy đủ mọi phiếu, thanh chip cho chọn qua lại.
+       - Chi nhánh ĐẶT HÀNG (được đẩy chuông "đơn đã gửi xuống kho"): CHỈ XEM ĐÚNG 1 phiếu — phiếu
+         đến từ chính đường link chuông (14/9/2026, anh Sáu chốt "đi theo cửa chuông vào từ đơn nào
+         thì xem đơn đó"). KHÔNG tự chọn/liệt kê các phiếu KHÁC của họ dù có thể đang có nhiều đơn
+         đặt khác nhau — vào thẳng URL không kèm slip_id thì không suy đoán, để trống (không có gì
+         để lộ ra ngoài đúng cái link họ vừa bấm). Mọi thao tác vẫn bị khoá ở cả giao diện lẫn
+         endpoint ghi như cũ. */
     $staff = wh_is_staff($u);
-    $slips = $staff ? wh_list_slips_for_staff() : wh_list_slips_for_owner($uid);
-
-    $sid = isset($_GET['slip_id']) ? (int) $_GET['slip_id'] : 0;
-    if (!$staff && $sid > 0 && wh_slip_owner_uid($sid) !== $uid) $sid = 0;   // không phải đơn của mình
-    if ($sid <= 0 && $slips) $sid = (int) $slips[0]['id'];
-    $slip = $sid > 0 ? wh_get_slip($sid) : null;
+    if ($staff) {
+        $slips = wh_list_slips_for_staff();
+        $sid   = isset($_GET['slip_id']) ? (int) $_GET['slip_id'] : 0;
+        if ($sid <= 0 && $slips) $sid = (int) $slips[0]['id'];
+        $slip  = $sid > 0 ? wh_get_slip($sid) : null;
+    } else {
+        $sid = isset($_GET['slip_id']) ? (int) $_GET['slip_id'] : 0;
+        if ($sid > 0 && wh_slip_owner_uid($sid) !== $uid) $sid = 0;   // không phải đơn của mình
+        $slip  = $sid > 0 ? wh_get_slip($sid) : null;
+        $slips = $slip ? wh_list_slips_single($sid) : [];
+    }
 
     // Người đang đăng nhập — JS cần để biết dòng vừa được tích là do MÌNH hay đồng nghiệp
     // (chỉ bay avatar khi người khác tích).
@@ -147,8 +156,9 @@ function slip_dataAction()
     $sid = isset($_REQUEST['slip_id']) ? (int) $_REQUEST['slip_id'] : 0;
     if ($sid <= 0) wh_json(['ok' => false, 'msg' => 'Thiếu slip_id.']);
     list($u, $staff) = wh_guard_json_view($sid);
+    // Chi nhánh xem nhờ: chỉ trả ĐÚNG phiếu đang xem, không lộ các phiếu khác của họ (xem picking_taskAction).
     wh_json_slip($sid, [
-        'slips' => $staff ? wh_list_slips_for_staff() : wh_list_slips_for_owner((int) $u['id']),
+        'slips' => $staff ? wh_list_slips_for_staff() : wh_list_slips_single($sid),
     ]);
 }
 

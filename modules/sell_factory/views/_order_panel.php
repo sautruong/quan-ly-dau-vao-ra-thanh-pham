@@ -15,8 +15,13 @@ $product_groups = isset($product_groups) && is_array($product_groups) ? $product
 $last_branch    = isset($last_branch) && is_array($last_branch) ? $last_branch : null;
 $panel_mode     = isset($panel_mode) ? $panel_mode : 'order';
 $panel_edit     = ($panel_mode === 'edit');
+// Cột đang ẩn tạm — cá nhân hóa theo user (xem sf_get_hidden_cols/save_hidden_colsAction).
+$hidden_cols  = isset($hidden_cols) && is_array($hidden_cols) ? $hidden_cols : [];
+$hideWeight   = in_array('weight', $hidden_cols, true);
+$hideStock    = in_array('stock', $hidden_cols, true);
 ?>
-<div class="app-ov-view of-order-view" id="of-order-view" style="display:none;" data-mode="<?= $panel_edit ? 'edit' : 'order' ?>">
+<div class="app-ov-view of-order-view" id="of-order-view" style="display:none;" data-mode="<?= $panel_edit ? 'edit' : 'order' ?>"
+     data-hidden-cols="<?= htmlspecialchars(implode(',', $hidden_cols), ENT_QUOTES, 'UTF-8') ?>">
     <div class="app-ov-head">
         <h2 class="app-ov-title">
             <i class="fa-solid <?= $panel_edit ? 'fa-pen-to-square' : 'fa-cart-shopping' ?>"></i>
@@ -86,10 +91,10 @@ $panel_edit     = ($panel_mode === 'edit');
                     <ul class="dropdown-suggest" id="goods-suggest"></ul>
                 </div>
                 <div class="of-ov-tablebar-actions">
-                    <button type="button" class="of-ov-btn of-col-show" data-col="weight" hidden>
+                    <button type="button" class="of-ov-btn of-col-show" data-col="weight"<?= $hideWeight ? '' : ' hidden' ?>>
                         <i class="fa-regular fa-eye"></i> Khối lượng (kg)
                     </button>
-                    <button type="button" class="of-ov-btn of-col-show" data-col="stock" hidden>
+                    <button type="button" class="of-ov-btn of-col-show" data-col="stock"<?= $hideStock ? '' : ' hidden' ?>>
                         <i class="fa-regular fa-eye"></i> Tồn nhà máy
                     </button>
                     <button type="button" class="of-ov-btn" id="of-recent-qty-btn">
@@ -109,10 +114,10 @@ $panel_edit     = ($panel_mode === 'edit');
                             <td>Tên sản phẩm</td>
                             <td>Đơn vị</td>
                             <td>Số lượng đặt</td>
-                            <td class="of-col-weight">Khối lượng (kg)
+                            <td class="of-col-weight"<?= $hideWeight ? ' style="display:none"' : '' ?>>Khối lượng (kg)
                                 <button type="button" class="of-col-hide" data-col="weight" title="Ẩn tạm cột này"><i class="fa-regular fa-eye-slash"></i></button>
                             </td>
-                            <td class="of-col-stock">Tồn nhà máy
+                            <td class="of-col-stock"<?= $hideStock ? ' style="display:none"' : '' ?>>Tồn nhà máy
                                 <button type="button" class="of-col-hide" data-col="stock" title="Ẩn tạm cột này"><i class="fa-regular fa-eye-slash"></i></button>
                             </td>
                             <td></td>

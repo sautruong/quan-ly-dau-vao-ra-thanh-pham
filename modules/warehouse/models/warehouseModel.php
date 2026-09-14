@@ -346,29 +346,28 @@ function wh_user_has_any_slip($user_id)
     ) > 0;
 }
 
-/** Phiếu đang soạn / vừa soạn xong CỦA CÁC ĐƠN do user này đặt (chip chọn phiếu, chế độ chỉ xem). */
-function wh_list_slips_for_owner($user_id)
+/**
+ * ĐÚNG 1 phiếu, cùng khuôn dữ liệu với wh_list_slips_for_staff() (để renderChips() ở client vẽ được
+ * chip như bình thường) — dùng cho chi nhánh xem nhờ (14/9/2026, anh Sáu chốt): "đi theo cửa chuông
+ * vào từ đơn nào thì xem đơn đó", KHÔNG cho thấy/chuyển sang các phiếu KHÁC của chính họ dù có thể
+ * đang có nhiều đơn đặt khác nhau cùng lúc đang hoặc đã soạn xong. Trả [] nếu không có slip.
+ */
+function wh_list_slips_single($slip_id)
 {
-    $uid = (int) $user_id;
-    if ($uid <= 0) return [];
+    $sid = (int) $slip_id;
+    if ($sid <= 0) return [];
     wh_ensure_tables();
-    $rows = db_fetch_array(
+    $r = db_fetch_row(
         "SELECT s.id, s.order_id, s.customer_name, s.customer_short, s.status, s.sent_at, s.done_at, s.accent,
                 (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0) AS total_items,
                 (SELECT COUNT(*) FROM wh_picking_items i WHERE i.slip_id = s.id AND i.removed = 0 AND i.picked = 1) AS picked_items
          FROM wh_picking_slips s
-         INNER JOIN factory_order_sales_history h ON h.id = s.order_id
-         WHERE h.user_id = $uid
-           AND (s.status IN ('new','doing')
-                OR (s.status = 'done' AND s.done_at >= DATE_SUB(NOW(), INTERVAL 3 DAY)))
-         ORDER BY (s.status = 'done') ASC, s.sent_at DESC, s.id DESC"
-    ) ?: [];
-    foreach ($rows as &$r) {
-        $r['label'] = trim((string) $r['customer_short']) !== ''
-            ? (string) $r['customer_short'] : (string) $r['customer_name'];
-    }
-    unset($r);
-    return $rows;
+         WHERE s.id = $sid LIMIT 1"
+    );
+    if (!$r) return [];
+    $r['label'] = trim((string) $r['customer_short']) !== ''
+        ? (string) $r['customer_short'] : (string) $r['customer_name'];
+    return [$r];
 }
 
 /** Phiếu mới nhất của 1 đơn (cho trạng thái nút trên card đơn hàng). */

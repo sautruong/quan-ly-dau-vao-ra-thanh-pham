@@ -458,7 +458,14 @@
        Nút mắt gạch nằm trong ô tiêu đề (hiện khi hover); ẩn rồi thì nút mở lại nằm cùng
        hàng với "Lấy số đặt gần đây".
        ================================================================================= */
+    // Trạng thái ẩn cột CÁ NHÂN HÓA theo user — server render sẵn từ data-hidden-cols
+    // (xem _order_panel.php + sf_get_hidden_cols) để không bị "chớp" hiện rồi mới ẩn lúc tải trang.
     var hiddenCols = {};
+    (function initHiddenCols() {
+        var raw = String($('#of-order-view').attr('data-hidden-cols') || '').trim();
+        if (!raw) return;
+        raw.split(',').forEach(function (c) { c = c.trim(); if (c) hiddenCols[c] = true; });
+    })();
     function applyColVisibility($scope) {
         $.each(['weight', 'stock'], function (i, col) {
             var hide = !!hiddenCols[col];
@@ -466,14 +473,21 @@
             $('#of-order-view .of-col-show[data-col="' + col + '"]').prop('hidden', !hide);
         });
     }
+    /** Ghi lại lên server để lần vào trang sau vẫn giữ đúng cột đang ẩn (mỗi user riêng). */
+    function saveHiddenCols() {
+        var cols = Object.keys(hiddenCols).filter(function (c) { return hiddenCols[c]; });
+        $.post(BASE + 'save_hidden_cols', { cols: cols.join(',') });
+    }
     $(document).on('click', '.of-col-hide', function (e) {
         e.stopPropagation();
         hiddenCols[$(this).data('col')] = true;
         applyColVisibility();
+        saveHiddenCols();
     });
     $(document).on('click', '.of-col-show', function () {
         hiddenCols[$(this).data('col')] = false;
         applyColVisibility();
+        saveHiddenCols();
     });
 
     /* =================================================================================

@@ -295,7 +295,23 @@ function home_permission_state_payload($user, $cur_mod = '', $cur_ctl = '', $cur
         // Admin phó được vào màn phân quyền/quản lý user dù không nằm trong tbl_views.
         $deputy_pass = $is_deputy && $cur_mod === 'admin_factory'
             && in_array($cur_act, ['manage_permissions', 'manage_user_list'], true);
-        if (!$deputy_pass) {
+        // Chi nhánh ĐẶT HÀNG đang xem phiếu soạn của đơn mình (chế độ chỉ xem, mở qua permission_guard()
+        // — xem helper/permission.php): view "Soạn hàng" CÓ trong tbl_views nên vòng lặp bên dưới
+        // sẽ tính $current_allowed = false vì họ không được GÁN view đó, rồi tự đá về trang chủ giữa
+        // chừng. Nới đúng như permission_guard() (KHÔNG require warehouseModel.php — load_model() dùng
+        // require trần, dễ "Cannot redeclare" nếu model đó lỡ nạp ở nơi khác trong cùng request).
+        $wh_guest_pass = false;
+        if ($cur_mod === 'warehouse' && $cur_ctl === 'warehouse' && $cur_act === 'picking_task') {
+            $uidChk = (int) ($user['id'] ?? 0);
+            if ($uidChk > 0 && db_fetch_row("SHOW TABLES LIKE 'wh_picking_slips'")) {
+                $wh_guest_pass = db_num_rows(
+                    "SELECT s.id FROM wh_picking_slips s
+                     INNER JOIN factory_order_sales_history h ON h.id = s.order_id
+                     WHERE h.user_id = $uidChk LIMIT 1"
+                ) > 0;
+            }
+        }
+        if (!$deputy_pass && !$wh_guest_pass) {
             $view = permission_find_view($cur_mod, $cur_ctl, $cur_act);
             if ($view) { // chỉ những view có trong danh mục mới bị gate
                 $current_allowed = isset($allowed_keys[strtolower($cur_mod . '|' . $cur_ctl . '|' . $cur_act)]);

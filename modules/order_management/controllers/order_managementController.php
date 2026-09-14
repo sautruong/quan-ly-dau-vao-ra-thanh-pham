@@ -195,14 +195,19 @@ function delete_orderAction()
     echo json_encode(['ok' => $ok], JSON_UNESCAPED_UNICODE);
 }
 
-/* AJAX: nhà máy "Xác nhận đơn hàng" (không đẩy thông báo cho bán hàng). */
+/* AJAX: nhà máy "Xác nhận đơn hàng" -> đẩy chuông cho khách hàng (chỉ khi TÍCH, bỏ tích thì không). */
 function set_confirmedAction()
 {
     header('Content-Type: application/json; charset=utf-8');
     $id        = isset($_POST['id']) ? (int) $_POST['id'] : 0;
     $confirmed = !empty($_POST['confirmed']);
     if ($id <= 0) { echo json_encode(['ok' => false, 'msg' => 'Thiếu id']); return; }
-    $ok = om_set_confirmed($id, $confirmed);
+    $meta = om_get_order_meta($id);
+    $ok   = om_set_confirmed($id, $confirmed);
+    if ($ok && $confirmed && $meta) {
+        om_notify_seller($meta, 'Đơn hàng đã được xác nhận',
+            'Nhà máy đã xác nhận đơn "' . ($meta['customer_name'] ?? '') . '".');
+    }
     echo json_encode(['ok' => $ok], JSON_UNESCAPED_UNICODE);
 }
 

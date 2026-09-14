@@ -566,6 +566,44 @@ function sf_set_last_branch($user_id, $customer_id, $customer_name)
 }
 
 /**
+ * Cột đang ẩn tạm trong bảng "Đơn hiện tại" (Khối lượng / Tồn nhà máy) — cá nhân hóa THEO USER,
+ * giữ nguyên qua các lần vào lại trang (12/9/2026, anh Sáu chốt). Trả mảng key đang ẩn, vd ['weight'].
+ */
+function sf_get_hidden_cols($user_id)
+{
+    $user_id = (int) $user_id;
+    if ($user_id <= 0) return [];
+    sf_ensure_settings_table();
+    $key = escape_string('sell_factory.hidden_cols.' . $user_id);
+    $row = db_fetch_row("SELECT setting_value FROM app_settings WHERE setting_key = '$key' LIMIT 1");
+    if (!$row || $row['setting_value'] === null || $row['setting_value'] === '') return [];
+    $data = json_decode($row['setting_value'], true);
+    if (!is_array($data)) return [];
+    $allow = ['weight', 'stock'];
+    return array_values(array_intersect($allow, $data));
+}
+
+/** Ghi lại cột đang ẩn của user. $cols: mảng key trong {'weight','stock'} (rỗng = không ẩn cột nào). */
+function sf_set_hidden_cols($user_id, $cols)
+{
+    $user_id = (int) $user_id;
+    if ($user_id <= 0) return false;
+    sf_ensure_settings_table();
+    $allow = ['weight', 'stock'];
+    $clean = array_values(array_intersect($allow, (array) $cols));
+    $full  = 'sell_factory.hidden_cols.' . $user_id;
+    $fk    = escape_string($full);
+    $val   = json_encode($clean, JSON_UNESCAPED_UNICODE);
+    $exists = db_num_rows("SELECT 1 FROM app_settings WHERE setting_key = '$fk'") > 0;
+    if ($exists) {
+        db_update('app_settings', ['setting_value' => $val], "setting_key = '$fk'");
+    } else {
+        db_insert('app_settings', ['setting_key' => $full, 'setting_value' => $val]);
+    }
+    return true;
+}
+
+/**
  * Bảo đảm các cột cờ ẩn 2 chiều + xác nhận đơn tồn tại.
  *  - factory_hidden: nhà máy ẩn đơn (không ảnh hưởng lịch sử bán hàng).
  *  - seller_hidden : bán hàng ẩn đơn khỏi lịch sử của mình.

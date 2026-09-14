@@ -35,6 +35,10 @@
     var rawMode   = {};   // {itemId: true} — dòng đang hiện SỐ thay vì quy đổi kiện
     var kienTimer = {};   // {group: timeoutId} — hẹn 2s mới báo sai định dạng
     var thuTuDong = {};   // {itemId: thứ tự} — CHỐT lúc mở phiếu, không sắp lại nữa
+    /* KHACH-only: khi nhà máy đổi số lượng thực bốc, hiện tạm số CŨ (gạch, nhỏ) bên dưới số MỚI
+       để chi nhánh nhận ra ngay có điều chỉnh — xem noteQtyChange()/rowHtml(). */
+    var qtyChangeMap = {};      // {itemId: {old: "text cũ", ts: epoch_ms}}
+    var QTY_CHANGE_TTL = 30000; // 30s đủ để nhận ra, không lưu vĩnh viễn gây rối mắt
 
     function esc(s) {
         return String(s == null ? '' : s)
@@ -107,6 +111,8 @@
     function rowHtml(it) {
         var locked = !!it.picked;
         var qtyText = rawMode[it.id] ? num(it.qty_actual) : (it.kien_text || '');
+        // KHACH: nhà máy vừa đổi số bốc thực tế -> hiện số CŨ (gạch, nhỏ) dưới số MỚI ~30s.
+        var chg = (KHACH && qtyChangeMap[it.id]) ? qtyChangeMap[it.id] : null;
         var sub = [];
         if (it.pack_label) sub.push(esc(it.pack_label));
         if (it.inv_kien) sub.push('TK: ' + esc(it.inv_kien));
@@ -156,9 +162,14 @@
                 '</div>' +
                 '<div class="wpk-qty-wrap">' +
                   '<label class="wpk-chk"><input type="checkbox" class="wpk-picked"' + (locked ? ' checked' : '') + '><span></span></label>' +
-                  '<span class="wpk-qty' + (quyDoiDuoc(it) ? '' : ' is-plain') + '">' + esc(qtyText) + '</span>' +
+                  (chg
+                    ? '<span class="wpk-qty wpk-qty-changed' + (quyDoiDuoc(it) ? '' : ' is-plain') + '" title="Vừa được nhà máy điều chỉnh">' +
+                        '<span class="wpk-qty-new">' + esc(qtyText) + '</span>' +
+                        '<span class="wpk-qty-old">' + esc(chg.old) + '</span>' +
+                      '</span>'
+                    : '<span class="wpk-qty' + (quyDoiDuoc(it) ? '' : ' is-plain') + '">' + esc(qtyText) + '</span>') +
                 '</div>' +
-                '<button type="button" class="wpk-del" title="Gỡ khỏi phiếu">&times;</button>' +
+                (KHACH ? '' : '<button type="button" class="wpk-del" title="Gỡ khỏi phiếu">&times;</button>') +
               '</div>' +
             '</div>';
     }
@@ -177,26 +188,32 @@
         $('#wpk-total-label').text('TỔNG ' + live.length + ' SP');
 
         // Khối "đã gỡ": giữ lại để admin (và cả nhân viên lỡ tay) bấm cho vào lại.
+        // Chi nhánh xem nhờ (KHACH) CŨNG được thấy khối này (biết SP nào bị gỡ khỏi đơn mình) —
+        // chỉ khác là không có nút "Đưa lại vào phiếu". Xem lại phiếu cũ (CHIXEM) thì ẩn hẳn
+        // (giữ nguyên hành vi cũ, phiếu đã chốt không còn ý nghĩa "gỡ tạm" nữa).
         var $rm = $('#wpk-removed');
-        if (!gone.length) { $rm.attr('hidden', true); }
+        if (!gone.length || CHIXEM) { $rm.attr('hidden', true); }
         else {
             $rm.removeAttr('hidden');
             $('#wpk-removed-count').text('(' + gone.length + ')');
             $('#wpk-removed-list').html(gone.map(function (it) {
-                return '<div class="wpk-removed-item" data-id="' + it.id + '">' +
+                var restoreBtn = KHACH ? '' : '<button type="button" class="wpk-restore" title="Đưa lại vào phiếu"><i class="fa-solid fa-rotate-left"></i></button>';
+                return '<div class="wpk-removed-item' + (KHACH ? ' is-readonly' : '') + '" data-id="' + it.id + '">' +
                     '<span>' + esc(it.product_name) + '</span>' +
-                    '<button type="button" class="wpk-restore" title="Đưa lại vào phiếu"><i class="fa-solid fa-rotate-left"></i></button>' +
+                    restoreBtn +
                     '</div>';
             }).join(''));
         }
 
         $('#wpk-slip').toggleClass('is-locked', !editable()).toggleClass('is-readonly', CHIXEM || KHACH);
-        // Xem lại phiếu cũ / chi nhánh xem nhờ: giấu ô thêm hàng + khối đã gỡ, nút dưới đổi thành "Chi tiết".
+        // Xem lại phiếu cũ / chi nhánh xem nhờ: giấu ô thêm hàng, nút dưới đổi thành "Chi tiết".
         $('#wpk-toolbar').toggle(!CHIXEM && !KHACH);
         $('#wpk-note').prop('readonly', CHIXEM || KHACH);
-        if (CHIXEM || KHACH) $rm.attr('hidden', true);
+        // Chi nhánh không có quyền CHỐT phiếu ("Soạn xong") nhưng VẪN được bấm "Chi tiết" khi
+        // đang xem lại 1 phiếu trong lịch sử (CHIXEM) — nút chỉ thật sự ẩn khi KHACH ở màn "đang
+        // soạn" hiện tại (không có gì để họ bấm chốt).
         $('#wpk-finish')
-            .toggle(!KHACH)                       // chi nhánh không có quyền chốt phiếu
+            .toggle(!KHACH || CHIXEM)
             .prop('disabled', CHIXEM ? false : !editable())
             .html(CHIXEM
                 ? '<i class="fa-solid fa-circle-info"></i> Chi tiết'
@@ -851,6 +868,19 @@
         return !!(el && el.tagName === 'INPUT' && el.closest && el.closest('#wpk-slip'));
     }
 
+    /** Ghi nhận 1 dòng vừa bị nhà máy đổi số bốc thực tế (KHACH xem) — tự dọn sau TTL. */
+    function noteQtyChange(id, oldText) {
+        qtyChangeMap[id] = { old: oldText, ts: Date.now() };
+        var sid = slipId();
+        setTimeout(function () {
+            var c = qtyChangeMap[id];
+            if (c && Date.now() - c.ts >= QTY_CHANGE_TTL - 50) {
+                delete qtyChangeMap[id];
+                if (slipId() === sid) renderList();
+            }
+        }, QTY_CHANGE_TTL);
+    }
+
     /** Bay avatar người vừa tích lên từ đúng ô checkbox rồi tan dần. */
     function bayAvatar(itemId, nguoi) {
         var el = document.querySelector('.wpk-row[data-id="' + itemId + '"] .wpk-chk');
@@ -884,6 +914,17 @@
                     moiTich.push({ id: i.id, nguoi: danhBa[i.picked_by] });
                 }
             });
+
+            // KHACH: nhà máy đổi số bốc thực tế của dòng nào -> ghi nhận để hiện số cũ (gạch, nhỏ).
+            if (KHACH) {
+                var truocQty = {};
+                ((SLIP.items) || []).forEach(function (i) { truocQty[i.id] = { qty: Number(i.qty_actual), text: i.kien_text || num(i.qty_actual) }; });
+                ((res.slip.items) || []).forEach(function (i) {
+                    var t = truocQty[i.id];
+                    if (!t || i.removed) return;   // dòng mới thêm / vừa gỡ -> không phải "điều chỉnh"
+                    if (Number(i.qty_actual) !== t.qty) noteQtyChange(i.id, t.text);
+                });
+            }
 
             SLIP = res.slip;
             if (res.slips) SLIPS = res.slips;

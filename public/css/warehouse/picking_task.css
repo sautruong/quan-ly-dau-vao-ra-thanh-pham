@@ -932,3 +932,33 @@
 /* Khoá hẳn tương tác trên danh sách hàng (server cũng chặn, đây chỉ để khỏi bấm nhầm). */
 .wpk-page.is-guest .wpk-list { pointer-events: none; }
 .wpk-page.is-guest .wpk-row { cursor: default; }
+
+/* ---- Badge "Chỉ xem" gọn (12/9/2026 rút từ thanh cảnh báo dài) ---- */
+.wpk-guest-note {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-bottom: 12px; padding: 5px 12px;
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 999px; color: #1e40af; font-size: 12.5px; font-weight: 700;
+    cursor: default;
+}
+.wpk-guest-note i { font-size: 12px; }
+
+/* ---- KHACH: nhà máy vừa đổi số bốc -> số mới (đậm, trên) + số cũ (gạch, nhỏ, dưới) ---- */
+.wpk-qty-changed {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+    cursor: default;
+}
+.wpk-qty-changed .wpk-qty-new {
+    font-weight: 700; font-size: 15px; color: var(--wpk-accent);
+    animation: wpkQtyPop .5s ease;
+}
+.wpk-qty-changed .wpk-qty-old {
+    font-weight: 400; font-size: 11px; color: #9ca3af; text-decoration: line-through;
+}
+@keyframes wpkQtyPop {
+    0%   { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+/* ---- Khối "Đã gỡ" khi chi nhánh xem nhờ: không có nút phục hồi, chỉ để biết ---- */
+.wpk-removed-item.is-readonly { color: #9ca3af; }

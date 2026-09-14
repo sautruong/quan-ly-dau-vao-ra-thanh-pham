@@ -42,9 +42,8 @@ $accent = $slip && !empty($slip['accent']) ? (string) $slip['accent'] : '#16a34a
 
             <?php if (!empty($readonly)): ?>
                 <!-- Chi nhánh đặt hàng vào từ chuông "đơn đã gửi xuống kho": chỉ theo dõi tiến độ. -->
-                <div class="wpk-guest-note">
-                    <i class="fa-solid fa-eye"></i>
-                    <span>Chế độ <b>chỉ xem</b> — bạn đang theo dõi kho soạn hàng cho đơn của mình (tự cập nhật theo thời gian thực).</span>
+                <div class="wpk-guest-note" title="Bạn đang theo dõi kho soạn hàng cho đơn của mình — tự cập nhật theo thời gian thực, không thao tác được.">
+                    <i class="fa-solid fa-eye"></i> Chỉ xem
                 </div>
             <?php endif; ?>
 

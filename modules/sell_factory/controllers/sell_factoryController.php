@@ -30,6 +30,9 @@ function order_factoryAction()
         'last_branch'    => $last_branch,
         // Sản phẩm của mẻ sản xuất gần nhất -> ô sản phẩm chớp sáng khi vào trang.
         'recent_prod_ids' => sf_get_recent_production_product_ids(),
+        // Cột "Khối lượng (kg)"/"Tồn nhà máy" đang ẩn tạm — cá nhân hóa theo user, giữ nguyên
+        // qua các lần vào lại trang (xem _order_panel.php + save_hidden_colsAction).
+        'hidden_cols' => sf_get_hidden_cols($uid),
     ]);
 }
 
@@ -41,11 +44,14 @@ function order_historyAction()
     $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
     $per  = isset($_GET['per']) ? (int) $_GET['per'] : 20;
     if (!in_array($per, [10, 20, 50, 100], true)) $per = 20;
+    $uid = sf_current_user_id();
     load_view('order_history', [
-        'history'    => sf_get_history($page, $per, sf_current_user_id()),
+        'history'    => sf_get_history($page, $per, $uid),
         // Cột tồn kho bên trái của view "Chỉnh sửa đơn hàng" (dùng chung _order_panel.php).
         'product_groups' => sf_get_products_grouped_by_category(),
         'page_title' => 'Lịch Sử đặt hàng nhà máy',
+        // Cùng cài đặt ẩn cột với "Đơn hiện tại" (chung 1 panel, chung 1 user).
+        'hidden_cols' => sf_get_hidden_cols($uid),
     ]);
 }
 
@@ -119,6 +125,17 @@ function set_branchAction()
     $cid   = isset($_POST['customer_id']) && $_POST['customer_id'] !== '' ? (int) $_POST['customer_id'] : null;
     $cname = isset($_POST['customer_name']) ? trim($_POST['customer_name']) : '';
     $ok    = sf_set_last_branch(sf_current_user_id(), $cid, $cname);
+    echo json_encode(['ok' => $ok], JSON_UNESCAPED_UNICODE);
+}
+
+/* AJAX: lưu cột đang ẩn tạm ("Khối lượng (kg)"/"Tồn nhà máy") của user hiện tại — cá nhân hóa,
+   giữ nguyên qua các lần vào lại trang (12/9/2026). POST cols = "weight,stock" (rỗng = hiện hết). */
+function save_hidden_colsAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    $raw  = isset($_POST['cols']) ? (string) $_POST['cols'] : '';
+    $cols = array_filter(array_map('trim', explode(',', $raw)));
+    $ok   = sf_set_hidden_cols(sf_current_user_id(), $cols);
     echo json_encode(['ok' => $ok], JSON_UNESCAPED_UNICODE);
 }
 

@@ -2520,3 +2520,10 @@ body.app-ov-open .of-cart-dropdown { display: none !important; }
 }
 .ofh-bulk-del:hover { background: #b91c1c; }
 .ofh-bulk-del:disabled { opacity: .6; cursor: default; }
+
+/* ---- Khách hàng xem "Đơn hiện tại"/"Chỉnh sửa đơn hàng" -> ẩn bóng chat nổi (14/9/2026) ----
+   Chỉ ẩn nút tròn nổi (.chat-launcher); nếu đang có cửa sổ chat mở dở (.chat-panel) thì giữ
+   nguyên, không đóng ngang cuộc trò chuyện. Quy tắc chỉ nằm trong file CSS riêng của
+   sell_factory (order_factory/order_history/production_forecast) nên không ảnh hưởng view
+   "Xem đơn hàng" phía nhà máy (order_management dùng file CSS khác dù chung tên class body). */
+body.app-ov-open .chat-launcher { display: none !important; }
