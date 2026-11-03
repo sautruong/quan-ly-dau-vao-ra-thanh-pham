@@ -713,27 +713,115 @@
     /* --------------------------- Share Zalo --------------------------- */
     $(document).on('click', '#btn-share-zalo', function () {
         // Dựng hoá đơn bằng ĐÚNG hàm mà nút "Gửi qua chat" dùng -> hai đường không bao giờ lệch.
-        if (!fillInvoicePreview()) { alert('Chưa có sản phẩm để chia sẻ.'); return; }
+        var payload = fillInvoicePreview();
+        if (!payload) { alert('Chưa có sản phẩm để chia sẻ.'); return; }
+        // Mỗi lần mở: dựng lại chữ theo đơn hiện tại và quay về tab Hình ảnh (tab mặc định).
+        var ta = document.getElementById('zalo-text');
+        ta.value = buildOrderText(payload);
+        ta.rows = Math.min(14, Math.max(6, payload.items.length + 3));
+        try { ta.setSelectionRange(0, 0); } catch (e) { /* phần tử đang ẩn: bỏ qua */ }
+        ta.scrollTop = 0;
+        switchZaloTab('image');
         openModal('modal-zalo');
+    });
+
+    /* ----- Tab "Hình ảnh" / "Dạng chữ" của modal Share Zalo ----- */
+    function switchZaloTab(tab) {
+        $('#zalo-tabs .of-setting-tab').each(function () {
+            $(this).toggleClass('active', $(this).data('ztab') === tab);
+        });
+        $('#zalo-pane-image').toggle(tab === 'image');
+        $('#zalo-pane-text').toggle(tab === 'text');
+        if (tab === 'text') document.getElementById('zalo-text').focus();
+    }
+    $(document).on('click', '#zalo-tabs .of-setting-tab', function () {
+        switchZaloTab($(this).data('ztab'));
+    });
+
+    /** Mỗi sản phẩm một dòng "Tên: số lượng đơn vị". Chỉ dùng '\n' để dán vào khung chat Zalo
+     *  vẫn xuống dòng đúng từng dòng (Zalo không gửi đi khi dán nhiều dòng). */
+    function buildOrderText(payload) {
+        function gon(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim(); }
+        return payload.items.map(function (it) {
+            var unit = gon(it.unit);
+            // Số lượng nguyên văn như cột "Số lượng" ở tab Hình ảnh (không chèn dấu . , phân cách).
+            return gon(it.product_name) + ': ' + it.qt_order + (unit ? ' ' + unit : '');
+        }).join('\n');
+    }
+
+    /* Trong ô chữ: Alt + Enter = xuống dòng (Enter thường vẫn xuống dòng như mặc định). */
+    $(document).on('keydown', '#zalo-text', function (e) {
+        if (e.key !== 'Enter' || !e.altKey) return;
+        e.preventDefault();
+        // insertText giữ được Ctrl+Z; setRangeText là đường dự phòng nếu trình duyệt không hỗ trợ.
+        if (!document.execCommand || !document.execCommand('insertText', false, '\n')) {
+            this.setRangeText('\n', this.selectionStart, this.selectionEnd, 'end');
+        }
+    });
+
+    /** Dự phòng khi navigator.clipboard không dùng được (trang http, trình duyệt cũ). */
+    function legacyCopyText(text) {
+        var t = document.createElement('textarea');
+        t.value = text;
+        t.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+        document.body.appendChild(t);
+        t.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(t);
+        return ok;
+    }
+
+    $(document).on('click', '#btn-copy-zalo-text', function () {
+        var $btn = $(this);
+        // Bỏ dòng trống đầu và khoảng trắng cuối (hay dư khi gõ lời nhắn) cho tin gọn.
+        var text = String($('#zalo-text').val() || '').replace(/\r\n?/g, '\n')
+            .replace(/^(?:[ \t]*\n)+/, '').replace(/\s+$/, '');
+        if (text === '') { alert('Chưa có nội dung để sao chép.'); return; }
+
+        var xong = function () {
+            $btn.text('Đã sao chép ✓');
+            setTimeout(function () { $btn.text('Sao chép nội dung'); }, 1500);
+        };
+        var thatBai = function () {
+            alert('Trình duyệt không cho sao chép tự động. Hãy bấm vào khung chữ, Ctrl+A rồi Ctrl+C.');
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(xong, function () {
+                if (legacyCopyText(text)) xong(); else thatBai();
+            });
+        } else if (legacyCopyText(text)) {
+            xong();
+        } else {
+            thatBai();
+        }
     });
     /* ---------------------------------------------------------------------------------
        CHỤP HOÁ ĐƠN — hàm dùng chung cho "Chụp hóa đơn" (Zalo) và "Gửi qua chat", để hai
        đường luôn ra CÙNG MỘT tấm ảnh.
 
-       Hai việc phải làm quanh lúc chụp:
+       Ba việc phải làm quanh lúc chụp:
        1. Gỡ viền gạch đứt của .zalo-capture — nó chỉ để nhìn trên màn hình, không được vào ảnh.
        2. Nếu #modal-zalo đang đóng (đường "Gửi qua chat" không mở nó ra) thì phải cho nó
           ĐƯỢC BỐ TRÍ, nếu không html2canvas đo ra 0x0 và ảnh rỗng. Dùng display:flex kèm
           opacity:0 thay vì mở modal thật: opacity nằm trên lớp mask (cha), mà html2canvas chỉ
           đọc computed style của CHÍNH #zalo-capture trở xuống nên ảnh vẫn đục bình thường.
+       3. Modal có tab "Dạng chữ": nếu lần trước đóng modal ở tab đó thì khung ảnh đang ẩn,
+          cũng phải tạm hiện ra rồi trả lại như cũ.
        --------------------------------------------------------------------------------- */
     function captureInvoiceCanvas() {
         var el = document.getElementById('zalo-capture');
         var $mask = $('#modal-zalo');
         var dangHien = $mask.is(':visible');
         var styleCu = $mask.attr('style') || '';
+        // Modal có 2 tab: đang đứng ở "Dạng chữ" thì khung ảnh bị display:none -> cũng đo ra 0x0.
+        // Đọc display tính toán của CHÍNH khung ảnh (không bị ảnh hưởng bởi modal cha đang ẩn).
+        var $pane = $('#zalo-pane-image');
+        var paneAn = $pane.css('display') === 'none';
+        var paneStyleCu = $pane.attr('style') || '';
 
         if (!dangHien) $mask.css({ display: 'flex', opacity: 0, pointerEvents: 'none' });
+        if (paneAn) $pane.css('display', 'block');
         $(el).addClass('of-capturing');
 
         // html2canvas trả Promise GỐC (không phải Deferred của jQuery) nên KHÔNG có .always() —
@@ -741,6 +829,10 @@
         // và #modal-zalo kẹt ở display:flex khi chụp lỗi.
         var donDep = function () {
             $(el).removeClass('of-capturing');
+            if (paneAn) {
+                if (paneStyleCu) $pane.attr('style', paneStyleCu);
+                else $pane.removeAttr('style');
+            }
             if (!dangHien) {
                 if (styleCu) $mask.attr('style', styleCu);
                 else $mask.removeAttr('style').hide();

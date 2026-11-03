@@ -151,25 +151,7 @@ $page           = (int) ($history['page'] ?? 1);
         </div>
     </div>
 
-    <div class="modal-mask" id="modal-zalo" style="display:none;">
-        <div class="modal-box">
-            <span class="modal-close" data-close="modal-zalo">&times;</span>
-            <div id="zalo-capture" class="zalo-capture">
-                <div class="zalo-customer"><strong>Tên khách hàng:</strong> <span id="zalo-customer-name"></span></div>
-                <div class="zalo-title">ĐẶT HÀNG NHÀ MÁY</div>
-                <table class="zalo-table">
-                    <thead>
-                        <tr><th>Tên sản phẩm</th><th>Đơn vị</th><th>Số lượng</th><th>Khối lượng (kg)</th></tr>
-                    </thead>
-                    <tbody id="zalo-body"></tbody>
-                </table>
-                <div class="zalo-weight-total">Tổng khối lượng: <span id="zalo-weight-total-value">0</span> kg</div>
-            </div>
-            <div class="modal-zalo-footer">
-                <button class="btn-capture-zalo" id="btn-capture-zalo">Chụp hóa đơn</button>
-            </div>
-        </div>
-    </div>
+    <?php include __DIR__ . '/_zalo_modal.php'; ?>
 
     <div class="modal-mask of-chat-modal" id="modal-share-chat" style="display:none;">
         <div class="modal-box of-chat-box">
