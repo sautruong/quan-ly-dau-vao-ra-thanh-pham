@@ -998,14 +998,38 @@
             openMatcheck(parseInt(b.getAttribute('data-product-id'), 10) || 0);
         });
 
-        // Gập/mở card (không còn đối chiếu inline).
+        // Tô đỏ nút "Đối chiếu" + nhãn "· thiếu N" khi SP thiếu NVL (cảnh báo ngay, chưa cần mở modal).
+        function checkShort(item) {
+            var btn = item.querySelector('.pf-mc-btn');
+            if (!btn) return;
+            var pid = item.getAttribute('data-product-id');
+            fetch(ACT + 'material_check_get&product_id=' + pid + '&quantity=' + cardQty(pid), { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    var short = !!(res && res.ok && res.short_count > 0);
+                    btn.classList.toggle('is-short', short);
+                    btn.innerHTML = '<i class="fa-solid fa-scale-balanced"></i> Đối chiếu' + (short ? (' · thiếu ' + res.short_count) : '');
+                }).catch(function () {});
+        }
+
+        // Gập/mở card; khi mở → kiểm tra thiếu để tô cảnh báo trên nút Đối chiếu.
         list.addEventListener('click', function (e) {
             var head = e.target.closest('.pf-acc-head');
             if (!head) return;
             if (!window.PF_READONLY && (e.target.closest('.num')
                 || e.target.closest('.pf-name-edit-btn') || e.target.closest('.pf-name-text'))) return;
             var item = head.closest('.product-item');
-            if (item) item.classList.toggle('open');
+            if (!item) return;
+            item.classList.toggle('open');
+            if (item.classList.contains('open')) checkShort(item);
+        });
+
+        // Đổi SL (đã lưu qua ajax) → cập nhật lại cảnh báo thiếu trên nút Đối chiếu.
+        list.addEventListener('change', function (e) {
+            var q = e.target.closest && e.target.closest('.pf-qty-input');
+            if (!q) return;
+            var item = q.closest('.product-item');
+            if (item && item.classList.contains('open')) checkShort(item);
         });
     })();
 

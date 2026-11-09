@@ -1358,6 +1358,7 @@ a img {
 .pf-card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .pf-mc-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #0ea5e9; color: #0369a1; background: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pf-mc-btn:active { background: #f0f9ff; }
+.pf-mc-btn.is-short { border-color: #dc2626; color: #b91c1c; background: #fef2f2; }
 .pf-card-actions .pf-del-product { margin-left: auto; }
 
 /* ----- Admin: nút xoá SP (chân card) + footer "Lưu & Gửi kế hoạch" ----- */
