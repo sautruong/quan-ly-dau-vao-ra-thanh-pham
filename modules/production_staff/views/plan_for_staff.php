@@ -26,6 +26,9 @@ $pf_ro = function_exists('permission_is_view_only')
     && permission_is_view_only('production_staff', 'production_staff', 'plan_for_staff');
 // Ngày của kế hoạch hằng ngày (lấy theo card dài ngày đã công bố) — controller truyền xuống.
 $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime((string) $plan_date) : time();
+// Hình công thức: admin thấy nút quản lý; user thường chỉ thấy nút xem với SP đã duyệt.
+$pf_is_admin      = !empty($pf_is_admin);
+$formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? $formula_approved : [];
 ?>
 
 <body>
@@ -48,12 +51,7 @@ $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime(
                         <button type="button" class="btn-reset" id="btn-reset">
                             <i class="fa-solid fa-rotate-left"></i> Reset
                         </button>
-                        <button type="button" class="btn-print-bc" id="btn-print-bc">
-                            <i class="fa-solid fa-print"></i> In BC
-                        </button>
-                        <button type="button" class="btn-share-khsx" id="btn-share-khsx">
-                            <i class="fa-solid fa-share-nodes"></i> Share KHSX
-                        </button>
+                        <?php /* Nút "In BC" + "Share KHSX" đã gỡ (không còn cần) — 2026-11-09. */ ?>
                         <?php if (permission_can_check_db('production_staff', 'production_staff', 'plan_for_staff')): ?>
                         <button type="button" class="btn-check-db"
                             data-tables="production_plans,products,pre_production_notes,additional_tasks,finished_goods_inventory,product_info_basic,material_information,finished_product_production_data">
@@ -81,6 +79,8 @@ $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime(
                         <?php foreach ($plans as $plan): ?>
                             <li class="product-item pf-acc" data-product-id="<?php echo (int)$plan['product_id']; ?>">
                                 <div class="wp-product-num pf-acc-head">
+                                    <?php $pf_img = trim((string) ($plan['image_url'] ?? '')); ?>
+                                    <div class="pf-prod-ava"><?php if ($pf_img !== ''): ?><img src="public/images/<?php echo htmlspecialchars($pf_img, ENT_QUOTES, 'UTF-8'); ?>" alt="" loading="lazy"><?php else: ?><i class="fa-solid fa-box pf-ava-ph"></i><?php endif; ?></div>
                                     <div class="name-product">
                                         <p><strong class="pf-name-text" contenteditable="false" spellcheck="false" data-product-id="<?php echo (int)$plan['product_id']; ?>"><?php echo htmlspecialchars($plan['product_name']); ?></strong><button type="button" class="pf-name-edit-btn" title="Sửa tên"><i class="fa-solid fa-pen"></i></button></p>
                                     </div>
@@ -90,6 +90,18 @@ $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime(
                                     <span class="pf-acc-caret" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>
                                 </div>
                                 <div class="pf-acc-body">
+                                <?php $pf_pid = (int) $plan['product_id']; ?>
+                                <div class="pf-formula-row">
+                                    <?php if ($pf_is_admin): ?>
+                                        <button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="<?php echo $pf_pid; ?>">
+                                            <i class="fa-solid fa-flask"></i> Công thức
+                                        </button>
+                                    <?php elseif (in_array($pf_pid, $formula_approved, true)): ?>
+                                        <button type="button" class="pf-formula-btn pf-formula-view" data-product-id="<?php echo $pf_pid; ?>">
+                                            <i class="fa-solid fa-flask"></i> Xem công thức
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="list-QC">
                                     <div class="wp-ck">
                                         <input type="checkbox" id="ck_sample_<?php echo $plan['plan_id']; ?>" data-plan-id="<?php echo (int)$plan['plan_id']; ?>" data-field="sample" <?php echo (int)$plan['sample'] === 1 ? 'checked' : ''; ?>>
@@ -143,6 +155,14 @@ $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime(
                                         <strong>Lưu ý:</strong>
                                         <input type="text" class="pf-note-input" data-product-id="<?php echo (int)$plan['product_id']; ?>" value="<?php echo htmlspecialchars($note_display); ?>" readonly>
                                     </div>
+                                <?php endif; ?>
+                                <div class="pf-matcheck" data-loaded="0"></div>
+                                <?php if ($pf_is_admin): ?>
+                                <div class="pf-card-foot">
+                                    <button type="button" class="pf-del-product" data-plan-id="<?php echo (int) $plan['plan_id']; ?>">
+                                        <i class="fa-solid fa-trash"></i> Xoá sản phẩm
+                                    </button>
+                                </div>
                                 <?php endif; ?>
                                 </div><!-- .pf-acc-body -->
                             </li>
@@ -265,6 +285,43 @@ $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime(
                 </div>
             </div>
         </div>
+    </div>
+
+    <?php if ($pf_is_admin): ?>
+    <!-- Footer "Lưu & Gửi kế hoạch": mờ sẵn, sáng khi có thay đổi; gửi = đẩy chuông NV -->
+    <div class="pf-savebar" id="pf-savebar">
+        <button type="button" class="pf-save-btn" id="pf-save-send" disabled>
+            <i class="fa-solid fa-paper-plane"></i> Lưu &amp; Gửi kế hoạch
+        </button>
+    </div>
+    <?php endif; ?>
+
+    <!-- Modal CÔNG THỨC (admin quản lý): xem ảnh + nạp ảnh + duyệt cho NV xem -->
+    <div class="pf-fx-backdrop" id="pf-fx-backdrop" aria-hidden="true">
+        <div class="pf-fx-modal" role="dialog" aria-modal="true">
+            <div class="pf-fx-bar">
+                <span class="pf-fx-title" id="pf-fx-title">Công thức</span>
+                <button type="button" class="pf-fx-close" id="pf-fx-close" aria-label="Đóng">&times;</button>
+            </div>
+            <div class="pf-fx-body">
+                <div class="pf-fx-imgwrap" id="pf-fx-imgwrap">
+                    <div class="pf-fx-empty" id="pf-fx-empty">Chưa có hình công thức.</div>
+                    <img id="pf-fx-img" src="" alt="Công thức" style="display:none;">
+                </div>
+                <div class="pf-fx-note" id="pf-fx-note"></div>
+                <div class="pf-fx-admin" id="pf-fx-admin" style="display:none;">
+                    <input type="file" id="pf-fx-file" accept="image/*" hidden>
+                    <button type="button" class="pf-fx-act pf-fx-upload" id="pf-fx-upload"><i class="fa-solid fa-upload"></i> Nạp ảnh</button>
+                    <button type="button" class="pf-fx-act pf-fx-approve" id="pf-fx-approve"><i class="fa-solid fa-user-check"></i> Duyệt cho NV xem</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Xem ảnh công thức FULL VIEWPORT: pinch-zoom 2 ngón + kéo pan -->
+    <div class="pf-zoom" id="pf-zoom" aria-hidden="true">
+        <button type="button" class="pf-zoom-close" id="pf-zoom-close" aria-label="Đóng">&times;</button>
+        <img id="pf-zoom-img" src="" alt="Công thức" draggable="false">
     </div>
 
     <script>window.PF_READONLY = <?php echo $pf_ro ? 'true' : 'false'; ?>;</script>
