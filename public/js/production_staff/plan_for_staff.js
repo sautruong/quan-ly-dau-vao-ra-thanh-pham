@@ -1007,8 +1007,7 @@
                 .then(function (r) { return r.json(); })
                 .then(function (res) {
                     var short = !!(res && res.ok && res.short_count > 0);
-                    btn.classList.toggle('is-short', short);
-                    btn.innerHTML = 'Đối chiếu' + (short ? (' · thiếu ' + res.short_count) : '');
+                    btn.innerHTML = (short ? '<span class="pf-mc-warn" aria-label="Thiếu NVL"></span>' : '') + 'Đối chiếu';
                 }).catch(function () {});
         }
 

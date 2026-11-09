@@ -1355,12 +1355,13 @@ a img {
 .pf-mc-val.is-ok { color: #16a34a; }
 
 /* Hàng action ở chân card: Đối chiếu · Công thức · (Xoá đẩy sang phải) — luôn trên MỘT hàng. */
-.pf-card-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; margin-top: 12px; }
-.pf-card-actions > button { padding: 6px 9px; font-size: 12.5px; white-space: nowrap; }
+.pf-card-actions { display: flex; align-items: stretch; gap: 6px; flex-wrap: nowrap; margin-top: 12px; }
+/* 3 nút chia ĐỀU full-width card, căn giữa, padding 2 bên thoáng. */
+.pf-card-actions > button { flex: 1 1 0; min-width: 0; justify-content: center; padding: 9px 10px; font-size: 12.5px; white-space: nowrap; }
 .pf-mc-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #0ea5e9; color: #0369a1; background: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pf-mc-btn:active { background: #f0f9ff; }
-.pf-mc-btn.is-short { border-color: #dc2626; color: #b91c1c; background: #fef2f2; }
-.pf-card-actions .pf-del-product { margin-left: auto; }
+/* Thiếu NVL: chỉ 1 chip cảnh báo (chấm đỏ) cạnh trái, không đổi chữ/màu nút. */
+.pf-mc-warn { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #dc2626; margin-right: 6px; flex: 0 0 auto; }
 
 /* ----- Admin: nút xoá SP (chân card) + footer "Lưu & Gửi kế hoạch" ----- */
 .pf-card-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
