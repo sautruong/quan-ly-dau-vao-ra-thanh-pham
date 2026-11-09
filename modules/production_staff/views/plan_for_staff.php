@@ -146,12 +146,12 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                                     </div>
                                 <?php endif; ?>
                                 <div class="pf-card-actions">
-                                    <button type="button" class="pf-mc-btn" data-product-id="<?php echo $pf_pid; ?>"><i class="fa-solid fa-scale-balanced"></i> Đối chiếu</button>
+                                    <button type="button" class="pf-mc-btn" data-product-id="<?php echo $pf_pid; ?>">Đối chiếu</button>
                                     <?php if ($pf_is_admin): ?>
-                                        <button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="<?php echo $pf_pid; ?>"><i class="fa-solid fa-flask"></i> Công thức</button>
-                                        <button type="button" class="pf-del-product" data-plan-id="<?php echo (int) $plan['plan_id']; ?>"><i class="fa-solid fa-trash"></i> Xoá sản phẩm</button>
+                                        <button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="<?php echo $pf_pid; ?>">Công thức</button>
+                                        <button type="button" class="pf-del-product" data-plan-id="<?php echo (int) $plan['plan_id']; ?>">Xoá</button>
                                     <?php elseif (in_array($pf_pid, $formula_approved, true)): ?>
-                                        <button type="button" class="pf-formula-btn pf-formula-view" data-product-id="<?php echo $pf_pid; ?>"><i class="fa-solid fa-flask"></i> Xem công thức</button>
+                                        <button type="button" class="pf-formula-btn pf-formula-view" data-product-id="<?php echo $pf_pid; ?>">Xem công thức</button>
                                     <?php endif; ?>
                                 </div>
                                 </div><!-- .pf-acc-body -->

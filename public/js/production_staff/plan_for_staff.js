@@ -853,9 +853,9 @@
                         '</ul>' +
                     '</div>' +
                     '<div class="pf-card-actions">' +
-                        '<button type="button" class="pf-mc-btn" data-product-id="' + pid + '"><i class="fa-solid fa-scale-balanced"></i> Đối chiếu</button>' +
-                        '<button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="' + pid + '"><i class="fa-solid fa-flask"></i> Công thức</button>' +
-                        '<button type="button" class="pf-del-product" data-plan-id="' + plan.plan_id + '"><i class="fa-solid fa-trash"></i> Xoá sản phẩm</button>' +
+                        '<button type="button" class="pf-mc-btn" data-product-id="' + pid + '">Đối chiếu</button>' +
+                        '<button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="' + pid + '">Công thức</button>' +
+                        '<button type="button" class="pf-del-product" data-plan-id="' + plan.plan_id + '">Xoá</button>' +
                     '</div>' +
                     '</div>' + // .pf-acc-body
                 '</li>';
@@ -1008,7 +1008,7 @@
                 .then(function (res) {
                     var short = !!(res && res.ok && res.short_count > 0);
                     btn.classList.toggle('is-short', short);
-                    btn.innerHTML = '<i class="fa-solid fa-scale-balanced"></i> Đối chiếu' + (short ? (' · thiếu ' + res.short_count) : '');
+                    btn.innerHTML = 'Đối chiếu' + (short ? (' · thiếu ' + res.short_count) : '');
                 }).catch(function () {});
         }
 
