@@ -160,7 +160,31 @@ $ajax_base  = '?mod=admin_factory&controllers=admin&action=';
             border-radius: 4px; cursor: pointer; font-size: 13px;
         }
         .btn-delete:hover { background: #fde2e2; }
-        .col-action { min-width: 80px; text-align: center; }
+        .btn-merge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 30px; height: 30px; margin-right: 4px;
+            background: #fff; color: #1d5fa8; border: 1px solid #a9c4e4;
+            border-radius: 4px; cursor: pointer; font-size: 13px;
+        }
+        .btn-merge:hover { background: #e3eefb; }
+        .col-action { min-width: 80px; text-align: center; white-space: nowrap; }
+
+        /* Modal Gộp sản phẩm */
+        .merge-modal .modal { width: 560px; }
+        .merge-modal .merge-body { padding: 16px; font-size: 13px; line-height: 1.5; }
+        .merge-modal .merge-src { background: #fdf3f3; border: 1px solid #efc3c3; border-radius: 4px; padding: 8px 10px; margin-bottom: 12px; }
+        .merge-modal .merge-search { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #c2c8d0; border-radius: 4px; font-size: 13px; margin-bottom: 6px; }
+        .merge-modal .merge-list { max-height: 220px; overflow-y: auto; border: 1px solid #c2c8d0; border-radius: 4px; }
+        .merge-modal .merge-item { padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #f0f2f4; display: flex; gap: 8px; justify-content: space-between; }
+        .merge-modal .merge-item:last-child { border-bottom: 0; }
+        .merge-modal .merge-item:hover { background: #f3f7fb; }
+        .merge-modal .merge-item.active { background: #dcebfb; font-weight: 600; }
+        .merge-modal .merge-item .meta { color: #666; font-size: 12px; white-space: nowrap; }
+        .merge-modal .merge-item.same { border-left: 3px solid #e0a000; }
+        .merge-modal .merge-note { margin-top: 12px; padding: 8px 10px; background: #fff8e5; border: 1px solid #f0d98a; border-radius: 4px; color: #6b5200; }
+        .btn-merge-ok { background: #1d5fa8; color: #fff; border: 0; padding: 7px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-merge-ok:hover { background: #174f8c; }
+        .btn-merge-ok:disabled { background: #9db6d3; cursor: not-allowed; }
 
         /* Modal */
         .modal-backdrop {
@@ -351,6 +375,9 @@ $ajax_base  = '?mod=admin_factory&controllers=admin&action=';
                             </div>
                         </td>
                         <td class="col-action">
+                            <button type="button" class="btn-merge" data-action="merge-product" title="Gộp vào sản phẩm khác (chuyển toàn bộ lịch sử sang sản phẩm kia rồi xóa bản này)">
+                                <i class="fa-solid fa-code-merge"></i>
+                            </button>
                             <button type="button" class="btn-delete" data-action="delete-product" title="Xóa">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
@@ -359,6 +386,31 @@ $ajax_base  = '?mod=admin_factory&controllers=admin&action=';
                 <?php endforeach; endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Modal: Gộp sản phẩm trùng -->
+    <div class="modal-backdrop merge-modal" id="mergeModal">
+        <div class="modal">
+            <div class="modal-header">Gộp sản phẩm</div>
+            <div class="merge-body">
+                <div class="merge-src">
+                    <b>Sản phẩm sẽ bị xóa (nguồn):</b><br>
+                    <span id="mergeSrcLabel"></span>
+                </div>
+                <div style="margin-bottom:6px;"><b>Gộp vào sản phẩm (được giữ lại):</b></div>
+                <input type="text" class="merge-search" id="mergeSearch" placeholder="Tìm theo tên..." autocomplete="off">
+                <div class="merge-list" id="mergeList"></div>
+                <div class="merge-note">
+                    Toàn bộ <b>phiếu xuất/nhập kho, sản xuất, bán hàng, phiếu soạn, đơn đặt hàng nhà máy</b> của sản phẩm nguồn sẽ chuyển sang sản phẩm được chọn;
+                    <b>tồn kho được cộng dồn</b>. Thông tin mô tả (quy cách, khối lượng, giá, công thức) <b>giữ theo sản phẩm được chọn</b>.
+                    Sau đó sản phẩm nguồn bị xóa. Thao tác <b>không thể hoàn tác</b> — nên sao lưu CSDL trước.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="btnCancelMerge">Hủy</button>
+                <button type="button" class="btn-merge-ok" id="btnDoMerge" disabled>Gộp</button>
+            </div>
         </div>
     </div>
 
@@ -545,13 +597,14 @@ $ajax_base  = '?mod=admin_factory&controllers=admin&action=';
             });
         }
 
-        function showToast(msg, isErr) {
+        // ms: thời gian hiện (mặc định 1,8s; lỗi/cảnh báo dài nên cho lâu hơn để kịp đọc).
+        function showToast(msg, isErr, ms) {
             var t = document.getElementById('toast');
             t.textContent = msg;
             t.classList.toggle('err', !!isErr);
             t.classList.add('show');
             clearTimeout(t._timer);
-            t._timer = setTimeout(function () { t.classList.remove('show'); }, 1800);
+            t._timer = setTimeout(function () { t.classList.remove('show'); }, ms || (isErr ? 4500 : 1800));
         }
 
         function flash(cell, ok) {
@@ -578,6 +631,8 @@ $ajax_base  = '?mod=admin_factory&controllers=admin&action=';
             .then(function (res) {
                 if (res && res.ok) {
                     flash(cell, true);
+                    // Đổi tên trùng SP khác: vẫn lưu, nhưng nhắc để gộp/đổi tên sớm.
+                    if (res.warning) showToast(res.warning, true, 7000);
                 } else {
                     flash(cell, false);
                     showToast((res && res.message) || 'Lưu thất bại', true);
@@ -682,12 +737,140 @@ $ajax_base  = '?mod=admin_factory&controllers=admin&action=';
                         if (res && res.ok) {
                             showToast('Đã xóa sản phẩm');
                             setTimeout(function () { location.reload(); }, 350);
+                        } else if (res && res.blocked) {
+                            // Đã có phát sinh nghiệp vụ: KHÔNG xóa, dữ liệu giữ nguyên. Gợi ý gộp.
+                            var same = res.same_name || [];
+                            if (same.length) {
+                                var list = same.map(function (s) {
+                                    return '#' + s.id + ' ' + s.product_name + ' (' + (s.category_name || '—') + ', tồn ' + s.stock + ')';
+                                }).join('\n');
+                                if (confirm(res.message + '\n\nĐang có sản phẩm cùng tên:\n' + list +
+                                            '\n\nBấm OK để mở hộp thoại GỘP vào sản phẩm đó (chuyển toàn bộ lịch sử sang, rồi xóa bản này).')) {
+                                    openMerge(pid, parseInt(same[0].id, 10));
+                                }
+                            } else {
+                                alert(res.message + '\n\nSản phẩm đã có lịch sử nên không thể xóa. ' +
+                                      'Nếu đây là bản trùng, dùng nút Gộp (biểu tượng ⤵ cạnh nút xóa) để chuyển lịch sử sang sản phẩm đúng.');
+                            }
                         } else {
-                            showToast((res && res.message) || 'Xóa thất bại', true);
+                            showToast((res && res.message) || 'Xóa thất bại', true, 6000);
                         }
                     })
                     .catch(function () { showToast('Lỗi kết nối', true); });
             });
+        });
+
+        /* ----------- Gộp sản phẩm trùng ----------- */
+        var mergeModal  = document.getElementById('mergeModal');
+        var mergeList   = document.getElementById('mergeList');
+        var mergeSearch = document.getElementById('mergeSearch');
+        var btnDoMerge  = document.getElementById('btnDoMerge');
+        var mergeFrom   = null;   // {id, name}
+        var mergeInto   = 0;
+
+        function normText(s) {
+            return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+        }
+        function allProducts() {
+            var out = [];
+            document.querySelectorAll('.product-table tbody tr[data-product-id]').forEach(function (tr) {
+                var n = tr.querySelector('input[data-field="product_name"]');
+                var c = tr.querySelector('input[data-field="common_product_name"]');
+                var s = tr.querySelector('select[data-field="category_id"]');
+                out.push({
+                    id: parseInt(tr.getAttribute('data-product-id'), 10),
+                    name: n ? n.value : '',
+                    common: c ? c.value : '',
+                    cat: (s && s.selectedIndex >= 0) ? s.options[s.selectedIndex].text.trim() : ''
+                });
+            });
+            return out;
+        }
+        function renderMergeList() {
+            var kw = normText(mergeSearch.value);
+            var srcKey = normText(mergeFrom.name);
+            var items = allProducts().filter(function (p) {
+                return p.id !== mergeFrom.id && (kw === '' || normText(p.name + ' ' + p.common).indexOf(kw) !== -1);
+            });
+            // Sản phẩm cùng tên với nguồn xếp lên đầu (thường là bản trùng cần gộp).
+            items.sort(function (a, b) {
+                var as = normText(a.name) === srcKey ? 0 : 1, bs = normText(b.name) === srcKey ? 0 : 1;
+                return as - bs || a.name.localeCompare(b.name, 'vi');
+            });
+            mergeList.innerHTML = '';
+            if (!items.length) {
+                var e = document.createElement('div');
+                e.className = 'merge-item';
+                e.textContent = 'Không có sản phẩm phù hợp.';
+                mergeList.appendChild(e);
+                return;
+            }
+            items.forEach(function (p) {
+                var d = document.createElement('div');
+                d.className = 'merge-item' + (normText(p.name) === srcKey ? ' same' : '') + (p.id === mergeInto ? ' active' : '');
+                d.setAttribute('data-id', p.id);
+                var l = document.createElement('span');
+                l.textContent = p.name + (p.common && p.common !== p.name ? ' — ' + p.common : '');
+                var m = document.createElement('span');
+                m.className = 'meta';
+                m.textContent = '#' + p.id + (p.cat ? ' · ' + p.cat : '') + (normText(p.name) === srcKey ? ' · TRÙNG TÊN' : '');
+                d.appendChild(l); d.appendChild(m);
+                mergeList.appendChild(d);
+            });
+        }
+        function openMerge(fromId, preselectId) {
+            var tr = document.querySelector('.product-table tbody tr[data-product-id="' + fromId + '"]');
+            var n = tr ? tr.querySelector('input[data-field="product_name"]') : null;
+            mergeFrom = { id: fromId, name: n ? n.value : ('#' + fromId) };
+            mergeInto = preselectId || 0;
+            document.getElementById('mergeSrcLabel').textContent = mergeFrom.name + '  (#' + fromId + ')';
+            mergeSearch.value = '';
+            btnDoMerge.disabled = !mergeInto;
+            renderMergeList();
+            mergeModal.classList.add('show');
+            var active = mergeList.querySelector('.merge-item.active');
+            if (active) active.scrollIntoView({ block: 'nearest' });
+        }
+        mergeList.addEventListener('click', function (e) {
+            var it = e.target.closest('.merge-item[data-id]');
+            if (!it) return;
+            mergeInto = parseInt(it.getAttribute('data-id'), 10);
+            btnDoMerge.disabled = !mergeInto;
+            mergeList.querySelectorAll('.merge-item').forEach(function (x) { x.classList.remove('active'); });
+            it.classList.add('active');
+        });
+        mergeSearch.addEventListener('input', renderMergeList);
+        document.getElementById('btnCancelMerge').addEventListener('click', function () { mergeModal.classList.remove('show'); });
+        mergeModal.addEventListener('click', function (e) { if (e.target === mergeModal) mergeModal.classList.remove('show'); });
+        document.querySelectorAll('[data-action="merge-product"]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var pid = rowProductId(btn);
+                if (pid) openMerge(pid, 0);
+            });
+        });
+        btnDoMerge.addEventListener('click', function () {
+            if (!mergeFrom || !mergeInto) return;
+            var target = allProducts().filter(function (p) { return p.id === mergeInto; })[0];
+            var tname = target ? target.name : ('#' + mergeInto);
+            if (!confirm('GỘP "' + mergeFrom.name + '" (#' + mergeFrom.id + ') vào "' + tname + '" (#' + mergeInto + ')?\n\n' +
+                         'Sản phẩm #' + mergeFrom.id + ' sẽ bị xóa; toàn bộ lịch sử và tồn kho chuyển sang #' + mergeInto + '.\nKhông thể hoàn tác.')) return;
+            btnDoMerge.disabled = true;
+            var fd = new FormData();
+            fd.append('from_id', mergeFrom.id);
+            fd.append('into_id', mergeInto);
+            fetch(AJAX_BASE + 'merge_product', { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res && res.ok) {
+                        mergeModal.classList.remove('show');
+                        showToast(res.message || 'Đã gộp sản phẩm', false, 2500);
+                        setTimeout(function () { location.reload(); }, 900);
+                    } else {
+                        btnDoMerge.disabled = false;
+                        alert((res && res.message) || 'Gộp thất bại.');
+                    }
+                })
+                .catch(function () { btnDoMerge.disabled = false; showToast('Lỗi kết nối', true); });
         });
 
         /* ----------- Modal Thêm ----------- */
@@ -741,17 +924,29 @@ $ajax_base  = '?mod=admin_factory&controllers=admin&action=';
             // Checkbox unchecked => không có trong FormData; chuẩn hoá thành 0.
             if (!fd.has('has_nutrition_fact')) fd.set('has_nutrition_fact', '0');
             if (!fd.has('is_new_product')) fd.set('is_new_product', '0');
-            fetch(AJAX_BASE + 'create_product', { method: 'POST', body: fd, credentials: 'same-origin' })
-                .then(function (r) { return r.json(); })
-                .then(function (res) {
-                    if (res && res.ok) {
-                        showToast('Đã thêm sản phẩm');
-                        setTimeout(function () { location.reload(); }, 350);
-                    } else {
-                        showToast((res && res.message) || 'Thêm thất bại', true);
-                    }
-                })
-                .catch(function () { showToast('Lỗi kết nối', true); });
+            function submitCreate(formData) {
+                fetch(AJAX_BASE + 'create_product', { method: 'POST', body: formData, credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (res) {
+                        if (res && res.ok) {
+                            showToast('Đã thêm sản phẩm');
+                            setTimeout(function () { location.reload(); }, 350);
+                        } else if (res && res.duplicate) {
+                            // Đã có SP cùng tên: hỏi lại, đồng ý mới gửi force=1.
+                            var list = (res.existing || []).map(function (s) {
+                                return '#' + s.id + ' ' + s.product_name + ' (' + (s.category_name || '—') + ', tồn ' + s.stock + ')';
+                            }).join('\n');
+                            if (confirm(res.message + '\n\n' + list + '\n\nBấm OK nếu vẫn muốn tạo thêm sản phẩm trùng tên. Bấm Hủy để kiểm tra lại (nên dùng sản phẩm đã có).')) {
+                                formData.set('force', '1');
+                                submitCreate(formData);
+                            }
+                        } else {
+                            showToast((res && res.message) || 'Thêm thất bại', true);
+                        }
+                    })
+                    .catch(function () { showToast('Lỗi kết nối', true); });
+            }
+            submitCreate(fd);
         });
 
         // Chọn hình ảnh => mở file picker, upload, cập nhật url.

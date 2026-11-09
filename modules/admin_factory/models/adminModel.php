@@ -122,9 +122,16 @@ function admin_upsert_product_info_basic($product_id, $field, $value)
     $pid    = (int) $product_id;
     $exists = db_fetch_row("SELECT id FROM product_info_basic WHERE product_id = {$pid} LIMIT 1");
     if ($exists) {
-        return db_update('product_info_basic', [$field => $value], "product_id = {$pid}");
+        $res = db_update('product_info_basic', [$field => $value], "product_id = {$pid}");
+    } else {
+        $res = db_insert('product_info_basic', ['product_id' => $pid, $field => $value]);
     }
-    return db_insert('product_info_basic', ['product_id' => $pid, $field => $value]);
+    // Quy cách bao bì ngoài là CHỮ ("20 gói/thùng") nhưng Soạn hàng/quy đổi kiện đọc bảng
+    // outer_packaging_specifications -> đẩy chữ sang bảng đó (xem helper/packaging.php).
+    if ($field === 'outer_packaging_spec') {
+        pack_sync_outer_spec($pid);
+    }
+    return $res;
 }
 
 /**
@@ -963,6 +970,7 @@ function admin_create_product($data, $image_file = null)
             'inner_packaging_spec' => $inner !== '' ? $inner : null,
             'outer_packaging_spec' => $outer !== '' ? $outer : null,
         ]);
+        if ($outer !== '') pack_sync_outer_spec($pid);   // chữ -> bảng cấu trúc (helper/packaging.php)
     }
 
     if (isset($data['weight_kg']) && $data['weight_kg'] !== '') {
@@ -1101,28 +1109,187 @@ function admin_create_supplier($data)
  *  FK constraint sẽ chặn và trả về thông báo cho user.
  * =====================================================================*/
 
+/* ---------------------------------------------------------------------
+ *  XOÁ / GỘP SẢN PHẨM  (viết lại 9/11/2026)
+ *
+ *  BẪY ĐÃ DÍNH: bản cũ xoá các bảng phụ (quy cách, khối lượng, giá...) TRƯỚC rồi mới xoá sản phẩm,
+ *  không có giao dịch. Sản phẩm đã có phát sinh (xuất/nhập kho, sản xuất, bán hàng...) bị khoá ngoại
+ *  chặn ở bước cuối -> báo "không xoá được" nhưng dữ liệu phụ đã mất. Dòng tồn kho
+ *  (finished_goods_inventory) lại không bao giờ được dọn nên gần như SP nào cũng bị chặn. Ngoài ra
+ *  các bảng ON DELETE CASCADE (stock_exports, stock_imports, sales_returns...) sẽ xoá luôn lịch sử
+ *  nếu việc xoá lọt qua.
+ *
+ *  Bản mới:
+ *   - admin_product_usage()  : đếm phát sinh nghiệp vụ TRƯỚC khi làm gì.
+ *   - admin_delete_product() : có phát sinh -> từ chối kèm chi tiết, KHÔNG đụng dữ liệu; không phát
+ *                              sinh -> dọn bảng phụ + dòng tồn (nếu = 0) + xoá, trong 1 giao dịch.
+ *   - admin_merge_products() : gộp SP trùng — chuyển toàn bộ lịch sử sang SP đích rồi xoá SP nguồn,
+ *                              trong 1 giao dịch (lỗi -> hoàn tác hết).
+ * ------------------------------------------------------------------- */
+
+/** Bảng có tồn tại không (cache theo request). */
+function admin_table_exists($table)
+{
+    static $cache = [];
+    $t = (string) $table;
+    if (!array_key_exists($t, $cache)) {
+        $e = escape_string($t);
+        $cache[$t] = db_num_rows(
+            "SELECT 1 FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = '$e' AND table_type = 'BASE TABLE' LIMIT 1"
+        ) > 0;
+    }
+    return $cache[$t];
+}
+
+/** Chạy 1 câu SQL trong giao dịch; lỗi -> ném RuntimeException để rollback. */
+function admin_tx_exec($sql)
+{
+    global $conn;
+    $r = mysqli_query($conn, $sql);
+    if ($r === false) {
+        throw new RuntimeException(mysqli_error($conn));
+    }
+    return $r;
+}
+
+/** Số dòng 1 bảng đang tham chiếu SP ($extra = điều kiện thêm, vd "item_type = 'product'"). */
+function admin_count_refs($table, $col, $product_id, $extra = '')
+{
+    if (!admin_table_exists($table)) return 0;
+    $pid = (int) $product_id;
+    $row = db_fetch_row("SELECT COUNT(*) AS c FROM `$table` WHERE `$col` = $pid" . ($extra !== '' ? " AND $extra" : ''));
+    return (int) ($row['c'] ?? 0);
+}
+
+/** Điều kiện SQL tìm đơn đặt hàng nhà máy (order_items là JSON) có chứa product_id. */
+function admin_factory_order_regex($product_id)
+{
+    $pid = (int) $product_id;
+    return "order_items REGEXP '\"product_id\":\"?{$pid}\"?[,}]'";
+}
+
+/**
+ * Phát sinh nghiệp vụ đang gắn với 1 sản phẩm — những thứ KHÔNG được xoá mất.
+ * @return array ['counts' => [nhãn => số dòng], 'lines' => ['25 phiếu xuất kho', ...], 'stock' => int]
+ */
+function admin_product_usage($product_id)
+{
+    $pid = (int) $product_id;
+    // nhãn => [bảng, cột, điều kiện thêm]
+    $spec = [
+        'phiếu xuất kho'                     => ['stock_exports', 'product_id', ''],
+        'phiếu nhập kho'                     => ['stock_imports', 'product_id', ''],
+        'phiếu trả hàng'                     => ['sales_returns', 'product_id', ''],
+        'lần nhập thành phẩm sản xuất'       => ['finished_product_production_data', 'product_id', ''],
+        'phiếu giá vốn sản xuất'             => ['production_receipts', 'product_id', ''],
+        'kế hoạch sản xuất'                  => ['production_plans', 'product_id', ''],
+        'kế hoạch sản xuất dài ngày'         => ['long_term_production_plans', 'product_id', ''],
+        'lần xuất NVL cho sản xuất'          => ['raw_material_production_issue_data', 'product_id', ''],
+        'dòng bán hàng / xuất bán'           => ['sales_inventory_issue_data', 'product_id', ''],
+        'lần nhập thành phẩm mua ngoài'      => ['purchased_finished_product_data', 'product_id', ''],
+        'ghi chú trước sản xuất'             => ['pre_production_notes', 'product_id', ''],
+        'dòng phiếu soạn hàng'               => ['wh_picking_items', 'item_id', "item_type = 'product'"],
+        'dòng sổ bao bì khách hàng'          => ['cp_packaging_ledger', 'product_id', ''],
+        'dòng sổ nhóm hương trà'             => ['tsg_ledger', 'product_id', ''],
+        'mục trong Thảo luận'                => ['de_items', 'product_id', ''],
+    ];
+    $counts = [];
+    foreach ($spec as $label => $s) {
+        $n = admin_count_refs($s[0], $s[1], $pid, $s[2]);
+        if ($n > 0) $counts[$label] = $n;
+    }
+    if (admin_table_exists('factory_order_sales_history')) {
+        $r = db_fetch_row("SELECT COUNT(*) AS c FROM factory_order_sales_history WHERE " . admin_factory_order_regex($pid));
+        $n = (int) ($r['c'] ?? 0);
+        if ($n > 0) $counts['đơn đặt hàng nhà máy'] = $n;
+    }
+
+    $stock = 0;
+    if (admin_table_exists('finished_goods_inventory')) {
+        $r = db_fetch_row("SELECT COALESCE(SUM(quantity), 0) AS q FROM finished_goods_inventory WHERE product_id = $pid");
+        $stock = (int) ($r['q'] ?? 0);
+    }
+
+    $lines = [];
+    foreach ($counts as $label => $n) $lines[] = $n . ' ' . $label;
+    if ($stock !== 0) $lines[] = 'tồn kho còn ' . $stock;
+
+    return ['counts' => $counts, 'lines' => $lines, 'stock' => $stock];
+}
+
+/**
+ * Sản phẩm khác CÙNG TÊN (so khớp tên chính hoặc tên thường gọi, không phân biệt hoa/thường/dấu).
+ * @return array [['id','product_name','category_name','stock'], ...]
+ */
+function admin_find_same_name_products($name, $exclude_id = 0)
+{
+    $n = trim((string) $name);
+    if ($n === '') return [];
+    $e  = escape_string($n);
+    $ex = (int) $exclude_id;
+    return db_fetch_array(
+        "SELECT p.id, COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                pc.category_name, COALESCE(fgi.quantity, 0) AS stock
+         FROM products p
+         LEFT JOIN product_categories pc ON pc.id = p.category_id
+         LEFT JOIN finished_goods_inventory fgi ON fgi.product_id = p.id
+         WHERE p.id <> $ex
+           AND (TRIM(p.product_name) = '$e' OR (p.common_product_name IS NOT NULL AND p.common_product_name <> '' AND TRIM(p.common_product_name) = '$e'))
+         ORDER BY p.id ASC"
+    ) ?: [];
+}
+
+/** Bảng phụ/cấu hình "thuộc về" SP — tự dọn khi xoá SP chưa có phát sinh (cột product_id). */
+function admin_product_owned_tables()
+{
+    return [
+        'product_info_basic', 'product_weights', 'branch_product_selling_prices', 'product_prices',
+        'product_purchase_prices', 'product_files', 'product_materials', 'outer_packaging_specifications',
+        'pricing_policies', 'bill_of_materials', 'product_batch_recipes', 'product_recipe_notes',
+        'key_product_stock_settings', 'fgi_discontinued_products', 'om_slip_display_order',
+        'sf_product_display_order', 'sf_product_display_order_personal', 'product_reminders_pre_input',
+        'product_reminders_pre_plan', 'product_pickup_reminders', 'oc_recipes', 'im_dismissed_fg_products',
+        'cp_setup_products', 'tsg_setup_products', 'long_term_production_backup',
+    ];
+}
+
 function admin_delete_product($id)
 {
+    global $conn;
     $id = (int) $id;
     $p  = admin_get_product_by_id($id);
     if (!$p) {
         return ['ok' => false, 'message' => 'Sản phẩm không tồn tại.'];
     }
 
-    // Bảng phụ 1-N "thuộc về" sản phẩm.
-    admin_safe_query("DELETE FROM product_info_basic            WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM product_weights               WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM branch_product_selling_prices WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM product_prices                WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM product_purchase_prices       WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM product_files                 WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM product_materials             WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM outer_packaging_specifications WHERE product_id = {$id}");
-    admin_safe_query("DELETE FROM pricing_policies              WHERE product_id = {$id}");
+    // 1) Có phát sinh nghiệp vụ -> TỪ CHỐI, không đụng vào bất kỳ dữ liệu nào.
+    $usage = admin_product_usage($id);
+    if ($usage['lines']) {
+        $name = (string) (($p['common_product_name'] ?? '') !== '' ? $p['common_product_name'] : $p['product_name']);
+        return [
+            'ok'        => false,
+            'blocked'   => true,
+            'message'   => 'Không thể xoá "' . $name . '" vì đã có phát sinh: ' . implode('; ', $usage['lines']) . '.',
+            'usage'     => $usage['counts'],
+            'same_name' => admin_find_same_name_products($p['product_name'], $id),
+        ];
+    }
 
-    $r = admin_safe_query("DELETE FROM products WHERE id = {$id}");
-    if (!$r['ok']) {
-        return ['ok' => false, 'message' => 'Không thể xoá sản phẩm — đang được sử dụng ở bảng nghiệp vụ khác.'];
+    // 2) Chưa phát sinh gì: dọn bảng phụ + dòng tồn (đang = 0) rồi xoá — 1 giao dịch.
+    try {
+        mysqli_begin_transaction($conn);
+        foreach (admin_product_owned_tables() as $t) {
+            if (admin_table_exists($t)) admin_tx_exec("DELETE FROM `$t` WHERE product_id = $id");
+        }
+        if (admin_table_exists('finished_goods_inventory')) {
+            admin_tx_exec("DELETE FROM finished_goods_inventory WHERE product_id = $id AND quantity = 0");
+        }
+        admin_tx_exec("DELETE FROM products WHERE id = $id");
+        mysqli_commit($conn);
+    } catch (Throwable $e) {
+        mysqli_rollback($conn);
+        return ['ok' => false, 'message' => 'Không thể xoá sản phẩm (đã hoàn tác, dữ liệu giữ nguyên): ' . $e->getMessage()];
     }
 
     // Xoá file ảnh vật lý nếu nằm trong public/images/product_profile.
@@ -1134,6 +1301,161 @@ function admin_delete_product($id)
         }
     }
     return ['ok' => true];
+}
+
+/**
+ * GỘP sản phẩm $from_id (nguồn — sẽ bị xoá) vào $into_id (đích — được giữ).
+ *  - Tồn kho: cộng dồn vào đích.
+ *  - Lịch sử nghiệp vụ (xuất/nhập kho, sản xuất, bán hàng, phiếu soạn, đơn đặt hàng nhà máy...): chuyển sang đích.
+ *  - Thông tin mô tả (quy cách, khối lượng, giá, công thức, thứ tự hiển thị...): GIỮ THEO ĐÍCH; đích
+ *    chưa có thì lấy của nguồn.
+ *  Toàn bộ trong 1 giao dịch; bảng nào còn tham chiếu mà hàm chưa biết -> hoàn tác và báo tên bảng.
+ * @return array ['ok'=>bool, 'message'=>string, 'moved'=>[nhãn => số dòng]]
+ */
+function admin_merge_products($from_id, $into_id)
+{
+    global $conn;
+    $from = (int) $from_id;
+    $into = (int) $into_id;
+    if ($from <= 0 || $into <= 0 || $from === $into) {
+        return ['ok' => false, 'message' => 'Hai sản phẩm không hợp lệ.'];
+    }
+    $src = admin_get_product_by_id($from);
+    $dst = admin_get_product_by_id($into);
+    if (!$src || !$dst) {
+        return ['ok' => false, 'message' => 'Không tìm thấy sản phẩm cần gộp.'];
+    }
+
+    // Bảng 1 dòng/SP hoặc "bộ mô tả" của SP: GIỮ của đích; đích chưa có mới lấy của nguồn.
+    $keep = [
+        'product_info_basic', 'product_weights', 'product_prices', 'branch_product_selling_prices',
+        'outer_packaging_specifications', 'pricing_policies', 'product_recipe_notes', 'bill_of_materials',
+        'product_materials', 'product_batch_recipes', 'key_product_stock_settings', 'fgi_discontinued_products',
+        'om_slip_display_order', 'sf_product_display_order', 'product_reminders_pre_input', 'oc_recipes',
+    ];
+    // Bảng có khoá duy nhất ghép (product_id + cột khác): chuyển, dòng nào đụng khoá thì bỏ.
+    $ignore = ['cp_setup_products', 'tsg_setup_products', 'im_dismissed_fg_products', 'sf_product_display_order_personal'];
+    // Lịch sử / nghiệp vụ: chuyển hết sang đích.
+    $move = [
+        'stock_exports', 'stock_imports', 'sales_returns', 'finished_product_production_data',
+        'production_receipts', 'production_plans', 'long_term_production_plans', 'long_term_production_backup',
+        'raw_material_production_issue_data', 'sales_inventory_issue_data', 'purchased_finished_product_data',
+        'pre_production_notes', 'product_files', 'product_purchase_prices', 'purchase_price_changes',
+        'cp_packaging_ledger', 'tsg_ledger', 'product_pickup_reminders', 'product_reminders_pre_plan', 'de_items',
+    ];
+    $handled = array_merge($keep, $ignore, $move, ['finished_goods_inventory', 'products']);
+
+    $moved = [];
+    try {
+        mysqli_begin_transaction($conn);
+        admin_tx_exec("SELECT id FROM products WHERE id IN ($from, $into) FOR UPDATE");
+
+        // 1) Tồn kho: cộng dồn.
+        $r  = db_fetch_row("SELECT COALESCE(SUM(quantity), 0) AS q, COUNT(*) AS n FROM finished_goods_inventory WHERE product_id = $from");
+        $sq = (int) ($r['q'] ?? 0);
+        $has_dst = admin_count_refs('finished_goods_inventory', 'product_id', $into) > 0;
+        if ($has_dst) {
+            admin_tx_exec("UPDATE finished_goods_inventory SET quantity = quantity + ($sq) WHERE product_id = $into ORDER BY id ASC LIMIT 1");
+            admin_tx_exec("DELETE FROM finished_goods_inventory WHERE product_id = $from");
+        } else {
+            admin_tx_exec("UPDATE finished_goods_inventory SET product_id = $into WHERE product_id = $from");
+        }
+        $moved['tồn kho cộng sang (số lượng)'] = $sq;
+
+        // 2) Thông tin mô tả: giữ của đích.
+        foreach ($keep as $t) {
+            if (!admin_table_exists($t)) continue;
+            if (admin_count_refs($t, 'product_id', $into) > 0) {
+                admin_tx_exec("DELETE FROM `$t` WHERE product_id = $from");
+            } else {
+                admin_tx_exec("UPDATE `$t` SET product_id = $into WHERE product_id = $from");
+            }
+        }
+        foreach ($ignore as $t) {
+            if (!admin_table_exists($t)) continue;
+            admin_tx_exec("UPDATE IGNORE `$t` SET product_id = $into WHERE product_id = $from");
+            admin_tx_exec("DELETE FROM `$t` WHERE product_id = $from");
+        }
+
+        // 3) Lịch sử nghiệp vụ: chuyển sang đích.
+        foreach ($move as $t) {
+            if (!admin_table_exists($t)) continue;
+            admin_tx_exec("UPDATE `$t` SET product_id = $into WHERE product_id = $from");
+            $n = (int) mysqli_affected_rows($conn);
+            if ($n > 0) $moved[$t] = $n;
+        }
+
+        // 4) Tham chiếu "mềm" (không có khoá ngoại).
+        if (admin_table_exists('wh_picking_items')) {
+            admin_tx_exec("UPDATE wh_picking_items SET item_id = $into WHERE item_type = 'product' AND item_id = $from");
+            $n = (int) mysqli_affected_rows($conn);
+            if ($n > 0) $moved['wh_picking_items'] = $n;
+        }
+        if (admin_table_exists('factory_order_sales_history')) {
+            $rs = admin_tx_exec("SELECT id, order_items FROM factory_order_sales_history WHERE " . admin_factory_order_regex($from));
+            $n_orders = 0;
+            while ($row = mysqli_fetch_assoc($rs)) {
+                $items = json_decode((string) $row['order_items'], true);
+                if (!is_array($items)) continue;
+                $changed = false;
+                foreach ($items as &$it) {
+                    if (is_array($it) && (int) ($it['product_id'] ?? 0) === $from && empty($it['material_id'])) {
+                        $it['product_id'] = $into;
+                        $changed = true;
+                    }
+                }
+                unset($it);
+                if ($changed) {
+                    $json = mysqli_real_escape_string($conn, json_encode($items, JSON_UNESCAPED_UNICODE));
+                    admin_tx_exec("UPDATE factory_order_sales_history SET order_items = '$json' WHERE id = " . (int) $row['id']);
+                    $n_orders++;
+                }
+            }
+            if ($n_orders > 0) $moved['factory_order_sales_history'] = $n_orders;
+        }
+
+        // 5) Đích còn trống ảnh / tên thường gọi thì lấy của nguồn.
+        admin_tx_exec("UPDATE products t JOIN products s ON s.id = $from
+                       SET t.image_url = s.image_url
+                       WHERE t.id = $into AND (t.image_url IS NULL OR t.image_url = '') AND s.image_url IS NOT NULL AND s.image_url <> ''");
+        admin_tx_exec("UPDATE products t JOIN products s ON s.id = $from
+                       SET t.common_product_name = s.common_product_name
+                       WHERE t.id = $into AND (t.common_product_name IS NULL OR t.common_product_name = '') AND s.common_product_name IS NOT NULL AND s.common_product_name <> ''");
+
+        // 6) Lưới an toàn: bảng nào còn tham chiếu nguồn mà hàm chưa biết -> hoàn tác, KHÔNG xoá nhầm.
+        $cols = db_fetch_array(
+            "SELECT DISTINCT table_name AS t, column_name AS c FROM (
+                SELECT c.table_name, c.column_name
+                  FROM information_schema.columns c
+                  JOIN information_schema.tables tb ON tb.table_schema = c.table_schema AND tb.table_name = c.table_name AND tb.table_type = 'BASE TABLE'
+                 WHERE c.table_schema = DATABASE() AND c.column_name = 'product_id'
+                UNION
+                SELECT k.table_name, k.column_name
+                  FROM information_schema.key_column_usage k
+                 WHERE k.table_schema = DATABASE() AND k.referenced_table_name = 'products'
+             ) x"
+        ) ?: [];
+        foreach ($cols as $c) {
+            if (in_array($c['t'], $handled, true)) continue;
+            if (admin_count_refs($c['t'], $c['c'], $from) > 0) {
+                throw new RuntimeException('Bảng "' . $c['t'] . '" còn dữ liệu của sản phẩm nguồn mà chức năng gộp chưa hỗ trợ');
+            }
+        }
+
+        // 7) Xoá sản phẩm nguồn (các bảng con đã được chuyển/dọn nên không còn gì bị cascade).
+        admin_tx_exec("DELETE FROM products WHERE id = $from");
+        mysqli_commit($conn);
+    } catch (Throwable $e) {
+        mysqli_rollback($conn);
+        return ['ok' => false, 'message' => 'Không gộp được (đã hoàn tác, dữ liệu giữ nguyên): ' . $e->getMessage()];
+    }
+
+    error_log('[admin_merge_products] #' . $from . ' "' . $src['product_name'] . '" -> #' . $into . ' "' . $dst['product_name'] . '" ' . json_encode($moved, JSON_UNESCAPED_UNICODE));
+    return [
+        'ok'      => true,
+        'message' => 'Đã gộp "' . $src['product_name'] . '" (#' . $from . ') vào "' . $dst['product_name'] . '" (#' . $into . ').',
+        'moved'   => $moved,
+    ];
 }
 
 function admin_delete_material($id)

@@ -855,11 +855,21 @@ function update_product_fieldAction()
         exit;
     }
 
+    $warning = '';
     switch ($field) {
         case 'product_name':
         case 'common_product_name':
         case 'unit':
             admin_update_products_field($product_id, $field, trim((string) $value));
+            // Đổi tên thành tên đã có ở SP khác -> vẫn lưu nhưng cảnh báo để gộp/đổi tên sớm.
+            if ($field !== 'unit' && trim((string) $value) !== '') {
+                $dups = admin_find_same_name_products(trim((string) $value), $product_id);
+                if ($dups) {
+                    $d = $dups[0];
+                    $warning = 'Trùng tên với sản phẩm #' . $d['id'] . ' "' . $d['product_name'] . '" ('
+                        . ($d['category_name'] ?? '—') . ', tồn ' . $d['stock'] . '). Nên gộp hoặc đổi tên.';
+                }
+            }
             break;
 
         case 'category_id':
@@ -914,7 +924,7 @@ function update_product_fieldAction()
             exit;
     }
 
-    echo json_encode(['ok' => true]);
+    echo json_encode($warning !== '' ? ['ok' => true, 'warning' => $warning] : ['ok' => true], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -1058,8 +1068,42 @@ function create_productAction()
     header('Content-Type: application/json; charset=utf-8');
     permission_require_can_edit('admin_factory', 'admin', 'manage_product_list', 'ok');
     $image = $_FILES['image'] ?? null;
-    $res   = admin_create_product($_POST, $image);
+
+    // Chống tạo trùng: đã có SP cùng tên thì hỏi lại (client gửi force=1 nếu người dùng vẫn muốn tạo).
+    $name = trim((string) ($_POST['product_name'] ?? ''));
+    if ($name !== '' && empty($_POST['force'])) {
+        $dups = admin_find_same_name_products($name, 0);
+        if ($dups) {
+            echo json_encode([
+                'ok'        => false,
+                'duplicate' => true,
+                'existing'  => $dups,
+                'message'   => 'Đã có sản phẩm cùng tên "' . $name . '".',
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+
+    $res = admin_create_product($_POST, $image);
     echo json_encode($res);
+    exit;
+}
+
+/**
+ * AJAX: GỘP sản phẩm trùng — chuyển toàn bộ lịch sử của from_id sang into_id rồi xoá from_id.
+ * Tham số POST: from_id (sẽ bị xoá), into_id (được giữ).
+ */
+function merge_productAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_can_edit('admin_factory', 'admin', 'manage_product_list', 'ok');
+    $from = (int) ($_POST['from_id'] ?? 0);
+    $into = (int) ($_POST['into_id'] ?? 0);
+    if ($from <= 0 || $into <= 0) {
+        echo json_encode(['ok' => false, 'message' => 'Thiếu tham số.']);
+        exit;
+    }
+    echo json_encode(admin_merge_products($from, $into), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
