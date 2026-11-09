@@ -933,8 +933,15 @@ function py_calc_employee_month(array $employee, $year, $month, array $overrides
     // o_base = i*u*hệ_số_thâm_niên (hệ số thâm niên = 1+y2*0.05 đã có sẵn "+1" trong định nghĩa —
     // không cộng thêm 1 lần nữa), làm tròn 0 chữ số thập phân.
     $o_base = round($i * $u * $seniority_coeff);
-    // o cuối cùng = o_base * (số ngày đi làm / số ngày làm việc trong tháng) — quy đổi theo tỉ lệ chuyên cần.
-    $o = $b > 0 ? round($o_base * $c / $b) : 0.0;
+    // Quy đổi theo chuyên cần:
+    //  - Từ tháng 10/2026 (py_kpi_attendance_rule_v2): off <= 1 ngày -> giữ NGUYÊN o_base;
+    //    off > 1 ngày -> o_base * (b-1)/b (VD tháng 10/2026 b=27 => 26/27).
+    //  - Các tháng trước đó: giữ công thức cũ o_base * c / b (không đổi số liệu đã chi).
+    if (py_kpi_attendance_rule_v2($year, $month)) {
+        $o = $b > 0 ? ($g > 1 ? round($o_base * ($b - 1) / $b) : $o_base) : 0.0;
+    } else {
+        $o = $b > 0 ? round($o_base * $c / $b) : 0.0;
+    }
 
     $new_product_bonus = 0.0;
     if ($jt_norm === 'truong_phong') {
@@ -1003,6 +1010,15 @@ function py_calc_employee_month(array $employee, $year, $month, array $overrides
         'other_bonus_note'      => $other_bonus_note,
         'net_pay'               => $net_pay,
     ];
+}
+
+/**
+ * Luật "quy đổi KPI sản lượng theo chuyên cần" bản 2 (chủ dự án chốt 9/11/2026): áp dụng từ
+ * bảng lương tháng 10/2026. PHẢI đồng bộ với hàm kpiAttendanceRuleV2() trong public/js/payroll/payslip.js.
+ */
+function py_kpi_attendance_rule_v2($year, $month)
+{
+    return ((int) $year * 12 + (int) $month) >= (2026 * 12 + 10);
 }
 
 /** Danh sách cột lưu vào payroll_monthly_entries (khớp key trả về của py_calc_employee_month). */

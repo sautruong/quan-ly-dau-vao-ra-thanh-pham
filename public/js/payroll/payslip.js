@@ -485,14 +485,26 @@
     /* ============================================================
      *  Giải thích cách tính Thưởng KPI sản lượng
      * ============================================================ */
+    // Luật quy đổi KPI theo chuyên cần bản 2 — áp dụng từ bảng lương tháng 10/2026.
+    // PHẢI đồng bộ với py_kpi_attendance_rule_v2() trong modules/payroll/models/payrollModel.php.
+    function kpiAttendanceRuleV2(year, month) {
+        return (Number(year) * 12 + Number(month)) >= (2026 * 12 + 10);
+    }
+
     function openKpiExplain(emp) {
         var a = emp.kpi_i != null ? Number(emp.kpi_i) : summaryI();          // SP/NVSX
         var b = emp.kpi_u != null ? Number(emp.kpi_u) : summaryU();          // Thành tích
         var coeff = Number(emp.seniority_coefficient);                       // hệ số thâm niên
         var c = Number(emp.days_worked_c);                                   // số ngày đi làm
         var d = Number(emp.workdays_in_month_b);                             // số ngày làm việc trong tháng
+        var g = Number(emp.off_days_g || 0);                                 // số ngày off
         var oBase = emp.kpi_o_base != null ? Number(emp.kpi_o_base) : (a != null && b != null ? Math.round(a * b * coeff) : null);
-        var prorated = (oBase != null && d > 0) ? Math.round(oBase * c / d) : null;
+        var ruleV2 = kpiAttendanceRuleV2(state.year, state.month);
+        var prorated = null;
+        if (oBase != null && d > 0) {
+            if (ruleV2) prorated = g > 1 ? Math.round(oBase * (d - 1) / d) : oBase;
+            else prorated = Math.round(oBase * c / d);
+        }
         var newProductBonus = Number(emp.new_product_bonus || 0);
         var finalO = Number(emp.kpi_o);
 
@@ -516,8 +528,17 @@
         }
         lines.push(rowExplain('Số ngày đi làm', num2(c)));
         lines.push(rowExplain('Số ngày làm việc trong tháng', num2(d)));
+        if (ruleV2) lines.push(rowExplain('Số ngày off', num2(g)));
         if (oBase != null && prorated != null) {
-            lines.push(rowExplain('Quy đổi theo chuyên cần', money(oBase) + ' × ' + num2(c) + ' / ' + num2(d) + ' = ' + money(prorated)));
+            var prorateText;
+            if (!ruleV2) {
+                prorateText = money(oBase) + ' × ' + num2(c) + ' / ' + num2(d) + ' = ' + money(prorated);
+            } else if (g > 1) {
+                prorateText = 'Off > 1 ngày: ' + money(oBase) + ' × ' + num2(d - 1) + ' / ' + num2(d) + ' = ' + money(prorated);
+            } else {
+                prorateText = 'Off ≤ 1 ngày: giữ nguyên = ' + money(prorated);
+            }
+            lines.push(rowExplain('Quy đổi theo chuyên cần', prorateText));
         }
         if (emp.job_title && emp.job_title.toLowerCase().indexOf('trưởng phòng') !== -1 && newProductBonus > 0) {
             var newProductQty = summaryNewProductQty();
