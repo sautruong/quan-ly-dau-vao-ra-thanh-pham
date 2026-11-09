@@ -431,15 +431,23 @@ if (!function_exists('push_ensure_table')) {
      * đó rồi (push_on_chat_message), đẩy thêm nữa là rung điện thoại hai lần cho
      * cùng một việc.
      */
-    function push_on_notification($user_id, $title, $message = '', $link = '', $type = 'general')
+    function push_on_notification($user_id, $title, $message = '', $link = '', $type = 'general', $noti_id = 0)
     {
         if ($type === 'chat_mention') return 0;
         if (!push_is_configured()) return 0;
 
+        // Gắn ?__noti=<id> vào URL để khi mở app từ push, client đánh dấu ĐÚNG thông báo đó đã đọc
+        // (giảm số trên chuông). Chỉ gắn với link dạng đường dẫn thật (có '/'), bỏ qua link token
+        // kiểu 'arcfg:5' / 'evcal:7' vốn không phải URL mở trang.
+        $url = (string) $link;
+        if ((int) $noti_id > 0 && $url !== '' && strpos($url, ':') === false) {
+            $url .= (strpos($url, '?') !== false ? '&' : '?') . '__noti=' . (int) $noti_id;
+        }
+
         return push_send_to_user((int) $user_id, [
             'title' => (string) $title,
             'body'  => mb_substr(trim((string) $message), 0, 160, 'UTF-8'),
-            'url'   => (string) $link,
+            'url'   => $url,
             'tag'   => 'noti',
             'type'  => (string) $type,
         ]);

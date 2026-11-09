@@ -63,7 +63,8 @@ if (!function_exists('notify_ensure_table')) {
            (47 nơi trong repo đều gọi qua đây), nên móc ở đây là phủ hết.
            Hỏng thì im lặng — không được làm vỡ nghiệp vụ đang chạy. */
         if ($id > 0 && function_exists('push_on_notification')) {
-            push_on_notification($uid, $title, $message, $link, $type);
+            // Truyền id để push gắn ?__noti=<id> vào URL → mở app từ push = coi như đã đọc.
+            push_on_notification($uid, $title, $message, $link, $type, $id);
         }
 
         return $id;

@@ -727,6 +727,27 @@
                 }).catch(function () {});
             }
 
+            /* Mở app TỪ THÔNG BÁO ĐẨY (push): push nhét ?__noti=<id> vào URL (xem push.php).
+               Coi như đã đọc đúng thông báo đó → giảm số trên chuông + badge icon, rồi dọn param
+               khỏi URL để F5 không chạy lại. Chạy 1 lần lúc dựng chuông. */
+            (function () {
+                var m = /[?&]__noti=(\d+)/.exec(location.search || '');
+                if (!m) return;
+                var nid = m[1];
+                var body = new URLSearchParams(); body.append('id', nid);
+                fetch(NOTI + 'markNotificationRead', {
+                    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString(), credentials: 'same-origin'
+                }).then(function (r) { return r.json(); }).then(function (res) {
+                    if (res && res.ok) setBadge(res.unread);
+                }).catch(function () {});
+                try {
+                    var u = new URL(location.href);
+                    u.searchParams.delete('__noti');
+                    history.replaceState(null, '', u.pathname + u.search + u.hash);
+                } catch (e2) {}
+            })();
+
             // Click 1 thông báo → đánh dấu đã đọc (trừ badge) + điều hướng nếu có link.
             list.addEventListener('click', function (e) {
                 // Đóng menu "Nhắc lại" khác đang mở khi bấm ra ngoài nó (nhưng vẫn trong danh sách).
