@@ -1335,6 +1335,31 @@ a img {
 .pf-mc-table td.num { text-align: right; white-space: nowrap; }
 .pf-mc-table tr.is-short td { background: #fef2f2; color: #b91c1c; }
 
+/* Đối chiếu dạng MODAL */
+.pf-mc-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: flex-end; justify-content: center; z-index: 5500; }
+.pf-mc-backdrop.is-open { display: flex; }
+.pf-mc-modal { background: #fff; width: 100%; max-width: 560px; max-height: 88vh; display: flex; flex-direction: column; border-radius: 16px 16px 0 0; }
+@media (min-width: 560px) { .pf-mc-backdrop { align-items: center; } .pf-mc-modal { border-radius: 16px; } }
+.pf-mc-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: #fff; border-radius: inherit; }
+.pf-mc-mtitle { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-mc-close { border: none; background: none; font-size: 28px; line-height: 1; color: #666; cursor: pointer; flex: 0 0 auto; }
+.pf-mc-content { padding: 14px 16px; overflow: auto; }
+.pf-mc-item { border: 1px solid #eee; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+.pf-mc-item.is-short { border-color: #fca5a5; background: #fef2f2; }
+.pf-mc-name { font-weight: 700; font-size: 14.5px; margin-bottom: 8px; word-break: break-word; }
+.pf-mc-stats { display: flex; gap: 10px; }
+.pf-mc-cell { flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pf-mc-lbl { font-size: 11px; color: #9ca3af; font-weight: 500; }
+.pf-mc-val { font-size: 13.5px; font-weight: 600; color: #111827; word-break: break-word; }
+.pf-mc-val.is-short { color: #dc2626; }
+.pf-mc-val.is-ok { color: #16a34a; }
+
+/* Hàng action ở chân card: Đối chiếu · Công thức · (Xoá SP đẩy sang phải) */
+.pf-card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.pf-mc-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #0ea5e9; color: #0369a1; background: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pf-mc-btn:active { background: #f0f9ff; }
+.pf-card-actions .pf-del-product { margin-left: auto; }
+
 /* ----- Admin: nút xoá SP (chân card) + footer "Lưu & Gửi kế hoạch" ----- */
 .pf-card-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
 .pf-del-product { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #dc2626; color: #dc2626; background: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }

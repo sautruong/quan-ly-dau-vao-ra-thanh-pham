@@ -823,7 +823,6 @@
                         '<span class="pf-acc-caret" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>' +
                     '</div>' +
                     '<div class="pf-acc-body">' +
-                    '<div class="pf-formula-row"><button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="' + pid + '"><i class="fa-solid fa-flask"></i> Công thức</button></div>' +
                     '<div class="list-QC">' +
                         '<div class="wp-ck"><input type="checkbox" id="ck_sample_' + plan.plan_id + '" data-plan-id="' + plan.plan_id + '" data-field="sample" ' + isChk(plan.sample) + '><label for="ck_sample_' + plan.plan_id + '">Lấy mẫu</label></div>' +
                         '<div class="wp-ck"><input type="checkbox" id="ck_test_' + plan.plan_id + '" data-plan-id="' + plan.plan_id + '" data-field="test" ' + isChk(plan.test) + '><label for="ck_test_' + plan.plan_id + '">Test</label></div>' +
@@ -853,8 +852,11 @@
                             '</li>' +
                         '</ul>' +
                     '</div>' +
-                    '<div class="pf-matcheck" data-loaded="0"></div>' +
-                    '<div class="pf-card-foot"><button type="button" class="pf-del-product" data-plan-id="' + plan.plan_id + '"><i class="fa-solid fa-trash"></i> Xoá sản phẩm</button></div>' +
+                    '<div class="pf-card-actions">' +
+                        '<button type="button" class="pf-mc-btn" data-product-id="' + pid + '"><i class="fa-solid fa-scale-balanced"></i> Đối chiếu</button>' +
+                        '<button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="' + pid + '"><i class="fa-solid fa-flask"></i> Công thức</button>' +
+                        '<button type="button" class="pf-del-product" data-plan-id="' + plan.plan_id + '"><i class="fa-solid fa-trash"></i> Xoá sản phẩm</button>' +
+                    '</div>' +
                     '</div>' + // .pf-acc-body
                 '</li>';
         }
@@ -936,59 +938,74 @@
         var list = document.getElementById('list-product');
         if (!list) return;
 
+        var mcBackdrop = document.getElementById('pf-mc-backdrop');
+        var mcContent  = document.getElementById('pf-mc-content');
+        var mcTitle    = document.getElementById('pf-mc-mtitle');
+        var mcClose    = document.getElementById('pf-mc-close');
+
         function fmtNum(n) { n = Number(n) || 0; return (Math.round(n * 1000) / 1000).toLocaleString('vi-VN'); }
-        function renderMatcheck(box, res) {
+        function cardQty(pid) {
+            var li = document.querySelector('.product-item[data-product-id="' + pid + '"]');
+            var inp = li && li.querySelector('.pf-qty-input');
+            return inp ? (parseInt(String(inp.value).replace(/[^\d]/g, ''), 10) || 0) : 0;
+        }
+        function nameOf(pid) {
+            var li = document.querySelector('.product-item[data-product-id="' + pid + '"]');
+            var el = li && li.querySelector('.pf-name-text');
+            return el ? el.textContent.trim() : '';
+        }
+        function renderMc(res) {
             if (!res || !res.ok) {
-                box.innerHTML = '<div class="pf-mc-empty">' + escapeHtml((res && res.reason) || 'Chưa có dữ liệu đối chiếu.') + '</div>';
+                mcContent.innerHTML = '<div class="pf-mc-empty">' + escapeHtml((res && res.reason) || 'Chưa có dữ liệu đối chiếu.') + '</div>';
                 return;
             }
             var short = res.short_count > 0;
-            var rows = (res.rows || []).map(function (r) {
-                return '<tr class="' + (r.short ? 'is-short' : '') + '">'
-                    + '<td>' + escapeHtml(r.name) + '</td>'
-                    + '<td class="num">' + fmtNum(r.need) + (r.unit ? (' ' + escapeHtml(r.unit)) : '') + '</td>'
-                    + '<td class="num">' + fmtNum(r.stock) + '</td>'
-                    + '<td class="num">' + (r.short ? ('Thiếu ' + fmtNum(-r.diff)) : ('Đủ +' + fmtNum(r.diff))) + '</td>'
-                    + '</tr>';
-            }).join('');
-            box.innerHTML =
-                '<div class="pf-mc-head' + (short ? ' is-short' : '') + '">'
+            var head = '<div class="pf-mc-head' + (short ? ' is-short' : '') + '">'
                 + (short ? '<i class="fa-solid fa-triangle-exclamation"></i> Thiếu ' + res.short_count + ' nguyên vật liệu'
                          : '<i class="fa-solid fa-circle-check"></i> Đủ nguyên vật liệu')
-                + '</div>'
-                + '<div class="pf-mc-sub">Định mức theo lần SX gần nhất' + (res.last_date ? (' (' + res.last_date + ')') : '') + '</div>'
-                + '<table class="pf-mc-table"><thead><tr><th>Thành phần</th><th>Cần</th><th>Tồn</th><th>Đối chiếu</th></tr></thead><tbody>'
-                + rows + '</tbody></table>';
+                + '</div><div class="pf-mc-sub">Định mức theo lần SX gần nhất' + (res.last_date ? (' (' + res.last_date + ')') : '') + '</div>';
+            var items = (res.rows || []).map(function (r) {
+                return '<div class="pf-mc-item' + (r.short ? ' is-short' : '') + '">'
+                    + '<div class="pf-mc-name">' + escapeHtml(r.name) + '</div>'
+                    + '<div class="pf-mc-stats">'
+                        + '<div class="pf-mc-cell"><span class="pf-mc-lbl">Cần</span><span class="pf-mc-val">' + fmtNum(r.need) + (r.unit ? (' ' + escapeHtml(r.unit)) : '') + '</span></div>'
+                        + '<div class="pf-mc-cell"><span class="pf-mc-lbl">Tồn</span><span class="pf-mc-val">' + fmtNum(r.stock) + '</span></div>'
+                        + '<div class="pf-mc-cell"><span class="pf-mc-lbl">Đối chiếu</span><span class="pf-mc-val ' + (r.short ? 'is-short' : 'is-ok') + '">' + (r.short ? ('Thiếu ' + fmtNum(-r.diff)) : ('Đủ +' + fmtNum(r.diff))) + '</span></div>'
+                    + '</div></div>';
+            }).join('');
+            mcContent.innerHTML = head + items;
         }
-        function loadMatcheck(item) {
-            var box = item.querySelector('.pf-matcheck');
-            if (!box || box.getAttribute('data-loaded') === '1') return;
-            box.setAttribute('data-loaded', '1');
-            var pid = item.getAttribute('data-product-id');
-            var qel = item.querySelector('.pf-qty-input');
-            var qty = qel ? (parseInt(String(qel.value).replace(/[^\d]/g, ''), 10) || 0) : 0;
-            box.innerHTML = '<div class="pf-mc-loading">Đang đối chiếu tồn…</div>';
-            fetch(ACT + 'material_check_get&product_id=' + pid + '&quantity=' + qty, { credentials: 'same-origin' })
+        function openMatcheck(pid) {
+            if (!mcBackdrop || !mcContent) return;
+            if (mcTitle) mcTitle.textContent = 'Đối chiếu — ' + nameOf(pid);
+            mcContent.innerHTML = '<div class="pf-mc-loading">Đang đối chiếu tồn…</div>';
+            mcBackdrop.classList.add('is-open');
+            // Luôn tính theo SL HIỆN TẠI ở input (đổi số → đối chiếu cập nhật theo).
+            fetch(ACT + 'material_check_get&product_id=' + pid + '&quantity=' + cardQty(pid), { credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
-                .then(function (res) { renderMatcheck(box, res); })
-                .catch(function () { box.innerHTML = '<div class="pf-mc-empty">Không tải được đối chiếu tồn.</div>'; });
+                .then(function (res) { renderMc(res); })
+                .catch(function () { mcContent.innerHTML = '<div class="pf-mc-empty">Không tải được đối chiếu tồn.</div>'; });
         }
-        // Đổi số lượng (admin) → reset cờ để lần mở sau nạp lại đối chiếu.
-        window.pfResetMatcheck = function (pid) {
-            var li = document.querySelector('.product-item[data-product-id="' + pid + '"]');
-            var box = li && li.querySelector('.pf-matcheck');
-            if (box) box.setAttribute('data-loaded', '0');
-        };
+        function closeMc() { if (mcBackdrop) mcBackdrop.classList.remove('is-open'); }
+        if (mcClose) mcClose.addEventListener('click', closeMc);
+        if (mcBackdrop) mcBackdrop.addEventListener('click', function (e) { if (e.target === mcBackdrop) closeMc(); });
 
+        // Nút "Đối chiếu" → mở modal bảng đối chiếu.
+        document.addEventListener('click', function (e) {
+            var b = e.target.closest && e.target.closest('.pf-mc-btn');
+            if (!b) return;
+            e.stopPropagation();
+            openMatcheck(parseInt(b.getAttribute('data-product-id'), 10) || 0);
+        });
+
+        // Gập/mở card (không còn đối chiếu inline).
         list.addEventListener('click', function (e) {
             var head = e.target.closest('.pf-acc-head');
             if (!head) return;
             if (!window.PF_READONLY && (e.target.closest('.num')
                 || e.target.closest('.pf-name-edit-btn') || e.target.closest('.pf-name-text'))) return;
             var item = head.closest('.product-item');
-            if (!item) return;
-            item.classList.toggle('open');
-            if (item.classList.contains('open')) loadMatcheck(item);
+            if (item) item.classList.toggle('open');
         });
     })();
 
@@ -1166,15 +1183,6 @@
                 if (res && res.success) { if (li.parentNode) li.parentNode.removeChild(li); }
                 else { btn.disabled = false; alert((res && res.message) || 'Xoá thất bại.'); }
             }).catch(function () { btn.disabled = false; alert('Lỗi mạng khi xoá.'); });
-        });
-
-        // Đổi số lượng → cho phép đối chiếu tồn nạp lại lần mở sau.
-        document.addEventListener('change', function (e) {
-            var q = e.target.closest && e.target.closest('.pf-qty-input');
-            if (q) {
-                var li = q.closest('.product-item');
-                if (li && window.pfResetMatcheck) window.pfResetMatcheck(li.getAttribute('data-product-id'));
-            }
         });
 
         // "Lưu & Gửi kế hoạch" → đẩy chuông NV "KH đã thay đổi/bổ sung", xoá cờ dirty.

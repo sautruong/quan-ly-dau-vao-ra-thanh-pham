@@ -91,17 +91,6 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                                 </div>
                                 <div class="pf-acc-body">
                                 <?php $pf_pid = (int) $plan['product_id']; ?>
-                                <div class="pf-formula-row">
-                                    <?php if ($pf_is_admin): ?>
-                                        <button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="<?php echo $pf_pid; ?>">
-                                            <i class="fa-solid fa-flask"></i> Công thức
-                                        </button>
-                                    <?php elseif (in_array($pf_pid, $formula_approved, true)): ?>
-                                        <button type="button" class="pf-formula-btn pf-formula-view" data-product-id="<?php echo $pf_pid; ?>">
-                                            <i class="fa-solid fa-flask"></i> Xem công thức
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
                                 <div class="list-QC">
                                     <div class="wp-ck">
                                         <input type="checkbox" id="ck_sample_<?php echo $plan['plan_id']; ?>" data-plan-id="<?php echo (int)$plan['plan_id']; ?>" data-field="sample" <?php echo (int)$plan['sample'] === 1 ? 'checked' : ''; ?>>
@@ -156,14 +145,15 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                                         <input type="text" class="pf-note-input" data-product-id="<?php echo (int)$plan['product_id']; ?>" value="<?php echo htmlspecialchars($note_display); ?>" readonly>
                                     </div>
                                 <?php endif; ?>
-                                <div class="pf-matcheck" data-loaded="0"></div>
-                                <?php if ($pf_is_admin): ?>
-                                <div class="pf-card-foot">
-                                    <button type="button" class="pf-del-product" data-plan-id="<?php echo (int) $plan['plan_id']; ?>">
-                                        <i class="fa-solid fa-trash"></i> Xoá sản phẩm
-                                    </button>
+                                <div class="pf-card-actions">
+                                    <button type="button" class="pf-mc-btn" data-product-id="<?php echo $pf_pid; ?>"><i class="fa-solid fa-scale-balanced"></i> Đối chiếu</button>
+                                    <?php if ($pf_is_admin): ?>
+                                        <button type="button" class="pf-formula-btn pf-formula-admin" data-product-id="<?php echo $pf_pid; ?>"><i class="fa-solid fa-flask"></i> Công thức</button>
+                                        <button type="button" class="pf-del-product" data-plan-id="<?php echo (int) $plan['plan_id']; ?>"><i class="fa-solid fa-trash"></i> Xoá sản phẩm</button>
+                                    <?php elseif (in_array($pf_pid, $formula_approved, true)): ?>
+                                        <button type="button" class="pf-formula-btn pf-formula-view" data-product-id="<?php echo $pf_pid; ?>"><i class="fa-solid fa-flask"></i> Xem công thức</button>
+                                    <?php endif; ?>
                                 </div>
-                                <?php endif; ?>
                                 </div><!-- .pf-acc-body -->
                             </li>
                         <?php endforeach; ?>
@@ -322,6 +312,17 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
     <div class="pf-zoom" id="pf-zoom" aria-hidden="true">
         <button type="button" class="pf-zoom-close" id="pf-zoom-close" aria-label="Đóng">&times;</button>
         <img id="pf-zoom-img" src="" alt="Công thức" draggable="false">
+    </div>
+
+    <!-- Modal ĐỐI CHIẾU NGUYÊN VẬT LIỆU -->
+    <div class="pf-mc-backdrop" id="pf-mc-backdrop" aria-hidden="true">
+        <div class="pf-mc-modal" role="dialog" aria-modal="true">
+            <div class="pf-mc-bar">
+                <span class="pf-mc-mtitle" id="pf-mc-mtitle">Đối chiếu nguyên vật liệu</span>
+                <button type="button" class="pf-mc-close" id="pf-mc-close" aria-label="Đóng">&times;</button>
+            </div>
+            <div class="pf-mc-content" id="pf-mc-content"></div>
+        </div>
     </div>
 
     <script>window.PF_READONLY = <?php echo $pf_ro ? 'true' : 'false'; ?>;</script>
