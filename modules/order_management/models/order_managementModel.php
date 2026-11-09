@@ -144,6 +144,7 @@ function om_inventory_kien($stock, $ops_qty, $short_name, $unit = '')
 /** Bao bì ngoài + tồn hiện tại + đơn vị của 1 sản phẩm. */
 function om_get_product_packaging($product_id)
 {
+    pack_heal_outer_specs();   // điền quy cách (chữ -> bảng cấu trúc) cho SP còn trống, 1 lần/request
     $product_id = (int) $product_id;
     $sql = "SELECT
                 p.id AS product_id,

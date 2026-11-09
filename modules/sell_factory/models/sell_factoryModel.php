@@ -10,6 +10,7 @@
  */
 function sf_get_products_grouped_by_category()
 {
+    pack_heal_outer_specs();   // điền quy cách (chữ -> bảng cấu trúc) cho SP còn trống, 1 lần/request
     $sql = "SELECT
                 p.id              AS product_id,
                 COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
@@ -278,6 +279,7 @@ function sf_get_product_detail($product_id)
  */
 function sf_get_product_order_info($product_id)
 {
+    pack_heal_outer_specs();   // điền quy cách (chữ -> bảng cấu trúc) cho SP còn trống, 1 lần/request
     $product_id = (int)$product_id;
     $sql = "SELECT
                 p.id          AS product_id,
@@ -406,23 +408,33 @@ function sf_get_recent_purchase_quantities($customer_id, $limit_rows = 4000)
 }
 
 /**
- * Sản phẩm ĐANG HẾT (không có tồn) khớp keyword — chỉ dùng khi search.
- * Lưới tồn vốn chỉ hiện SP có tồn; hàm này bù các SP hết để user vẫn đặt được.
+ * Sản phẩm ĐANG HẾT (tồn = 0 hoặc chưa có dòng tồn) và TỒN ÂM (tồn < 0) khớp keyword — chỉ dùng khi search.
+ * Lưới tồn / cột trái vốn chỉ hiện SP có tồn > 0; hàm này bù các SP hết + tồn âm để user vẫn đặt được.
+ * Trả thêm qt_fgi: < 0 -> giao diện gắn nhãn "Tồn âm", = 0 -> "Đang hết".
+ * Khớp cả tên thường gọi (common_product_name) vì đó mới là tên hiển thị ở lưới / cột trái.
  */
 function sf_search_out_of_stock($keyword)
 {
     $keyword = escape_string($keyword);
     $sql = "SELECT p.id AS product_id,
                    COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
-                   COALESCE(NULLIF(p.unit, ''), pib.unit) AS unit
+                   COALESCE(NULLIF(p.unit, ''), pib.unit) AS unit,
+                   COALESCE(fgi.quantity, 0) AS qt_fgi
             FROM products p
             LEFT JOIN product_info_basic pib ON pib.product_id = p.id
             LEFT JOIN finished_goods_inventory fgi ON fgi.product_id = p.id
-            WHERE (p.product_name LIKE '%$keyword%' OR p.product_code LIKE '%$keyword%')
+            WHERE (p.product_name LIKE '%$keyword%'
+                   OR p.common_product_name LIKE '%$keyword%'
+                   OR p.product_code LIKE '%$keyword%')
               AND COALESCE(fgi.quantity, 0) <= 0
             ORDER BY p.product_name ASC
             LIMIT 20";
-    return db_fetch_array($sql) ?: [];
+    $rows = db_fetch_array($sql) ?: [];
+    foreach ($rows as &$r) {
+        $r['qt_fgi'] = (int) $r['qt_fgi'];
+    }
+    unset($r);
+    return $rows;
 }
 
 /**

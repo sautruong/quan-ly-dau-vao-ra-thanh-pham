@@ -60,6 +60,8 @@ $hideStock    = in_array('stock', $hidden_cols, true);
                         <?php endforeach; ?>
                     </div>
                 <?php endforeach; ?>
+                <!-- SP ĐANG HẾT / TỒN ÂM: chỉ do JS đổ vào khi user gõ từ khoá ở ô tìm trên (bấm vẫn thêm vào đơn được). -->
+                <div class="of-stock-group of-stock-out" id="of-ov-stock-out" style="display:none;"></div>
             </div>
             <p class="of-stock-empty" id="of-stock-empty" hidden>Không có sản phẩm phù hợp.</p>
         </aside>

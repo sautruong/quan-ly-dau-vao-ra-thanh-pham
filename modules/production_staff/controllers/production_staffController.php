@@ -499,6 +499,7 @@ function ajax_update_product_basicAction()
         }
     } else {
         db_update('product_info_basic', [$field => trim($value)], "product_id = $product_id");
+        if ($field === 'outer_packaging_spec') pack_sync_outer_spec($product_id);   // chữ -> bảng cấu trúc
     }
 
     echo json_encode($resp, JSON_UNESCAPED_UNICODE);

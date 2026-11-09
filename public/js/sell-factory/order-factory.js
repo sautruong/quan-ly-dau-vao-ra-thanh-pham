@@ -130,7 +130,16 @@
         searchOutOfStock(raw, shown);
     });
 
-    /* --- SP đang hết: chỉ hiện khi search, bấm vào vẫn thêm vào giỏ được --- */
+    /** Nhãn tình trạng tồn của SP không còn tồn dương: "Tồn âm: -2 Gói" (qt_fgi < 0) hoặc "Đang hết" (qt_fgi = 0). */
+    function outTagHtml(p, baseClass) {
+        var q = parseInt(p.qt_fgi, 10) || 0;
+        var neg = q < 0;
+        return '<span class="' + baseClass + ' of-out-tag' + (neg ? ' of-out-neg' : '') + '">'
+             + (neg ? 'Tồn âm: ' + q + (p.unit ? ' ' + escHtml(p.unit) : '') : 'Đang hết')
+             + '</span>';
+    }
+
+    /* --- SP đang hết / tồn âm: chỉ hiện khi search, bấm vào vẫn thêm vào giỏ được --- */
     function searchOutOfStock(rawKw, shown) {
         clearTimeout(outStockTimer);
         var $box = $('#of-out-stock');
@@ -144,13 +153,13 @@
                     $('#of-empty-search').toggle(lastShownInStock === 0);
                     return;
                 }
-                var html = '<div class="of-out-head"><i class="fa-solid fa-box-open"></i> Sản phẩm đang hết:</div>'
+                var html = '<div class="of-out-head"><i class="fa-solid fa-box-open"></i> Sản phẩm đang hết / tồn âm:</div>'
                          + '<div class="of-out-list">';
                 $.each(rows, function (i, p) {
                     html += '<div class="of-prod of-prod-out product-item btn-order-product" data-product-id="' + p.product_id + '" title="Thêm vào giỏ hàng">'
                           + '<span class="of-prod-name">' + escHtml(p.product_name) + '</span>'
                           + '<span class="of-prod-lead"></span>'
-                          + '<span class="of-prod-inv of-out-tag">Đang hết</span>'
+                          + outTagHtml(p, 'of-prod-inv')
                           + '</div>';
                 });
                 html += '</div>';
@@ -401,19 +410,61 @@
        phải, kèm icon bay từ dòng tồn sang dòng vừa thêm + dòng đó chớp sáng, để khách đang
        xem đơn đặt thêm hàng mà không phải đóng view ra lưới tồn.
        ================================================================================= */
+    var stockOutTimer = null, stockShown = 0;
     $(document).on('input', '#of-stock-search', function () {
-        var kw = noAccent(String($(this).val() || '').trim());
+        var raw = String($(this).val() || '').trim();
+        var kw = noAccent(raw);
         var shown = 0;
-        $('#of-ov-stock-list .of-stock-row').each(function () {
+        // Khối "đang hết / tồn âm" (#of-ov-stock-out) KHÔNG nằm trong phép lọc client này — nó do server trả theo từ khoá.
+        $('#of-ov-stock-list .of-stock-row:not(.of-stock-row-out)').each(function () {
             var ok = kw === '' || noAccent($(this).attr('data-search')).indexOf(kw) !== -1;
             $(this).toggle(ok);
             if (ok) shown++;
         });
-        $('#of-ov-stock-list .of-stock-group').each(function () {
+        $('#of-ov-stock-list .of-stock-group:not(#of-ov-stock-out)').each(function () {
             $(this).toggle(kw === '' || $(this).find('.of-stock-row:visible').length > 0);
         });
-        $('#of-stock-empty').prop('hidden', shown !== 0);
+        stockShown = shown;
+        // Có từ khoá: chờ kết quả SP đang hết / tồn âm rồi mới quyết định hiện "Không có sản phẩm phù hợp".
+        $('#of-stock-empty').prop('hidden', raw !== '' || shown !== 0);
+        searchStockOut(raw);
     });
+
+    /* Gõ từ khoá ở cột trái -> xổ thêm SP "Đang hết" + SP "Tồn âm" khớp từ khoá (lưới tồn chỉ có SP tồn > 0),
+       để khách vẫn bấm đặt được. Dùng chung API search_out_of_stock với ô tìm ở lưới chính. */
+    function searchStockOut(raw) {
+        clearTimeout(stockOutTimer);
+        var $box = $('#of-ov-stock-out');
+        if (!raw) { $box.empty().hide(); return; }
+        stockOutTimer = setTimeout(function () {
+            $.getJSON(BASE + 'search_out_of_stock', { keyword: raw }, function (res) {
+                // User đã gõ tiếp / xoá từ khoá trong lúc chờ -> bỏ kết quả cũ.
+                if (String($('#of-stock-search').val() || '').trim() !== raw) return;
+                var rows = (res && res.ok && res.data) ? res.data : [];
+                if (!rows.length) {
+                    $box.empty().hide();
+                    $('#of-stock-empty').prop('hidden', stockShown !== 0);
+                    return;
+                }
+                var html = '<div class="of-stock-group-title"><i class="fa-solid fa-box-open"></i> Đang hết / tồn âm</div>';
+                $.each(rows, function (i, p) {
+                    var nm = escHtml(p.product_name);
+                    var neg = (parseInt(p.qt_fgi, 10) || 0) < 0;
+                    html += '<div class="of-stock-row of-stock-row-out" data-product-id="' + p.product_id + '"'
+                          + ' title="' + nm + ' — ' + (neg ? 'tồn âm' : 'đang hết') + ' (bấm để thêm vào đơn)">'
+                          + '<span class="of-stock-name">' + nm + '</span>'
+                          + '<span class="of-stock-lead"></span>'
+                          + outTagHtml(p, 'of-stock-inv')
+                          + '</div>';
+                });
+                $box.html(html).show();
+                $('#of-stock-empty').prop('hidden', true);   // có SP gợi ý -> không báo "không có SP"
+            }).fail(function () {
+                $box.empty().hide();
+                $('#of-stock-empty').prop('hidden', stockShown !== 0);
+            });
+        }, 300);
+    }
 
     $(document).on('click', '.of-stock-row', function () {
         var $src = $(this);

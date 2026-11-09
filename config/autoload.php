@@ -32,7 +32,7 @@ $autoload['libraries'] = array('nav');
  */
 
 
-$autoload['helper'] = array('data','auth','permission','format','accounting','invoice_ui');
+$autoload['helper'] = array('data','auth','permission','format','accounting','invoice_ui','packaging');
 
 
 

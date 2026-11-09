@@ -2408,6 +2408,13 @@ body.app-ov-open .of-cart-dropdown { display: none !important; }
 .of-stock-inv { flex: 0 0 auto; font-size: 12px; color: var(--color-gray-500); white-space: nowrap; }
 .of-stock-empty { padding: 14px; text-align: center; color: var(--color-gray-500); font-style: italic; font-size: 13px; }
 
+/* Khối SP "Đang hết / Tồn âm" xổ ra khi gõ từ khoá ở ô tìm cột trái (bấm vẫn thêm vào đơn). */
+.of-stock-out .of-stock-group-title { color: #b45309; }
+.of-stock-out .of-stock-group-title i { margin-right: 4px; }
+.of-stock-row-out .of-stock-name { color: var(--color-gray-500); }
+/* Nhãn "Tồn âm: -2 Gói" đậm, không nghiêng — phân biệt với "Đang hết" (nghiêng). Dùng chung lưới chính + cột trái. */
+.of-out-tag.of-out-neg { font-style: normal; font-weight: 700; }
+
 /* ---- Thanh công cụ trên bảng: ô tìm (trái) + các nút (phải) ---- */
 .of-ov-tablebar {
     flex: 0 0 auto;

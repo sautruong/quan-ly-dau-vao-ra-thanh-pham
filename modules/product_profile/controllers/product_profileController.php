@@ -402,6 +402,7 @@ function ready_add_productAction()
     $sql_basic = "INSERT INTO product_info_basic (product_id, unit, inner_packaging, outer_packaging, inner_packaging_spec, outer_packaging_spec)
                   VALUES ($product_id, '$unit', '$inner_packaging', '$outer_packaging', '$inner_packaging_spec', '$outer_packaging_spec')";
     mysqli_query($conn, $sql_basic);
+    pack_sync_outer_spec($product_id);   // chữ quy cách ngoài -> bảng cấu trúc (helper/packaging.php)
 
     // Insert chính sách giá vào pricing_policies
     $cost_price = floatval($_POST['cost_price'] ?? 0);
@@ -558,6 +559,7 @@ function ready_edit_productAction()
                       VALUES ($product_id, '$unit', '$inner_packaging', '$outer_packaging', '$inner_packaging_spec', '$outer_packaging_spec')";
     }
     mysqli_query($conn, $sql_basic);
+    pack_sync_outer_spec($product_id);   // chữ quy cách ngoài -> bảng cấu trúc (helper/packaging.php)
 
     // Cập nhật chính sách giá
     $cost_price = floatval($_POST['cost_price'] ?? 0);
@@ -1528,6 +1530,7 @@ function ajax_update_product_basicAction()
     } else {
         $v = mysqli_real_escape_string($conn, trim($value));
         mysqli_query($conn, "UPDATE product_info_basic SET $field = '$v' WHERE product_id = $product_id");
+        if ($field === 'outer_packaging_spec') pack_sync_outer_spec($product_id);   // chữ -> bảng cấu trúc
     }
 
     echo json_encode($resp);

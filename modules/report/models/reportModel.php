@@ -28,6 +28,7 @@ function rp_ensure_inventory_views_group()
  */
 function rp_fgi_get_products_grouped_by_category($user_id = 0)
 {
+    pack_heal_outer_specs();   // điền quy cách (chữ -> bảng cấu trúc) cho SP còn trống, 1 lần/request
     rp_fgi_ensure_display_order_table();
     rp_fgi_ensure_personal_display_order_table();
     rp_ensure_product_common_name_column();
@@ -258,6 +259,7 @@ function rp_fgi_save_stock_adjustment($map)
  * ============================================================ */
 function rp_fgi_long_unsold($months)
 {
+    pack_heal_outer_specs();
     $m = (int) $months;
     if (!in_array($m, [1, 3, 6, 12], true)) $m = 3;
     rp_fgi_ensure_discontinued_table();
@@ -365,6 +367,7 @@ function rp_fgi_set_discontinued($product_id, $on)
 /** Danh sách sản phẩm đang "Ngưng bán" (kèm tồn + lần sản xuất gần nhất). */
 function rp_fgi_discontinued_list()
 {
+    pack_heal_outer_specs();
     rp_fgi_ensure_discontinued_table();
     rp_ensure_product_common_name_column();
     $sql = "SELECT p.id AS product_id,
@@ -880,6 +883,7 @@ function rp_sap_materials_at($date_ymd, $mode)
  * ============================================================ */
 function rp_fgi_product_analysis($product_id)
 {
+    pack_heal_outer_specs();
     $pid = (int) $product_id;
     if ($pid <= 0) return null;
     rp_ensure_product_common_name_column();
