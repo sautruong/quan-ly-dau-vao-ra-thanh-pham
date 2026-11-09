@@ -970,7 +970,7 @@
                     + '<div class="pf-mc-stats">'
                         + '<div class="pf-mc-cell"><span class="pf-mc-lbl">Cần</span><span class="pf-mc-val">' + fmtNum(r.need) + (r.unit ? (' ' + escapeHtml(r.unit)) : '') + '</span></div>'
                         + '<div class="pf-mc-cell"><span class="pf-mc-lbl">Tồn</span><span class="pf-mc-val">' + fmtNum(r.stock) + '</span></div>'
-                        + '<div class="pf-mc-cell"><span class="pf-mc-lbl">Đối chiếu</span><span class="pf-mc-val ' + (r.short ? 'is-short' : 'is-ok') + '">' + (r.short ? ('Thiếu ' + fmtNum(-r.diff)) : ('Đủ +' + fmtNum(r.diff))) + '</span></div>'
+                        + '<div class="pf-mc-cell"><span class="pf-mc-lbl">Đối chiếu</span><span class="pf-mc-val ' + (r.short ? 'is-short' : 'is-ok') + '">' + (r.short ? ('Thiếu ' + fmtNum(-r.diff)) : 'Đủ') + '</span></div>'
                     + '</div></div>';
             }).join('');
             mcContent.innerHTML = head + items;
