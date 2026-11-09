@@ -122,6 +122,16 @@ if (!function_exists('ltpn_ensure_tables')) {
         return db_fetch_row("SELECT * FROM ltp_share_reminder_configs ORDER BY id ASC LIMIT 1");
     }
 
+    /** Ngày của KẾ HOẠCH HẰNG NGÀY đang chạy = card đã công bố gần nhất (hoặc hôm nay nếu chưa có). */
+    function ltpn_current_plan_date()
+    {
+        ltpn_ensure_tables();
+        $r = db_fetch_row("SELECT plan_date FROM ltp_share_state
+                           WHERE shared_at IS NOT NULL
+                           ORDER BY last_change_at DESC, shared_at DESC LIMIT 1");
+        return ($r && !empty($r['plan_date'])) ? (string) $r['plan_date'] : date('Y-m-d');
+    }
+
     /** Kế hoạch cho ngày $planDate đã từng được công bố chưa (shared_at khác NULL). */
     function ltpn_is_shared($planDate)
     {
@@ -149,7 +159,7 @@ if (!function_exists('ltpn_ensure_tables')) {
      * Chống rung liên hồi: nếu vừa báo trong vòng LTPN_THROTTLE giây thì cập nhật trạng thái
      * nhưng KHÔNG bắn chuông lần nữa (admin sửa 5 dòng liên tục = 1 chuông, không phải 5).
      */
-    function ltpn_mark_and_notify($planDate, $sharedBy = 0)
+    function ltpn_mark_and_notify($planDate, $sharedBy = 0, $force = false)
     {
         $d = ltpn_norm_date($planDate);
         if ($d === '') $d = ltpn_today();
@@ -163,7 +173,7 @@ if (!function_exists('ltpn_ensure_tables')) {
         // Có nên bắn chuông lần này không (throttle theo notified_users_at).
         $throttle = defined('LTPN_THROTTLE') ? (int) LTPN_THROTTLE : 60;
         $notify   = true;
-        if ($prev && !empty($prev['notified_users_at'])
+        if (!$force && $prev && !empty($prev['notified_users_at'])
             && (time() - strtotime($prev['notified_users_at'])) < $throttle) {
             $notify = false;
         }

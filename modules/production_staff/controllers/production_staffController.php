@@ -18,6 +18,7 @@ function plan_for_staffAction()
     $sql = "SELECT pp.id AS plan_id, pp.product_id, pp.quantity, pp.note AS plan_note,
                    pp.sample, pp.test, pp.check_inventory,
                    COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                   p.image_url,
                    ppn.note AS pre_note,
                    fgi.quantity AS stock_qty,
                    COALESCE(NULLIF(mi_in.common_material_name, ''), mi_in.material_name) AS inner_packaging,
@@ -47,10 +48,18 @@ function plan_for_staffAction()
                           ORDER BY last_change_at DESC, shared_at DESC LIMIT 1");
     $plan_date = ($__pd && !empty($__pd['plan_date'])) ? (string) $__pd['plan_date'] : date('Y-m-d');
 
+    // Hình công thức: admin thấy nút quản lý; user thường chỉ thấy nút xem với SP đã được duyệt
+    // cho kế hoạch (plan_date) này.
+    require_once __DIR__ . '/../../../libraries/formula_image.php';
+    $pf_is_admin      = function_exists('permission_is_admin') && permission_is_admin();
+    $formula_approved = fmi_approved_pids($plan_date);
+
     $data = [
-        'plans'     => $plans ?: [],
-        'tasks'     => $tasks ?: [],
-        'plan_date' => $plan_date,
+        'plans'            => $plans ?: [],
+        'tasks'            => $tasks ?: [],
+        'plan_date'        => $plan_date,
+        'pf_is_admin'      => $pf_is_admin,
+        'formula_approved' => $formula_approved,
     ];
     load_view('plan_for_staff', $data);
 }
@@ -631,6 +640,7 @@ function ajax_add_plan_productAction()
     $sql = "SELECT pp.id AS plan_id, pp.product_id, pp.quantity,
                    pp.sample, pp.test, pp.check_inventory,
                    COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                   p.image_url,
                    fgi.quantity AS stock_qty,
                    COALESCE(NULLIF(mi_in.common_material_name, ''), mi_in.material_name) AS inner_packaging,
                    COALESCE(NULLIF(mi_out.common_material_name, ''), mi_out.material_name) AS outer_packaging,
@@ -692,6 +702,37 @@ function ajax_delete_taskAction()
 
     db_delete('additional_tasks', "id = {$task_id}");
     echo json_encode(['success' => true]);
+    exit;
+}
+
+/** AJAX: admin xoá 1 sản phẩm khỏi KHSX hiện hành (nút ở chân card). POST: plan_id */
+function ajax_delete_plan_productAction()
+{
+    header('Content-Type: application/json');
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
+
+    $plan_id = (int) ($_POST['plan_id'] ?? 0);
+    if ($plan_id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Dữ liệu không hợp lệ.']);
+        exit;
+    }
+    // Gỡ "việc khác" đang gắn về dòng kế hoạch này trước (tránh mồ côi plan_id), rồi xoá sản phẩm.
+    db_delete('additional_tasks', "plan_id = {$plan_id}");
+    db_delete('production_plans', "id = {$plan_id}");
+    echo json_encode(['success' => true]);
+    exit;
+}
+
+/** AJAX: nút "Lưu & Gửi kế hoạch" — đẩy chuông "KH đã có thay đổi/bổ sung" cho user có quyền xem. */
+function plan_notify_changedAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
+
+    require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+    $user = permission_current_user();
+    $n = ltpn_mark_and_notify(ltpn_current_plan_date(), $user ? (int) $user['id'] : 0, true);
+    echo json_encode(['success' => true, 'notified' => (int) $n], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -802,6 +843,92 @@ function export_plan_by_dateAction()
     ltpn_mark_and_notify($exp['plan_date'] ?? $plan_date, $__u ? (int) $__u['id'] : 0);
 
     echo json_encode(['success' => true, 'item_count' => (int) $exp['item_count']], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/* =====================================================================================
+ *  HÌNH CÔNG THỨC (formula image) + DUYỆT — nghiệp vụ ở libraries/formula_image.php (fmi_*)
+ * ===================================================================================== */
+function fmi_boot()
+{
+    require_once __DIR__ . '/../../../libraries/formula_image.php';
+    require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+    fmi_ensure_tables();
+}
+
+/** JSON: lấy ảnh công thức cho (product, qty) + trạng thái duyệt. Admin xem luôn; user chỉ khi đã duyệt. */
+function formula_image_getAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    fmi_boot();
+    $user     = permission_current_user();
+    $pid      = (int) ($_GET['product_id'] ?? ($_POST['product_id'] ?? 0));
+    $qty      = (int) ($_GET['quantity'] ?? ($_POST['quantity'] ?? 0));
+    $isAdmin  = function_exists('permission_is_admin') && permission_is_admin($user);
+    $planDate = ltpn_current_plan_date();
+    $approved = fmi_is_approved($planDate, $pid);
+
+    if (!$isAdmin && !$approved) {
+        echo json_encode(['ok' => true, 'allowed' => false, 'approved' => false], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $img = fmi_find_image($pid, $qty);
+    echo json_encode([
+        'ok'              => true,
+        'allowed'         => true,
+        'is_admin'        => $isAdmin,
+        'approved'        => $approved,
+        'plan_date'       => $planDate,
+        'has_image'       => $img ? true : false,
+        'image_url'       => $img ? $img['image_file'] : '',
+        'source_quantity' => $img ? $img['source_quantity'] : 0,
+        'exact'           => $img ? (bool) $img['exact'] : false,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: admin tải ảnh công thức cho (product, qty). multipart: image. */
+function formula_image_uploadAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_admin(true);
+    fmi_boot();
+    $user = permission_current_user();
+    $res  = fmi_save_image(
+        (int) ($_POST['product_id'] ?? 0),
+        (int) ($_POST['quantity'] ?? 0),
+        $_FILES['image'] ?? null,
+        $user ? (int) $user['id'] : 0
+    );
+    echo json_encode(!empty($res['ok'])
+        ? ['ok' => true, 'image_url' => $res['image_file']]
+        : ['ok' => false, 'message' => $res['message'] ?? 'Lỗi lưu ảnh.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: admin duyệt / gỡ duyệt công thức cho SP trong kế hoạch hiện hành (POST product_id, on). */
+function formula_approveAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_admin(true);
+    fmi_boot();
+    $user     = permission_current_user();
+    $pid      = (int) ($_POST['product_id'] ?? 0);
+    $on       = !empty($_POST['on']);
+    $planDate = ltpn_current_plan_date();
+    fmi_set_approved($planDate, $pid, $user ? (int) $user['id'] : 0, $on);
+    echo json_encode(['ok' => true, 'approved' => $on, 'plan_date' => $planDate], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: đối chiếu tồn NVL cho (product, qty) theo định mức lần SX gần nhất. Ai xem KH cũng gọi được. */
+function material_check_getAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    require_once __DIR__ . '/../../../libraries/material_check.php';
+    $pid = (int) ($_GET['product_id'] ?? ($_POST['product_id'] ?? 0));
+    $qty = (float) ($_GET['quantity'] ?? ($_POST['quantity'] ?? 0));
+    echo json_encode(matchk_compare($pid, $qty), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
