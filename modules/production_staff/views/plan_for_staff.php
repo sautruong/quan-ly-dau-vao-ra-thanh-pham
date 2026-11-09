@@ -21,10 +21,15 @@ $ps_share = function_exists('ps_get_share_settings')
 
 <?php
 $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
+// User "chỉ xem" view này: ẩn/khoá mọi control sửa (backend cũng đã chặn ở các action ghi).
+$pf_ro = function_exists('permission_is_view_only')
+    && permission_is_view_only('production_staff', 'production_staff', 'plan_for_staff');
+// Ngày của kế hoạch hằng ngày (lấy theo card dài ngày đã công bố) — controller truyền xuống.
+$pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime((string) $plan_date) : time();
 ?>
 
 <body>
-    <div id="wrapper" class="cols-<?php echo $cols; ?>">
+    <div id="wrapper" class="cols-<?php echo $cols; ?><?php echo $pf_ro ? ' pf-ro' : ''; ?>">
         <?php get_sidebar('app'); ?>
         <?php get_header('app'); ?>
         <div class="wp-header-content">
@@ -65,7 +70,7 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
                     <ul class="search-dropdown" id="pf-search-dropdown"></ul>
                 </div>
                 <div class="date">
-                    <p><?php echo date('d') . ' tháng ' . date('n') . ' ' . date('Y'); ?></p>
+                    <p><?php echo date('d', $pf_plan_ts) . ' tháng ' . date('n', $pf_plan_ts) . ' ' . date('Y', $pf_plan_ts); ?></p>
                 </div>
                 <ul class="list-product" id="list-product">
                     <?php if (empty($plans)): ?>
@@ -74,15 +79,17 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
                         </li>
                     <?php else: ?>
                         <?php foreach ($plans as $plan): ?>
-                            <li class="product-item" data-product-id="<?php echo (int)$plan['product_id']; ?>">
-                                <div class="wp-product-num">
+                            <li class="product-item pf-acc" data-product-id="<?php echo (int)$plan['product_id']; ?>">
+                                <div class="wp-product-num pf-acc-head">
                                     <div class="name-product">
                                         <p><strong class="pf-name-text" contenteditable="false" spellcheck="false" data-product-id="<?php echo (int)$plan['product_id']; ?>"><?php echo htmlspecialchars($plan['product_name']); ?></strong><button type="button" class="pf-name-edit-btn" title="Sửa tên"><i class="fa-solid fa-pen"></i></button></p>
                                     </div>
                                     <div class="num">
                                         <input type="text" class="pf-qty-input" data-plan-id="<?php echo (int)$plan['plan_id']; ?>" value="<?php echo (int)$plan['quantity']; ?>">
                                     </div>
+                                    <span class="pf-acc-caret" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>
                                 </div>
+                                <div class="pf-acc-body">
                                 <div class="list-QC">
                                     <div class="wp-ck">
                                         <input type="checkbox" id="ck_sample_<?php echo $plan['plan_id']; ?>" data-plan-id="<?php echo (int)$plan['plan_id']; ?>" data-field="sample" <?php echo (int)$plan['sample'] === 1 ? 'checked' : ''; ?>>
@@ -137,6 +144,7 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
                                         <input type="text" class="pf-note-input" data-product-id="<?php echo (int)$plan['product_id']; ?>" value="<?php echo htmlspecialchars($note_display); ?>" readonly>
                                     </div>
                                 <?php endif; ?>
+                                </div><!-- .pf-acc-body -->
                             </li>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -201,7 +209,7 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
                         <div class="khsx-doc-footband">
                             <span class="khsx-doc-foottri"></span>
                         </div>
-                        <div class="khsx-share-date"><?php echo htmlspecialchars(function_exists('ps_vn_date') ? ps_vn_date(date('Y-m-d')) : date('d/m/Y'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div class="khsx-share-date"><?php echo htmlspecialchars(function_exists('ps_vn_date') ? ps_vn_date(date('Y-m-d', $pf_plan_ts)) : date('d/m/Y', $pf_plan_ts), ENT_QUOTES, 'UTF-8'); ?></div>
                     </div>
                 </div>
             </div>
@@ -218,7 +226,7 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
             </div>
             <div class="bc-print-sheet" id="bc-print-sheet">
                 <h2 class="bc-title">BÁO CÁO SẢN XUẤT</h2>
-                <p class="bc-date">Ngày <?php echo date('d'); ?> tháng <?php echo date('n'); ?> năm <?php echo date('Y'); ?></p>
+                <p class="bc-date">Ngày <?php echo date('d', $pf_plan_ts); ?> tháng <?php echo date('n', $pf_plan_ts); ?> năm <?php echo date('Y', $pf_plan_ts); ?></p>
 
                 <ul class="bc-product-list">
                     <?php if (empty($plans)): ?>
@@ -259,6 +267,7 @@ $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
         </div>
     </div>
 
+    <script>window.PF_READONLY = <?php echo $pf_ro ? 'true' : 'false'; ?>;</script>
     <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="<?php echo asset_ver('public/js/production_staff/plan_for_staff.js'); ?>"></script>

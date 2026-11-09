@@ -111,6 +111,11 @@ if (!isset($page_title) || $page_title === '') {
                 <button type="button" class="app-tools-item" data-tools-target="app-view-theme-btn">
                     <i class="fa-solid fa-circle-half-stroke"></i> Sáng / Tối
                 </button>
+                <!-- Chat: gom vào cụm công cụ trên mobile (bóng chat nổi bị ẩn ở CSS ≤768px).
+                     data-tools-target sẽ click #chat-launcher để mở bảng chat. -->
+                <button type="button" class="app-tools-item" data-tools-target="chat-launcher">
+                    <i class="fa-solid fa-comment-dots"></i> Tin nhắn
+                </button>
             </div>
         </div>
 
@@ -128,8 +133,10 @@ $__plan_tabs = [
     ['action' => 'plan_for_staff',            'label' => 'Kế hoạch sản xuất hằng ngày'],
     ['action' => 'long_term_production_plan', 'label' => 'Kế hoạch sản xuất dài ngày'],
 ];
+// Gỡ thanh tab ở view "Kế hoạch sản xuất hằng ngày" (plan_for_staff) — view này dành cho nhân
+// viên xem trên mobile, không cần nhảy sang board dài ngày. Chỉ còn hiện trên board dài ngày.
 if ($__hd_mod === 'production_staff' && $__hd_ctl === 'production_staff'
-    && in_array($__hd_act, array_column($__plan_tabs, 'action'), true)):
+    && $__hd_act === 'long_term_production_plan'):
 ?>
 <nav class="app-subtabs" aria-label="Chuyển trang kế hoạch sản xuất">
     <?php foreach ($__plan_tabs as $__t):

@@ -24,6 +24,15 @@
 /* ============================================
    WRAPPER & LAYOUT
    ============================================ */
+/* Trang KH hằng ngày là trang nội dung thường: nền TRẮNG tràn màn hình, nội dung canh TỪ TRÊN
+   XUỐNG. Ghi đè "letterbox" của global.css (html,body{background:#000; display:flex;
+   align-items:center}) vốn canh giữa dọc -> ít sản phẩm sẽ bị 2 dải đen trên/dưới.
+   plan_for_staff.css chỉ nạp ở trang này nên không đụng view khác. */
+html, body {
+    background-color: var(--color-white);
+    align-items: stretch;   /* không canh giữa theo chiều dọc nữa */
+}
+
 #wrapper {
     padding: 20px 40px !important;
     overflow-y: auto !important;
@@ -31,7 +40,8 @@
     flex-direction: column;
     justify-content: flex-start;
     background-color: var(--color-white);
-    min-height: 100vh;
+    height: auto;           /* bỏ height:100% của global để min-height nở theo nội dung */
+    min-height: 100vh;      /* vẫn luôn phủ hết màn hình dù ít sản phẩm */
 }
 
 .header {
@@ -1239,4 +1249,46 @@ a img {
     .pf-share-doctitle-wrap { text-align: left; }
     .pf-share-doctitle { white-space: normal; font-size: 20px; }
     .khsx-share-list { grid-template-columns: 1fr; }
+}
+
+/* =====================================================================
+   FAQ / ACCORDION — mỗi sản phẩm là 1 hàng gập/mở (tối ưu xem trên mobile).
+   Thanh tên (.wp-product-num) là phần luôn thấy; chi tiết (QC/bao bì/lưu ý)
+   nằm trong .pf-acc-body, mặc định ẩn, bấm hàng tên để mở.
+   ===================================================================== */
+.pf-acc { padding-bottom: 0; overflow: hidden; }
+.pf-acc .pf-acc-head { cursor: pointer; user-select: none; }
+.pf-acc .pf-acc-head .name-product { flex: 1 1 auto; min-width: 0; }
+.pf-acc .pf-acc-head .name-product p {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pf-acc .pf-acc-caret {
+    flex: 0 0 auto; color: #fff; opacity: .9; font-size: 15px;
+    transition: transform .18s ease;
+}
+.pf-acc.open .pf-acc-caret { transform: rotate(180deg); }
+/* Đóng: bo tròn cả 4 góc cho gọn (header vốn chỉ bo 2 góc trên). */
+.pf-acc:not(.open) .wp-product-num { border-radius: 13px; }
+
+.pf-acc .pf-acc-body {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 15px;
+}
+.pf-acc.open .pf-acc-body { display: flex; }
+
+/* Mobile: bỏ mũi tên xổ bên phải card — bấm cả hàng tên là xổ/đóng FAQ (handler trong JS). */
+@media (max-width: 768px) {
+    .pf-acc .pf-acc-caret { display: none; }
+}
+
+/* Mobile: 1 cột, hàng tên to & dễ chạm. */
+@media (max-width: 600px) {
+    .list-product { gap: 12px; }
+    .pf-acc .pf-acc-head { padding: 14px 16px; min-height: 56px; }
+    .name-product p { font-size: 17px; white-space: normal; }
+    .num input { font-size: 17px; }
+    .pf-acc .pf-acc-caret { font-size: 18px; }
+    .list-QC > div { min-height: 40px; }
 }

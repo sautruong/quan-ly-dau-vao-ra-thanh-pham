@@ -788,14 +788,16 @@
             var isChk = function (v) { return Number(v) === 1 ? 'checked' : ''; };
             var stockDisplay = (plan.stock_qty === null || typeof plan.stock_qty === 'undefined') ? '—' : parseInt(plan.stock_qty, 10);
             return '' +
-                '<li class="product-item" data-product-id="' + pid + '">' +
-                    '<div class="wp-product-num">' +
+                '<li class="product-item pf-acc" data-product-id="' + pid + '">' +
+                    '<div class="wp-product-num pf-acc-head">' +
                         '<div class="name-product">' +
                             '<p><strong class="pf-name-text" contenteditable="false" spellcheck="false" data-product-id="' + pid + '">' + escapeHtml(plan.product_name) + '</strong>' +
                             '<button type="button" class="pf-name-edit-btn" title="Sửa tên"><i class="fa-solid fa-pen"></i></button></p>' +
                         '</div>' +
                         '<div class="num"><input type="text" class="pf-qty-input" data-plan-id="' + plan.plan_id + '" value="' + qty + '"></div>' +
+                        '<span class="pf-acc-caret" aria-hidden="true"><i class="fa-solid fa-chevron-down"></i></span>' +
                     '</div>' +
+                    '<div class="pf-acc-body">' +
                     '<div class="list-QC">' +
                         '<div class="wp-ck"><input type="checkbox" id="ck_sample_' + plan.plan_id + '" data-plan-id="' + plan.plan_id + '" data-field="sample" ' + isChk(plan.sample) + '><label for="ck_sample_' + plan.plan_id + '">Lấy mẫu</label></div>' +
                         '<div class="wp-ck"><input type="checkbox" id="ck_test_' + plan.plan_id + '" data-plan-id="' + plan.plan_id + '" data-field="test" ' + isChk(plan.test) + '><label for="ck_test_' + plan.plan_id + '">Test</label></div>' +
@@ -825,6 +827,7 @@
                             '</li>' +
                         '</ul>' +
                     '</div>' +
+                    '</div>' + // .pf-acc-body
                 '</li>';
         }
 
@@ -894,5 +897,48 @@
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.wp-search')) hideDropdown();
         });
+    })();
+
+    /* ============================================================
+       FAQ / Accordion: mỗi sản phẩm gập/mở. Bấm hàng tên để mở chi tiết (QC, bao bì, lưu ý).
+       Admin: bỏ qua khi bấm đúng ô số lượng / nút sửa tên để không chặn thao tác sửa. User chỉ
+       xem: bấm đâu trên hàng cũng gập/mở (ô đã khoá nên không sợ chặn nhầm).
+       ============================================================ */
+    (function () {
+        var list = document.getElementById('list-product');
+        if (!list) return;
+        list.addEventListener('click', function (e) {
+            var head = e.target.closest('.pf-acc-head');
+            if (!head) return;
+            if (!window.PF_READONLY && (e.target.closest('.num')
+                || e.target.closest('.pf-name-edit-btn') || e.target.closest('.pf-name-text'))) return;
+            var item = head.closest('.product-item');
+            if (item) item.classList.toggle('open');
+        });
+    })();
+
+    /* ============================================================
+       CHỈ XEM (view-only): khoá mọi control sửa cho user thường. Backend đã chặn các action ghi
+       (permission_require_can_edit) — đây chỉ để giao diện gọn, không bày nút vô tác dụng. Danh
+       sách sản phẩm do server render sẵn nên khoá 1 lần lúc tải là đủ (view-only không thêm được).
+       ============================================================ */
+    (function () {
+        if (!window.PF_READONLY) return;
+        function lock() {
+            document.querySelectorAll(
+                '.pf-qty-input, .info-field, .pkg-search, #pf-search-product, #other-work-input'
+            ).forEach(function (el) { el.readOnly = true; el.tabIndex = -1; });
+            document.querySelectorAll('.list-QC input[type="checkbox"]').forEach(function (el) {
+                el.disabled = true;
+            });
+            document.querySelectorAll(
+                '.pf-name-edit-btn, #btn-add-other-work, .task-delete, #btn-reset, .btn-reset, .wp-search'
+            ).forEach(function (el) { el.style.display = 'none'; });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', lock);
+        } else {
+            lock();
+        }
     })();
 })();

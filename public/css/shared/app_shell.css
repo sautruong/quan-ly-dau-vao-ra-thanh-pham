@@ -1485,6 +1485,13 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
     .app-header-burger { display: flex; }
     .app-user-meta { display: none; }
     .app-sb-collapse { display: none; }
+    /* Bỏ mũi tên xổ cạnh avatar + bóp avatar nhỏ lại cho gọn header mobile. */
+    .app-user-caret { display: none; }
+    .app-user-btn { padding: 4px; gap: 0; }
+    .app-user-btn .app-avatar { width: 32px; height: 32px; font-size: 14px; }
+    /* Ẩn bóng chat nổi — chat giờ mở từ cụm công cụ (… > Tin nhắn). Phần tử vẫn trong DOM nên
+       lệnh click từ cụm công cụ vẫn mở được bảng chat. */
+    .chat-widget .chat-launcher { display: none; }
 }
 
 /* =====================================================================
