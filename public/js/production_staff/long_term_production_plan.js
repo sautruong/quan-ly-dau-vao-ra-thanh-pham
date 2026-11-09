@@ -1115,35 +1115,26 @@
         });
     });
 
-    /* ---------------- XUẤT KH: đẩy kế hoạch 1 ngày (đã qua) sang trang Lập KHSX ----------------
-     * Gom sản phẩm + việc khác của card rồi gọi save_plan (ghi vào production_plans +
-     * additional_tasks) — đúng nguồn dữ liệu mà 'plan_for_staff' đọc. */
+    /* ---------------- XUẤT KH: công bố kế hoạch 1 ngày sang "KH hằng ngày" (plan_for_staff) ----
+     * Chạy HOÀN TOÀN server-side: chỉ gửi plan_date của card, server đọc thẳng
+     * long_term_production_plans của ngày đó rồi ghi sang production_plans/additional_tasks
+     * (export_plan_by_date → pae_export_plan_date). Không cào DOM nên không còn lỗi "không có sản
+     * phẩm" do dòng chưa kịp gắn data-product-id. */
     document.addEventListener('click', function (e) {
         var btn = e.target.closest && e.target.closest('.ltp-export-plan');
         if (!btn) return;
         var card = btn.closest('.ltp-card');
         if (!card) return;
 
-        var items = [];
-        card.querySelectorAll('.ltp-product-list .ltp-item').forEach(function (li) {
-            var pid = parseInt(li.getAttribute('data-product-id'), 10);
-            if (!pid) return; // bỏ dòng nháp chưa chọn sản phẩm
-            var qEl = li.querySelector('.ltp-item-qty');
-            var qty = qEl ? (parseFloat(String(qEl.value).replace(/,/g, '')) || 0) : 0;
-            items.push({ product_id: pid, quantity: qty });
-        });
-        var tasks = [];
-        card.querySelectorAll('.ltp-task-list .ltp-task').forEach(function (li) {
-            var c = li.querySelector('.ltp-task-content');
-            var v = c ? c.value.trim() : '';
-            if (v) tasks.push(v);
-        });
+        var planDate = card.getAttribute('data-date') || '';
+        if (!planDate) { alert('Không xác định được ngày của kế hoạch.'); return; }
 
-        if (!items.length) { alert('Ngày này chưa có sản phẩm để xuất.'); return; }
-        // Không hỏi xác nhận — đẩy thẳng sang plan_for_staff.
+        // Flush ô số lượng đang sửa dở (blur -> change -> ltp_update_product) trước khi xuất, để
+        // server đọc ra số lượng mới nhất.
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 
         btn.disabled = true;
-        post('save_plan', { items: JSON.stringify(items), tasks: JSON.stringify(tasks), force_clear: 1 })
+        post('export_plan_by_date', { plan_date: planDate })
             .then(function (res) {
                 if (res && res.success) {
                     window.location.href = BASE + 'plan_for_staff';

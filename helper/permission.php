@@ -460,6 +460,7 @@ function permission_view_only_capable_keys()
         ['module' => 'warehouse_outbound',   'controller' => 'warehouse_outbound',   'action' => 'sales_delivery_note'],
         ['module' => 'warehouse_outbound',   'controller' => 'warehouse_outbound',   'action' => 'other_warehouse_outbound'],
         ['module' => 'production_formula',   'controller' => 'production_formula',   'action' => 'production_formula'],
+        ['module' => 'production_staff',     'controller' => 'production_staff',     'action' => 'plan_for_staff'],
         ['module' => 'cash_transactions',    'controller' => 'cash_transactions',    'action' => 'cash_transactions'],
         ['module' => 'admin_factory',        'controller' => 'admin',                'action' => 'manage_product_list'],
         ['module' => 'admin_factory',        'controller' => 'admin',                'action' => 'manage_material_list'],

@@ -915,6 +915,10 @@ function auto_report_due_checkAction()
     */
     require_once __DIR__ . '/../../../libraries/production_reminder.php';
     prm_run_sweep();
+    // Cùng lý do: nhắc "chưa công bố kế hoạch sản xuất ngày mai" (sau 17:00, bỏ chủ nhật) cũng
+    // thuần server → đi nhờ nhịp poll này. Tự thoát sớm khi chưa tới giờ / đã nhắc / đã công bố.
+    require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+    ltpn_reminder_sweep();
     echo json_encode(['ok' => true, 'due' => ar_due_for_user($uid)], JSON_UNESCAPED_UNICODE);
     exit;
 }

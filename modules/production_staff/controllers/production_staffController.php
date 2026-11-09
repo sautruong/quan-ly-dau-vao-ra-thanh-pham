@@ -37,9 +37,20 @@ function plan_for_staffAction()
     $sql_tasks = "SELECT id, description FROM additional_tasks ORDER BY id ASC";
     $tasks = db_fetch_array($sql_tasks);
 
+    // Ngày của kế hoạch hằng ngày = ngày CARD dài ngày vừa được công bố gần nhất (vd share card
+    // Thứ 3 thì hiển thị 10/11), KHÔNG phải ngày hôm nay. Lấy từ ltp_share_state; chưa share lần
+    // nào thì mặc định hôm nay.
+    require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+    ltpn_ensure_tables();
+    $__pd = db_fetch_row("SELECT plan_date FROM ltp_share_state
+                          WHERE shared_at IS NOT NULL
+                          ORDER BY last_change_at DESC, shared_at DESC LIMIT 1");
+    $plan_date = ($__pd && !empty($__pd['plan_date'])) ? (string) $__pd['plan_date'] : date('Y-m-d');
+
     $data = [
-        'plans' => $plans ?: [],
-        'tasks' => $tasks ?: []
+        'plans'     => $plans ?: [],
+        'tasks'     => $tasks ?: [],
+        'plan_date' => $plan_date,
     ];
     load_view('plan_for_staff', $data);
 }
@@ -550,6 +561,7 @@ function delete_noteAction()
 function ajax_update_plan_qcAction()
 {
     header('Content-Type: application/json');
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
 
     $plan_id = (int) ($_POST['plan_id'] ?? 0);
     $field   = (string) ($_POST['field'] ?? '');
@@ -570,6 +582,7 @@ function ajax_update_plan_qcAction()
 function ajax_update_plan_quantityAction()
 {
     header('Content-Type: application/json');
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
 
     $plan_id = (int) ($_POST['plan_id'] ?? 0);
     $quantity = (int) ($_POST['quantity'] ?? 0);
@@ -588,6 +601,7 @@ function ajax_update_plan_quantityAction()
 function ajax_add_plan_productAction()
 {
     header('Content-Type: application/json');
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
 
     $product_id = (int) ($_POST['product_id'] ?? 0);
     if ($product_id <= 0) {
@@ -639,6 +653,7 @@ function ajax_add_plan_productAction()
 function ajax_add_taskAction()
 {
     header('Content-Type: application/json');
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
 
     $desc = trim((string) ($_POST['description'] ?? ''));
     if ($desc === '') {
@@ -667,6 +682,7 @@ function ajax_add_taskAction()
 function ajax_delete_taskAction()
 {
     header('Content-Type: application/json');
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
 
     $task_id = (int) ($_POST['task_id'] ?? 0);
     if ($task_id <= 0) {
@@ -683,10 +699,15 @@ function save_planAction()
 {
     global $conn;
     header('Content-Type: application/json');
+    // User "chỉ xem" view KH hằng ngày không được công bố/reset. Admin & người không bị giới hạn
+    // (vd người dùng board dài ngày) vẫn qua — xem permission_user_can_edit().
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
 
     $items_raw   = $_POST['items'] ?? '[]';
     $tasks_raw   = $_POST['tasks'] ?? '[]';
     $force_clear = !empty($_POST['force_clear']);
+    // Ngày của kế hoạch đang công bố (nút "XUẤT KH" gửi lên theo card). Rỗng → coi như hôm nay.
+    $plan_date   = (string) ($_POST['plan_date'] ?? '');
 
     $items = json_decode($items_raw, true) ?: [];
     $tasks = json_decode($tasks_raw, true) ?: [];
@@ -734,7 +755,53 @@ function save_planAction()
         }
     }
 
+    // Công bố thật (có sản phẩm) → đẩy chuông cho user có quyền xem KH hằng ngày (YC2/YC3).
+    // Reset (force_clear + rỗng) là GỠ kế hoạch, không phải công bố → không báo.
+    if (!empty($items)) {
+        require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+        $__u = permission_current_user();
+        ltpn_mark_and_notify($plan_date, $__u ? (int) $__u['id'] : 0);
+    }
+
     echo json_encode(['success' => true]);
+    exit;
+}
+
+/**
+ * AJAX: CÔNG BỐ ("XUẤT KH") kế hoạch của 1 ngày trên board dài ngày — chạy HOÀN TOÀN server-side.
+ *
+ * VÌ SAO KHÔNG CÀO DOM như trước: nút cũ gom sản phẩm từ DOM rồi post sang save_plan — mong manh
+ * (dòng vừa thêm chưa kịp gắn data-product-id, bấm nhầm card... → "không có sản phẩm để xuất" dù
+ * card có hàng). Bản này đọc THẲNG long_term_production_plans của plan_date qua pae_export_plan_date()
+ * — đúng hàm mà đường auto 16:50 dùng, nên tay và auto giờ cùng một nguồn sự thật.
+ *
+ * POST: plan_date (Y-m-d). Trả {success, item_count | message}.
+ */
+function export_plan_by_dateAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    // User "chỉ xem" view KH hằng ngày không được công bố.
+    permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
+
+    $plan_date = (string) ($_POST['plan_date'] ?? '');
+    if ($plan_date === '' || !strtotime($plan_date)) {
+        echo json_encode(['success' => false, 'message' => 'Thiếu ngày kế hoạch cần xuất.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    require_once __DIR__ . '/../../../libraries/plan_auto_export.php';
+    $exp = pae_export_plan_date($plan_date);
+    if (empty($exp['ok'])) {
+        echo json_encode(['success' => false, 'message' => $exp['error'] ?? 'Không có sản phẩm để xuất.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // Công bố thành công → đẩy chuông cho user có quyền xem KH hằng ngày + ghi nhận "đã share".
+    require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+    $__u = permission_current_user();
+    ltpn_mark_and_notify($exp['plan_date'] ?? $plan_date, $__u ? (int) $__u['id'] : 0);
+
+    echo json_encode(['success' => true, 'item_count' => (int) $exp['item_count']], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -892,6 +959,11 @@ function plan_auto_export_runAction()
     // Chốt "đã chạy" NGAY sau khi chuyển xong — phần gửi ảnh phía dưới hỏng cũng không làm
     // quét-lỡ báo nhầm là kế hoạch chưa được chuyển.
     pae_mark_run($cid);
+
+    // Auto-export thành công = đã CÔNG BỐ kế hoạch ngày mai → đẩy chuông cho user có quyền xem
+    // KH hằng ngày, và ghi nhận "đã share" để lời nhắc 17:00 không nổ nữa (YC1/YC2 gộp làm một).
+    require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+    ltpn_mark_and_notify($planDate, $uid);
 
     // (2) Gửi ảnh vào chat (tuỳ chọn — thiếu ảnh vẫn coi như chạy xong phần chính).
     if (empty($_FILES['image']) || ($_FILES['image']['error'] ?? 1) !== UPLOAD_ERR_OK) {
