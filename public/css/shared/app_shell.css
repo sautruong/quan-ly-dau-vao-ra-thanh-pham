@@ -518,6 +518,19 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
     background: var(--app-gray-100); border-color: var(--app-gray-200);
     color: var(--app-gray-700); box-shadow: none;
 }
+/* Reset KHSX: 1 icon đỏ ngoài header (thay cho dropdown 3 chấm) */
+.app-header-right .header-actions.app-actions-solo { display: flex; align-items: center; margin: 0; padding: 0; }
+.btn-reset.app-reset-icon {
+    width: 42px; height: 42px; padding: 0; margin: 0; gap: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid transparent; border-radius: 50%;
+    background: transparent; color: var(--color-red, #ef4444);
+    font-size: 18px; box-shadow: none; transform: none;
+}
+.btn-reset.app-reset-icon:hover {
+    background: var(--app-gray-100); border-color: var(--app-gray-200);
+    color: var(--color-red, #ef4444); box-shadow: none; transform: none;
+}
 /* Cụm chứa nút cũ (đã bị JS lấy nút ra) không được chiếm chỗ/gap trên header */
 .app-header-right .cdb-actions:empty,
 .app-header-right .header-actions:empty { display: none; }
@@ -1237,16 +1250,16 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
 .app-user { position: relative; }
 .app-user-btn {
     display: flex; align-items: center; gap: 10px;
-    padding: 5px 10px 5px 5px;
+    padding: 4px 8px 4px 4px;
     border: 1px solid transparent; border-radius: 999px;
     background: transparent; cursor: pointer; font-family: inherit;
     transition: var(--app-trans);
 }
 .app-user-btn:hover { background: var(--app-gray-100); border-color: var(--app-gray-200); }
 .app-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 34px; height: 34px; border-radius: 50%;
     background: linear-gradient(135deg, var(--app-green) 0%, var(--app-green-dark) 100%);
-    color: #fff; font-weight: 700; font-size: 16px;
+    color: #fff; font-weight: 700; font-size: 14px;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0; overflow: hidden; text-transform: uppercase;
 }
@@ -1254,8 +1267,8 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
 .app-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .app-avatar-lg { width: 64px; height: 64px; font-size: 26px; }
 .app-user-meta { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
-.app-user-name { font-size: 14px; font-weight: 700; color: var(--app-gray-900); }
-.app-user-sub  { font-size: 12px; color: var(--app-gray-500); }
+.app-user-name { font-size: 13px; font-weight: 700; color: var(--app-gray-900); }
+.app-user-sub  { font-size: 11px; color: var(--app-gray-500); }
 .app-user-caret { font-size: 11px; color: var(--app-gray-500); transition: transform 0.2s ease; }
 .app-user.is-open .app-user-caret { transform: rotate(180deg); }
 
@@ -1488,7 +1501,7 @@ body .btn-check-db:not(.app-cdb-icon) { display: none; }
     /* Bỏ mũi tên xổ cạnh avatar + bóp avatar nhỏ lại cho gọn header mobile. */
     .app-user-caret { display: none; }
     .app-user-btn { padding: 4px; gap: 0; }
-    .app-user-btn .app-avatar { width: 32px; height: 32px; font-size: 14px; }
+    .app-user-btn .app-avatar { width: 28px; height: 28px; font-size: 12px; }
     /* Ẩn bóng chat nổi — chat giờ mở từ cụm công cụ (… > Tin nhắn). Phần tử vẫn trong DOM nên
        lệnh click từ cụm công cụ vẫn mở được bảng chat. */
     .chat-widget .chat-launcher { display: none; }

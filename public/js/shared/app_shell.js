@@ -2063,7 +2063,21 @@
                nên desktop không đổi. ---- */
             // (R2-5) Reset / In BC / Share KHSX -> gom sau 1 nút icon (dropdown).
             var actionsGrp = hdrRight.querySelector('.header-actions');
-            if (actionsGrp) {
+            /* Nhóm chỉ còn mỗi nút Reset (Check DB đã được gom lên header ở 5c) -> KHÔNG cần
+               dropdown 3 chấm: để thẳng 1 icon Reset ngoài header (cả desktop lẫn mobile). */
+            var soloReset = actionsGrp && actionsGrp.children.length === 1
+                && actionsGrp.children[0].id === 'btn-reset';
+            if (soloReset) {
+                var rb = actionsGrp.children[0];
+                var rico = rb.querySelector('i');
+                rb.removeAttribute('title');
+                rb.setAttribute('data-app-tip', 'Reset');
+                rb.setAttribute('aria-label', 'Reset');
+                rb.innerHTML = '';
+                rb.appendChild(rico || Object.assign(document.createElement('i'), { className: 'fa-solid fa-rotate-left' }));
+                rb.classList.add('app-reset-icon');
+                actionsGrp.classList.add('app-actions-solo');
+            } else if (actionsGrp) {
                 var aWrap = document.createElement('div');
                 aWrap.className = 'app-actions';
                 var aBtn = document.createElement('button');

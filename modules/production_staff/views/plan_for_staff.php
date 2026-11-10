@@ -164,7 +164,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                     <div class="add-other-work">
                         <p>VIỆC KHÁC</p>
                         <button type="button" class="btn-add-other-work" id="btn-add-other-work">
-                            <i class="fa-solid fa-plus"></i> Việc khác
+                            <i class="fa-solid fa-plus"></i> Thêm
                         </button>
                     </div>
                     <div class="other-work-form" id="other-work-form" style="display:none;">
