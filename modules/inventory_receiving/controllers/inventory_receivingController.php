@@ -304,14 +304,14 @@ function record_row_materialAction()
         // Phiếu ghi thành công + khớp bộ NVL với các đơn đã lưu -> tự xác nhận "Đã nhận" cho
         // TẤT CẢ đơn trong tổ hợp, kèm snapshot dự kiến/thực nhận để daily_dashboard so sánh.
         foreach ($order_matches as $m) {
-            om_set_received($m['order_id'], true, $m['expected_value'], $m['actual_value']);
+            om_set_received($m['order_id'], true, $m['expected_value'], $m['actual_value'], $invoice_id);
         }
     } else {
         $order_matches = [];
     }
     $order_match = $order_matches[0] ?? null;   // giữ khóa cũ cho client bản trước
     if ($invoice_id > 0 && $coffee_match) {
-        oc_set_received($coffee_match['order_id'], true, $coffee_match['expected_value'], $coffee_match['actual_value']);
+        oc_set_received($coffee_match['order_id'], true, $coffee_match['expected_value'], $coffee_match['actual_value'], $invoice_id);
     } else {
         $coffee_match = null;
     }
@@ -374,10 +374,22 @@ function edit_row_materialAction()
     ppc_reset();
     $invoice_id = ir_edit_batch($gk, $items, $supplier_id, $ca, $je);
 
+    // Phiếu này có thể đã tự xác nhận "Đã nhận" cho đơn đặt hàng NVL / cà phê lúc ghi lần đầu (kèm snapshot
+    // giá thực nhận). Giá nhập vừa sửa -> chốt lại giá thực nhận của đơn theo phiếu MỚI, để daily_dashboard
+    // so lại với giá dự kiến (lệch thì gạch giá) thay vì giữ số cũ của lần ghi đầu.
+    $order_resync = [];
+    if ($invoice_id > 0) {
+        $order_resync = array_merge(
+            om_resync_received_orders($invoice_id, ir_extract_material_lines($items)),
+            oc_resync_received_order($invoice_id, ir_extract_product_lines($items))
+        );
+    }
+
     echo json_encode([
         'success'      => $invoice_id > 0,
         'invoice_id'   => $invoice_id,
         'price_changes'=> ppc_take(),
+        'order_resync' => $order_resync,
         'history'      => ir_get_history_page(1, max(1, ir_count_batches())),
         'history_total'=> ir_count_batches(),
     ], JSON_UNESCAPED_UNICODE);

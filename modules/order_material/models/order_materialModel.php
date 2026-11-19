@@ -59,6 +59,9 @@ function om_ensure_tables()
     // daily_dashboard hiển thị so sánh dự kiến/thực nhận mà không bị trôi theo giá NVL cập nhật sau đó.
     db_query("ALTER TABLE material_purchase_orders ADD COLUMN IF NOT EXISTS expected_value_snapshot DECIMAL(15,2) DEFAULT NULL AFTER received_at");
     db_query("ALTER TABLE material_purchase_orders ADD COLUMN IF NOT EXISTS actual_value_snapshot   DECIMAL(15,2) DEFAULT NULL AFTER expected_value_snapshot");
+    // Phiếu nhập (stock_import_invoices.id) đã tự xác nhận "Đã nhận" cho đơn này — để khi user SỬA phiếu
+    // sau đó (đổi giá/số lượng) còn biết đơn nào phải chốt lại actual_value_snapshot (om_resync_received_orders).
+    db_query("ALTER TABLE material_purchase_orders ADD COLUMN IF NOT EXISTS receipt_invoice_id INT DEFAULT NULL AFTER actual_value_snapshot");
 
     db_query("CREATE TABLE IF NOT EXISTS app_settings (
         setting_key   VARCHAR(100) NOT NULL PRIMARY KEY,
@@ -694,8 +697,10 @@ function om_get_order($id)
  * (lúc ghi phiếu ở inventory_receiving) — chỉ có khi tự động xác nhận qua khớp phiếu
  * (xem om_match_order_for_receipt()); bỏ trống (null) khi user tự tay bật/tắt "Đã nhận" ở
  * module order_material — khi đó không có gì để snapshot, và tắt "Đã nhận" luôn xóa snapshot cũ.
+ * $receipt_invoice_id: id phiếu nhập đã khớp đơn (chỉ truyền khi tự xác nhận qua phiếu) — lưu lại để
+ * sửa phiếu sau đó còn chốt lại được giá thực nhận (om_resync_received_orders()).
  */
-function om_set_received($id, $received, $expected_value = null, $actual_value = null)
+function om_set_received($id, $received, $expected_value = null, $actual_value = null, $receipt_invoice_id = null)
 {
     om_ensure_tables();
     $oid = (int) $id;
@@ -707,8 +712,76 @@ function om_set_received($id, $received, $expected_value = null, $actual_value =
         'received_at'             => $rc ? date('Y-m-d H:i:s') : null,
         'expected_value_snapshot' => ($rc && $expected_value !== null) ? (float) $expected_value : null,
         'actual_value_snapshot'   => ($rc && $actual_value !== null) ? (float) $actual_value : null,
+        'receipt_invoice_id'      => ($rc && (int) $receipt_invoice_id > 0) ? (int) $receipt_invoice_id : null,
     ], "id = $oid");
     return true;
+}
+
+/**
+ * Gọi SAU KHI user SỬA 1 phiếu nhập (ir_edit_batch): chốt lại actual_value_snapshot của các đơn đã được
+ * phiếu này tự xác nhận "Đã nhận", theo nội dung phiếu MỚI. Không có bước này thì giá thực nhận kẹt ở
+ * số lúc ghi phiếu lần đầu -> sửa giá nhập cho đúng thực tế mà daily_dashboard vẫn báo "khớp", không gạch giá.
+ *
+ * Cách tính giống lúc khớp ban đầu (om_match_orders_for_receipt): tiền thực nhập = Σ qty × giá gồm thuế
+ * của các dòng phiếu thuộc bộ NVL của (các) đơn đã gắn với phiếu; chia cho từng đơn theo tỉ lệ giá trị dự kiến
+ * đã chốt, phần dư dồn vào đơn cuối để tổng không lệch. expected_value_snapshot GIỮ NGUYÊN (giá lúc đặt).
+ * Dòng phiếu thêm mới KHÔNG thuộc NVL của đơn nào thì không tính vào giá trị thực nhận của đơn.
+ *
+ * $receipt_lines: như ir_extract_material_lines() — [ ['material_id'=>, 'qty'=>, 'price_incl'=>], ... ].
+ * Trả về danh sách [ ['order_id','expected_value','actual_value'], ... ] đã cập nhật (rỗng nếu không có đơn gắn).
+ */
+function om_resync_received_orders($invoice_id, array $receipt_lines)
+{
+    om_ensure_tables();
+    $iid = (int) $invoice_id;
+    if ($iid <= 0) return [];
+
+    $rows = db_fetch_array(
+        "SELECT id, order_items, expected_value_snapshot
+         FROM material_purchase_orders
+         WHERE receipt_invoice_id = $iid AND received = 1 AND hidden = 0
+           AND expected_value_snapshot IS NOT NULL
+         ORDER BY created_at ASC, id ASC"
+    ) ?: [];
+    if (empty($rows)) return [];
+
+    // Bộ NVL thuộc các đơn gắn với phiếu này.
+    $mids = [];
+    foreach ($rows as $r) {
+        $items = json_decode((string) $r['order_items'], true);
+        foreach ((array) $items as $it) {
+            $mid = (int) ($it['material_id'] ?? 0);
+            if ($mid > 0) $mids[$mid] = true;
+        }
+    }
+    $actualTotal = 0.0;
+    foreach ($receipt_lines as $l) {
+        if (!isset($mids[(int) ($l['material_id'] ?? 0)])) continue;
+        $actualTotal += (float) ($l['qty'] ?? 0) * (float) ($l['price_incl'] ?? 0);
+    }
+    // Phiếu sau khi sửa không còn dòng nào của các đơn này -> không có cơ sở để chốt lại, giữ nguyên.
+    if ($actualTotal <= 0) return [];
+
+    $totalExpected = 0.0;
+    foreach ($rows as $r) $totalExpected += (float) $r['expected_value_snapshot'];
+
+    $out       = [];
+    $allocated = 0.0;
+    $k         = count($rows);
+    foreach ($rows as $n => $r) {
+        $exp = (float) $r['expected_value_snapshot'];
+        if ($n === $k - 1) {
+            $actual = round($actualTotal - $allocated, 2);
+        } else {
+            $actual = $totalExpected > 0
+                ? round($actualTotal * $exp / $totalExpected, 2)
+                : round($actualTotal / $k, 2);
+            $allocated += $actual;
+        }
+        db_update('material_purchase_orders', ['actual_value_snapshot' => $actual], 'id = ' . (int) $r['id']);
+        $out[] = ['order_id' => (int) $r['id'], 'expected_value' => round($exp, 2), 'actual_value' => $actual];
+    }
+    return $out;
 }
 
 function om_delete_order($id)

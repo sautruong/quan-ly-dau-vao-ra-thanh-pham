@@ -152,6 +152,9 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                                     <div class="title">
                                         <p>Thông tin:</p>
                                     </div>
+                                    <?php if (!empty($plan['system_product_name'])): ?>
+                                    <div class="pf-sys-name"><?php echo htmlspecialchars($plan['system_product_name']); ?></div>
+                                    <?php endif; ?>
                                     <ul class="list-info">
                                         <li class="info-item">Tồn kho đầu ngày:
                                             <span><?php echo $plan['stock_qty'] !== null ? (int)$plan['stock_qty'] : '—'; ?></span>
@@ -206,7 +209,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
 
                 <div class="wp-other-work">
                     <div class="add-other-work">
-                        <p>VIỆC KHÁC</p>
+                        <p><i class="fa-solid fa-list-check"></i> VIỆC KHÁC</p>
                         <button type="button" class="btn-add-other-work" id="btn-add-other-work">
                             <i class="fa-solid fa-plus"></i> Thêm
                         </button>
@@ -221,7 +224,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                                     <p><?php echo $i + 1; ?></p>
                                 </div>
                                 <div class="content-other-work">
-                                    <input type="text" value="<?php echo htmlspecialchars($task['description']); ?>" readonly>
+                                    <span class="other-work-text"><?php echo htmlspecialchars($task['description']); ?></span>
                                 </div>
                                 <button type="button" class="task-delete" title="Gỡ việc này">&times;</button>
                             </li>

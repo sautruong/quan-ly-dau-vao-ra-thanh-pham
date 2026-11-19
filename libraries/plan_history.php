@@ -126,6 +126,7 @@ if (!function_exists('phs_ensure_table')) {
             "SELECT pp.id AS plan_id, pp.product_id, pp.quantity, pp.note AS plan_note,
                     pp.sample, pp.test, pp.check_inventory,
                     COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                    p.product_name AS system_product_name,
                     p.image_url,
                     ppn.note AS pre_note,
                     fgi.quantity AS stock_qty,

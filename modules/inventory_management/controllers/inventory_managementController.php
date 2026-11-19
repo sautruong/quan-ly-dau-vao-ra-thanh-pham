@@ -156,6 +156,13 @@ function search_productAction()
     exit;
 }
 
+function get_all_productsAction()
+{
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'data' => im_get_all_products()]);
+    exit;
+}
+
 function get_productAction()
 {
     header('Content-Type: application/json');

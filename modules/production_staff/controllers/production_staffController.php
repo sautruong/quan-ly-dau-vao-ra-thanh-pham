@@ -704,6 +704,7 @@ function ajax_add_plan_productAction()
     $sql = "SELECT pp.id AS plan_id, pp.product_id, pp.quantity,
                    pp.sample, pp.test, pp.check_inventory,
                    COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
+                   p.product_name AS system_product_name,
                    p.image_url,
                    fgi.quantity AS stock_qty,
                    COALESCE(NULLIF(mi_in.common_material_name, ''), mi_in.material_name) AS inner_packaging,

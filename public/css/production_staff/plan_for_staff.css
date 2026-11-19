@@ -516,6 +516,16 @@ a img {
     letter-spacing: 0.4px;
 }
 
+.pf-sys-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-gray-900);
+    padding: 4px 0 6px;
+    border-bottom: 1px solid var(--color-gray-200);
+    margin-bottom: 2px;
+    word-break: break-word;
+}
+
 .list-info {
     list-style: none;
     padding: 0;
@@ -680,9 +690,9 @@ a img {
     color: var(--color-red-dark);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid var(--color-red);
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
 }
 
 .btn-add-other-work {
@@ -755,9 +765,9 @@ a img {
 /* Nút gỡ "việc khác": ẩn mặc định, hiện khi hover vào dòng (đè lên .content-other-work) */
 .task-delete {
     position: absolute;
-    top: 50%;
+    top: 6px;
     right: 6px;
-    transform: translateY(-50%);
+    transform: none;
     width: 18px;
     height: 18px;
     border: 0;
@@ -801,19 +811,19 @@ a img {
 
 .content-other-work {
     flex: 1;
-    min-width: 150px;
+    min-width: 0;
 }
 
-.content-other-work input {
-    border: none;
-    background: transparent;
+.content-other-work .other-work-text {
+    display: block;
     font-size: 14px;
     color: var(--color-gray-700);
     font-weight: 500;
-    outline: none;
-    width: 100%;
     padding: 2px 4px;
-    pointer-events: none;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    line-height: 1.5;
 }
 
 /* ============================================
@@ -1362,6 +1372,14 @@ a img {
 .pf-mc-btn:active { background: #f0f9ff; }
 /* Thiếu NVL: chỉ 1 chip cảnh báo (chấm đỏ) cạnh trái, không đổi chữ/màu nút. */
 .pf-mc-warn { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #dc2626; margin-right: 6px; flex: 0 0 auto; }
+/* Thiếu NVL khi đối chiếu (14/11/2026): ô Số lượng ở đầu card viền cam đỏ nhạt cho user chú ý (JS gắn .is-short, kể cả khi card đang gập).
+   Viền 2px được bù bằng bớt padding 2px mỗi cạnh → ô KHÔNG đổi kích thước. Tuỳ chọn thêm vầng sáng mờ để nổi trên nền xanh đậm của đầu card. */
+.num input.pf-qty-input.is-short {
+    border: 2px solid #ff8a65;
+    padding: 3px 2px;
+    box-shadow: 0 0 0 2px rgba(255, 138, 101, .30);
+}
+.num input.pf-qty-input.is-short:focus { box-shadow: 0 0 0 2px rgba(255, 138, 101, .30), 0 0 0 4px rgba(22, 163, 74, .35); }
 
 /* ----- Admin: nút xoá SP (chân card) + footer "Lưu & Gửi kế hoạch" ----- */
 .pf-card-foot { display: flex; justify-content: flex-end; margin-top: 10px; }

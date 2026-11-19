@@ -297,7 +297,7 @@
 
 .wp-search input {
     width: 100%;
-    padding: 11px 16px 11px 42px;
+    padding: 11px 76px 11px 42px; /* phải: chỗ cho nút clear + arrow */
     border: 1.5px solid var(--color-gray-200);
     border-radius: 10px;
     background-color: var(--color-white);
@@ -325,6 +325,57 @@
 .wp-search:focus-within i.fa-magnifying-glass {
     color: var(--color-green);
 }
+
+/* Nút xóa keyword (×) */
+.search-clear {
+    position: absolute;
+    right: 42px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: none;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 0;
+    transition: var(--transition);
+}
+.search-clear:hover {
+    background: var(--color-gray-100);
+    color: var(--color-gray-700);
+}
+
+/* Nút mũi tên xổ danh sách */
+.search-arrow {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: none;
+    color: var(--color-gray-400, #9ca3af);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 0;
+    transition: var(--transition);
+}
+.search-arrow:hover { background: var(--color-gray-100); color: var(--color-green); }
+.search-arrow:disabled { opacity: 0.45; cursor: not-allowed; }
+.search-arrow i { transition: transform 0.2s ease; }
+.search-arrow.open i { transform: rotate(180deg); }
 
 .search-dropdown {
     position: absolute;
@@ -462,21 +513,22 @@
     transform: translateY(-2px);
 }
 
-/* Top strip: green background, white product name, small input */
+.product-item.is-removing {
+    animation: productFadeOut 0.25s ease forwards;
+    pointer-events: none;
+}
+
+@keyframes productFadeOut {
+    from { opacity: 1; transform: scale(1) translateY(0); }
+    to   { opacity: 0; transform: scale(0.88) translateY(4px); }
+}
+
+/* Top strip: tên sản phẩm full width, nền xanh */
 .wp-top-product {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
     padding: 10px 14px;
     background: linear-gradient(135deg, #0f5629 0%, #145f30 100%);
     border-radius: 10px 10px 0 0;
     margin: -1px -1px 0 -1px;
-}
-
-.wp-top-product .name-product {
-    flex: 1;
-    min-width: 0;
 }
 
 .wp-top-product .name-product p {
@@ -484,19 +536,33 @@
     color: var(--color-white);
     font-size: 18px;
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
+    word-break: break-word;
 }
 
-.wp-top-product input {
+/* Dòng số lượng: label nhỏ + input, canh phải */
+.wp-qty-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 8px 14px 10px;
+}
+
+.qty-label {
+    font-size: 12px;
+    color: var(--color-gray-500);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.wp-qty-row .input-quantity {
     width: 80px;
     padding: 6px 8px;
-    border: none;
+    border: 1.5px solid var(--color-gray-200);
     border-radius: 6px;
     background-color: var(--color-white);
-    color: var(--color-gray-900);
-       font-size: 20px;
+    font-size: 20px;
     color: #003c7c;
     font-weight: 600;
     text-align: center;
@@ -505,8 +571,28 @@
     transition: var(--transition);
 }
 
-.wp-top-product input:focus {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.45);
+.wp-qty-row .input-quantity:focus {
+    border-color: var(--color-green);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+/* Tồn trước / sau nhập */
+.wp-stock-info {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 0 14px 10px;
+    font-size: 12px;
+    color: var(--color-gray-500);
+}
+
+.wp-stock-info strong {
+    font-weight: 600;
+    color: var(--color-gray-700);
+}
+
+.wp-stock-info .val-stock-after {
+    color: var(--color-green-dark, #15803d);
 }
 
 /* ============================================
@@ -1060,34 +1146,20 @@ label {
 .btn-plan-products i { font-size: 13px; }
 
 @media (max-width: 768px) {
-    /* Toolbar xuong hang doc o mobile -> bo margin-right:auto (khong con nghia)
-       va cho nut trai ngang cho de bam. */
-    .btn-plan-products { margin-right: 0; width: 100%; justify-content: center; }
-
-    /* ---------------------------------------------------------------------------------
-       MOBILE (anh Sau chot 7/8/2026): "DSSP theo ke hoach" chi con ICON, dat canh PHAI
-       va NGANG HANG voi o tim kiem san pham — nut chu day du chiem tron mot dong, day
-       moi thu khac xuong duoi.
-       Dat CUOI khoi @media de de len rule .btn-plan-products{width:100%} ngay phia tren.
-       --------------------------------------------------------------------------------- */
+    /* Search + date picker xếp dọc, mỗi mục full width */
     .wp-toolbar {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
         gap: 10px;
     }
     .wp-toolbar > .wp-search {
-        flex: 1 1 auto;
-        min-width: 0;          /* khong co dong nay thi o tim day nut ra khoi hang */
+        max-width: none;
+        min-width: 0;
     }
-    .btn-plan-products {
-        width: 42px;
-        height: 42px;
-        flex: 0 0 auto;
-        padding: 0;
-        border-radius: 10px;
-        justify-content: center;
+    .wp-toolbar > .wp-date-picker {
+        padding-right: 0;
+        justify-content: flex-start;
     }
-    .btn-plan-products .btn-plan-label { display: none; }
-    .wp-toolbar > .wp-date-picker { flex: 1 1 100%; padding-right: 0; }
 }
 
 /* =====================================================================================
@@ -1126,3 +1198,31 @@ label {
 .im-dup-cancel:hover { background: #f3f4f6; }
 .im-dup-ok { border: 0; background: #b45309; color: #fff; }
 .im-dup-ok:hover { background: #92400e; }
+
+@media (max-width: 768px) {
+    /* Cho app_shell R2-2 "cuộn dọc tự nhiên" hoạt động:
+       bỏ overflow:hidden + height:100vh để dropdown không bị kẹp bởi .content */
+    #wrapper {
+        padding: 16px !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .content {
+        overflow: visible;
+        padding-right: 0;
+        min-height: 0;
+    }
+    /* Date picker input kéo dài hết phần còn lại */
+    .wp-date-picker input[type="datetime-local"] {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+/* Dropdown: hiển thị tối đa 6 dòng, cuộn phần còn lại */
+@media (max-width: 768px) {
+    .search-dropdown {
+        max-height: 252px; /* 6 × ~42px */
+        -webkit-overflow-scrolling: touch;
+    }
+}

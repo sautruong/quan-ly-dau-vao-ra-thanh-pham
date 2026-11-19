@@ -70,6 +70,9 @@ function oc_ensure_tables()
     // giá nhập mới); actual_value chốt lúc phiếu nhập kho khớp đơn (tự đánh dấu "Đã nhận").
     db_query("ALTER TABLE oc_orders ADD COLUMN IF NOT EXISTS expected_value DECIMAL(15,2) DEFAULT NULL AFTER received_at");
     db_query("ALTER TABLE oc_orders ADD COLUMN IF NOT EXISTS actual_value   DECIMAL(15,2) DEFAULT NULL AFTER expected_value");
+    // Phiếu nhập (stock_import_invoices.id) đã tự xác nhận "Đã nhận" cho đơn này — để sửa phiếu sau đó
+    // còn chốt lại được actual_value (oc_resync_received_order). Mirror order_material.
+    db_query("ALTER TABLE oc_orders ADD COLUMN IF NOT EXISTS receipt_invoice_id INT DEFAULT NULL AFTER actual_value");
 
     // Ảnh dẫn chứng gắn vào TỪNG DÒNG sổ bao bì (oc_packaging_ledger) — lưu ảnh chụp tin nhắn
     // đã xác nhận tồn với NCC làm điểm mốc chốt tồn (dán Ctrl+V vào ô Ngày của dòng).
@@ -611,7 +614,7 @@ function oc_get_order($id)
     return $row ? oc_decode_order_row($row) : null;
 }
 
-function oc_set_received($id, $received, $expected_value = null, $actual_value = null)
+function oc_set_received($id, $received, $expected_value = null, $actual_value = null, $receipt_invoice_id = null)
 {
     oc_ensure_tables();
     $oid = (int) $id;
@@ -624,8 +627,52 @@ function oc_set_received($id, $received, $expected_value = null, $actual_value =
     ];
     if ($rc && $expected_value !== null) $data['expected_value'] = (float) $expected_value;
     $data['actual_value'] = ($rc && $actual_value !== null) ? (float) $actual_value : null;
+    $data['receipt_invoice_id'] = ($rc && (int) $receipt_invoice_id > 0) ? (int) $receipt_invoice_id : null;
     db_update('oc_orders', $data, "id = $oid");
     return true;
+}
+
+/**
+ * Mirror om_resync_received_orders() cho đơn cà phê: gọi SAU KHI user SỬA phiếu nhập (ir_edit_batch) để chốt
+ * lại actual_value của đơn đã được phiếu này tự xác nhận "Đã nhận" theo nội dung phiếu MỚI (expected_value
+ * giữ nguyên). Tiền thực nhập = Σ qty × giá gồm thuế của các dòng thành phẩm thuộc bộ SP của đơn.
+ * $product_lines: như ir_extract_product_lines() — [ ['product_id'=>, 'qty'=>, 'price_incl'=>], ... ].
+ * Trả về [ ['order_id','expected_value','actual_value'], ... ] đã cập nhật (rỗng nếu không có đơn gắn).
+ */
+function oc_resync_received_order($invoice_id, array $product_lines)
+{
+    oc_ensure_tables();
+    $iid = (int) $invoice_id;
+    if ($iid <= 0) return [];
+
+    $rows = db_fetch_array(
+        "SELECT id, groups, expected_value
+         FROM oc_orders
+         WHERE receipt_invoice_id = $iid AND received = 1 AND hidden = 0
+           AND expected_value IS NOT NULL
+         ORDER BY created_at ASC, id ASC"
+    ) ?: [];
+
+    $out = [];
+    foreach ($rows as $r) {
+        $groups = json_decode((string) $r['groups'], true);
+        $oSet = [];
+        foreach ((array) $groups as $g) {
+            $pid = (int) ($g['product_id'] ?? 0);
+            if ($pid > 0) $oSet[$pid] = true;
+        }
+        $actual = 0.0;
+        foreach ($product_lines as $l) {
+            if (!isset($oSet[(int) ($l['product_id'] ?? 0)])) continue;
+            $actual += (float) ($l['qty'] ?? 0) * (float) ($l['price_incl'] ?? 0);
+        }
+        // Phiếu sau khi sửa không còn dòng nào của đơn này -> không có cơ sở để chốt lại, giữ nguyên.
+        if ($actual <= 0) continue;
+        $actual = round($actual, 2);
+        db_update('oc_orders', ['actual_value' => $actual], 'id = ' . (int) $r['id']);
+        $out[] = ['order_id' => (int) $r['id'], 'expected_value' => round((float) $r['expected_value'], 2), 'actual_value' => $actual];
+    }
+    return $out;
 }
 
 /**
