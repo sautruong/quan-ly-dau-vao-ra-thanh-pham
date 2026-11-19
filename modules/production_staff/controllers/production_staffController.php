@@ -11,48 +11,72 @@ function check_databaseAction()
     cdb_handle_ajax();
 }
 
+/** Nạp thư viện lịch sử kế hoạch hằng ngày (idempotent). */
+function phs_boot()
+{
+    require_once __DIR__ . '/../../../libraries/plan_history.php';
+    phs_ensure_table();
+}
+
+/**
+ * Cất lại bản lưu lịch sử của kế hoạch hiện hành sau 1 thao tác điều chỉnh. Không bao giờ làm hỏng
+ * thao tác chính (xem quy tắc 1 trong libraries/plan_history.php) nên gọi ở mọi action ghi là an toàn.
+ */
+function phs_after_edit($source = 'edit')
+{
+    require_once __DIR__ . '/../../../libraries/plan_history.php';
+    phs_touch($source);
+}
+
 function plan_for_staffAction()
 {
     global $conn;
-
-    $sql = "SELECT pp.id AS plan_id, pp.product_id, pp.quantity, pp.note AS plan_note,
-                   pp.sample, pp.test, pp.check_inventory,
-                   COALESCE(NULLIF(p.common_product_name, ''), p.product_name) AS product_name,
-                   p.image_url,
-                   ppn.note AS pre_note,
-                   fgi.quantity AS stock_qty,
-                   COALESCE(NULLIF(mi_in.common_material_name, ''), mi_in.material_name) AS inner_packaging,
-                   COALESCE(NULLIF(mi_out.common_material_name, ''), mi_out.material_name) AS outer_packaging,
-                   pib.inner_packaging_id, pib.outer_packaging_id,
-                   pib.inner_packaging_spec, pib.outer_packaging_spec
-            FROM production_plans pp
-            LEFT JOIN products p ON p.id = pp.product_id
-            LEFT JOIN pre_production_notes ppn ON ppn.product_id = pp.product_id
-            LEFT JOIN finished_goods_inventory fgi ON fgi.product_id = pp.product_id
-            LEFT JOIN product_info_basic pib ON pib.product_id = pp.product_id
-            LEFT JOIN material_information mi_in ON mi_in.id = pib.inner_packaging_id
-            LEFT JOIN material_information mi_out ON mi_out.id = pib.outer_packaging_id
-            ORDER BY pp.id ASC";
-    $plans = db_fetch_array($sql);
-
-    $sql_tasks = "SELECT id, description FROM additional_tasks ORDER BY id ASC";
-    $tasks = db_fetch_array($sql_tasks);
 
     // Ngày của kế hoạch hằng ngày = ngày CARD dài ngày vừa được công bố gần nhất (vd share card
     // Thứ 3 thì hiển thị 10/11), KHÔNG phải ngày hôm nay. Lấy từ ltp_share_state; chưa share lần
     // nào thì mặc định hôm nay.
     require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
     ltpn_ensure_tables();
-    $__pd = db_fetch_row("SELECT plan_date FROM ltp_share_state
-                          WHERE shared_at IS NOT NULL
-                          ORDER BY last_change_at DESC, shared_at DESC LIMIT 1");
-    $plan_date = ($__pd && !empty($__pd['plan_date'])) ? (string) $__pd['plan_date'] : date('Y-m-d');
+    phs_boot();
+    $live_date = phs_live_date();
 
-    // Hình công thức: admin thấy nút quản lý; user thường chỉ thấy nút xem với SP đã được duyệt
-    // cho kế hoạch (plan_date) này.
-    require_once __DIR__ . '/../../../libraries/formula_image.php';
-    $pf_is_admin      = function_exists('permission_is_admin') && permission_is_admin();
-    $formula_approved = fmi_approved_pids($plan_date);
+    // XEM LẠI NGÀY CŨ: ?plan_date=YYYY-MM-DD khác ngày hiện hành → dựng trang từ bản lưu của ngày đó,
+    // CHỈ XEM. Trùng ngày hiện hành thì vẫn là trang thật (sửa được) — không có "bản cũ" của ngày đang chạy.
+    $req_date = phs_norm_date($_GET['plan_date'] ?? '');
+    $pf_hist  = null;
+    if ($req_date !== '' && $req_date !== $live_date) {
+        $snap = phs_get($req_date);
+        $pf_hist = [
+            'date'     => $req_date,
+            'found'    => (bool) $snap,
+            'saved_at' => $snap ? $snap['last_saved_at'] : '',
+            'saved_by' => $snap ? $snap['saved_by_name'] : '',
+            'source'   => $snap ? phs_source_label($snap['source']) : '',
+        ];
+    }
+
+    if ($pf_hist) {
+        $plans     = $snap ? $snap['plans'] : [];
+        $tasks     = $snap ? $snap['tasks'] : [];
+        $plan_date = $req_date;
+        // Ngày cũ: không có nút quản trị, không có hình công thức (duyệt công thức gắn với kế hoạch đang chạy).
+        $pf_is_admin      = false;
+        $formula_approved = [];
+    } else {
+        // Kế hoạch đang chạy có từ TRƯỚC khi có tính năng lịch sử → cất bản đầu tiên ngay lần xem này.
+        phs_capture_if_missing($live_date);
+
+        $live  = phs_fetch_live();
+        $plans = $live['plans'];
+        $tasks = $live['tasks'];
+        $plan_date = $live_date;
+
+        // Hình công thức: admin thấy nút quản lý; user thường chỉ thấy nút xem với SP đã được duyệt
+        // cho kế hoạch (plan_date) này.
+        require_once __DIR__ . '/../../../libraries/formula_image.php';
+        $pf_is_admin      = function_exists('permission_is_admin') && permission_is_admin();
+        $formula_approved = fmi_approved_pids($plan_date);
+    }
 
     $data = [
         'plans'            => $plans ?: [],
@@ -60,8 +84,37 @@ function plan_for_staffAction()
         'plan_date'        => $plan_date,
         'pf_is_admin'      => $pf_is_admin,
         'formula_approved' => $formula_approved,
+        'pf_hist'          => $pf_hist,       // null = trang hiện hành; mảng = đang xem lịch sử
+        'pf_live_date'     => $live_date,
     ];
     load_view('plan_for_staff', $data);
+}
+
+/**
+ * JSON: các ngày CÓ lịch sử trong 1 tháng — cấp dữ liệu cho popover lịch ở trang plan_for_staff.
+ * GET month=YYYY-MM. Trả {ok, month, live_date, days:{ 'Y-m-d': {items, tasks} }}.
+ * Ai xem được trang này cũng gọi được (chỉ đọc).
+ */
+function plan_history_datesAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    phs_boot();
+
+    $month = (string) ($_GET['month'] ?? date('Y-m'));
+    if (!preg_match('/^(\d{4})-(\d{2})$/', $month, $m) || (int) $m[2] < 1 || (int) $m[2] > 12) {
+        echo json_encode(['ok' => false, 'message' => 'Tháng không hợp lệ.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $from = $month . '-01';
+    $to   = date('Y-m-t', strtotime($from));
+
+    echo json_encode([
+        'ok'        => true,
+        'month'     => $month,
+        'live_date' => phs_live_date(),
+        'days'      => (object) phs_dates_between($from, $to),
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 /* =====================================================================
@@ -443,7 +496,9 @@ function save_product_common_nameAction()
         echo json_encode(['success' => false, 'message' => 'Thiếu sản phẩm.']);
         exit;
     }
-    echo json_encode(['success' => ps_save_product_common_name($pid, $value), 'value' => trim($value)], JSON_UNESCAPED_UNICODE);
+    $ok = ps_save_product_common_name($pid, $value);
+    if ($ok) phs_after_edit();   // tên SP hiện trong kế hoạch hằng ngày → cập nhật bản lưu của ngày
+    echo json_encode(['success' => $ok, 'value' => trim($value)], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -457,7 +512,9 @@ function save_material_common_nameAction()
         echo json_encode(['success' => false, 'message' => 'Thiếu nguyên liệu.']);
         exit;
     }
-    echo json_encode(['success' => ps_save_material_common_name($mid, $value), 'value' => trim($value)], JSON_UNESCAPED_UNICODE);
+    $ok = ps_save_material_common_name($mid, $value);
+    if ($ok) phs_after_edit();   // tên bao bì hiện trong kế hoạch hằng ngày → cập nhật bản lưu của ngày
+    echo json_encode(['success' => $ok, 'value' => trim($value)], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -522,6 +579,8 @@ function ajax_update_product_basicAction()
         if ($field === 'outer_packaging_spec') pack_sync_outer_spec($product_id);   // chữ -> bảng cấu trúc
     }
 
+    phs_after_edit();   // bao bì / quy cách là một phần của kế hoạch ngày → cập nhật bản lưu
+
     echo json_encode($resp, JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -540,6 +599,7 @@ function save_noteAction()
     }
 
     rp_save_pre_production_note($product_id, $note);
+    phs_after_edit();   // "Lưu ý" hiện trong card kế hoạch → cập nhật bản lưu của ngày
 
     if ($note === '') {
         echo json_encode(['success' => true, 'deleted' => true]);
@@ -562,6 +622,7 @@ function delete_noteAction()
     }
 
     rp_delete_pre_production_note($product_id);
+    phs_after_edit();
     echo json_encode(['success' => true]);
     exit;
 }
@@ -583,6 +644,7 @@ function ajax_update_plan_qcAction()
     }
 
     db_update('production_plans', [$field => $value], "id = {$plan_id}");
+    phs_after_edit();
     echo json_encode(['success' => true]);
     exit;
 }
@@ -602,6 +664,7 @@ function ajax_update_plan_quantityAction()
     }
 
     db_update('production_plans', ['quantity' => $quantity], "id = {$plan_id}");
+    phs_after_edit();
     echo json_encode(['success' => true, 'quantity' => $quantity]);
     exit;
 }
@@ -636,6 +699,7 @@ function ajax_add_plan_productAction()
         'test'            => 0,
         'check_inventory' => 0
     ]);
+    phs_after_edit();
 
     $sql = "SELECT pp.id AS plan_id, pp.product_id, pp.quantity,
                    pp.sample, pp.test, pp.check_inventory,
@@ -683,6 +747,7 @@ function ajax_add_taskAction()
         'plan_id'     => (int) $plan_row['id'],
         'description' => $desc
     ]);
+    phs_after_edit();
 
     echo json_encode(['success' => true, 'id' => (int) $id], JSON_UNESCAPED_UNICODE);
     exit;
@@ -701,6 +766,7 @@ function ajax_delete_taskAction()
     }
 
     db_delete('additional_tasks', "id = {$task_id}");
+    phs_after_edit();
     echo json_encode(['success' => true]);
     exit;
 }
@@ -719,6 +785,7 @@ function ajax_delete_plan_productAction()
     // Gỡ "việc khác" đang gắn về dòng kế hoạch này trước (tránh mồ côi plan_id), rồi xoá sản phẩm.
     db_delete('additional_tasks', "plan_id = {$plan_id}");
     db_delete('production_plans', "id = {$plan_id}");
+    phs_after_edit();   // (nếu xoá hết SP thì bản lưu cũ được giữ nguyên — xem quy tắc 2 ở plan_history.php)
     echo json_encode(['success' => true]);
     exit;
 }
@@ -730,6 +797,7 @@ function plan_notify_changedAction()
     permission_require_can_edit('production_staff', 'production_staff', 'plan_for_staff');
 
     require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
+    phs_after_edit();   // "Lưu & Gửi kế hoạch" = chốt các điều chỉnh → chắc chắn bản lưu của ngày là bản mới nhất
     $user = permission_current_user();
     $n = ltpn_mark_and_notify(ltpn_current_plan_date(), $user ? (int) $user['id'] : 0, true);
     echo json_encode(['success' => true, 'notified' => (int) $n], JSON_UNESCAPED_UNICODE);
@@ -799,6 +867,12 @@ function save_planAction()
     // Công bố thật (có sản phẩm) → đẩy chuông cho user có quyền xem KH hằng ngày (YC2/YC3).
     // Reset (force_clear + rỗng) là GỠ kế hoạch, không phải công bố → không báo.
     if (!empty($items)) {
+        // Lưu lịch sử của NGÀY được công bố (rỗng → hôm nay, khớp ltpn_mark_and_notify).
+        // Chuẩn hoá giống ltpn_mark_and_notify (tại thời điểm này ltp_share_state CHƯA trỏ sang ngày mới,
+        // nên không được để phs_capture tự suy ngày hiện hành).
+        require_once __DIR__ . '/../../../libraries/plan_history.php';
+        phs_capture(ltpn_norm_date($plan_date) ?: date('Y-m-d'), 'publish');
+
         require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
         $__u = permission_current_user();
         ltpn_mark_and_notify($plan_date, $__u ? (int) $__u['id'] : 0);
@@ -836,6 +910,10 @@ function export_plan_by_dateAction()
         echo json_encode(['success' => false, 'message' => $exp['error'] ?? 'Không có sản phẩm để xuất.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
+
+    // Đổ từ dài ngày sang hằng ngày thành công → cất lịch sử của ngày đó (gồm SP + việc khác).
+    require_once __DIR__ . '/../../../libraries/plan_history.php';
+    phs_capture($exp['plan_date'] ?? $plan_date, 'publish');
 
     // Công bố thành công → đẩy chuông cho user có quyền xem KH hằng ngày + ghi nhận "đã share".
     require_once __DIR__ . '/../../../libraries/ltp_share_notify.php';
@@ -1086,6 +1164,10 @@ function plan_auto_export_runAction()
     // Chốt "đã chạy" NGAY sau khi chuyển xong — phần gửi ảnh phía dưới hỏng cũng không làm
     // quét-lỡ báo nhầm là kế hoạch chưa được chuyển.
     pae_mark_run($cid);
+
+    // Lịch tự động chuyển kế hoạch ngày mai → cất lịch sử của ngày đó (nguồn 'auto').
+    require_once __DIR__ . '/../../../libraries/plan_history.php';
+    phs_capture($planDate, 'auto');
 
     // Auto-export thành công = đã CÔNG BỐ kế hoạch ngày mai → đẩy chuông cho user có quyền xem
     // KH hằng ngày, và ghi nhận "đã share" để lời nhắc 17:00 không nổ nữa (YC1/YC2 gộp làm một).

@@ -21,9 +21,21 @@ $ps_share = function_exists('ps_get_share_settings')
 
 <?php
 $cols = isset($_GET['cols']) && (int)$_GET['cols'] === 2 ? 2 : 4;
+// Đang XEM LẠI một ngày cũ (từ popover lịch)? null = trang hiện hành. Dữ liệu dựng từ bản lưu lịch sử
+// (libraries/plan_history.php) nên CHỈ XEM: khoá mọi control sửa, ẩn nút ghi/đối chiếu.
+$pf_hist      = (isset($pf_hist) && is_array($pf_hist)) ? $pf_hist : null;
+$pf_live_date = (isset($pf_live_date) && $pf_live_date) ? (string) $pf_live_date : date('Y-m-d');
 // User "chỉ xem" view này: ẩn/khoá mọi control sửa (backend cũng đã chặn ở các action ghi).
-$pf_ro = function_exists('permission_is_view_only')
-    && permission_is_view_only('production_staff', 'production_staff', 'plan_for_staff');
+$pf_ro = $pf_hist || (function_exists('permission_is_view_only')
+    && permission_is_view_only('production_staff', 'production_staff', 'plan_for_staff'));
+// URL trang kế hoạch (kèm ?plan_date nếu có) — dùng URL gọn của hệ thống khi có.
+$pf_nav = function ($date = '') {
+    $params = $date !== '' ? ['plan_date' => $date] : [];
+    if (function_exists('nav_url')) return nav_url('production_staff', 'production_staff', 'plan_for_staff', $params);
+    return '?mod=production_staff&controllers=production_staff&action=plan_for_staff'
+        . ($date !== '' ? '&plan_date=' . rawurlencode($date) : '');
+};
+$pf_h = function ($s) { return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8'); };
 // Ngày của kế hoạch hằng ngày (lấy theo card dài ngày đã công bố) — controller truyền xuống.
 $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime((string) $plan_date) : time();
 // Hình công thức: admin thấy nút quản lý; user thường chỉ thấy nút xem với SP đã duyệt.
@@ -32,7 +44,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
 ?>
 
 <body>
-    <div id="wrapper" class="cols-<?php echo $cols; ?><?php echo $pf_ro ? ' pf-ro' : ''; ?>">
+    <div id="wrapper" class="cols-<?php echo $cols; ?><?php echo $pf_ro ? ' pf-ro' : ''; ?><?php echo $pf_hist ? ' pf-hist' : ''; ?>">
         <?php get_sidebar('app'); ?>
         <?php get_header('app'); ?>
         <div class="wp-header-content">
@@ -54,7 +66,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                         <?php /* Nút "In BC" + "Share KHSX" đã gỡ (không còn cần) — 2026-11-09. */ ?>
                         <?php if (permission_can_check_db('production_staff', 'production_staff', 'plan_for_staff')): ?>
                         <button type="button" class="btn-check-db"
-                            data-tables="production_plans,products,pre_production_notes,additional_tasks,finished_goods_inventory,product_info_basic,material_information,finished_product_production_data">
+                            data-tables="production_plans,production_plan_history,products,pre_production_notes,additional_tasks,finished_goods_inventory,product_info_basic,material_information,finished_product_production_data">
                             <i class="fa-solid fa-database"></i> Check Database
                         </button>
                         <?php endif; ?>
@@ -67,13 +79,43 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                     <input type="text" id="pf-search-product" placeholder="Tìm sản phẩm để thêm..." autocomplete="off">
                     <ul class="search-dropdown" id="pf-search-dropdown"></ul>
                 </div>
-                <div class="date">
-                    <p><?php echo date('d', $pf_plan_ts) . ' tháng ' . date('n', $pf_plan_ts) . ' ' . date('Y', $pf_plan_ts); ?></p>
+                <!-- Ngày của kế hoạch + nút LỊCH: bấm → popover chọn ngày (JS: plan_history_calendar.js)
+                     để xem lại kế hoạch các ngày trước. Chỉ ngày có bản lưu mới chọn được. -->
+                <div class="date pf-datebar">
+                    <button type="button" class="pf-date-btn<?php echo $pf_hist ? ' is-hist' : ''; ?>" id="pf-date-btn"
+                        aria-haspopup="dialog" aria-expanded="false" aria-controls="pf-cal-pop"
+                        title="Chọn ngày để xem lại kế hoạch"
+                        data-current="<?php echo $pf_h(date('Y-m-d', $pf_plan_ts)); ?>"
+                        data-live="<?php echo $pf_h($pf_live_date); ?>"
+                        data-url-live="<?php echo $pf_h($pf_nav('')); ?>"
+                        data-url-tpl="<?php echo $pf_h($pf_nav('__DATE__')); ?>"
+                        data-dates-url="<?php echo $pf_h('?mod=production_staff&controllers=production_staff&action=plan_history_dates'); ?>">
+                        <i class="fa-solid fa-calendar-days pf-date-ico"></i>
+                        <span class="pf-date-text"><?php echo date('d', $pf_plan_ts) . ' tháng ' . date('n', $pf_plan_ts) . ' ' . date('Y', $pf_plan_ts); ?></span>
+                        <i class="fa-solid fa-chevron-down pf-date-caret"></i>
+                    </button>
+                    <div class="pf-cal-pop" id="pf-cal-pop" role="dialog" aria-label="Chọn ngày xem kế hoạch" hidden></div>
                 </div>
+                <?php if ($pf_hist): ?>
+                    <div class="pf-hist-banner" role="status">
+                        <i class="fa-solid fa-clock-rotate-left pf-hist-ico"></i>
+                        <div class="pf-hist-text">
+                            <strong>Đang xem lại kế hoạch ngày <?php echo date('d/m/Y', $pf_plan_ts); ?></strong>
+                            <?php if (!empty($pf_hist['found'])): ?>
+                                <span>Lưu lần cuối <?php echo date('H:i d/m/Y', strtotime((string) $pf_hist['saved_at'])); ?><?php
+                                    echo $pf_hist['saved_by'] !== '' ? ' · ' . $pf_h($pf_hist['saved_by']) : '';
+                                    echo $pf_hist['source'] !== '' ? ' · ' . $pf_h($pf_hist['source']) : ''; ?></span>
+                            <?php else: ?>
+                                <span>Ngày này chưa có kế hoạch nào được lưu.</span>
+                            <?php endif; ?>
+                        </div>
+                        <a class="pf-hist-back" href="<?php echo $pf_h($pf_nav('')); ?>">Về hiện hành</a>
+                    </div>
+                <?php endif; ?>
                 <ul class="list-product" id="list-product">
                     <?php if (empty($plans)): ?>
                         <li class="list-product-empty" style="grid-column:1/-1;text-align:center;padding:40px;color:#6b7280;font-style:italic;list-style:none;">
-                            Chưa có kế hoạch sản xuất được gửi xuống.
+                            <?php echo $pf_hist ? 'Không có sản phẩm nào trong kế hoạch ngày này.' : 'Chưa có kế hoạch sản xuất được gửi xuống.'; ?>
                         </li>
                     <?php else: ?>
                         <?php foreach ($plans as $plan): ?>
@@ -145,6 +187,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                                         <input type="text" class="pf-note-input" data-product-id="<?php echo (int)$plan['product_id']; ?>" value="<?php echo htmlspecialchars($note_display); ?>" readonly>
                                     </div>
                                 <?php endif; ?>
+                                <?php if (!$pf_hist): /* Xem lại ngày cũ: "Đối chiếu" so với tồn NVL HIỆN TẠI nên sẽ sai với ngày đó → không hiện. */ ?>
                                 <div class="pf-card-actions">
                                     <button type="button" class="pf-mc-btn" data-product-id="<?php echo $pf_pid; ?>">Đối chiếu</button>
                                     <?php if ($pf_is_admin): ?>
@@ -154,6 +197,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                                         <button type="button" class="pf-formula-btn pf-formula-view" data-product-id="<?php echo $pf_pid; ?>">Xem công thức</button>
                                     <?php endif; ?>
                                 </div>
+                                <?php endif; ?>
                                 </div><!-- .pf-acc-body -->
                             </li>
                         <?php endforeach; ?>
@@ -329,6 +373,7 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
     <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="<?php echo asset_ver('public/js/production_staff/plan_for_staff.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/production_staff/plan_history_calendar.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>
 </body>
 

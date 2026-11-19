@@ -105,6 +105,8 @@ function cdb_allowed_tables()
         'production_plans', 'pre_production_notes', 'additional_tasks', 'product_info_basic',
         // production_staff — Kế hoạch sản xuất dài ngày
         'long_term_production_plans', 'long_term_production_tasks', 'long_term_production_backup',
+        // production_staff — Lịch sử kế hoạch hằng ngày (mỗi ngày 1 bản lưu: SP + việc khác)
+        'production_plan_history',
         // production_formula (Công thức sản xuất)
         'product_recipe_notes', 'product_batch_recipes', 'product_batch_recipe_items', 'material_images',
         // customer_orders (Quản lý đơn hàng) — 'sales_warehouse_export_invoices', 'stock_exports',

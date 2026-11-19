@@ -92,15 +92,30 @@ function im_update_plan_quantity($plan_id, $product_id, $quantity)
 
     if ($pid_plan > 0) {
         db_update('production_plans', ['quantity' => $q], "id = $pid_plan");
+        im_plan_history_touch();
         return true;
     }
     if ($pid_prod > 0) {
         $row = db_fetch_row("SELECT id FROM production_plans WHERE product_id = $pid_prod ORDER BY id ASC LIMIT 1");
         if (!$row) return false;
         db_update('production_plans', ['quantity' => $q], 'id = ' . (int) $row['id']);
+        im_plan_history_touch();
         return true;
     }
     return false;
+}
+
+/**
+ * Số lượng kế hoạch vừa đổi từ màn kho → cập nhật bản lưu lịch sử của "Kế hoạch sản xuất hằng ngày"
+ * (production_staff/plan_for_staff), nếu không trang đó và lịch sử sẽ lệch nhau.
+ * Không bao giờ làm hỏng thao tác chính — xem quy tắc ở libraries/plan_history.php.
+ */
+function im_plan_history_touch()
+{
+    $f = __DIR__ . '/../../../libraries/plan_history.php';
+    if (!is_file($f)) return;
+    require_once $f;
+    if (function_exists('phs_touch')) phs_touch('edit');
 }
 
 /** Tìm sản phẩm theo keyword (dùng cho .wp-search). */
