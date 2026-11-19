@@ -465,8 +465,9 @@ body.app-has-sidebar.app-sidebar-collapsed .pr-footer { left: var(--app-sb-w-col
    Hình là ảnh NỀN `contain`: phóng ĐỀU ngang dọc cho cả món nằm gọn trong khung vuông (không méo, không cắt). KHÔNG dùng
    <img object-fit> — html2canvas (thư viện chụp phiếu) không hiểu object-fit và sẽ kéo giãn ảnh dọc cho vừa ô → bị bóp. */
 .pr-sheet table.pr-sheet-table td.img { padding: 4px; text-align: center; }
+/* KHÔNG viền riêng quanh ảnh: ảnh nằm thẳng trong ô của bảng (viền đen của ô đã là khung) — chủ chốt 19/11, tránh viền đôi. */
 .pr-sheet table.pr-sheet-table td.img .pr-sheet-thumb {
-    display: block; width: 80px; height: 80px; margin: 0 auto; border: 1px solid #9ca3af;
+    display: block; width: 80px; height: 80px; margin: 0 auto; border: 0;
     background-color: #fff; background-position: center; background-repeat: no-repeat; background-size: contain;
 }
 /* Ghi chú người đề nghị nhập cho từng món (nhãn hiệu, quy cách…): dòng nghiêng nhỏ ngay dưới tên hàng. */
