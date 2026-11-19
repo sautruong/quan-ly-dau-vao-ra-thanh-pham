@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/inventory_management/dashboard.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/accounting/journal_entry.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/cash_transactions/cash_transactions.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_ver('public/css/cash_transactions/purchase_request.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/app_shell.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/datetime_picker.css'); ?>">
     <link rel="stylesheet" href="<?php echo asset_ver('public/css/shared/history_filter.css'); ?>">
@@ -109,6 +110,10 @@
                     <p>Lịch sử</p>
                 </div>
                 <div class="history-filter" id="history-filter">
+                <?php /* QL danh sách đề nghị mua đồ: nằm cạnh TRÁI bộ lọc từ ngày–đến ngày (yêu cầu 19/11/2026). */ ?>
+                <button type="button" class="pr-manage-btn" id="pr-manage-btn" title="Thêm / sửa / xóa danh sách đề nghị mua đồ">
+                    <i class="fa-solid fa-list-check"></i> QL danh sách đề nghị
+                </button>
                 <div class="hf-group hf-daterange">
                     <span class="hf-cal-icon"><i class="fa-regular fa-calendar-days"></i></span>
                     <label for="hf-date-from">Từ ngày</label>
@@ -168,6 +173,8 @@
     </script>
     <script src="<?php echo asset_ver('public/js/accounting/journal_entry.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/cash_transactions/cash_transactions.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/cash_transactions/pr_common.js'); ?>"></script>
+    <script src="<?php echo asset_ver('public/js/cash_transactions/pr_catalog.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/check_database.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/datetime_picker.js'); ?>"></script>
     <script src="<?php echo asset_ver('public/js/shared/app_shell.js'); ?>"></script>

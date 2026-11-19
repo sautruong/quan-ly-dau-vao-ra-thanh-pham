@@ -342,6 +342,10 @@
                         <a href="#" class="edit-list-import">Sửa</a>
                         <span class="sep">|</span>
                         <a href="#" class="delete-list-import">Xóa</a>
+                        <span class="sep">|</span>
+                        ${b.pr_item_id
+                            ? '<a href="#" class="pr-remove-link" title="Gỡ khỏi danh sách đề nghị mua đồ">Gỡ DS đề nghị</a>'
+                            : '<a href="#" class="pr-add-link" title="Thêm vào danh sách đề nghị mua đồ">Thêm DS đề nghị</a>'}
                     </td>
                 </tr>
             `;
@@ -569,6 +573,16 @@
             });
         }
     }
+
+    // API nhỏ cho pr_catalog.js (Thêm/Gỡ DS đề nghị): tra 1 dòng, đổi cờ "đã thêm vào DS", hoặc thay cả danh sách.
+    window.CtHistory = {
+        getRow: function (id) { return (history || []).find(r => +r.id === +id) || null; },
+        setPrItem: function (id, itemId) {
+            const r = (history || []).find(x => +x.id === +id);
+            if (r) { r.pr_item_id = +itemId || 0; renderHistoryPage(); }
+        },
+        replace: function (list) { history = Array.isArray(list) ? list : []; renderHistoryPage(); }
+    };
 
     function init() {
         $dateTime.value = nowLocalValue();

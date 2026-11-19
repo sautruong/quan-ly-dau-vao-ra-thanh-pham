@@ -28,11 +28,23 @@ function ct_get($id)
                          FROM cash_transactions WHERE id = $id LIMIT 1");
 }
 
-/** Format 1 dòng cho lịch sử (thêm date_display + date_color). */
-function ct_format_history_row($r)
+/**
+ * Format 1 dòng cho lịch sử (thêm date_display + date_color + pr_item_id).
+ * pr_item_id > 0 = dòng này đã được "Thêm DS đề nghị" (hạng mục đề nghị mua đồ) → nút đổi thành "Gỡ DS đề nghị".
+ * $pr_map = [cash_id => item_id] dựng sẵn cho cả loạt (1 truy vấn); null → tra riêng từng dòng.
+ */
+function ct_format_history_row($r, $pr_map = null)
 {
+    require_once __DIR__ . '/../../../libraries/purchase_request.php';
     $hist_date = history_date_display($r['created_at'] ?? '');
+    if ($pr_map !== null) {
+        $pr_item_id = (int) ($pr_map[(int) $r['id']] ?? 0);
+    } else {
+        pr_ensure_tables();                       // tra riêng 1 dòng (vd get_transaction) — bảng phải có trước
+        $pr_item_id = pr_item_id_by_cash((int) $r['id']);
+    }
     return [
+        'pr_item_id'       => $pr_item_id,
         'id'               => (int) $r['id'],
         'description'      => $r['description'],
         'transaction_type' => $r['transaction_type'],
@@ -55,7 +67,9 @@ function ct_get_history($limit = 100)
                             FROM cash_transactions
                             ORDER BY created_at DESC, id DESC
                             LIMIT $limit") ?: [];
-    return array_map('ct_format_history_row', $rows);
+    require_once __DIR__ . '/../../../libraries/purchase_request.php';
+    $pr_map = pr_item_ids_by_cash(array_map(static fn($r) => (int) $r['id'], $rows));
+    return array_map(static fn($r) => ct_format_history_row($r, $pr_map), $rows);
 }
 
 /**

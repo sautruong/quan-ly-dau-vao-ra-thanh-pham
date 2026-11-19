@@ -172,6 +172,14 @@ function permission_ensure_static_views()
          VALUES ('warehouse', 'warehouse', 'picking_task', 'Soạn hàng', 'KHO', 152, 1)"
     );
 
+    /* Thu chi — "Đề nghị mua đồ": nhân viên lập đề nghị mua đồ dùng linh tinh, admin gom + đặt mua.
+       Đăng ký ở đây (không chờ module tự đăng ký) để view có mặt ở trang Phân quyền ngay, nếu không
+       thì không cấp quyền được cho ai và cũng không ai mở được để nó tự đăng ký. */
+    db_query(
+        "INSERT IGNORE INTO tbl_views (module, controller, action, label, group_label, sort, is_active)
+         VALUES ('cash_transactions', 'cash_transactions', 'purchase_request', 'Đề nghị mua đồ', 'THU CHI', 51, 1)"
+    );
+
     /* 3 tab của "Bán hàng - nhà máy" tách thành 3 mục menu cấp 2 (thay cho thanh tab trong
        trang). Trước đây chỉ order_factory có trong danh mục; 2 view kia không đăng ký nên
        vừa không hiện ở sidebar, vừa lọt guard FAIL-OPEN (ai đăng nhập cũng vào được). */
@@ -462,6 +470,7 @@ function permission_view_only_capable_keys()
         ['module' => 'production_formula',   'controller' => 'production_formula',   'action' => 'production_formula'],
         ['module' => 'production_staff',     'controller' => 'production_staff',     'action' => 'plan_for_staff'],
         ['module' => 'cash_transactions',    'controller' => 'cash_transactions',    'action' => 'cash_transactions'],
+        ['module' => 'cash_transactions',    'controller' => 'cash_transactions',    'action' => 'purchase_request'],
         ['module' => 'admin_factory',        'controller' => 'admin',                'action' => 'manage_product_list'],
         ['module' => 'admin_factory',        'controller' => 'admin',                'action' => 'manage_material_list'],
         ['module' => 'admin_factory',        'controller' => 'admin',                'action' => 'manage_supplier_list'],

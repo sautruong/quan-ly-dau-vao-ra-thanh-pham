@@ -131,3 +131,301 @@ function deleteAction()
     ct_delete($id);
     ct_json(['success' => true, 'history' => ct_get_history(100)]);
 }
+
+/* =====================================================================================
+ *  ĐỀ NGHỊ MUA ĐỒ (view cash_transactions/purchase_request) — nghiệp vụ: libraries/purchase_request.php
+ *
+ *  2 NƠI dùng chung thư viện:
+ *   · "Nhập thu chi"  → xây DANH SÁCH ĐỀ NGHỊ (nút Thêm/Gỡ DS đề nghị + "QL danh sách đề nghị")
+ *                        → quyền ghi = quyền sửa của view cash_transactions.
+ *   · "Đề nghị mua đồ" → lập đề nghị (mọi người được gán view) + duyệt/gom/đặt mua (admin)
+ *                        → quyền ghi = quyền sửa của view purchase_request.
+ *  Các action AJAX KHÔNG nằm trong tbl_views nên guard cấp trang bỏ qua chúng → tự kiểm quyền ở đây.
+ * ===================================================================================== */
+
+function pr_boot()
+{
+    require_once __DIR__ . '/../../../libraries/purchase_request.php';
+    pr_ensure_tables();
+}
+
+/** Người dùng có vào được ít nhất 1 trong các view (cash_transactions | purchase_request) — admin luôn được. */
+function pr_guard_access(array $views)
+{
+    $user = permission_current_user();
+    if (!$user) ct_json(['ok' => false, 'message' => 'Chưa đăng nhập.']);
+    if (permission_is_admin($user)) return $user;
+    foreach ($views as $v) {
+        $view = permission_find_view('cash_transactions', 'cash_transactions', $v);
+        if ($view && permission_user_has_view((int) $user['id'], (int) $view['id'])) return $user;
+    }
+    ct_json(['ok' => false, 'message' => 'Bạn chưa được cấp quyền dùng chức năng này.']);
+}
+
+/** Chặn ghi nếu user đang ở chế độ "chỉ xem" của view đó. Trả JSON {ok:false} (thư viện permission_* dùng khoá 'success'). */
+function pr_guard_edit($view_action)
+{
+    if (!permission_user_can_edit('cash_transactions', 'cash_transactions', $view_action)) {
+        ct_json(['ok' => false, 'message' => 'Bạn chỉ có quyền xem, không thể ghi/sửa dữ liệu.']);
+    }
+}
+
+/**
+ * Thao tác trên DANH SÁCH hạng mục (thêm / đổi hình / gỡ) dùng chung cho 2 màn: "Nhập thu chi" và "Đề nghị mua đồ"
+ * (người lập đề nghị tự thêm món mới ngay trong màn đề nghị) → cho phép khi user CÓ ÍT NHẤT MỘT trong 2 view
+ * và view đó KHÔNG ở chế độ "chỉ xem". Admin luôn được.
+ */
+function pr_guard_edit_any($user)
+{
+    if (permission_is_admin($user)) return;
+    foreach (['cash_transactions', 'purchase_request'] as $v) {
+        $view = permission_find_view('cash_transactions', 'cash_transactions', $v);
+        if ($view && permission_user_has_view((int) $user['id'], (int) $view['id'])
+            && permission_user_can_edit('cash_transactions', 'cash_transactions', $v)) return;
+    }
+    ct_json(['ok' => false, 'message' => 'Bạn chỉ có quyền xem, không thể ghi/sửa dữ liệu.']);
+}
+
+/** Quản lý MỤC CHI (thêm/sửa/xóa) vẫn thuộc "Nhập thu chi": admin hoặc người có view đó (không ở chế độ chỉ xem). */
+function pr_can_manage_categories($user)
+{
+    if (permission_is_admin($user)) return true;
+    $view = permission_find_view('cash_transactions', 'cash_transactions', 'cash_transactions');
+    return $view && permission_user_has_view((int) $user['id'], (int) $view['id'])
+        && permission_user_can_edit('cash_transactions', 'cash_transactions', 'cash_transactions');
+}
+
+/** Trang "Đề nghị mua đồ" — thiết kế cho điện thoại, dựng sẵn danh sách + số đếm, phần còn lại nạp bằng AJAX. */
+function purchase_requestAction()
+{
+    pr_boot();
+    $user = permission_current_user();
+    $is_approver = pr_is_approver($user);
+    $tab = (string) ($_GET['tab'] ?? '');
+    if (!in_array($tab, ['new', 'mine', 'review'], true)) $tab = '';
+    if ($tab === 'review' && !$is_approver) $tab = 'mine';
+
+    // Thông tin đơn vị trên tờ phiếu: DÙNG CHUNG với phiếu xuất/nhập kho (print_settings, app_settings 'print_receipt.*'),
+    // nên sửa tên/địa chỉ công ty ở một nơi là mọi phiếu cùng đổi.
+    require_once __DIR__ . '/../../../libraries/print_settings.php';
+    $ps = print_settings_get();
+
+    load_view('purchase_request', [
+        'print'       => ['company_name' => (string) ($ps['company_name'] ?? ''), 'company_address' => (string) ($ps['company_address'] ?? '')],
+        'catalog'     => pr_catalog(),
+        'counts'      => pr_counts((int) $user['id'], $is_approver),
+        'is_approver' => $is_approver,
+        'can_edit'    => permission_user_can_edit('cash_transactions', 'cash_transactions', 'purchase_request'),
+        'can_manage_cats' => pr_can_manage_categories($user),
+        'start_tab'   => $tab,
+        'me'          => ['id' => (int) $user['id'], 'name' => pr_user_name($user['id'])],
+    ]);
+}
+
+/* ---------- Danh sách đề nghị (catalog) ---------- */
+
+/** GET: toàn bộ mục chi + hạng mục (bộ chọn + màn QL). */
+function pr_catalogAction()
+{
+    pr_boot();
+    pr_guard_access(['cash_transactions', 'purchase_request']);
+    ct_json(['ok' => true, 'catalog' => pr_catalog()]);
+}
+
+/** POST: thêm/sửa tên mục chi. POST: id (0=mới), name */
+function pr_category_saveAction()
+{
+    pr_boot();
+    pr_guard_access(['cash_transactions']);
+    pr_guard_edit('cash_transactions');
+    $res = pr_category_save((int) ($_POST['id'] ?? 0), (string) ($_POST['name'] ?? ''));
+    if (!empty($res['ok'])) $res['catalog'] = pr_catalog();
+    ct_json($res);
+}
+
+/** POST: xóa mục chi (chỉ khi rỗng). POST: id */
+function pr_category_deleteAction()
+{
+    pr_boot();
+    pr_guard_access(['cash_transactions']);
+    pr_guard_edit('cash_transactions');
+    $res = pr_category_delete((int) ($_POST['id'] ?? 0));
+    if (!empty($res['ok'])) $res['catalog'] = pr_catalog();
+    ct_json($res);
+}
+
+/**
+ * POST multipart: thêm/sửa hạng mục. id (0=mới), category_id, name, source_cash_id, image (file), remove_image.
+ * source_cash_id > 0 = thêm TỪ MỘT DÒNG "Nhập thu chi": phiếu phải tồn tại và chưa có hạng mục nào.
+ */
+function pr_item_saveAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['cash_transactions', 'purchase_request']);
+    pr_guard_edit_any($user);
+
+    $src = (int) ($_POST['source_cash_id'] ?? 0);
+    $id  = (int) ($_POST['id'] ?? 0);
+    if ($src > 0 && $id === 0) {
+        if (!ct_get($src)) ct_json(['ok' => false, 'message' => 'Không tìm thấy phiếu thu chi.']);
+        if (pr_item_id_by_cash($src) > 0) ct_json(['ok' => false, 'message' => 'Phiếu này đã được thêm vào danh sách đề nghị rồi.']);
+    }
+    $res = pr_item_save(
+        $id, (int) ($_POST['category_id'] ?? 0), (string) ($_POST['name'] ?? ''), $src,
+        $_FILES['image'] ?? null, !empty($_POST['remove_image']), (int) $user['id']
+    );
+    if (!empty($res['ok'])) $res['catalog'] = pr_catalog();
+    ct_json($res);
+}
+
+/**
+ * POST multipart: đổi/gỡ HÌNH của 1 hạng mục có sẵn (bấm hình trên card ở màn "Đề nghị mua đồ"). id, image (file) | remove_image.
+ * Dùng được cho người có view "Đề nghị mua đồ" lẫn "Nhập thu chi" (không cần quyền sửa tên/mục chi) —
+ * nhưng người đang ở chế độ "chỉ xem" của view mình được cấp thì không ghi được.
+ */
+function pr_item_imageAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['cash_transactions', 'purchase_request']);
+    pr_guard_edit_any($user);
+
+    $id  = (int) ($_POST['id'] ?? 0);
+    $cur = pr_item_get($id);
+    if (!$cur) ct_json(['ok' => false, 'message' => 'Không tìm thấy hạng mục (có thể đã bị gỡ khỏi danh sách).']);
+
+    $res = pr_item_save($id, (int) $cur['category_id'], (string) $cur['name'], 0,
+        $_FILES['image'] ?? null, !empty($_POST['remove_image']), (int) $user['id']);
+    if (!empty($res['ok'])) $res['catalog'] = pr_catalog();
+    ct_json($res);
+}
+
+/** POST: gỡ hạng mục khỏi danh sách. POST: id */
+function pr_item_deleteAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['cash_transactions', 'purchase_request']);
+    pr_guard_edit_any($user);
+    $res = pr_item_delete((int) ($_POST['id'] ?? 0));
+    if (!empty($res['ok'])) $res['catalog'] = pr_catalog();
+    ct_json($res);
+}
+
+/** POST: nút "Gỡ DS đề nghị" trên 1 dòng thu chi. POST: cash_id */
+function pr_item_remove_by_cashAction()
+{
+    pr_boot();
+    pr_guard_access(['cash_transactions']);
+    pr_guard_edit('cash_transactions');
+    $iid = pr_item_id_by_cash((int) ($_POST['cash_id'] ?? 0));
+    $res = $iid > 0 ? pr_item_delete($iid) : ['ok' => true];
+    if (!empty($res['ok'])) $res['catalog'] = pr_catalog();
+    ct_json($res);
+}
+
+/* ---------- Đề nghị ---------- */
+
+/** GET: gợi ý cho 1 hạng mục — 2 lần đặt mua gần nhất + đề nghị khác đang chờ. GET: id, exclude */
+function pr_item_infoAction()
+{
+    pr_boot();
+    pr_guard_access(['purchase_request']);
+    $info = pr_item_info((int) ($_GET['id'] ?? 0), (int) ($_GET['exclude'] ?? 0));
+    ct_json(['ok' => true] + $info);
+}
+
+/** POST: lưu nháp / gửi đề nghị. POST: payload (JSON {id,is_urgent,note,lines[]}), submit (0|1) */
+function pr_request_saveAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    pr_guard_edit('purchase_request');
+    $payload = json_decode((string) ($_POST['payload'] ?? ''), true);
+    if (!is_array($payload)) ct_json(['ok' => false, 'message' => 'Dữ liệu đề nghị không hợp lệ.']);
+    $res = pr_request_save($user, $payload, !empty($_POST['submit']));
+    if (!empty($res['ok'])) $res['counts'] = pr_counts((int) $user['id'], pr_is_approver($user));
+    ct_json($res);
+}
+
+/** GET: 1 đơn (chủ đơn hoặc người duyệt). GET: id */
+function pr_request_getAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    $r = pr_request_get((int) ($_GET['id'] ?? 0));
+    if (!$r || ((int) $r['user_id'] !== (int) $user['id'] && !pr_is_approver($user))) {
+        ct_json(['ok' => false, 'message' => 'Không tìm thấy đề nghị.']);
+    }
+    ct_json(['ok' => true, 'request' => $r]);
+}
+
+/** GET: đơn của tôi (phân trang 10 đơn/trang). GET: page (mặc định 1; vượt quá thì lùi về trang cuối). */
+function pr_my_requestsAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    $mine = pr_my_requests((int) $user['id'], (int) ($_GET['page'] ?? 1), 10);
+    ct_json(['ok' => true, 'requests' => $mine['requests'],
+             'total' => $mine['total'], 'page' => $mine['page'], 'pages' => $mine['pages'], 'per_page' => $mine['per_page'],
+             'counts' => pr_counts((int) $user['id'], pr_is_approver($user))]);
+}
+
+/** POST: hủy đơn đã gửi. POST: id */
+function pr_request_cancelAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    pr_guard_edit('purchase_request');
+    $res = pr_request_cancel($user, (int) ($_POST['id'] ?? 0));
+    $res['counts'] = pr_counts((int) $user['id'], pr_is_approver($user));
+    ct_json($res);
+}
+
+/** POST: xóa đơn nháp / bị từ chối / đã hủy. POST: id */
+function pr_request_deleteAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    pr_guard_edit('purchase_request');
+    $res = pr_request_delete($user, (int) ($_POST['id'] ?? 0));
+    $res['counts'] = pr_counts((int) $user['id'], pr_is_approver($user));
+    ct_json($res);
+}
+
+/* ---------- Duyệt (admin) ---------- */
+
+/** GET: hàng đợi duyệt. GET: mode = submitted (mặc định, không phân trang) | done (phân trang 10/trang), page */
+function pr_review_listAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    if (!pr_is_approver($user)) ct_json(['ok' => false, 'message' => 'Bạn không có quyền duyệt đề nghị.']);
+    $mode = (($_GET['mode'] ?? '') === 'done') ? 'done' : 'submitted';
+    $res  = pr_review_list($mode, (int) ($_GET['page'] ?? 1), 10);
+    ct_json(['ok' => true, 'requests' => $res['requests'],
+             'total' => $res['total'], 'page' => $res['page'], 'pages' => $res['pages'], 'per_page' => $res['per_page'],
+             'counts' => pr_counts((int) $user['id'], true)]);
+}
+
+/** POST: từ chối đề nghị. POST: id, reason */
+function pr_request_rejectAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    pr_guard_edit('purchase_request');
+    $res = pr_request_reject($user, (int) ($_POST['id'] ?? 0), (string) ($_POST['reason'] ?? ''));
+    $res['counts'] = pr_counts((int) $user['id'], pr_is_approver($user));
+    ct_json($res);
+}
+
+/** POST: xác nhận gửi đặt mua các đơn đã gom. POST: request_ids (JSON mảng), adjust (JSON [{line_id,qty,dropped}]) */
+function pr_order_confirmAction()
+{
+    pr_boot();
+    $user = pr_guard_access(['purchase_request']);
+    pr_guard_edit('purchase_request');
+    $ids    = json_decode((string) ($_POST['request_ids'] ?? '[]'), true);
+    $adjust = json_decode((string) ($_POST['adjust'] ?? '[]'), true);
+    $res = pr_order_confirm($user, is_array($ids) ? $ids : [], is_array($adjust) ? $adjust : []);
+    $res['counts'] = pr_counts((int) $user['id'], pr_is_approver($user));
+    ct_json($res);
+}
