@@ -302,8 +302,8 @@
                 // querySelectorAll toàn trang khớp cả 2 -> in bị nhân đôi việc khác).
                 var owLive = document.querySelector('.content > .wp-other-work #list-other-work');
                 var taskTexts = owLive ? Array.prototype.map.call(
-                    owLive.querySelectorAll('.other-work-item .content-other-work input'),
-                    function (inp) { return inp.value.trim(); }
+                    owLive.querySelectorAll('.other-work-item .content-other-work .other-work-text'),
+                    function (el) { return el.textContent.trim(); }
                 ).filter(function (t) { return t !== ''; }) : [];
                 bcOwList.innerHTML = taskTexts.length
                     ? taskTexts.map(function (t) { return '<li>' + escapeHtml(t) + '</li>'; }).join('')
@@ -705,7 +705,7 @@
                         li.setAttribute('data-task-id', res.id);
                         li.innerHTML =
                             '<div class="serial"><p></p></div>' +
-                            '<div class="content-other-work"><input type="text" value="' + escapeHtml(desc) + '" readonly></div>' +
+                            '<div class="content-other-work"><span class="other-work-text">' + escapeHtml(desc) + '</span></div>' +
                             '<button type="button" class="task-delete" title="Gỡ việc này">&times;</button>';
                         list.appendChild(li);
                         renumber();
@@ -830,6 +830,7 @@
                     '</div>' +
                     '<div class="wp-info">' +
                         '<div class="title"><p>Thông tin:</p></div>' +
+                        (plan.system_product_name ? '<div class="pf-sys-name">' + escapeHtml(plan.system_product_name) + '</div>' : '') +
                         '<ul class="list-info">' +
                             '<li class="info-item">Tồn kho đầu ngày: <span>' + stockDisplay + '</span></li>' +
                             '<li class="info-item">Bao bì trong:' +
@@ -998,17 +999,40 @@
             openMatcheck(parseInt(b.getAttribute('data-product-id'), 10) || 0);
         });
 
-        // Tô đỏ nút "Đối chiếu" + nhãn "· thiếu N" khi SP thiếu NVL (cảnh báo ngay, chưa cần mở modal).
+        // Cảnh báo khi SP thiếu NVL (chưa cần mở modal): chấm đỏ ở nút "Đối chiếu" + viền cam đỏ nhạt ở ô Số lượng
+        // (ô SL nằm ở ĐẦU card nên thấy cả khi card đang gập — user chốt 14/11/2026). Trả về Promise để quét tuần tự.
         function checkShort(item) {
             var btn = item.querySelector('.pf-mc-btn');
-            if (!btn) return;
+            var qtyInp = item.querySelector('.pf-qty-input');
+            if (!btn && !qtyInp) return Promise.resolve();
             var pid = item.getAttribute('data-product-id');
-            fetch(ACT + 'material_check_get&product_id=' + pid + '&quantity=' + cardQty(pid), { credentials: 'same-origin' })
+            // Gõ đổi SL liên tiếp: kết quả của lần gọi cũ về chậm không được đè lên kết quả mới.
+            var seq = (item._pfMcSeq = (item._pfMcSeq || 0) + 1);
+            return fetch(ACT + 'material_check_get&product_id=' + pid + '&quantity=' + cardQty(pid), { credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (res) {
+                    if (seq !== item._pfMcSeq) return;
                     var short = !!(res && res.ok && res.short_count > 0);
-                    btn.innerHTML = (short ? '<span class="pf-mc-warn" aria-label="Thiếu NVL"></span>' : '') + 'Đối chiếu';
+                    if (btn) btn.innerHTML = (short ? '<span class="pf-mc-warn" aria-label="Thiếu NVL"></span>' : '') + 'Đối chiếu';
+                    if (qtyInp) qtyInp.classList.toggle('is-short', short);
                 }).catch(function () {});
+        }
+
+        // Quét cả danh sách khi tải trang (mỗi card một request nên chạy TUẦN TỰ, khỏi dồn lên máy chủ).
+        var scanChain = Promise.resolve();
+        function scanShort(items) {
+            items.forEach(function (it) { scanChain = scanChain.then(function () { return checkShort(it); }); });
+        }
+        scanShort(Array.prototype.slice.call(list.querySelectorAll('.product-item[data-product-id]')));
+        // Card thêm sau đó (tìm SP → thêm vào kế hoạch) cũng được kiểm.
+        if (window.MutationObserver) {
+            new MutationObserver(function (muts) {
+                muts.forEach(function (m) {
+                    Array.prototype.forEach.call(m.addedNodes, function (n) {
+                        if (n.nodeType === 1 && n.matches && n.matches('.product-item[data-product-id]')) scanShort([n]);
+                    });
+                });
+            }).observe(list, { childList: true });
         }
 
         // Gập/mở card; khi mở → kiểm tra thiếu để tô cảnh báo trên nút Đối chiếu.
@@ -1023,12 +1047,12 @@
             if (item.classList.contains('open')) checkShort(item);
         });
 
-        // Đổi SL (đã lưu qua ajax) → cập nhật lại cảnh báo thiếu trên nút Đối chiếu.
+        // Đổi SL (đã lưu qua ajax) → cập nhật lại cảnh báo thiếu (nút Đối chiếu + viền ô SL), kể cả khi card đang gập.
         list.addEventListener('change', function (e) {
             var q = e.target.closest && e.target.closest('.pf-qty-input');
             if (!q) return;
             var item = q.closest('.product-item');
-            if (item && item.classList.contains('open')) checkShort(item);
+            if (item) checkShort(item);
         });
     })();
 

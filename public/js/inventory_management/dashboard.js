@@ -14,8 +14,10 @@
     // Bộ lọc lịch sử (client-side trên INITIAL.history đã nạp sẵn).
     const histFilter = { keyword: '', dateFrom: '', dateTo: '' };
 
-    const $search   = document.getElementById('search-product');
-    const $dropdown = document.getElementById('search-dropdown');
+    const $search      = document.getElementById('search-product');
+    const $dropdown    = document.getElementById('search-dropdown');
+    const $searchClear = document.getElementById('search-clear');
+    const $searchArrow = document.getElementById('search-arrow');
     const $list     = document.getElementById('list-product');
     const $btnRec   = document.getElementById('btn-record');
     const $btnEdit  = document.getElementById('btn-edit');
@@ -124,7 +126,12 @@
     }
 
     // ---------- Search ----------
+    function updateSearchClear() {
+        if ($searchClear) $searchClear.style.display = $search.value.trim() ? '' : 'none';
+    }
+
     const runSearch = debounce(function () {
+        updateSearchClear();
         const kw = $search.value.trim();
         if (kw === '') { hideDropdown(); return; }
         postForm('search_product', { keyword: kw }).then(res => {
@@ -143,12 +150,14 @@
             ).join('');
         }
         $dropdown.classList.add('active');
+        if ($searchArrow) $searchArrow.classList.add('open');
     }
 
     function hideDropdown() {
         $dropdown.classList.remove('active');
         $dropdown.innerHTML = '';
         activeIdx = -1;
+        if ($searchArrow) $searchArrow.classList.remove('open');
     }
 
     function selectDropdownItem(el) {
@@ -162,13 +171,15 @@
         postForm('get_product', { product_id: id }).then(res => {
             if (!res.success) { alert(res.message || 'Lỗi'); return; }
             addProductItem({
-                product_id:   res.data.product_id,
-                product_name: res.data.product_name,
-                quantity:     '',
-                plan_date:    res.data.plan_date || INITIAL.planDate
+                product_id:    res.data.product_id,
+                product_name:  res.data.product_name,
+                quantity:      '',
+                plan_date:     res.data.plan_date || INITIAL.planDate,
+                current_stock: res.data.current_stock
             });
             $search.value = '';
             hideDropdown();
+            updateSearchClear();
         });
     }
 
@@ -214,7 +225,36 @@
         if (!e.target.closest('.wp-search')) hideDropdown();
     });
 
+    // Arrow: xổ danh sách sản phẩm theo kế hoạch hôm nay
+    if ($searchArrow) {
+        $searchArrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if ($dropdown.classList.contains('active')) { hideDropdown(); return; }
+            $searchArrow.disabled = true;
+            postForm('get_all_products', {}).then(res => {
+                $searchArrow.disabled = false;
+                if (!res || !res.success || !Array.isArray(res.data)) return;
+                renderDropdown(res.data.map(p => ({ id: parseInt(p.id, 10), product_name: p.product_name })));
+            }).catch(() => { $searchArrow.disabled = false; });
+        });
+    }
+
+    // Clear: xóa keyword, đóng dropdown
+    if ($searchClear) {
+        $searchClear.addEventListener('click', () => {
+            $search.value = '';
+            hideDropdown();
+            updateSearchClear();
+            $search.focus();
+        });
+    }
+
     // ---------- Render product-item ----------
+    function fmtStock(n) {
+        if (!Number.isFinite(n)) return '—';
+        return n.toLocaleString('vi-VN');
+    }
+
     function addProductItem(p) {
         const pid = p.product_id;
         const qty = (p.quantity === 0 || p.quantity) ? p.quantity : '';
@@ -225,6 +265,15 @@
         const interp = (p.interpretation && p.interpretation !== '') ? p.interpretation : buildInterpretation(name, date);
         const importId = p.import_id ? p.import_id : '';
         const planId   = p.plan_id   ? p.plan_id   : '';
+
+        const stock = (p.current_stock !== undefined && p.current_stock !== null)
+            ? parseFloat(p.current_stock) : null;
+        const qtyNum = parseFloat(qty) || 0;
+        const stockHtml = Number.isFinite(stock) ? `
+            <div class="wp-stock-info">
+                <span>Tồn trước nhập: <strong>${fmtStock(stock)}</strong></span>
+                <span>Tồn sau nhập: <strong class="val-stock-after">${fmtStock(stock + qtyNum)}</strong></span>
+            </div>` : '';
 
         const li = document.createElement('li');
         li.className = 'product-item';
@@ -237,38 +286,49 @@
                 <div class="name-product">
                     <p>${escapeHtml(name)}</p>
                 </div>
-                <input type="text" class="input-quantity" value="${escapeHtml(qty)}" placeholder="SL">
             </div>
-            <div class="interpretation">
-                <textarea class="input-interpretation" rows="1">${escapeHtml(interp)}</textarea>
+            <div class="wp-qty-row">
+                <label class="qty-label">Số lượng</label>
+                <input type="text" class="input-quantity" value="${escapeHtml(qty)}" placeholder="0">
             </div>
+            ${stockHtml}
         `;
 
+        if (Number.isFinite(stock)) {
+            const $qtyInput  = li.querySelector('.input-quantity');
+            const $stockAfter = li.querySelector('.val-stock-after');
+            $qtyInput.addEventListener('input', function () {
+                $stockAfter.textContent = fmtStock(stock + (parseFloat(this.value) || 0));
+            });
+        }
+
         li.querySelector('.btn-remove-product').addEventListener('click', () => {
-            // Đang SỬA nhóm lịch sử: chỉ bỏ dòng khỏi form (lưu bằng nút "Sửa"),
-            // không đụng phiếu nhập thành phẩm của ngày.
-            if (editingBatchKey) { li.remove(); addedProducts.delete(pid); return; }
-            if (!confirm('Gỡ "' + (name || '') + '" khỏi ngày này?\n\n'
-                + 'Sẽ XÓA phiếu nhập thành phẩm của sản phẩm trong ngày (nếu có) và TRỪ LẠI tồn kho. '
-                + 'Sản phẩm cũng biến mất ở trang "Nhập giá vốn sản xuất". Không hồi phục được.')) return;
+            if (editingBatchKey) {
+                li.classList.add('is-removing');
+                setTimeout(() => { li.remove(); addedProducts.delete(pid); }, 260);
+                return;
+            }
+            li.classList.add('is-removing');
             postForm('remove_day_product', {
                 product_id: pid,
                 date: pickerToDateYMD(),
                 source: 'dashboard'
             }).then(res => {
-                if (!res || !res.success) { alert((res && res.message) || 'Gỡ thất bại.'); return; }
+                if (!res || !res.success) {
+                    li.classList.remove('is-removing');
+                    alert((res && res.message) || 'Gỡ thất bại.');
+                    return;
+                }
                 li.remove();
                 addedProducts.delete(pid);
-            }).catch(() => alert('Lỗi kết nối khi gỡ.'));
+            }).catch(() => {
+                li.classList.remove('is-removing');
+                alert('Lỗi kết nối khi gỡ.');
+            });
         });
 
         $list.appendChild(li);
         addedProducts.add(pid);
-
-        const $interp = li.querySelector('.input-interpretation');
-        $interp.addEventListener('input', () => autoResize($interp));
-        // Sau khi append xong mới resize để scrollHeight hợp lệ
-        requestAnimationFrame(() => autoResize($interp));
     }
 
     function clearList() {
@@ -343,11 +403,12 @@
         if (Array.isArray(INITIAL.items) && INITIAL.items.length) {
             INITIAL.items.forEach(it => {
                 addProductItem({
-                    plan_id:      it.plan_id ? parseInt(it.plan_id, 10) : 0,
-                    product_id:   parseInt(it.product_id, 10),
-                    product_name: it.product_name,
-                    quantity:     it.quantity,
-                    plan_date:    it.plan_date || INITIAL.planDate
+                    plan_id:       it.plan_id ? parseInt(it.plan_id, 10) : 0,
+                    product_id:    parseInt(it.product_id, 10),
+                    product_name:  it.product_name,
+                    quantity:      it.quantity,
+                    plan_date:     it.plan_date || INITIAL.planDate,
+                    current_stock: it.current_stock
                 });
             });
         }

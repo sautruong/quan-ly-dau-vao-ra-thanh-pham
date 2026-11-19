@@ -103,6 +103,15 @@ function im_update_plan_quantity($plan_id, $product_id, $quantity)
     return false;
 }
 
+/** Toàn bộ sản phẩm (dùng cho dropdown arrow). */
+function im_get_all_products()
+{
+    $sql = "SELECT id, product_name
+            FROM products
+            ORDER BY product_name ASC";
+    return db_fetch_array($sql) ?: [];
+}
+
 /** Tìm sản phẩm theo keyword (dùng cho .wp-search). */
 function im_search_products($keyword)
 {
