@@ -614,17 +614,127 @@ if (!function_exists('pr_ensure_tables')) {
 
     /**
      * Hàng đợi duyệt: 'submitted' = chờ duyệt (hàng đợi làm việc, KHÔNG phân trang để tick gom nhiều đơn);
-     * 'done' = đã xử lý (đặt mua/từ chối) 30 ngày gần đây — PHÂN TRANG, mới xử lý xong xếp trước.
-     * Cùng dạng kết quả với pr_requests_page().
+     * 'done' = đã xử lý 30 ngày gần đây, PHÂN TRANG — các đề nghị đã GOM cùng một lần đặt mua hiện thành MỘT mục
+     * (phiếu gom), xem pr_review_done_page(). Cùng dạng kết quả với pr_requests_page() (riêng 'done' trả thêm 'entries').
      */
     function pr_review_list($mode = 'submitted', $page = 1, $per_page = 10)
     {
-        if ($mode === 'done') {
-            return pr_requests_page("status IN ('ordered','rejected') AND decided_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
-                                    $page, $per_page, 'decided_at DESC, id DESC');
-        }
+        if ($mode === 'done') return pr_review_done_page($page, $per_page);
         $rows = pr_requests_fetch("status = 'submitted'", 100);
         return ['requests' => $rows, 'total' => count($rows), 'page' => 1, 'per_page' => max(1, count($rows)), 'pages' => 1];
+    }
+
+    /**
+     * "Đã xử lý (30 ngày)": mỗi PHIẾU GOM (pr_orders) = MỘT mục gồm các đề nghị đã gom vào lần đặt mua đó; đề nghị bị
+     * TỪ CHỐI (và đơn 'ordered' đời cũ không có order_id) = mỗi đơn một mục riêng. Mới xử lý xong xếp trước, phân trang.
+     * Trả ['entries'=>[ ['kind'=>'order','order'=>{...}] | ['kind'=>'request','request'=>{...}] ], 'requests'=>[],
+     *       'total'=>N (số MỤC), 'page', 'per_page', 'pages'].
+     */
+    function pr_review_done_page($page = 1, $per_page = 10)
+    {
+        pr_ensure_tables();
+        $per = max(1, min(50, (int) $per_page));
+        $win = "DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        $union = "SELECT 'order' AS kind, o.id AS ref_id, o.created_at AS sort_at
+                    FROM pr_orders o
+                   WHERE o.created_at >= $win
+                     AND EXISTS (SELECT 1 FROM pr_requests r WHERE r.order_id = o.id AND r.status = 'ordered')
+                  UNION ALL
+                  SELECT 'request' AS kind, r.id AS ref_id, r.decided_at AS sort_at
+                    FROM pr_requests r
+                   WHERE r.decided_at >= $win
+                     AND (r.status = 'rejected' OR (r.status = 'ordered' AND (r.order_id IS NULL OR r.order_id = 0)))";
+        $total = (int) (db_fetch_row("SELECT COUNT(*) AS c FROM ($union) e")['c'] ?? 0);
+        $pages = max(1, (int) ceil($total / $per));
+        $page  = min(max(1, (int) $page), $pages);
+        $rows  = $total > 0
+            ? (db_fetch_array("SELECT kind, ref_id FROM ($union) e ORDER BY sort_at DESC, kind ASC, ref_id DESC
+                               LIMIT $per OFFSET " . (($page - 1) * $per)) ?: [])
+            : [];
+
+        $orderIds = []; $reqIds = [];
+        foreach ($rows as $e) { if ($e['kind'] === 'order') $orderIds[] = (int) $e['ref_id']; else $reqIds[] = (int) $e['ref_id']; }
+
+        $orders = []; $members = [];
+        if ($orderIds) {
+            $in = implode(',', $orderIds);
+            foreach (db_fetch_array("SELECT * FROM pr_orders WHERE id IN ($in)") ?: [] as $o) $orders[(int) $o['id']] = $o;
+            // Các đề nghị thuộc từng phiếu (+ số dòng còn lại sau khi admin gỡ bớt) để hiện "Gồm: DN-… · tên".
+            $mrows  = db_fetch_array("SELECT id, code, user_id, order_id, note FROM pr_requests
+                                      WHERE order_id IN ($in) AND status = 'ordered' ORDER BY id ASC") ?: [];
+            $counts = [];
+            if ($mrows) {
+                $mids = implode(',', array_map(static fn($r) => (int) $r['id'], $mrows));
+                foreach (db_fetch_array("SELECT request_id, COUNT(*) AS c FROM pr_request_lines
+                                         WHERE request_id IN ($mids) AND dropped = 0 GROUP BY request_id") ?: [] as $c) {
+                    $counts[(int) $c['request_id']] = (int) $c['c'];
+                }
+            }
+            foreach ($mrows as $r) {
+                $members[(int) $r['order_id']][] = [
+                    'id' => (int) $r['id'], 'code' => (string) $r['code'], 'user_name' => pr_user_name($r['user_id']),
+                    'line_count' => $counts[(int) $r['id']] ?? 0,
+                    'note' => (string) ($r['note'] ?? ''),          // ghi chú chung của đề nghị → in lên phiếu khi xem lại
+                ];
+            }
+        }
+        $reqs = [];
+        if ($reqIds) foreach (pr_requests_fetch('id IN (' . implode(',', $reqIds) . ')', count($reqIds)) as $r) $reqs[(int) $r['id']] = $r;
+
+        $entries = [];
+        foreach ($rows as $e) {
+            $id = (int) $e['ref_id'];
+            if ($e['kind'] === 'order' && isset($orders[$id])) {
+                $entries[] = ['kind' => 'order', 'order' => pr_order_out($orders[$id], $members[$id] ?? [])];
+            } elseif ($e['kind'] === 'request' && isset($reqs[$id])) {
+                $entries[] = ['kind' => 'request', 'request' => $reqs[$id]];
+            }
+        }
+        return ['entries' => $entries, 'requests' => [], 'total' => $total, 'page' => $page, 'per_page' => $per, 'pages' => $pages];
+    }
+
+    /**
+     * Dữ liệu 1 PHIẾU GOM để hiện lại: danh sách đã gom ĐÓNG BĂNG lúc xác nhận (pr_orders.snapshot_json) + các đề nghị trong phiếu.
+     * Hình của món lấy theo hình HIỆN TẠI của hạng mục (hình lưu lúc gom có thể đã bị thay/xóa → ô hình vỡ khi xem lại phiếu).
+     */
+    function pr_order_out($o, array $members)
+    {
+        $lines = json_decode((string) ($o['snapshot_json'] ?? ''), true);
+        if (!is_array($lines)) $lines = [];
+        $ids = array_values(array_unique(array_filter(array_map(static fn($l) => (int) ($l['item_id'] ?? 0), $lines))));
+        $img = [];
+        if ($ids) {
+            foreach (db_fetch_array("SELECT id, image_file FROM pr_items WHERE id IN (" . implode(',', $ids) . ")") ?: [] as $r) {
+                $img[(int) $r['id']] = pr_image_url($r['image_file'] ?? '');
+            }
+        }
+        $out = [];
+        foreach ($lines as $l) {
+            $iid = (int) ($l['item_id'] ?? 0);
+            $out[] = [
+                'category_id'   => (int) ($l['category_id'] ?? 0),
+                'category_name' => (string) ($l['category_name'] ?? ''),
+                'item_id'       => $iid,
+                'item_name'     => (string) ($l['item_name'] ?? ''),
+                'qty'           => (float) ($l['qty'] ?? 0),
+                'qty_text'      => (string) ($l['qty_text'] ?? pr_qty_fmt($l['qty'] ?? 0)),
+                'unit'          => (string) ($l['unit'] ?? ''),
+                'note'          => (string) ($l['note'] ?? ''),
+                'image_url'     => $iid > 0 ? ($img[$iid] ?? '') : pr_image_url($l['image_url'] ?? ''),
+            ];
+        }
+        $t = strtotime((string) $o['created_at']);
+        return [
+            'id'            => (int) $o['id'],
+            'created_at'    => (string) $o['created_at'],
+            'date_text'     => pr_dmy($o['created_at']),
+            'time_text'     => $t ? date('H:i', $t) : '',
+            'by_name'       => pr_user_name($o['created_by']),
+            'request_count' => $members ? count($members) : (int) $o['request_count'],
+            'line_count'    => count($out),
+            'requests'      => $members,
+            'lines'         => $out,
+        ];
     }
 
     /** Số liệu cho huy hiệu trên tab. */

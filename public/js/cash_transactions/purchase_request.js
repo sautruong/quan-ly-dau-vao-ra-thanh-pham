@@ -29,7 +29,7 @@
         tab: 'new',
         draft: { id: 0, cards: [] },        // đơn đang soạn (id > 0 = đang sửa đơn nháp/bị từ chối)
         mine: [], minePage: 1,
-        review: { mode: 'submitted', list: [], selected: {}, page: 1 }   // page: chỉ dùng cho mode 'done'
+        review: { mode: 'submitted', list: [], selected: {}, page: 1, orders: {} }   // page: chỉ dùng cho mode 'done'
     };
     var seq = 0;
 
@@ -51,6 +51,10 @@
         var t = new Date(String(d || '').replace(' ', 'T'));
         if (isNaN(t)) return '';
         return ('0' + t.getDate()).slice(-2) + '/' + ('0' + (t.getMonth() + 1)).slice(-2) + '/' + t.getFullYear();
+    }
+    /** Đường dẫn tương đối của ảnh (theo <base> của trang) → URL tuyệt đối. */
+    function absUrl(u) {
+        try { return new URL(u, document.baseURI).href; } catch (e) { return u; }
     }
     /** "NGUYỄN thành lễ" → "Nguyễn Thành Lễ": chỉ in hoa chữ cái đầu mỗi từ (tên người lập phiếu). */
     function titleCase(s) {
@@ -716,16 +720,25 @@
             if (!res.ok) { els.reviewList.innerHTML = '<div class="pr-empty"><p>' + esc(res.message || 'Không tải được.') + '</p></div>'; return; }
             applyCounts(res.counts);
             if (mode === 'done') state.review.page = res.page || 1;
-            state.review.list = res.requests || [];
+            var sub = mode === 'submitted';
+            // "Đã xử lý": mỗi PHIẾU GOM = 1 thẻ (các đề nghị đã gom cùng một lần đặt mua); đề nghị bị từ chối = từng thẻ riêng.
+            var entries = sub ? [] : (res.entries || []);
+            state.review.list = sub ? (res.requests || [])
+                : entries.filter(function (e) { return e.kind === 'request'; }).map(function (e) { return e.request; });
+            state.review.orders = {};
+            entries.forEach(function (e) { if (e.kind === 'order') state.review.orders[e.order.id] = e.order; });
             // Bỏ chọn những đơn không còn chờ duyệt (đã bị hủy/xử lý bởi người khác).
             var alive = {}; state.review.list.forEach(function (r) { if (r.status === 'submitted') alive[r.id] = 1; });
             Object.keys(state.review.selected).forEach(function (id) { if (!alive[id]) delete state.review.selected[id]; });
 
-            var sub = mode === 'submitted';
             els.selAllWrap.hidden = !(sub && state.review.list.length);
-            els.reviewList.innerHTML = state.review.list.length
-                ? state.review.list.map(function (r) { return requestCard(r, { review: true, selectable: sub }); }).join('')
-                : '<div class="pr-empty"><i class="fa-regular fa-circle-check"></i><p>' +
+            var html = sub
+                ? state.review.list.map(function (r) { return requestCard(r, { review: true, selectable: true }); }).join('')
+                : entries.map(function (e) {
+                    return e.kind === 'order' ? orderCard(e.order) : requestCard(e.request, { review: true, selectable: false });
+                }).join('');
+            els.reviewList.innerHTML = html ||
+                '<div class="pr-empty"><i class="fa-regular fa-circle-check"></i><p>' +
                     (sub ? 'Không có đề nghị nào đang chờ duyệt.' : 'Chưa có đề nghị nào được xử lý trong 30 ngày qua.') + '</p></div>';
             els.reviewPager.innerHTML = sub ? '' : pagerHtml(res);
             updateBatchBtn();
@@ -733,6 +746,20 @@
     }
     if (els.reviewList) {
         wireRequestList(els.reviewList, function () { return state.review.list; });
+        // Thẻ PHIẾU GOM (tab "Đã xử lý"): bấm vào thẻ / nút "Xem lại phiếu" → mở phiếu để sao chép ảnh / tải PDF.
+        els.reviewList.addEventListener('click', function (e) {
+            var card = e.target.closest('.pr-ord'); if (!card) return;
+            var o = state.review.orders[card.getAttribute('data-order')]; if (!o) return;
+            var more = e.target.closest('.pr-toggle-more');
+            if (more) {
+                var open = card.classList.toggle('is-open');
+                more.textContent = open ? 'Thu gọn' : '+ ' + more.getAttribute('data-more') + ' mục nữa';
+                return;
+            }
+            var z = e.target.closest('[data-zoom]');
+            if (z) { PR.zoomImage(z.getAttribute('data-zoom')); return; }
+            openOrderView(o);
+        });
         wirePager(els.reviewPager, function (n) { loadReview(n); });
         els.reviewList.addEventListener('change', function (e) {
             var cb = e.target.closest('[data-sel]'); if (!cb) return;
@@ -900,7 +927,8 @@
      * Chủ chốt 19/11: không cần giống phiếu giấy mẫu, không ghi chú/mã; sau đó chủ yêu cầu thêm hình thumbnail
      * của món (đủ lớn để nhìn rõ) vào cả ảnh chụp lẫn PDF — món chưa có hình thì để trống ô hình.
      */
-    function sheetHtml(merged) {
+    function sheetHtml(merged, opts) {
+        opts = opts || {};
         var P = BOOT.print || {};
         var groups = [], idx = {};
         merged.forEach(function (m) {
@@ -908,22 +936,41 @@
             if (idx[k] == null) { idx[k] = groups.length; groups.push({ name: m.category_id > 0 ? m.category_name : 'Đề xuất khác', items: [] }); }
             groups[idx[k]].items.push(m);
         });
-        var now = new Date();
-        var dd = ('0' + now.getDate()).slice(-2), mm = ('0' + (now.getMonth() + 1)).slice(-2);
+        // Ngày trên phiếu: mặc định hôm nay; xem lại phiếu gom cũ thì dùng ngày đặt mua + người đã lập phiếu đó.
+        var when = opts.date ? new Date(String(opts.date).replace(' ', 'T')) : new Date();
+        if (isNaN(when)) when = new Date();
+        var dd = ('0' + when.getDate()).slice(-2), mm = ('0' + (when.getMonth() + 1)).slice(-2);
+        var signer = opts.signer != null ? opts.signer : ((BOOT.me && BOOT.me.name) || '');
 
         var n = 0, rowsHtml = '';
         groups.forEach(function (g) {
             rowsHtml += '<tr class="pr-sheet-grp"><td colspan="5">' + esc(g.name) + '</td></tr>';
             g.items.forEach(function (m) {
                 // Hình thumbnail của món (chủ chốt 19/11: ảnh chụp/PDF phải thấy hình món đồ để người đi mua nhận ra).
-                var thumb = m.image_url ? '<img src="' + esc(m.image_url) + '" alt="">' : '';
+                // Dùng ảnh NỀN `contain` chứ KHÔNG dùng <img object-fit>: html2canvas 1.4.1 không hiểu object-fit nên kéo giãn ảnh
+                // dọc cho vừa ô vuông (bị bóp). background-size: contain thì có hỗ trợ → ảnh được phóng ĐỀU ngang dọc, cả món nằm
+                // gọn trong khung vuông ở bản xem trước, ảnh chụp lẫn PDF.
+                // URL phải TUYỆT ĐỐI: html2canvas chụp trong iframe nhân bản không có thẻ <base> của trang → đường dẫn tương đối
+                // ("public/uploads/…") bị hiểu theo /cash_transactions/ và ra 404 → ô hình trống trên ảnh chụp/PDF.
+                var thumb = m.image_url ? '<span class="pr-sheet-thumb" style="background-image:url(\'' + esc(absUrl(m.image_url)) + '\')"></span>' : '';
+                // Ghi chú người đề nghị nhập cho món (nhãn hiệu, quy cách…): mergeRows gộp ở m.notes[], phiếu gom đã lưu ở m.note.
+                var note = String(m.note || (m.notes && m.notes.join('; ')) || '').trim();
                 rowsHtml += '<tr><td class="c">' + (++n) + '</td>' +
                     '<td class="img">' + thumb + '</td>' +
-                    '<td>' + esc(m.item_name) + '</td>' +
+                    '<td>' + esc(m.item_name) +
+                        (note ? '<div class="pr-sheet-note"><span>Ghi chú:</span> ' + esc(note) + '</div>' : '') + '</td>' +
                     '<td class="c">' + esc(m.unit) + '</td>' +
                     '<td class="num">' + esc(fmtQty(m.qty)) + '</td></tr>';
             });
         });
+
+        // Ghi chú CHUNG của từng đề nghị (vd "Cần trước thứ Sáu"), kèm tên người đề nghị vì phiếu có thể gom nhiều người.
+        var gn = (opts.notes || []).filter(function (x) { return x && String(x.text || '').trim() !== ''; });
+        var gnHtml = gn.length
+            ? '<div class="pr-sheet-gnotes"><div class="pr-sheet-gnotes-h">Ghi chú:</div><ul>' + gn.map(function (x) {
+                return '<li>' + (x.who ? '<b>' + esc(x.who) + ':</b> ' : '') + esc(x.text) + '</li>';
+            }).join('') + '</ul></div>'
+            : '';
 
         return '<div class="pr-sheet">' +
             '<table class="pr-sheet-info">' +
@@ -931,21 +978,52 @@
                 '<tr><td class="lab">Địa chỉ:</td><td>' + esc(P.company_address || '') + '</td></tr>' +
             '</table>' +
             '<h2 class="pr-sheet-title">PHIẾU ĐỀ NGHỊ MUA ĐỒ</h2>' +
-            '<div class="pr-sheet-date">Ngày ' + dd + ' tháng ' + mm + ' năm ' + now.getFullYear() + '</div>' +
+            '<div class="pr-sheet-date">Ngày ' + dd + ' tháng ' + mm + ' năm ' + when.getFullYear() + '</div>' +
             '<table class="pr-sheet-table"><thead><tr>' +
                 '<th style="width:8%">STT</th><th style="width:17%">Hình</th><th>Tên hàng cần mua</th><th style="width:15%">Đơn vị tính</th><th style="width:14%">Số lượng</th>' +
             '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+            gnHtml +
             '<div class="pr-sheet-sign"><div class="signer">' +
                 '<div class="role">Người lập phiếu</div><div class="sub">(Ký tên)</div>' +
-                '<div class="name">' + esc(titleCase((BOOT.me && BOOT.me.name) || '')) + '</div>' +
+                '<div class="name">' + esc(titleCase(signer)) + '</div>' +
             '</div></div></div>';
     }
 
-    /* ---------- Bản xem trước + Sao chép ảnh / Tải PDF + Xác nhận ---------- */
+    /* ---------- Tờ phiếu: bản xem trước + Sao chép ảnh / Tải PDF ---------- */
+
+    /** Ghi chú CHUNG của các đề nghị → in lên phiếu kèm tên người đề nghị. items: [{note, user_name}] */
+    function generalNotes(items) {
+        return (items || []).filter(function (r) { return r && String(r.note || '').trim() !== ''; })
+            .map(function (r) { return { who: r.user_name || '', text: String(r.note).trim() }; });
+    }
+
+    /**
+     * Chạy 1 thao tác xuất tờ phiếu: act = 'pdf' | 'copy'. Tự khóa/mở các nút ở chân modal và báo kết quả bằng toast.
+     * Trả Promise<'clipboard'|'download'|'pdf'|null> (null = lỗi, đã báo).
+     */
+    function exportSheet(act, merged, opts, foot, btn) {
+        var all = Array.prototype.slice.call(foot.querySelectorAll('.pr-btn')), old = btn.innerHTML;
+        all.forEach(function (x) { x.disabled = true; });
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + (act === 'pdf' ? 'Đang tạo PDF…' : 'Đang tạo ảnh…');
+        return (act === 'pdf' ? downloadSheetPdf(merged, opts) : copySheetImage(merged, opts)).then(function (how) {
+            all.forEach(function (x) { x.disabled = false; }); btn.innerHTML = old;
+            if (how === 'nolib') { PR.toast('Chưa tải được thư viện tạo PDF (cần mạng) — thử lại hoặc dùng "Sao chép ảnh".', 'err'); return null; }
+            if (how === 'fail') { PR.toast(act === 'pdf' ? 'Không tạo được PDF — thử lại.' : 'Không tạo được ảnh — thử lại.', 'err'); return null; }
+            PR.toast(how === 'clipboard'
+                ? 'Đã sao chép ảnh. Mở Zalo/Messenger và dán (Ctrl+V) để gửi người đi mua.'
+                : how === 'pdf'
+                    ? 'Đã tải file PDF về máy. Gửi file này cho người đi mua.'
+                    : 'Trình duyệt không cho sao chép ảnh — đã tải file PNG về máy.');
+            return how;
+        });
+    }
+
+    /** Bản xem trước TRƯỚC khi đặt mua (từ modal gom): xuất xong thì hỏi "Xác nhận gửi đặt mua". */
     function openPreview(reqs, rows, batchModal) {
         var merged = mergeRows(rows);
+        var opts = { notes: generalNotes(reqs) };
         var pv = PR.modal({ title: 'Xem trước ảnh danh sách', cls: 'pr-modal-lg pr-modal-preview' });
-        pv.body.innerHTML = '<div class="pr-preview-wrap">' + sheetHtml(merged) + '</div>';
+        pv.body.innerHTML = '<div class="pr-preview-wrap">' + sheetHtml(merged, opts) + '</div>';
         pv.foot.innerHTML =
             '<button type="button" class="pr-btn pr-btn-ghost" data-r="back">Sửa lại</button>' +
             '<button type="button" class="pr-btn pr-btn-outline" data-r="pdf"><i class="fa-regular fa-file-pdf"></i> Tải PDF</button>' +
@@ -958,19 +1036,9 @@
             if (act === 'back') { pv.close(); return; }
             if (busy) return;
             busy = true;
-            var all = Array.prototype.slice.call(pv.foot.querySelectorAll('.pr-btn')), old = b.innerHTML;
-            all.forEach(function (x) { x.disabled = true; });
-            b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + (act === 'pdf' ? 'Đang tạo PDF…' : 'Đang tạo ảnh…');
-
-            (act === 'pdf' ? downloadSheetPdf(merged) : copySheetImage(merged)).then(function (how) {
-                busy = false; all.forEach(function (x) { x.disabled = false; }); b.innerHTML = old;
-                if (how === 'nolib') { PR.toast('Chưa tải được thư viện tạo PDF (cần mạng) — thử lại hoặc dùng "Sao chép ảnh".', 'err'); return; }
-                if (how === 'fail') { PR.toast(act === 'pdf' ? 'Không tạo được PDF — thử lại.' : 'Không tạo được ảnh — thử lại.', 'err'); return; }
-                PR.toast(how === 'clipboard'
-                    ? 'Đã sao chép ảnh. Mở Zalo/Messenger và dán (Ctrl+V) để gửi người đi mua.'
-                    : how === 'pdf'
-                        ? 'Đã tải file PDF về máy. Gửi file này cho người đi mua.'
-                        : 'Trình duyệt không cho sao chép ảnh — đã tải file PNG về máy.');
+            exportSheet(act, merged, opts, pv.foot, b).then(function (how) {
+                busy = false;
+                if (!how) return;
                 // Bước chốt: chỉ khi admin xác nhận đã gửi, các đề nghị mới đổi sang "Đã đặt mua".
                 PR.confirm((how === 'pdf' ? 'File PDF' : 'Ảnh danh sách') + ' đã sẵn sàng. Xác nhận GỬI ĐẶT MUA ' + reqs.length + ' đề nghị này? Các đề nghị sẽ chuyển sang "Đã đặt mua" và người đề nghị được báo.',
                     { title: 'Xác nhận gửi đặt mua', okText: 'Xác nhận đã gửi', cancelText: 'Chưa gửi' }).then(function (yes) {
@@ -996,25 +1064,85 @@
     }
 
     /**
+     * Thẻ PHIẾU GOM ở tab "Đã xử lý (30 ngày)": các đề nghị đã gom cùng một lần đặt mua hiện thành MỘT thẻ
+     * (danh sách đã gộp lúc xác nhận + các đề nghị trong phiếu). Bấm vào thẻ / nút "Xem lại phiếu" → mở phiếu để sao chép ảnh / tải PDF.
+     */
+    function orderCard(o) {
+        var lines = o.lines || [], LIMIT = 4;
+        var li = lines.map(function (l, i) {
+            return '<li class="' + (i >= LIMIT ? 'pr-more' : '') + '">' +
+                thumbHtml(l.image_url, 'pr-li-thumb') +
+                '<span class="pr-li-name">' + esc(l.item_name) + (l.note ? '<small>' + esc(l.note) + '</small>' : '') + '</span>' +
+                '<b class="pr-li-qty">' + esc(l.qty_text) + ' ' + esc(l.unit) + '</b></li>';
+        }).join('');
+        var more = lines.length > LIMIT
+            ? '<button type="button" class="pr-link-btn pr-toggle-more" data-more="' + (lines.length - LIMIT) + '">+ ' + (lines.length - LIMIT) + ' mục nữa</button>' : '';
+        var chips = (o.requests || []).map(function (r) {
+            return '<span class="pr-ord-chip"><b>' + esc(r.code) + '</b> · ' + esc(r.user_name) + '</span>';
+        }).join('');
+        return '<article class="pr-req pr-ord st-ordered" data-order="' + o.id + '">' +
+            '<header class="pr-req-h">' +
+                '<div class="pr-req-title"><strong><i class="fa-solid fa-layer-group"></i> Phiếu gom #' + o.id + '</strong>' +
+                    '<span class="pr-status pr-st-ordered">Đã đặt mua</span></div>' +
+                '<div class="pr-req-meta">' + esc(o.date_text) + ' ' + esc(o.time_text) + ' · ' + esc(o.by_name) + ' · ' +
+                    o.request_count + ' đề nghị · ' + o.line_count + ' mục</div>' +
+            '</header>' +
+            '<ul class="pr-req-lines">' + li + '</ul>' + more +
+            (chips ? '<div class="pr-ord-reqs"><span class="pr-ord-reqs-h">Gồm:</span>' + chips + '</div>' : '') +
+            '<footer class="pr-req-actions"><button type="button" class="pr-btn pr-btn-sm pr-btn-primary" data-act="view-order">' +
+                '<i class="fa-regular fa-eye"></i> Xem lại phiếu</button></footer>' +
+        '</article>';
+    }
+
+    /**
+     * Xem lại PHIẾU GOM đã đặt mua: dựng lại đúng tờ phiếu từ danh sách đã đóng băng lúc gom (ngày đặt mua + người lập phiếu +
+     * ghi chú), có Sao chép ảnh / Tải PDF. KHÔNG có bước "Xác nhận đặt mua" vì phiếu đã đặt mua rồi.
+     */
+    function openOrderView(o) {
+        var opts = { date: o.created_at, signer: o.by_name, notes: generalNotes(o.requests), name: 'phieu-gom-' + o.id };
+        var pv = PR.modal({ title: 'Phiếu gom #' + o.id, cls: 'pr-modal-lg pr-modal-preview' });
+        pv.body.innerHTML =
+            '<div class="pr-ord-info"><i class="fa-solid fa-circle-check"></i> Đã đặt mua ' + esc(o.date_text) + ' ' + esc(o.time_text) +
+                ' · ' + esc(o.by_name) + ' · ' + o.request_count + ' đề nghị</div>' +
+            '<div class="pr-preview-wrap">' + sheetHtml(o.lines || [], opts) + '</div>';
+        pv.foot.innerHTML =
+            '<button type="button" class="pr-btn pr-btn-ghost" data-r="close">Đóng</button>' +
+            '<button type="button" class="pr-btn pr-btn-outline" data-r="pdf"><i class="fa-regular fa-file-pdf"></i> Tải PDF</button>' +
+            '<button type="button" class="pr-btn pr-btn-primary" data-r="copy"><i class="fa-regular fa-copy"></i> Sao chép ảnh</button>';
+        var busy = false;
+        pv.foot.addEventListener('click', function (e) {
+            var b = e.target.closest('[data-r]'); if (!b) return;
+            var act = b.getAttribute('data-r');
+            if (act === 'close') { pv.close(); return; }
+            if (busy) return;
+            busy = true;
+            exportSheet(act, o.lines || [], opts, pv.foot, b).then(function () { busy = false; });
+        });
+    }
+
+    /**
      * Dựng tờ phiếu ở khổ CỐ ĐỊNH (ngoài màn hình) rồi chụp — ảnh luôn cùng kích thước dù xem trên máy nào.
      * Trả Promise<{canvas, breaks}>: breaks = vị trí (px của canvas) cuối mỗi dòng bảng, để cắt trang PDF không xẻ đôi dòng.
      */
-    function renderSheetCanvas(merged, scale) {
+    function renderSheetCanvas(merged, scale, opts) {
         if (typeof html2canvas === 'undefined') return Promise.reject(new Error('html2canvas'));
         var host = document.createElement('div');
         host.className = 'pr-sheet-capture';
-        host.innerHTML = sheetHtml(merged);
+        host.innerHTML = sheetHtml(merged, opts);
         document.body.appendChild(host);
         var sheet = host.firstElementChild;
 
-        // Chờ ảnh thumbnail tải xong (kể cả lỗi) để không bị ô trống trên ảnh.
-        var imgs = Array.prototype.slice.call(host.querySelectorAll('img'));
-        return Promise.all(imgs.map(function (im) {
-            return im.complete ? Promise.resolve() : new Promise(function (r) { im.onload = im.onerror = r; });
+        // Nạp trước ảnh thumbnail (ảnh NỀN của .pr-sheet-thumb) cho tới khi xong (kể cả lỗi) để không bị ô trống trên ảnh chụp.
+        var urls = Array.prototype.map.call(host.querySelectorAll('.pr-sheet-thumb'), function (el) {
+            var m = /url\(["']?(.*?)["']?\)/.exec(el.style.backgroundImage || '');
+            return m ? m[1] : '';
+        }).filter(Boolean);
+        return Promise.all(urls.map(function (u) {
+            return new Promise(function (r) { var im = new Image(); im.onload = im.onerror = r; im.src = u; });
         })).then(function () {
             scale = scale || 2;
             var top = sheet.getBoundingClientRect().top;
-            var breaks = Array.prototype.slice.call(sheet.querySelectorAll('tr')).map(function (tr) {
+            var breaks = Array.prototype.slice.call(sheet.querySelectorAll('tr, .pr-sheet-gnotes-h, .pr-sheet-gnotes li')).map(function (tr) {
                 return Math.round((tr.getBoundingClientRect().bottom - top) * scale);
             });
             return html2canvas(sheet, { scale: scale, backgroundColor: '#ffffff', useCORS: true })
@@ -1022,8 +1150,9 @@
         }).then(function (r) { host.remove(); return r; }, function (err) { host.remove(); throw err; });
     }
 
-    function fileStamp() {
-        var t = new Date();
+    function fileStamp(d) {
+        var t = d ? new Date(String(d).replace(' ', 'T')) : new Date();
+        if (isNaN(t)) t = new Date();
         return t.getFullYear() + ('0' + (t.getMonth() + 1)).slice(-2) + ('0' + t.getDate()).slice(-2);
     }
 
@@ -1031,8 +1160,8 @@
      * Sao chép ảnh phiếu vào clipboard (ClipboardItem với Promise<Blob> để giữ "user gesture" trong lúc html2canvas chạy — Safari bắt buộc).
      * Trình duyệt không cho (HTTP / thiếu API) → tải file PNG. Trả Promise<'clipboard'|'download'|'fail'>.
      */
-    function copySheetImage(merged) {
-        var blobP = renderSheetCanvas(merged, 2).then(function (r) {
+    function copySheetImage(merged, opts) {
+        var blobP = renderSheetCanvas(merged, 2, opts).then(function (r) {
             return new Promise(function (res, rej) { r.canvas.toBlob(function (b) { b ? res(b) : rej(new Error('blob')); }, 'image/png'); });
         });
 
@@ -1040,7 +1169,7 @@
             return blobP.then(function (blob) {
                 var a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = 'de-nghi-mua-do-' + fileStamp() + '.png';
+                a.download = ((opts && opts.name) || 'de-nghi-mua-do') + '-' + fileStamp(opts && opts.date) + '.png';
                 document.body.appendChild(a); a.click(); a.remove();
                 setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
                 return 'download';
@@ -1062,9 +1191,9 @@
      * tiếng Việt, bảng và hình thumbnail y như bản xem trước. Phiếu dài hơn 1 trang thì cắt TẠI RANH GIỚI DÒNG.
      * Trả Promise<'pdf'|'nolib'|'fail'>.
      */
-    function downloadSheetPdf(merged) {
+    function downloadSheetPdf(merged, opts) {
         if (!(window.jspdf && window.jspdf.jsPDF)) return Promise.resolve('nolib');
-        return renderSheetCanvas(merged, 3).then(function (r) {
+        return renderSheetCanvas(merged, 3, opts).then(function (r) {
             var canvas = r.canvas, W = canvas.width, H = canvas.height;
             var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
             var mg = 10, usableW = 210 - mg * 2, usableH = 297 - mg * 2;
@@ -1090,7 +1219,7 @@
                 first = false;
                 y = end;
             }
-            doc.save('de-nghi-mua-do-' + fileStamp() + '.pdf');
+            doc.save(((opts && opts.name) || 'de-nghi-mua-do') + '-' + fileStamp(opts && opts.date) + '.pdf');
             return 'pdf';
         }).catch(function () { return 'fail'; });
     }

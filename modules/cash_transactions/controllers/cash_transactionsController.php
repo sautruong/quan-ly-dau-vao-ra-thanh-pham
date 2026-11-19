@@ -393,7 +393,10 @@ function pr_request_deleteAction()
 
 /* ---------- Duyệt (admin) ---------- */
 
-/** GET: hàng đợi duyệt. GET: mode = submitted (mặc định, không phân trang) | done (phân trang 10/trang), page */
+/**
+ * GET: hàng đợi duyệt. GET: mode = submitted (mặc định, không phân trang) | done (phân trang 10 mục/trang), page.
+ * mode=done trả thêm 'entries': mỗi phần tử là 1 PHIẾU GOM ({kind:'order', order:{...}}) hoặc 1 đề nghị bị từ chối ({kind:'request', request:{...}}).
+ */
 function pr_review_listAction()
 {
     pr_boot();
@@ -401,9 +404,11 @@ function pr_review_listAction()
     if (!pr_is_approver($user)) ct_json(['ok' => false, 'message' => 'Bạn không có quyền duyệt đề nghị.']);
     $mode = (($_GET['mode'] ?? '') === 'done') ? 'done' : 'submitted';
     $res  = pr_review_list($mode, (int) ($_GET['page'] ?? 1), 10);
-    ct_json(['ok' => true, 'requests' => $res['requests'],
+    $out  = ['ok' => true, 'requests' => $res['requests'],
              'total' => $res['total'], 'page' => $res['page'], 'pages' => $res['pages'], 'per_page' => $res['per_page'],
-             'counts' => pr_counts((int) $user['id'], true)]);
+             'counts' => pr_counts((int) $user['id'], true)];
+    if (isset($res['entries'])) $out['entries'] = $res['entries'];
+    ct_json($out);
 }
 
 /** POST: từ chối đề nghị. POST: id, reason */

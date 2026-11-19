@@ -334,6 +334,16 @@ body.app-has-sidebar.app-sidebar-collapsed .pr-footer { left: var(--app-sb-w-col
 /* ---- Danh sách đơn ---- */
 .pr-list { display: flex; flex-direction: column; gap: 12px; }
 
+/* ---- Thẻ PHIẾU GOM ở tab "Đã xử lý": các đề nghị đã gom cùng một lần đặt mua = MỘT thẻ, bấm để xem lại phiếu ---- */
+.pr-ord { cursor: pointer; border-left: 5px solid var(--pr-green); transition: box-shadow .15s; }
+.pr-ord:hover { box-shadow: 0 3px 12px rgba(0, 0, 0, .12); }
+.pr-ord .pr-req-title strong i { margin-right: 6px; color: var(--pr-green); }
+.pr-ord-reqs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.pr-ord-reqs-h { font-size: 12.5px; font-weight: 700; color: var(--pr-mute); }
+.pr-ord-chip { padding: 3px 10px; border-radius: 999px; background: #f3f4f6; font-size: 12px; color: var(--pr-ink-2); }
+.pr-ord-chip b { color: var(--pr-ink); }
+.pr-ord-info { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px 11px; border-radius: 10px; background: var(--pr-green-soft); color: var(--pr-green-dark); font-size: 13.5px; font-weight: 600; line-height: 1.4; }
+
 /* Phân trang "Đơn của tôi" / "Đã xử lý": « ‹ 1 2 3 › » (tối đa 7 nút 40px → vừa 375px) + dòng "Đơn 11–20 / 87". */
 .pr-pager-wrap:empty { display: none; }
 .pr-pager { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px 0 6px; }
@@ -451,9 +461,22 @@ body.app-has-sidebar.app-sidebar-collapsed .pr-footer { left: var(--app-sb-w-col
 .pr-sheet table.pr-sheet-table th { background: #f3f4f6; text-align: center; font-weight: 700; }
 .pr-sheet table.pr-sheet-table td.c { text-align: center; }
 .pr-sheet table.pr-sheet-table td.num { text-align: right; font-weight: 700; white-space: nowrap; }
-/* Cột hình thumbnail của món — đủ lớn (64px) để người đi mua nhìn ra món; ô trống nếu món chưa có hình. */
+/* Cột hình thumbnail của món — đủ lớn (80px) để người đi mua nhìn ra món; ô trống nếu món chưa có hình.
+   Hình là ảnh NỀN `contain`: phóng ĐỀU ngang dọc cho cả món nằm gọn trong khung vuông (không méo, không cắt). KHÔNG dùng
+   <img object-fit> — html2canvas (thư viện chụp phiếu) không hiểu object-fit và sẽ kéo giãn ảnh dọc cho vừa ô → bị bóp. */
 .pr-sheet table.pr-sheet-table td.img { padding: 4px; text-align: center; }
-.pr-sheet table.pr-sheet-table td.img img { display: block; width: 80px; height: 80px; margin: 0 auto; object-fit: cover; border: 1px solid #9ca3af; background: #fff; }
+.pr-sheet table.pr-sheet-table td.img .pr-sheet-thumb {
+    display: block; width: 80px; height: 80px; margin: 0 auto; border: 1px solid #9ca3af;
+    background-color: #fff; background-position: center; background-repeat: no-repeat; background-size: contain;
+}
+/* Ghi chú người đề nghị nhập cho từng món (nhãn hiệu, quy cách…): dòng nghiêng nhỏ ngay dưới tên hàng. */
+.pr-sheet .pr-sheet-note { margin-top: 3px; font-size: 12.5px; font-style: italic; line-height: 1.35; color: #374151; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pr-sheet .pr-sheet-note span { font-style: normal; font-weight: 700; color: #111; }
+/* Ghi chú CHUNG của từng đề nghị (kèm tên người đề nghị) — dưới bảng, trước chữ ký. */
+.pr-sheet .pr-sheet-gnotes { margin-top: 12px; font-size: 13px; line-height: 1.45; }
+.pr-sheet .pr-sheet-gnotes-h { font-weight: 700; }
+.pr-sheet .pr-sheet-gnotes ul { margin: 2px 0 0; padding-left: 18px; list-style: disc; }
+.pr-sheet .pr-sheet-gnotes li { margin: 1px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 /* Chân bản xem trước có 3 nút (Sửa lại / Tải PDF / Sao chép ảnh): giữ mỗi nút trên MỘT dòng, kể cả 375px. */
 .pr-modal-preview .pr-modal-foot { gap: 8px; }
 .pr-modal-preview .pr-modal-foot .pr-btn { white-space: nowrap; padding: 0 10px; font-size: 14px; gap: 6px; }
@@ -476,7 +499,9 @@ body.app-has-sidebar.app-sidebar-collapsed .pr-footer { left: var(--app-sb-w-col
     .pr-preview-wrap .pr-sheet table.pr-sheet-table { font-size: 12.5px; }
     .pr-preview-wrap .pr-sheet table.pr-sheet-table th, .pr-preview-wrap .pr-sheet table.pr-sheet-table td { padding: 5px 5px; }
     .pr-preview-wrap .pr-sheet table.pr-sheet-table td.img { padding: 3px; }
-    .pr-preview-wrap .pr-sheet table.pr-sheet-table td.img img { width: 48px; height: 48px; }
+    .pr-preview-wrap .pr-sheet table.pr-sheet-table td.img .pr-sheet-thumb { width: 48px; height: 48px; }
+    .pr-preview-wrap .pr-sheet .pr-sheet-note { font-size: 11.5px; }
+    .pr-preview-wrap .pr-sheet .pr-sheet-gnotes { font-size: 12px; }
 }
 
 /* ---- Chỉnh cho màn hẹp (iPhone SE ~375px) ---- */
