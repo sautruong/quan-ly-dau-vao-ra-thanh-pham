@@ -1071,7 +1071,20 @@
         var fxApprove = document.getElementById('pf-fx-approve');
         var fxClose = document.getElementById('pf-fx-close');
         var fxTitle = document.getElementById('pf-fx-title');
-        var curPid = 0, curQty = 0, curApproved = false;
+        // Lời nhắc (admin): khối hiển thị + nút + ô nhập.
+        var fxRemind = document.getElementById('pf-fx-remind');
+        var fxRemindT = document.getElementById('pf-fx-remind-t');
+        var fxNoteBtn = document.getElementById('pf-fx-notebtn');
+        var fxNoteBtnT = document.getElementById('pf-fx-notebtn-t');
+        var fxNoteEdit = document.getElementById('pf-fx-noteedit');
+        var fxNoteText = document.getElementById('pf-fx-notetext');
+        var fxNoteCount = document.getElementById('pf-fx-notecount');
+        var fxNoteSave = document.getElementById('pf-fx-notesave');
+        var fxNoteDel = document.getElementById('pf-fx-notedel');
+        var fxNoteCancel = document.getElementById('pf-fx-notecancel');
+        var curPid = 0, curQty = 0, curApproved = false, curNote = '';
+        // Nhắc duyệt sau "XUẤT KH": danh sách SP chưa duyệt (rmItems) + tập đã duyệt trong phiên này (rmDone).
+        var rmItems = [], rmDone = {}, rmActive = false;
 
         function cardQty(pid) {
             var li = document.querySelector('.product-item[data-product-id="' + pid + '"]');
@@ -1096,19 +1109,115 @@
                 fxAdmin.style.display = '';
                 if (fxApprove) { fxApprove.classList.toggle('is-on', !!res.approved); fxApprove.innerHTML = approveLabel(!!res.approved); }
             } else if (fxAdmin) { fxAdmin.style.display = 'none'; }
+            curNote = String(res.note || '');
+            renderNote();
         }
+
+        /* ---- Lời nhắc (admin nhập; NV thấy trước hình) ---- */
+        function renderNote() {
+            var has = curNote !== '';
+            if (fxRemind) fxRemind.style.display = has ? '' : 'none';
+            if (fxRemindT) fxRemindT.textContent = curNote;
+            if (fxNoteBtnT) fxNoteBtnT.textContent = has ? 'Sửa lời nhắc' : 'Nhập lời nhắc';
+            if (fxNoteBtn) fxNoteBtn.classList.toggle('is-on', has);
+            closeNoteEdit();
+        }
+        function updNoteCount() {
+            if (fxNoteCount && fxNoteText) fxNoteCount.textContent = fxNoteText.value.length + '/' + (fxNoteText.maxLength > 0 ? fxNoteText.maxLength : 500);
+        }
+        function openNoteEdit() {
+            if (!fxNoteEdit || !fxNoteText) return;
+            fxNoteText.value = curNote; updNoteCount();
+            if (fxNoteDel) fxNoteDel.style.display = curNote ? '' : 'none';
+            fxNoteEdit.style.display = '';
+            fxNoteText.focus();
+        }
+        function closeNoteEdit() { if (fxNoteEdit) fxNoteEdit.style.display = 'none'; }
+        function saveNote(text) {
+            if (!curPid) return;
+            var pid = curPid;
+            [fxNoteSave, fxNoteDel, fxNoteCancel].forEach(function (b) { if (b) b.disabled = true; });
+            postForm('formula_note_save', { product_id: pid, note: text }).then(function (res) {
+                if (res && res.ok) {
+                    if (pid === curPid) { curNote = String(res.note || ''); renderNote(); }
+                    toast(res.note ? 'Đã lưu lời nhắc.' : 'Đã xóa lời nhắc.');
+                } else toast((res && res.message) || 'Lưu lời nhắc thất bại.');
+            }).catch(function () { toast('Lỗi mạng khi lưu lời nhắc.'); })
+              .then(function () { [fxNoteSave, fxNoteDel, fxNoteCancel].forEach(function (b) { if (b) b.disabled = false; }); });
+        }
+        if (fxNoteBtn) fxNoteBtn.addEventListener('click', function () {
+            if (fxNoteEdit && fxNoteEdit.style.display !== 'none') closeNoteEdit(); else openNoteEdit();
+        });
+        if (fxNoteText) fxNoteText.addEventListener('input', updNoteCount);
+        if (fxNoteCancel) fxNoteCancel.addEventListener('click', closeNoteEdit);
+        if (fxNoteSave) fxNoteSave.addEventListener('click', function () { saveNote(fxNoteText ? fxNoteText.value : ''); });
+        if (fxNoteDel) fxNoteDel.addEventListener('click', function () {
+            if (confirm('Xóa lời nhắc của công thức này?')) saveNote('');
+        });
         function openFx(pid) {
             curPid = pid; curQty = cardQty(pid);
             if (fxTitle) fxTitle.textContent = 'Công thức — ' + nameOf(pid) + (curQty ? (' (' + curQty + ')') : '');
             fetch(ACTF + 'formula_image_get&product_id=' + pid + '&quantity=' + curQty, { credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (res) {
-                    if (!res || !res.ok) return;
+                    if (!res || !res.ok) { if (rmActive) showReminder(); return; }
                     curApproved = !!res.approved; renderFx(res);
                     if (fxBackdrop) fxBackdrop.classList.add('is-open');
-                }).catch(function () {});
+                }).catch(function () { if (rmActive) showReminder(); });
         }
-        function closeFx() { if (fxBackdrop) fxBackdrop.classList.remove('is-open'); }
+        function closeFx() {
+            if (fxBackdrop) fxBackdrop.classList.remove('is-open');
+            closeNoteEdit();
+            // Đang trong lượt "nhắc duyệt công thức" → quay lại danh sách (SP đã duyệt được gạch khỏi danh sách).
+            if (rmActive) showReminder();
+        }
+
+        /* ---- NV bấm "Xem công thức": lời nhắc (nếu có) hiện TRƯỚC → ẩn dần → rồi mới tới hình ---- */
+        var noteOv = document.getElementById('pf-note-ov');
+        var noteCard = document.getElementById('pf-note-card');
+        var noteProd = document.getElementById('pf-note-prod');
+        var noteText = document.getElementById('pf-note-text');
+        var noteBar = document.getElementById('pf-note-barfill');
+        var noteTimer = 0, noteBusy = false;
+        var NOTE_FADE_OUT = 900;       // ms: thời gian ẩn dần
+        var NOTE_SKIP_AFTER = 1000;    // ms: chạm sớm hơn mốc này bị bỏ qua (tránh bấm lỡ tay là mất lời nhắc)
+
+        function noteHoldMs(text) {    // thời gian đọc: ~2,5s + 60ms/ký tự, kẹp 3,5s…12s
+            return Math.min(12000, Math.max(3500, 2500 + String(text).length * 60));
+        }
+        function showNoteThen(note, prodName, next) {
+            if (!noteOv || !noteCard || !note || noteBusy) { if (!noteBusy) next(); return; }
+            noteBusy = true;
+            var hold = noteHoldMs(note), openedAt = Date.now(), finished = false;
+            if (noteProd) noteProd.textContent = prodName || '';
+            if (noteText) noteText.textContent = note;
+            noteCard.className = 'pf-note-card';
+            if (noteBar) { noteBar.style.transition = 'none'; noteBar.style.width = '100%'; }
+            noteOv.classList.add('is-open');
+            noteOv.setAttribute('aria-hidden', 'false');
+            // Hiện lên (fade-in) + chạy thanh đếm ngược.
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    noteCard.classList.add('is-in');
+                    if (noteBar) { noteBar.style.transition = 'width ' + hold + 'ms linear'; noteBar.style.width = '0%'; }
+                });
+            });
+            function finish() {
+                if (finished) return; finished = true;
+                clearTimeout(noteTimer);
+                noteOv.removeEventListener('click', onTap);
+                noteCard.classList.remove('is-in'); noteCard.classList.add('is-out');   // ẩn dần
+                noteTimer = setTimeout(function () {
+                    noteOv.classList.remove('is-open');
+                    noteOv.setAttribute('aria-hidden', 'true');
+                    noteBusy = false;
+                    next();                                                              // rồi mới tới hình công thức
+                }, NOTE_FADE_OUT);
+            }
+            function onTap() { if (Date.now() - openedAt >= NOTE_SKIP_AFTER) finish(); }
+            noteOv.addEventListener('click', onTap);
+            noteTimer = setTimeout(finish, hold);
+        }
 
         document.addEventListener('click', function (e) {
             var a = e.target.closest && e.target.closest('.pf-formula-admin');
@@ -1116,11 +1225,17 @@
             var v = e.target.closest && e.target.closest('.pf-formula-view');
             if (v) {
                 e.stopPropagation();
+                if (noteBusy) return;
                 var pid = parseInt(v.getAttribute('data-product-id'), 10) || 0;
                 fetch(ACTF + 'formula_image_get&product_id=' + pid + '&quantity=' + cardQty(pid), { credentials: 'same-origin' })
                     .then(function (r) { return r.json(); }).then(function (res) {
-                        if (res && res.ok && res.allowed && res.has_image) openZoom(res.image_url);
-                        else toast('Chưa có hình công thức cho sản lượng này.');
+                        if (!res || !res.ok || !res.allowed) { toast('Chưa có hình công thức cho sản lượng này.'); return; }
+                        var show = function () {
+                            if (res.has_image) openZoom(res.image_url);
+                            else toast('Chưa có hình công thức cho sản lượng này.');
+                        };
+                        // Có lời nhắc → hiện lời nhắc trước (mỗi lần xem đều hiện), hết thì mới tới hình.
+                        if (res.note) showNoteThen(String(res.note), nameOf(pid), show); else show();
                     }).catch(function () {});
             }
         });
@@ -1157,10 +1272,45 @@
                             curApproved = !!res.approved;
                             fxApprove.classList.toggle('is-on', curApproved);
                             fxApprove.innerHTML = approveLabel(curApproved);
+                            if (curApproved) rmDone[curPid] = true; else delete rmDone[curPid];   // cập nhật danh sách nhắc duyệt
                             toast(curApproved ? 'Đã duyệt cho nhân viên xem.' : 'Đã bỏ duyệt.');
                         } else toast((res && res.message) || 'Thao tác thất bại.');
                     }).catch(function () {});
             });
+        }
+
+        /* ---- Nhắc admin duyệt công thức NỐI TIẾP sau "XUẤT KH" (dữ liệu do server nhúng ở data-items) ---- */
+        var rmBackdrop = document.getElementById('pf-rm-backdrop');
+        var rmList = document.getElementById('pf-rm-list');
+        var rmSub = document.getElementById('pf-rm-sub');
+        var rmLater = document.getElementById('pf-rm-later');
+
+        function rmPending() { return rmItems.filter(function (it) { return !rmDone[it.product_id]; }); }
+        function hideReminder() { if (rmBackdrop) { rmBackdrop.classList.remove('is-open'); rmBackdrop.setAttribute('aria-hidden', 'true'); } }
+        function showReminder() {
+            if (!rmBackdrop || !rmList) return;
+            var pend = rmPending();
+            if (!pend.length) {                         // duyệt hết rồi → kết thúc lượt nhắc
+                rmActive = false; hideReminder();
+                if (rmItems.length) toast('Đã duyệt hết công thức cho nhân viên xem.');
+                return;
+            }
+            if (rmSub) rmSub.textContent = 'Kế hoạch vừa xuất có ' + pend.length + ' sản phẩm có công thức chưa duyệt cho nhân viên xem. Bấm vào để xem công thức rồi duyệt:';
+            rmList.innerHTML = '';
+            pend.forEach(function (it) {
+                var li = document.createElement('li'); li.className = 'pf-rm-item';
+                var nm = document.createElement('span'); nm.className = 'pf-rm-name'; nm.textContent = it.name || ('SP #' + it.product_id);
+                if (it.quantity) { var q = document.createElement('span'); q.className = 'pf-rm-qty'; q.textContent = ' (' + it.quantity + ')'; nm.appendChild(q); }
+                var go = document.createElement('button'); go.type = 'button'; go.className = 'pf-rm-go'; go.textContent = 'Xem & duyệt';
+                go.addEventListener('click', function () { hideReminder(); openFx(it.product_id); });
+                li.appendChild(nm); li.appendChild(go); rmList.appendChild(li);
+            });
+            rmBackdrop.classList.add('is-open'); rmBackdrop.setAttribute('aria-hidden', 'false');
+        }
+        if (rmBackdrop) {
+            try { rmItems = JSON.parse(rmBackdrop.getAttribute('data-items') || '[]') || []; } catch (x) { rmItems = []; }
+            if (rmItems.length) { rmActive = true; showReminder(); }
+            if (rmLater) rmLater.addEventListener('click', function () { rmActive = false; hideReminder(); });
         }
 
         /* ---- Viewer full viewport: pinch-zoom 2 ngón + kéo pan ---- */

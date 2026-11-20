@@ -44,6 +44,7 @@ function plan_for_staffAction()
     // CHỈ XEM. Trùng ngày hiện hành thì vẫn là trang thật (sửa được) — không có "bản cũ" của ngày đang chạy.
     $req_date = phs_norm_date($_GET['plan_date'] ?? '');
     $pf_hist  = null;
+    $pf_fx_remind = [];   // SP có công thức chưa duyệt cần nhắc admin (chỉ sau "XUẤT KH")
     if ($req_date !== '' && $req_date !== $live_date) {
         $snap = phs_get($req_date);
         $pf_hist = [
@@ -76,6 +77,16 @@ function plan_for_staffAction()
         require_once __DIR__ . '/../../../libraries/formula_image.php';
         $pf_is_admin      = function_exists('permission_is_admin') && permission_is_admin();
         $formula_approved = fmi_approved_pids($plan_date);
+
+        // Vừa bấm "XUẤT KH" ở board dài ngày (cờ flash do export_plan_by_date đặt) → NỐI TIẾP nhắc admin
+        // vào xem công thức để duyệt cho NV. Cờ dùng 1 lần; quá 10 phút coi như cũ, bỏ qua.
+        if (!empty($_SESSION['pf_fx_remind'])) {
+            $flash_ts = (int) $_SESSION['pf_fx_remind'];
+            unset($_SESSION['pf_fx_remind']);
+            if ($pf_is_admin && (time() - $flash_ts) <= 600) {
+                $pf_fx_remind = fmi_pending_review($plan_date, $plans);
+            }
+        }
     }
 
     $data = [
@@ -83,6 +94,7 @@ function plan_for_staffAction()
         'tasks'            => $tasks ?: [],
         'plan_date'        => $plan_date,
         'pf_is_admin'      => $pf_is_admin,
+        'pf_fx_remind'     => $pf_fx_remind,
         'formula_approved' => $formula_approved,
         'pf_hist'          => $pf_hist,       // null = trang hiện hành; mảng = đang xem lịch sử
         'pf_live_date'     => $live_date,
@@ -921,6 +933,12 @@ function export_plan_by_dateAction()
     $__u = permission_current_user();
     ltpn_mark_and_notify($exp['plan_date'] ?? $plan_date, $__u ? (int) $__u['id'] : 0);
 
+    // Admin vừa xuất → trang KH hằng ngày (mở ngay sau đó) sẽ nhắc admin vào xem công thức để duyệt.
+    // Cờ flash theo session, chỉ đặt cho admin (duyệt công thức là quyền admin).
+    if (function_exists('permission_is_admin') && permission_is_admin()) {
+        $_SESSION['pf_fx_remind'] = time();
+    }
+
     echo json_encode(['success' => true, 'item_count' => (int) $exp['item_count']], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -962,7 +980,25 @@ function formula_image_getAction()
         'image_url'       => $img ? $img['image_file'] : '',
         'source_quantity' => $img ? $img['source_quantity'] : 0,
         'exact'           => $img ? (bool) $img['exact'] : false,
+        'note'            => fmi_get_note($pid),   // lời nhắc: NV thấy TRƯỚC khi xem hình
     ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: admin lưu / xoá LỜI NHẮC của công thức sản phẩm (POST product_id, note; note rỗng = xoá). */
+function formula_note_saveAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_admin(true);
+    fmi_boot();
+    $user  = permission_current_user();
+    $pid   = (int) ($_POST['product_id'] ?? 0);
+    $saved = fmi_set_note($pid, (string) ($_POST['note'] ?? ''), $user ? (int) $user['id'] : 0);
+    if ($saved === false) {
+        echo json_encode(['ok' => false, 'message' => 'Thiếu sản phẩm.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    echo json_encode(['ok' => true, 'note' => $saved], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

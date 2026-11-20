@@ -41,6 +41,8 @@ $pf_plan_ts = (isset($plan_date) && strtotime((string) $plan_date)) ? strtotime(
 // Hình công thức: admin thấy nút quản lý; user thường chỉ thấy nút xem với SP đã duyệt.
 $pf_is_admin      = !empty($pf_is_admin);
 $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? $formula_approved : [];
+// SP có công thức chưa duyệt — chỉ có dữ liệu khi admin VỪA bấm "XUẤT KH" ở board dài ngày (nhắc nối tiếp).
+$pf_fx_remind = (!empty($pf_is_admin) && isset($pf_fx_remind) && is_array($pf_fx_remind)) ? $pf_fx_remind : [];
 ?>
 
 <body>
@@ -346,12 +348,52 @@ $formula_approved = (isset($formula_approved) && is_array($formula_approved)) ? 
                     <img id="pf-fx-img" src="" alt="Công thức" style="display:none;">
                 </div>
                 <div class="pf-fx-note" id="pf-fx-note"></div>
+                <!-- Lời nhắc đã lưu (admin thấy lại ở đây; NV sẽ thấy nó TRƯỚC hình công thức) -->
+                <div class="pf-fx-remind" id="pf-fx-remind" style="display:none;">
+                    <div class="pf-fx-remind-h"><i class="fa-solid fa-bell"></i> Lời nhắc hiện cho nhân viên trước khi xem hình</div>
+                    <div class="pf-fx-remind-t" id="pf-fx-remind-t"></div>
+                </div>
                 <div class="pf-fx-admin" id="pf-fx-admin" style="display:none;">
                     <input type="file" id="pf-fx-file" accept="image/*" hidden>
                     <button type="button" class="pf-fx-act pf-fx-upload" id="pf-fx-upload"><i class="fa-solid fa-upload"></i> Nạp ảnh</button>
                     <button type="button" class="pf-fx-act pf-fx-approve" id="pf-fx-approve"><i class="fa-solid fa-user-check"></i> Duyệt cho NV xem</button>
+                    <button type="button" class="pf-fx-act pf-fx-notebtn" id="pf-fx-notebtn"><i class="fa-solid fa-bell"></i> <span id="pf-fx-notebtn-t">Nhập lời nhắc</span></button>
+                    <div class="pf-fx-noteedit" id="pf-fx-noteedit" style="display:none;">
+                        <textarea id="pf-fx-notetext" rows="4" maxlength="500" placeholder="Nhập lời nhắc — nhân viên sẽ đọc dòng này trước, rồi mới thấy hình công thức…"></textarea>
+                        <div class="pf-fx-noteacts">
+                            <span class="pf-fx-notecount" id="pf-fx-notecount">0/500</span>
+                            <button type="button" class="pf-fx-act" id="pf-fx-notecancel">Hủy</button>
+                            <button type="button" class="pf-fx-act pf-fx-notedel" id="pf-fx-notedel">Xóa lời nhắc</button>
+                            <button type="button" class="pf-fx-act pf-fx-notesave" id="pf-fx-notesave">Lưu</button>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <?php if (!empty($pf_fx_remind)): ?>
+    <!-- NỐI TIẾP SAU "XUẤT KH": nhắc admin vào xem công thức để duyệt cho nhân viên -->
+    <div class="pf-rm-backdrop" id="pf-rm-backdrop" aria-hidden="true"
+         data-items="<?php echo $pf_h(json_encode($pf_fx_remind, JSON_UNESCAPED_UNICODE)); ?>">
+        <div class="pf-rm-modal" role="dialog" aria-modal="true">
+            <div class="pf-rm-head"><i class="fa-solid fa-circle-check"></i> Duyệt công thức cho nhân viên</div>
+            <div class="pf-rm-sub" id="pf-rm-sub"></div>
+            <ul class="pf-rm-list" id="pf-rm-list"></ul>
+            <div class="pf-rm-foot"><button type="button" class="pf-fx-act" id="pf-rm-later">Để sau</button></div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- LỜI NHẮC CÔNG THỨC cho nhân viên: hiện trước → ẩn dần → rồi mới tới hình công thức -->
+    <div class="pf-note-ov" id="pf-note-ov" aria-hidden="true">
+        <div class="pf-note-card" id="pf-note-card">
+            <div class="pf-note-ico"><i class="fa-solid fa-bell"></i></div>
+            <div class="pf-note-title">Lời nhắc</div>
+            <div class="pf-note-prod" id="pf-note-prod"></div>
+            <div class="pf-note-text" id="pf-note-text"></div>
+            <div class="pf-note-bar"><span id="pf-note-barfill"></span></div>
+            <div class="pf-note-hint" id="pf-note-hint">Chạm để xem hình công thức</div>
         </div>
     </div>
 

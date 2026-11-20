@@ -46,6 +46,16 @@ if (!function_exists('fmi_ensure_tables')) {
             approved_at DATETIME NOT NULL,
             PRIMARY KEY (plan_date, product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        /* LỜI NHẮC theo sản phẩm (admin nhập ở modal Công thức): hiện cho NV TRƯỚC khi xem hình công thức.
+           Khác duyệt (theo từng kế hoạch), lời nhắc LƯU MÃI cho tới khi admin sửa/xoá → khoá = product_id. */
+        db_query("CREATE TABLE IF NOT EXISTS product_formula_notes (
+            product_id  INT(11) NOT NULL,
+            note        TEXT NOT NULL,
+            updated_by  INT(11) NOT NULL DEFAULT 0,
+            updated_at  DATETIME NOT NULL,
+            PRIMARY KEY (product_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     }
 
     function fmi_now() { return date('Y-m-d H:i:s'); }
@@ -184,5 +194,71 @@ if (!function_exists('fmi_ensure_tables')) {
         $rows = db_fetch_array("SELECT product_id FROM plan_formula_approvals
                                 WHERE plan_date = '" . escape_string($d) . "'") ?: [];
         return array_map(static fn($r) => (int) $r['product_id'], $rows);
+    }
+
+    /* ============================================================
+     *  LỜI NHẮC CÔNG THỨC (theo sản phẩm, lưu cho tới khi đổi/xoá)
+     * ============================================================ */
+
+    /** Độ dài tối đa của lời nhắc (ký tự). */
+    function fmi_note_max() { return 500; }
+
+    /** Lời nhắc đã lưu của sản phẩm ('' nếu chưa có). */
+    function fmi_get_note($product_id)
+    {
+        fmi_ensure_tables();
+        $pid = (int) $product_id;
+        if ($pid <= 0) return '';
+        $row = db_fetch_row("SELECT note FROM product_formula_notes WHERE product_id = $pid LIMIT 1");
+        return $row ? trim((string) $row['note']) : '';
+    }
+
+    /**
+     * Lưu lời nhắc. $note rỗng (sau trim) = XOÁ lời nhắc. Trả chuỗi đã lưu ('' nếu đã xoá) hoặc false nếu pid sai.
+     * Giữ nguyên xuống dòng; cắt ở fmi_note_max() ký tự.
+     */
+    function fmi_set_note($product_id, $note, $by = 0)
+    {
+        fmi_ensure_tables();
+        $pid = (int) $product_id;
+        if ($pid <= 0) return false;
+        $note = str_replace(["\r\n", "\r"], "\n", (string) $note);
+        $note = trim($note);
+        if (function_exists('mb_substr')) $note = mb_substr($note, 0, fmi_note_max(), 'UTF-8');
+        else $note = substr($note, 0, fmi_note_max());
+
+        if ($note === '') {
+            db_delete('product_formula_notes', "product_id = $pid");
+            return '';
+        }
+        db_query("INSERT INTO product_formula_notes (product_id, note, updated_by, updated_at)
+                  VALUES ($pid, '" . escape_string($note) . "', " . (int) $by . ", '" . fmi_now() . "')
+                  ON DUPLICATE KEY UPDATE note = VALUES(note), updated_by = VALUES(updated_by), updated_at = VALUES(updated_at)");
+        return $note;
+    }
+
+    /* ============================================================
+     *  NHẮC ADMIN DUYỆT CÔNG THỨC SAU KHI "XUẤT KH"
+     * ============================================================ */
+
+    /**
+     * Các sản phẩm trong kế hoạch $plans (mảng dòng production_plans: product_id, quantity, product_name)
+     * ĐÃ CÓ hình công thức (đúng sản lượng hoặc lân cận ±3%) nhưng CHƯA được duyệt cho $plan_date
+     * → admin cần vào xem để duyệt cho NV. Mỗi sản phẩm xuất hiện 1 lần.
+     * Trả [['product_id'=>int,'name'=>string,'quantity'=>int], ...].
+     */
+    function fmi_pending_review($plan_date, $plans)
+    {
+        $approved = array_flip(fmi_approved_pids($plan_date));
+        $out = []; $seen = [];
+        foreach ((array) $plans as $p) {
+            $pid = (int) ($p['product_id'] ?? 0);
+            if ($pid <= 0 || isset($seen[$pid]) || isset($approved[$pid])) continue;
+            $seen[$pid] = true;
+            $qty = (int) ($p['quantity'] ?? 0);
+            if (!fmi_find_image($pid, $qty)) continue;
+            $out[] = ['product_id' => $pid, 'name' => (string) ($p['product_name'] ?? ''), 'quantity' => $qty];
+        }
+        return $out;
     }
 }
