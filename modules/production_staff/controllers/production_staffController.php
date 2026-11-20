@@ -981,7 +981,9 @@ function formula_image_getAction()
         'source_quantity' => $img ? $img['source_quantity'] : 0,
         'exact'           => $img ? (bool) $img['exact'] : false,
         'note'            => fmi_get_note($pid),   // lời nhắc (HTML đã lọc): NV thấy TRƯỚC khi xem hình
-        'description'     => fmi_get_desc($pid, $qty),   // mô tả (chữ thuần): hiện ở CHÂN hình rồi ẩn
+        // mô tả (chữ thuần): hiện ở CHÂN hình rồi ẩn — chỉ kèm theo HÌNH: chưa có hình thì NV không nhận mô tả
+        // (admin vẫn nhận để soạn sẵn). Lời nhắc ở trên thì KHÔNG phụ thuộc hình.
+        'description'     => ($img || $isAdmin) ? fmi_get_desc($pid, $qty) : '',
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -1041,6 +1043,19 @@ function formula_image_uploadAction()
     echo json_encode(!empty($res['ok'])
         ? ['ok' => true, 'image_url' => $res['image_file']]
         : ['ok' => false, 'message' => $res['message'] ?? 'Lỗi lưu ảnh.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: admin GỠ hình công thức đang hiển thị cho (product, qty) — xoá DB + file ảnh (POST product_id, quantity). */
+function formula_image_deleteAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_admin(true);
+    fmi_boot();
+    $res = fmi_delete_image((int) ($_POST['product_id'] ?? 0), (int) ($_POST['quantity'] ?? 0));
+    echo json_encode(!empty($res['ok'])
+        ? ['ok' => true, 'quantity' => (int) $res['quantity']]
+        : ['ok' => false, 'message' => $res['message'] ?? 'Gỡ hình thất bại.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

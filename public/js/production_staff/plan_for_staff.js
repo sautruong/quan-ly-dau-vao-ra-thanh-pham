@@ -1094,6 +1094,8 @@
         var fxDescDel = document.getElementById('pf-fx-descdel');
         var fxDescCancel = document.getElementById('pf-fx-desccancel');
         var curPid = 0, curQty = 0, curApproved = false, curNote = '', curDesc = '';
+        var curHasImage = false, curExact = false, curSrcQty = 0, fxIsAdmin = false, uploading = false;
+        var fxDelImg = document.getElementById('pf-fx-delimg');   // nút "Gỡ hình" (chỉ hiện khi đang có hình)
         // Nhắc duyệt sau "XUẤT KH": danh sách SP chưa duyệt (rmItems) + tập đã duyệt trong phiên này (rmDone).
         var rmItems = [], rmDone = {}, rmActive = false;
 
@@ -1112,10 +1114,20 @@
                       : '<i class="fa-solid fa-user-check"></i> Duyệt cho NV xem';
         }
         function renderFx(res) {
+            curHasImage = !!res.has_image; curExact = !!res.exact; fxIsAdmin = !!res.is_admin;
+            curSrcQty = res.has_image ? (parseInt(res.source_quantity, 10) || 0) : 0;
+            if (fxDelImg) fxDelImg.style.display = curHasImage ? '' : 'none';
             if (res.has_image) { fxImg.src = res.image_url; fxImg.style.display = ''; fxEmpty.style.display = 'none'; }
-            else { fxImg.style.display = 'none'; fxEmpty.style.display = ''; }
+            else {
+                fxImg.style.display = 'none'; fxEmpty.style.display = '';
+                fxEmpty.textContent = res.is_admin
+                    ? 'Chưa có hình công thức.\nKéo thả ảnh vào đây, dán (Ctrl+V) hoặc bấm Nạp ảnh.'
+                    : 'Chưa có hình công thức.';
+            }
             if (fxNote) fxNote.textContent = (res.has_image && !res.exact)
                 ? ('Đang dùng ảnh của sản lượng ' + res.source_quantity + ' (lân cận ±3%).') : '';
+            var dh = document.getElementById('pf-fx-desc-hint');   // mô tả chỉ hiện cho NV khi đã có hình
+            if (dh) dh.textContent = res.has_image ? '(hiện ở chân hình)' : '(chỉ hiện khi đã có hình công thức)';
             if (res.is_admin && fxAdmin) {
                 fxAdmin.style.display = '';
                 if (fxApprove) { fxApprove.classList.toggle('is-on', !!res.approved); fxApprove.innerHTML = approveLabel(!!res.approved); }
@@ -1357,6 +1369,18 @@
             noteTimer = setTimeout(finish, hold);
         }
 
+        // Hình mẫu (SVG nhúng sẵn, không cần file ảnh) cho SP đã duyệt nhưng chưa có hình công thức.
+        var NO_FORMULA_IMG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">' +
+            '<rect width="800" height="600" rx="28" fill="#f3f4f6"/>' +
+            '<rect x="16" y="16" width="768" height="568" rx="20" fill="none" stroke="#c4c8cf" stroke-width="4" stroke-dasharray="14 12"/>' +
+            '<g transform="translate(300 120)" fill="none" stroke="#9aa1ab" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">' +
+              '<rect x="0" y="0" width="200" height="150" rx="18"/><circle cx="60" cy="48" r="16"/>' +
+              '<path d="M14 134 L74 84 L112 112 L150 70 L186 118"/></g>' +
+            '<g font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700" fill="#4b5563" text-anchor="middle">' +
+              '<text x="400" y="392">Chưa có hình công thức</text><text x="400" y="448">được duyệt</text></g>' +
+            '</svg>');
+
         document.addEventListener('click', function (e) {
             var a = e.target.closest && e.target.closest('.pf-formula-admin');
             if (a) { e.stopPropagation(); openFx(parseInt(a.getAttribute('data-product-id'), 10) || 0); return; }
@@ -1371,7 +1395,9 @@
                         var show = function () {
                             // Truyền kèm lời nhắc (nút "Xem lại lời nhắc") + mô tả (chữ ở chân hình rồi ẩn).
                             if (res.has_image) openZoom(res.image_url, String(res.note || ''), nameOf(pid), String(res.description || ''));
-                            else toast('Chưa có hình công thức cho sản lượng này.');
+                            // Đã duyệt nhưng CHƯA có hình: vẫn mở viewer với HÌNH MẪU "Chưa có hình công thức được duyệt".
+                            // Lời nhắc vẫn hiện (trước đó + nút "Xem lại lời nhắc"); mô tả thì PHẢI có hình mới hiện → truyền ''.
+                            else openZoom(NO_FORMULA_IMG, String(res.note || ''), nameOf(pid), '');
                         };
                         // Có lời nhắc → hiện lời nhắc trước (mỗi lần xem đều hiện), hết thì mới tới hình.
                         if (res.note) showNoteThen(String(res.note), nameOf(pid), show); else show();
@@ -1383,30 +1409,132 @@
         // để không mất lời nhắc đang soạn dở / thao tác dở do lỡ chạm.
         if (fxImg) fxImg.addEventListener('click', function () { if (fxImg.src) openZoom(fxImg.src, curNote, nameOf(curPid), curDesc); });
 
+        /* ---- NẠP ẢNH công thức — 3 cách, cùng một đường lưu: (1) nút "Nạp ảnh" chọn file từ máy,
+              (2) KÉO THẢ ảnh vào modal, (3) DÁN ảnh bằng Ctrl+V. ---- */
+        var imgWrap = document.getElementById('pf-fx-imgwrap');
+        var EXT_OK = /\.(jpe?g|png|webp|gif)$/i;
+        var MIME_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+
+        // Ảnh dán/kéo từ nơi khác thường không có đuôi file hợp lệ (vd "image" / rỗng) → đặt tên theo MIME. Không hợp lệ → null.
+        function normalizeImageFile(f) {
+            if (!f) return null;
+            if (EXT_OK.test(f.name || '')) return f;
+            var ext = MIME_EXT[f.type];
+            if (!ext) return null;
+            try { return new File([f], 'formula.' + ext, { type: f.type }); } catch (x) { return null; }
+        }
+        function fxOpen() { return !!(fxBackdrop && fxBackdrop.classList.contains('is-open')); }
+
+        function uploadImage(file, askReplace) {
+            if (!curPid || uploading) return;
+            var f = normalizeImageFile(file);
+            if (!f) { toast('Chỉ nhận ảnh JPG/PNG/WEBP/GIF.'); return; }
+            var qty = cardQty(curPid) || curQty;
+            if (!qty) { toast('Chưa có sản lượng để gắn công thức.'); return; }
+            // Kéo thả / dán dễ nhầm tay mà ghi đè ảnh cũ (file cũ bị xoá) → hỏi trước. Chỉ khi hình đang hiện ĐÚNG sản lượng này
+            // (hình lân cận ±3% thì nạp mới là tạo hình riêng, không ghi đè).
+            if (askReplace && curHasImage && curExact && !confirm('Thay hình công thức hiện tại bằng hình mới?')) return;
+
+            var pid = curPid;
+            uploading = true;
+            if (imgWrap) imgWrap.classList.add('is-busy');
+            if (fxUpload) fxUpload.disabled = true;
+            var fd = new FormData();
+            fd.append('product_id', pid); fd.append('quantity', qty); fd.append('image', f);
+            fetch(ACTF + 'formula_image_upload', { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); }).then(function (res) {
+                    if (res && res.ok) {
+                        if (pid === curPid) {
+                            fxImg.src = res.image_url + '?t=' + Date.now(); fxImg.style.display = ''; fxEmpty.style.display = 'none';
+                            curHasImage = true; curExact = true; curSrcQty = qty;
+                            if (fxDelImg) fxDelImg.style.display = '';
+                            if (fxNote) fxNote.textContent = '';
+                            var dh = document.getElementById('pf-fx-desc-hint'); if (dh) dh.textContent = '(hiện ở chân hình)';
+                        }
+                        toast('Đã lưu ảnh công thức.');
+                        // Mô tả đi theo HÌNH: hình mới đúng sản lượng có thể khác hình lân cận trước đó → nạp lại mô tả đúng.
+                        fetch(ACTF + 'formula_image_get&product_id=' + pid + '&quantity=' + curQty, { credentials: 'same-origin' })
+                            .then(function (r) { return r.json(); }).then(function (g) {
+                                if (g && g.ok && pid === curPid) { curDesc = String(g.description || ''); renderDesc(); }
+                            }).catch(function () {});
+                    } else toast((res && res.message) || 'Lưu ảnh thất bại.');
+                }).catch(function () { toast('Lỗi mạng khi tải ảnh.'); })
+                .then(function () {
+                    uploading = false;
+                    if (imgWrap) imgWrap.classList.remove('is-busy');
+                    if (fxUpload) fxUpload.disabled = false;
+                });
+        }
+
+        // GỠ hình công thức (xoá hình + file trên máy chủ). Giữ nguyên duyệt / lời nhắc / mô tả.
+        if (fxDelImg) fxDelImg.addEventListener('click', function () {
+            if (!curPid || !curHasImage || uploading) return;
+            var qty = cardQty(curPid) || curQty;
+            var msg = curExact
+                ? 'Gỡ hình công thức của sản lượng ' + curSrcQty + '?\nNhân viên sẽ thấy "Chưa có hình công thức được duyệt" cho tới khi nạp hình mới.'
+                : 'Đang dùng hình của sản lượng ' + curSrcQty + ' (dùng chung cho các sản lượng lân cận ±3%).\nGỡ hình này sẽ làm các sản lượng đó cũng mất hình. Vẫn gỡ?';
+            if (!confirm(msg)) return;
+            var pid = curPid;
+            uploading = true; fxDelImg.disabled = true;
+            if (fxUpload) fxUpload.disabled = true;
+            postForm('formula_image_delete', { product_id: pid, quantity: qty }).then(function (res) {
+                if (!(res && res.ok)) { toast((res && res.message) || 'Gỡ hình thất bại.'); return; }
+                toast('Đã gỡ hình công thức.');
+                // Nạp lại trạng thái từ server: gỡ hình đúng sản lượng có thể lộ ra hình lân cận (±3%) hoặc không còn hình nào.
+                return fetch(ACTF + 'formula_image_get&product_id=' + pid + '&quantity=' + curQty, { credentials: 'same-origin' })
+                    .then(function (r) { return r.json(); }).then(function (g) {
+                        if (g && g.ok && pid === curPid) { curApproved = !!g.approved; renderFx(g); }
+                    });
+            }).catch(function () { toast('Lỗi mạng khi gỡ hình.'); })
+              .then(function () { uploading = false; fxDelImg.disabled = false; if (fxUpload) fxUpload.disabled = false; });
+        });
+
+        // (1) Chọn file từ máy.
         if (fxUpload && fxFile) {
             fxUpload.addEventListener('click', function () { fxFile.click(); });
             fxFile.addEventListener('change', function () {
-                if (!fxFile.files || !fxFile.files[0] || !curPid) return;
-                var qty = cardQty(curPid) || curQty;
-                if (!qty) { toast('Chưa có sản lượng để gắn công thức.'); return; }
-                var fd = new FormData();
-                fd.append('product_id', curPid); fd.append('quantity', qty); fd.append('image', fxFile.files[0]);
-                fetch(ACTF + 'formula_image_upload', { method: 'POST', body: fd, credentials: 'same-origin' })
-                    .then(function (r) { return r.json(); }).then(function (res) {
-                        fxFile.value = '';
-                        if (res && res.ok) {
-                            fxImg.src = res.image_url + '?t=' + Date.now(); fxImg.style.display = ''; fxEmpty.style.display = 'none';
-                            if (fxNote) fxNote.textContent = ''; toast('Đã lưu ảnh công thức.');
-                            // Mô tả đi theo HÌNH: hình mới đúng sản lượng có thể khác hình lân cận trước đó → nạp lại mô tả đúng.
-                            var upPid = curPid;
-                            fetch(ACTF + 'formula_image_get&product_id=' + upPid + '&quantity=' + curQty, { credentials: 'same-origin' })
-                                .then(function (r) { return r.json(); }).then(function (g) {
-                                    if (g && g.ok && upPid === curPid) { curDesc = String(g.description || ''); renderDesc(); }
-                                }).catch(function () {});
-                        } else toast((res && res.message) || 'Lưu ảnh thất bại.');
-                    }).catch(function () { toast('Lỗi mạng khi tải ảnh.'); });
+                var f = fxFile.files && fxFile.files[0];
+                fxFile.value = '';
+                if (f) uploadImage(f, false);   // chọn file chủ động → không hỏi lại
             });
         }
+
+        // (2) Kéo thả: thả ở BẤT KỲ đâu trong modal đều nhận (khung hình sáng lên); không để trình duyệt mở ảnh thành trang mới.
+        function dragHasFiles(e) {
+            var t = e.dataTransfer && e.dataTransfer.types;
+            return !!t && Array.prototype.indexOf.call(t, 'Files') >= 0;
+        }
+        if (fxBackdrop) {
+            var dragDepth = 0;
+            var setDrag = function (on) { if (imgWrap) imgWrap.classList.toggle('is-drag', on && fxIsAdmin); };
+            fxBackdrop.addEventListener('dragenter', function (e) { if (!dragHasFiles(e)) return; e.preventDefault(); dragDepth++; setDrag(true); });
+            fxBackdrop.addEventListener('dragover', function (e) { if (!dragHasFiles(e)) return; e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = fxIsAdmin ? 'copy' : 'none'; setDrag(true); });
+            fxBackdrop.addEventListener('dragleave', function (e) { if (!dragHasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (dragDepth === 0) setDrag(false); });
+            fxBackdrop.addEventListener('drop', function (e) {
+                if (!dragHasFiles(e)) return;
+                e.preventDefault(); dragDepth = 0; setDrag(false);
+                if (!fxIsAdmin) return;
+                var files = Array.prototype.slice.call(e.dataTransfer.files || []);
+                var img = files.filter(function (f) { return /^image\//.test(f.type) || EXT_OK.test(f.name || ''); })[0];
+                if (!img) { toast('Chỉ nhận ảnh JPG/PNG/WEBP/GIF.'); return; }
+                uploadImage(img, true);
+            });
+        }
+
+        // (3) Dán (Ctrl+V): khi modal đang mở và clipboard có ẢNH. Đang gõ chữ trong ô soạn mà clipboard có chữ → để dán chữ như thường.
+        document.addEventListener('paste', function (e) {
+            if (!fxOpen() || !fxIsAdmin || !e.clipboardData) return;
+            var img = null, items = e.clipboardData.items || [];
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file' && /^image\//.test(items[i].type)) { img = items[i].getAsFile(); break; }
+            }
+            if (!img) return;
+            var ae = document.activeElement;
+            var typing = ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT' || ae.isContentEditable);
+            if (typing && (e.clipboardData.getData('text/plain') || '').length) return;   // clipboard có cả chữ → dán chữ
+            e.preventDefault();
+            uploadImage(img, true);
+        });
         if (fxApprove) {
             fxApprove.addEventListener('click', function () {
                 if (!curPid) return;

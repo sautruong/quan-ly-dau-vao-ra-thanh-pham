@@ -166,6 +166,36 @@ if (!function_exists('fmi_ensure_tables')) {
         return ['ok' => true, 'image_file' => $rel];
     }
 
+    /**
+     * GỠ hình công thức đang hiển thị cho (sản phẩm, sản lượng thẻ): xoá dòng DB + file ảnh trên máy chủ.
+     * "Hình đang hiển thị" = hình đúng sản lượng, hoặc hình lân cận ±3% nếu chưa có hình riêng → gỡ hình GỐC đó
+     * (nên các sản lượng lân cận dùng chung hình ấy cũng mất hình). Giữ nguyên duyệt / lời nhắc / mô tả.
+     * Trả ['ok'=>true,'quantity'=>sản lượng gốc của hình đã gỡ] hoặc ['ok'=>false,'message'=>...].
+     */
+    function fmi_delete_image($product_id, $quantity)
+    {
+        fmi_ensure_tables();
+        $pid = (int) $product_id;
+        if ($pid <= 0) return ['ok' => false, 'message' => 'Thiếu sản phẩm.'];
+        $img = fmi_find_image($pid, $quantity);
+        if (!$img) return ['ok' => false, 'message' => 'Chưa có hình công thức để gỡ.'];
+
+        $q   = (int) $img['source_quantity'];
+        $row = db_fetch_row("SELECT id, image_file FROM product_formula_images WHERE product_id = $pid AND quantity = $q LIMIT 1");
+        if (!$row) return ['ok' => false, 'message' => 'Chưa có hình công thức để gỡ.'];
+        db_delete('product_formula_images', 'id = ' . (int) $row['id']);
+
+        // Xoá file: CHỈ trong thư mục formula_images và theo TÊN file (basename) — không bao giờ xoá file ngoài thư mục này,
+        // dù cột image_file có trỏ đi đâu; và không xoá nếu dòng khác còn dùng chung đúng file đó.
+        $name = basename(str_replace('\\', '/', (string) $row['image_file']));
+        if ($name !== '' && $name !== '.' && $name !== '..') {
+            $still = db_num_rows("SELECT 1 FROM product_formula_images WHERE image_file LIKE '%" . escape_string($name) . "' LIMIT 1");
+            $abs   = APPPATH . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, fmi_dir_rel()) . DIRECTORY_SEPARATOR . $name;
+            if (!$still && is_file($abs)) @unlink($abs);
+        }
+        return ['ok' => true, 'quantity' => $q];
+    }
+
     /* ============================================================
      *  DUYỆT THEO TỪNG KẾ HOẠCH
      * ============================================================ */

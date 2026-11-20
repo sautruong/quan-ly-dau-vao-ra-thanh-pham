@@ -355,12 +355,14 @@ $pf_fx_remind = (!empty($pf_is_admin) && isset($pf_fx_remind) && is_array($pf_fx
                 </div>
                 <!-- Mô tả công thức đã lưu (NV thấy ở chân hình một lúc rồi ẩn; chạm vào hình thì hiện lại) -->
                 <div class="pf-fx-desc" id="pf-fx-desc" style="display:none;">
-                    <div class="pf-fx-desc-h"><i class="fa-solid fa-align-left"></i> Mô tả công thức (hiện ở chân hình)</div>
+                    <div class="pf-fx-desc-h"><i class="fa-solid fa-align-left"></i> Mô tả công thức <span id="pf-fx-desc-hint">(hiện ở chân hình)</span></div>
                     <div class="pf-fx-desc-t" id="pf-fx-desc-t"></div>
                 </div>
                 <div class="pf-fx-admin" id="pf-fx-admin" style="display:none;">
+                    <div class="pf-fx-uphint"><i class="fa-regular fa-images"></i> Nạp ảnh: bấm <b>Nạp ảnh</b> để chọn từ máy, <b>kéo thả</b> ảnh vào khung hình, hoặc dán ảnh bằng <b>Ctrl+V</b>.</div>
                     <input type="file" id="pf-fx-file" accept="image/*" hidden>
                     <button type="button" class="pf-fx-act pf-fx-upload" id="pf-fx-upload"><i class="fa-solid fa-upload"></i> Nạp ảnh</button>
+                    <button type="button" class="pf-fx-act pf-fx-notedel" id="pf-fx-delimg" style="display:none;"><i class="fa-solid fa-trash-can"></i> Gỡ hình</button>
                     <button type="button" class="pf-fx-act pf-fx-approve" id="pf-fx-approve"><i class="fa-solid fa-user-check"></i> Duyệt cho NV xem</button>
                     <button type="button" class="pf-fx-act pf-fx-notebtn" id="pf-fx-notebtn"><i class="fa-solid fa-bell"></i> <span id="pf-fx-notebtn-t">Nhập lời nhắc</span></button>
                     <button type="button" class="pf-fx-act pf-fx-descbtn" id="pf-fx-descbtn"><i class="fa-solid fa-align-left"></i> <span id="pf-fx-descbtn-t">Nhập mô tả</span></button>
