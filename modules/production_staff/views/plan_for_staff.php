@@ -351,15 +351,44 @@ $pf_fx_remind = (!empty($pf_is_admin) && isset($pf_fx_remind) && is_array($pf_fx
                 <!-- Lời nhắc đã lưu (admin thấy lại ở đây; NV sẽ thấy nó TRƯỚC hình công thức) -->
                 <div class="pf-fx-remind" id="pf-fx-remind" style="display:none;">
                     <div class="pf-fx-remind-h"><i class="fa-solid fa-bell"></i> Lời nhắc hiện cho nhân viên trước khi xem hình</div>
-                    <div class="pf-fx-remind-t" id="pf-fx-remind-t"></div>
+                    <div class="pf-fx-remind-t pf-rich" id="pf-fx-remind-t"></div>
+                </div>
+                <!-- Mô tả công thức đã lưu (NV thấy ở chân hình một lúc rồi ẩn; chạm vào hình thì hiện lại) -->
+                <div class="pf-fx-desc" id="pf-fx-desc" style="display:none;">
+                    <div class="pf-fx-desc-h"><i class="fa-solid fa-align-left"></i> Mô tả công thức (hiện ở chân hình)</div>
+                    <div class="pf-fx-desc-t" id="pf-fx-desc-t"></div>
                 </div>
                 <div class="pf-fx-admin" id="pf-fx-admin" style="display:none;">
                     <input type="file" id="pf-fx-file" accept="image/*" hidden>
                     <button type="button" class="pf-fx-act pf-fx-upload" id="pf-fx-upload"><i class="fa-solid fa-upload"></i> Nạp ảnh</button>
                     <button type="button" class="pf-fx-act pf-fx-approve" id="pf-fx-approve"><i class="fa-solid fa-user-check"></i> Duyệt cho NV xem</button>
                     <button type="button" class="pf-fx-act pf-fx-notebtn" id="pf-fx-notebtn"><i class="fa-solid fa-bell"></i> <span id="pf-fx-notebtn-t">Nhập lời nhắc</span></button>
+                    <button type="button" class="pf-fx-act pf-fx-descbtn" id="pf-fx-descbtn"><i class="fa-solid fa-align-left"></i> <span id="pf-fx-descbtn-t">Nhập mô tả</span></button>
+                    <div class="pf-fx-descedit" id="pf-fx-descedit" style="display:none;">
+                        <textarea id="pf-fx-desctext" rows="3" maxlength="300" placeholder="Mô tả công thức — nhân viên thấy ở chân hình một lúc rồi tự ẩn (chạm vào hình để hiện lại)…"></textarea>
+                        <div class="pf-fx-noteacts">
+                            <span class="pf-fx-notecount" id="pf-fx-desccount">0/300</span>
+                            <button type="button" class="pf-fx-act" id="pf-fx-desccancel">Hủy</button>
+                            <button type="button" class="pf-fx-act pf-fx-notedel" id="pf-fx-descdel">Xóa mô tả</button>
+                            <button type="button" class="pf-fx-act pf-fx-notesave" id="pf-fx-descsave">Lưu</button>
+                        </div>
+                    </div>
                     <div class="pf-fx-noteedit" id="pf-fx-noteedit" style="display:none;">
-                        <textarea id="pf-fx-notetext" rows="4" maxlength="500" placeholder="Nhập lời nhắc — nhân viên sẽ đọc dòng này trước, rồi mới thấy hình công thức…"></textarea>
+                        <!-- Soạn lời nhắc: in đậm / nghiêng / gạch chân / gạch đầu dòng / màu chữ cơ bản -->
+                        <div class="pf-fx-rt-bar" id="pf-fx-rt-bar" role="toolbar" aria-label="Định dạng lời nhắc">
+                            <button type="button" class="pf-rt-btn" data-cmd="bold" title="In đậm" aria-label="In đậm"><b>B</b></button>
+                            <button type="button" class="pf-rt-btn" data-cmd="italic" title="In nghiêng" aria-label="In nghiêng"><i>I</i></button>
+                            <button type="button" class="pf-rt-btn" data-cmd="underline" title="Gạch chân" aria-label="Gạch chân"><u>U</u></button>
+                            <button type="button" class="pf-rt-btn" data-cmd="insertUnorderedList" title="Gạch đầu dòng" aria-label="Gạch đầu dòng"><i class="fa-solid fa-list-ul"></i></button>
+                            <span class="pf-rt-sep" aria-hidden="true"></span>
+                            <button type="button" class="pf-rt-color" data-color="#111111" style="--c:#111111" title="Màu đen" aria-label="Màu đen"></button>
+                            <button type="button" class="pf-rt-color" data-color="#dc2626" style="--c:#dc2626" title="Màu đỏ" aria-label="Màu đỏ"></button>
+                            <button type="button" class="pf-rt-color" data-color="#ea580c" style="--c:#ea580c" title="Màu cam" aria-label="Màu cam"></button>
+                            <button type="button" class="pf-rt-color" data-color="#16a34a" style="--c:#16a34a" title="Màu xanh lá" aria-label="Màu xanh lá"></button>
+                            <button type="button" class="pf-rt-color" data-color="#2563eb" style="--c:#2563eb" title="Màu xanh dương" aria-label="Màu xanh dương"></button>
+                        </div>
+                        <div id="pf-fx-notetext" class="pf-fx-rt-area pf-rich" contenteditable="true" role="textbox" aria-multiline="true"
+                             data-placeholder="Nhập lời nhắc — nhân viên sẽ đọc phần này trước, rồi mới thấy hình công thức…"></div>
                         <div class="pf-fx-noteacts">
                             <span class="pf-fx-notecount" id="pf-fx-notecount">0/500</span>
                             <button type="button" class="pf-fx-act" id="pf-fx-notecancel">Hủy</button>
@@ -391,9 +420,9 @@ $pf_fx_remind = (!empty($pf_is_admin) && isset($pf_fx_remind) && is_array($pf_fx
             <div class="pf-note-ico"><i class="fa-solid fa-bell"></i></div>
             <div class="pf-note-title">Lời nhắc</div>
             <div class="pf-note-prod" id="pf-note-prod"></div>
-            <div class="pf-note-text" id="pf-note-text"></div>
+            <div class="pf-note-text pf-rich" id="pf-note-text"></div>
             <div class="pf-note-bar"><span id="pf-note-barfill"></span></div>
-            <div class="pf-note-hint" id="pf-note-hint">Chạm để xem hình công thức</div>
+            <button type="button" class="pf-note-ok" id="pf-note-ok">Đã hiểu</button>
         </div>
     </div>
 
@@ -401,6 +430,21 @@ $pf_fx_remind = (!empty($pf_is_admin) && isset($pf_fx_remind) && is_array($pf_fx
     <div class="pf-zoom" id="pf-zoom" aria-hidden="true">
         <button type="button" class="pf-zoom-close" id="pf-zoom-close" aria-label="Đóng">&times;</button>
         <img id="pf-zoom-img" src="" alt="Công thức" draggable="false">
+        <!-- Mô tả công thức: hiện ở chân hình một lúc rồi ẩn; chạm vào hình → hiện lại rồi ẩn -->
+        <div class="pf-zoom-desc" id="pf-zoom-desc" aria-live="polite"></div>
+        <!-- Chân hình: chỉ hiện khi sản phẩm có lời nhắc → xem lại lời nhắc rồi quay lại hình -->
+        <button type="button" class="pf-zoom-note-btn" id="pf-zoom-note-btn" style="display:none;"><i class="fa-solid fa-bell"></i> Xem lại lời nhắc</button>
+    </div>
+
+    <!-- Modal XEM LẠI LỜI NHẮC (nút × đóng → trở lại hình công thức) -->
+    <div class="pf-nm-backdrop" id="pf-nm-backdrop" aria-hidden="true">
+        <div class="pf-nm-modal" role="dialog" aria-modal="true">
+            <button type="button" class="pf-nm-close" id="pf-nm-close" aria-label="Đóng">&times;</button>
+            <div class="pf-note-ico"><i class="fa-solid fa-bell"></i></div>
+            <div class="pf-note-title">Lời nhắc</div>
+            <div class="pf-note-prod" id="pf-nm-prod"></div>
+            <div class="pf-note-text pf-rich" id="pf-nm-text"></div>
+        </div>
     </div>
 
     <!-- Modal ĐỐI CHIẾU NGUYÊN VẬT LIỆU -->

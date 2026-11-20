@@ -1332,12 +1332,39 @@ a img {
 /* Lời nhắc đã lưu (admin thấy lại trong modal) */
 .pf-fx-remind { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #fff7e6; border: 1px solid #f6d89b; }
 .pf-fx-remind-h { font-size: 12px; font-weight: 700; color: #b36b00; margin-bottom: 4px; }
-.pf-fx-remind-t { font-size: 14px; color: #3d2a00; white-space: pre-wrap; word-break: break-word; }
+.pf-fx-remind-t { font-size: 14px; color: #3d2a00; word-break: break-word; }
+
+/* Nội dung lời nhắc có định dạng (in đậm / nghiêng / gạch chân / gạch đầu dòng / màu) — dùng ở mọi nơi hiển thị + vùng soạn */
+.pf-rich b { font-weight: 800; }
+.pf-rich i { font-style: italic; }
+.pf-rich u { text-decoration: underline; }
+.pf-rich ul, .pf-rich ol { margin: 4px 0; padding-left: 1.3em; text-align: left; }
+.pf-rich ul { list-style: disc; }
+.pf-rich li { margin: 2px 0; }
+.pf-rich div, .pf-rich p { margin: 0; }
 
 /* Ô nhập lời nhắc (admin) */
 .pf-fx-noteedit { flex: 1 0 100%; }
-.pf-fx-noteedit textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font: inherit; font-size: 14px; resize: vertical; min-height: 84px; }
-.pf-fx-noteedit textarea:focus { outline: none; border-color: #f0b44c; box-shadow: 0 0 0 3px rgba(240,180,76,.25); }
+/* Thanh công cụ + vùng soạn lời nhắc (contenteditable) */
+.pf-fx-rt-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px; border: 1px solid #ccc; border-bottom: none; border-radius: 8px 8px 0 0; background: #f7f7f7; }
+.pf-rt-btn { min-width: 36px; height: 34px; padding: 0 8px; border: 1px solid #d4d4d4; border-radius: 6px; background: #fff; color: #222; font-size: 15px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.pf-rt-btn.is-on { background: #fff1d6; border-color: #f0b44c; color: #b36b00; }
+.pf-rt-sep { width: 1px; height: 22px; background: #d4d4d4; margin: 0 4px; }
+.pf-rt-color { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #bbb; background: var(--c, #111); cursor: pointer; padding: 0; }
+.pf-rt-color.is-on { box-shadow: 0 0 0 2px #111; }
+.pf-fx-rt-area { width: 100%; box-sizing: border-box; min-height: 96px; max-height: 38vh; overflow: auto; padding: 10px 12px; border: 1px solid #ccc; border-radius: 0 0 8px 8px; background: #fff; font-size: 15px; line-height: 1.5; color: #111; word-break: break-word; }
+.pf-fx-rt-area:focus { outline: none; border-color: #f0b44c; box-shadow: 0 0 0 3px rgba(240,180,76,.25); }
+.pf-fx-rt-area:empty::before { content: attr(data-placeholder); color: #9a9a9a; pointer-events: none; }
+.pf-fx-notecount.is-over { color: #dc2626; font-weight: 700; }
+
+/* Mô tả công thức (admin): khối đã lưu + ô nhập chữ thuần */
+.pf-fx-desc { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #eef6fc; border: 1px solid #bcdcf2; }
+.pf-fx-desc-h { font-size: 12px; font-weight: 700; color: #1a6ea6; margin-bottom: 4px; }
+.pf-fx-desc-t { font-size: 14px; color: #12344d; white-space: pre-wrap; word-break: break-word; }
+.pf-fx-descbtn.is-on { background: #eef6fc; color: #1a6ea6; border-color: #7fb9de; }
+.pf-fx-descedit { flex: 1 0 100%; }
+.pf-fx-descedit textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font: inherit; font-size: 14px; resize: vertical; min-height: 70px; }
+.pf-fx-descedit textarea:focus { outline: none; border-color: #7fb9de; box-shadow: 0 0 0 3px rgba(26,133,204,.2); }
 .pf-fx-noteacts { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .pf-fx-notecount { margin-right: auto; font-size: 12px; color: #888; }
 .pf-fx-notesave { background: #16a34a; color: #fff; border-color: #16a34a; }
@@ -1367,10 +1394,40 @@ a img {
 .pf-note-ico { font-size: 30px; color: #e39a1b; line-height: 1; }
 .pf-note-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #b36b00; margin-top: 6px; }
 .pf-note-prod { font-size: 13px; color: #8a7a5a; margin-top: 2px; }
-.pf-note-text { margin-top: 14px; font-size: 20px; line-height: 1.5; font-weight: 600; color: #2b1d00; white-space: pre-wrap; word-break: break-word; text-align: left; }
+.pf-note-text { margin-top: 14px; font-size: 20px; line-height: 1.5; font-weight: 500; color: #2b1d00; word-break: break-word; text-align: left; }
 .pf-note-bar { height: 4px; border-radius: 2px; background: #f1e2c2; margin-top: 18px; overflow: hidden; }
 .pf-note-bar > span { display: block; height: 100%; width: 100%; background: #e39a1b; }
-.pf-note-hint { margin-top: 8px; font-size: 12px; color: #a08a5a; }
+/* Nút "Đã hiểu" ở chân lời nhắc: bỏ qua nhanh sang hình công thức */
+.pf-note-ok { display: block; width: 100%; margin-top: 14px; padding: 13px 16px; border: none; border-radius: 12px;
+    background: #16a34a; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+.pf-note-ok:active { background: #15803d; }
+
+/* Mô tả công thức ở CHÂN hình (NV): hiện một lúc → ẩn dần; chạm vào hình → hiện lại → ẩn. Không chặn thao tác (pointer-events:none). */
+.pf-zoom-desc { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: min(92vw, 520px); max-height: 30vh; overflow: auto;
+    box-sizing: border-box; z-index: 2; padding: 12px 16px; border-radius: 12px; background: rgba(0,0,0,.74); color: #fff; font-size: 15px; line-height: 1.45;
+    text-align: center; white-space: pre-wrap; word-break: break-word; opacity: 0; transform: translate(-50%, 8px); pointer-events: none;
+    transition: opacity .45s ease, transform .45s ease; }
+.pf-zoom-desc.is-show { opacity: 1; transform: translate(-50%, 0); }
+.pf-zoom-desc.is-fast { transition-duration: .14s; }   /* NV chạm để ẩn → mờ nhanh */
+.pf-zoom.has-nbtn .pf-zoom-desc { bottom: calc(18px + 56px + env(safe-area-inset-bottom, 0px)); }   /* nằm trên nút "Xem lại lời nhắc" khi có */
+
+/* Nút "Xem lại lời nhắc" ở chân hình công thức + modal xem lại (có nút ×) */
+.pf-zoom-note-btn { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 2;
+    display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border: none; border-radius: 999px;
+    background: #f5a623; color: #2b1d00; font-weight: 700; font-size: 15px; cursor: pointer; white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+.pf-zoom-note-btn:active { background: #e39a1b; }
+.pf-nm-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 6600; padding: 20px; }
+.pf-nm-backdrop.is-open { display: flex; }
+.pf-nm-modal { position: relative; width: 100%; max-width: 460px; max-height: 88vh; overflow: auto; background: #fffaf0; border-radius: 16px; padding: 22px 20px 20px; text-align: center; }
+.pf-nm-close { position: absolute; top: 8px; right: 10px; width: 38px; height: 38px; border: none; border-radius: 50%; background: rgba(0,0,0,.07); color: #555; font-size: 26px; line-height: 1; cursor: pointer; }
+.pf-nm-close:active { background: rgba(0,0,0,.15); }
+/* Mobile: modal "Xem lại lời nhắc" dán sát MÉP DƯỚI màn hình (bottom sheet), không canh giữa */
+@keyframes pfNmUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@media (max-width: 640px) {
+    .pf-nm-backdrop { align-items: flex-end; padding: 0; }
+    .pf-nm-modal { max-width: none; border-radius: 18px 18px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); animation: pfNmUp .22s ease-out; }
+}
 
 .pf-zoom { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: none; z-index: 6000; touch-action: none; overflow: hidden; }
 .pf-zoom.is-open { display: flex; align-items: center; justify-content: center; }

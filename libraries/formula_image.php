@@ -56,6 +56,17 @@ if (!function_exists('fmi_ensure_tables')) {
             updated_at  DATETIME NOT NULL,
             PRIMARY KEY (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        /* MÔ TẢ công thức (chữ thuần, admin nhập cạnh chỗ nạp hình): hiện ở CHÂN hình cho NV một lúc rồi ẩn.
+           Gắn với HÌNH → khoá (product_id, quantity) = sản lượng của chính hình đó (xem fmi_desc_key). */
+        db_query("CREATE TABLE IF NOT EXISTS product_formula_descs (
+            product_id  INT(11) NOT NULL,
+            quantity    INT(11) NOT NULL,
+            description TEXT NOT NULL,
+            updated_by  INT(11) NOT NULL DEFAULT 0,
+            updated_at  DATETIME NOT NULL,
+            PRIMARY KEY (product_id, quantity)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
     }
 
     function fmi_now() { return date('Y-m-d H:i:s'); }
@@ -198,43 +209,220 @@ if (!function_exists('fmi_ensure_tables')) {
 
     /* ============================================================
      *  LỜI NHẮC CÔNG THỨC (theo sản phẩm, lưu cho tới khi đổi/xoá)
+     *
+     *  Lời nhắc là HTML ĐỊNH DẠNG ĐƠN GIẢN do admin soạn: in đậm (b), nghiêng (i), gạch chân (u),
+     *  gạch đầu dòng (ul/li) và MÀU CHỮ (span style=color:#rrggbb). Mọi thứ khác bị lọc bỏ ở
+     *  fmi_note_sanitize_html() trước khi lưu VÀ trước khi trả ra → hiển thị bằng innerHTML là an toàn.
+     *  Ghi chú cũ lưu dạng chữ thường (không thẻ) vẫn đọc được: fmi_note_to_html() tự đổi sang HTML.
      * ============================================================ */
 
-    /** Độ dài tối đa của lời nhắc (ký tự). */
+    /** Độ dài tối đa của lời nhắc: số ký tự HIỂN THỊ (không tính thẻ định dạng). */
     function fmi_note_max() { return 500; }
 
-    /** Lời nhắc đã lưu của sản phẩm ('' nếu chưa có). */
+    /** Trần độ dài HTML sau khi lọc (chặn lạm dụng định dạng lồng nhau). */
+    function fmi_note_html_max() { return 6000; }
+
+    /** Chuẩn hoá màu về #rrggbb; chỉ nhận #rgb, #rrggbb, rgb()/rgba(). Sai → ''. */
+    function fmi_note_color($v)
+    {
+        $v = strtolower(trim((string) $v));
+        if (preg_match('/^#([0-9a-f])([0-9a-f])([0-9a-f])$/', $v, $m)) return '#' . $m[1] . $m[1] . $m[2] . $m[2] . $m[3] . $m[3];
+        if (preg_match('/^#[0-9a-f]{6}$/', $v)) return $v;
+        if (preg_match('/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*[\d.]+\s*)?\)$/', $v, $m)) {
+            return sprintf('#%02x%02x%02x', min(255, (int) $m[1]), min(255, (int) $m[2]), min(255, (int) $m[3]));
+        }
+        return '';
+    }
+
+    /** Làm sạch đệ quy các con của $parent theo danh sách thẻ cho phép. */
+    function fmi_note_clean_children(DOMNode $parent, DOMDocument $doc)
+    {
+        $drop  = ['script', 'style', 'iframe', 'object', 'embed', 'noscript', 'template', 'svg', 'math', 'link', 'meta',
+                  'title', 'head', 'form', 'input', 'button', 'textarea', 'select', 'img', 'video', 'audio', 'canvas'];
+        $keep  = ['b', 'i', 'u', 'ul', 'ol', 'li', 'br', 'div', 'p', 'span'];
+        $alias = ['strong' => 'b', 'em' => 'i'];
+
+        foreach (iterator_to_array($parent->childNodes) as $n) {
+            if ($n->nodeType === XML_TEXT_NODE) continue;
+            if ($n->nodeType !== XML_ELEMENT_NODE) { $parent->removeChild($n); continue; }   // comment, PI, ...
+            /** @var DOMElement $n */
+
+            $tag = strtolower($n->nodeName);
+            if (in_array($tag, $drop, true)) { $parent->removeChild($n); continue; }          // bỏ cả ruột
+
+            fmi_note_clean_children($n, $doc);                                                // sạch con trước
+
+            $color = '';
+            if ($tag === 'font') {
+                $color = fmi_note_color($n->getAttribute('color'));
+                $tag = 'span';
+            } elseif ($n->hasAttribute('style')
+                      && preg_match('/(?:^|;)\s*color\s*:\s*([^;]+)/i', $n->getAttribute('style'), $m)) {
+                // Trình duyệt có thể gắn color thẳng vào <u>/<b>/<i>/<li>... (không tạo <span>) → giữ màu ở BẤT KỲ thẻ cho phép.
+                $color = fmi_note_color($m[1]);
+            }
+            if (isset($alias[$tag])) $tag = $alias[$tag];
+
+            if (!in_array($tag, $keep, true) || ($tag === 'span' && $color === '')) {
+                // Thẻ không cho phép (hoặc span không màu): gỡ vỏ, giữ nội dung.
+                while ($n->firstChild) $parent->insertBefore($n->firstChild, $n);
+                $parent->removeChild($n);
+                continue;
+            }
+            // Dựng thẻ MỚI sạch mọi thuộc tính (chặn onclick/href/style lạ...).
+            $new = $doc->createElement($tag);
+            if ($color !== '') $new->setAttribute('style', 'color:' . $color);   // chỉ thuộc tính duy nhất được giữ
+            while ($n->firstChild) $new->appendChild($n->firstChild);
+            $parent->replaceChild($new, $n);
+        }
+    }
+
+    /**
+     * Lọc HTML lời nhắc → ['html' => đã lọc, 'text' => chữ thuần (trim)].
+     * Giữ: b i u ul ol li br div p + span màu. Còn lại gỡ vỏ/xoá. Bỏ xuống dòng/thẻ rỗng ở đầu-cuối.
+     */
+    function fmi_note_sanitize_html($html)
+    {
+        $html = str_replace(["\r\n", "\r"], "\n", (string) $html);
+        if (trim($html) === '') return ['html' => '', 'text' => ''];
+
+        if (!class_exists('DOMDocument')) {   // dự phòng: không có ext dom → hạ về chữ thuần
+            $t = trim(strip_tags($html));
+            return ['html' => nl2br(htmlspecialchars($t, ENT_QUOTES, 'UTF-8'), false), 'text' => $t];
+        }
+
+        $prev = libxml_use_internal_errors(true);
+        $doc  = new DOMDocument('1.0', 'UTF-8');
+        $ok   = $doc->loadHTML('<?xml encoding="UTF-8"><div id="fmi-root">' . $html . '</div>',
+                               LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        libxml_use_internal_errors($prev);
+        $root = $ok ? $doc->getElementsByTagName('div')->item(0) : null;
+        if (!$root) return ['html' => '', 'text' => ''];
+
+        fmi_note_clean_children($root, $doc);
+
+        $text = preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', (string) $root->textContent);
+        $out = '';
+        foreach ($root->childNodes as $c) $out .= $doc->saveHTML($c);
+        // Dọn xuống dòng thừa ở đầu/cuối (trình soạn hay để lại <br>, <div><br></div>).
+        $blank = '(?:\s|&nbsp;|<br\s*/?>|<div>(?:\s|&nbsp;|<br\s*/?>)*</div>|<p>(?:\s|&nbsp;|<br\s*/?>)*</p>)+';
+        $out = preg_replace('~^' . $blank . '~i', '', $out);
+        $out = preg_replace('~' . $blank . '$~i', '', $out);
+        return ['html' => $text === '' ? '' : $out, 'text' => $text];
+    }
+
+    /**
+     * Nội dung lời nhắc đã LƯU → HTML an toàn để hiển thị. Ghi chú cũ dạng chữ thuần (không có thẻ,
+     * không có thực thể &...;) được escape + đổi xuống dòng thành <br>; còn lại coi là HTML và lọc lại.
+     */
+    function fmi_note_to_html($stored)
+    {
+        $stored = trim((string) $stored);
+        if ($stored === '') return '';
+        if (!preg_match('/<|&(?:[a-z]+|#\d+|#x[0-9a-f]+);/i', $stored)) {
+            return nl2br(htmlspecialchars($stored, ENT_QUOTES, 'UTF-8'), false);
+        }
+        $r = fmi_note_sanitize_html($stored);
+        return $r['html'];
+    }
+
+    /** Lời nhắc đã lưu của sản phẩm — HTML an toàn ('' nếu chưa có). */
     function fmi_get_note($product_id)
     {
         fmi_ensure_tables();
         $pid = (int) $product_id;
         if ($pid <= 0) return '';
         $row = db_fetch_row("SELECT note FROM product_formula_notes WHERE product_id = $pid LIMIT 1");
-        return $row ? trim((string) $row['note']) : '';
+        return $row ? fmi_note_to_html($row['note']) : '';
     }
 
     /**
-     * Lưu lời nhắc. $note rỗng (sau trim) = XOÁ lời nhắc. Trả chuỗi đã lưu ('' nếu đã xoá) hoặc false nếu pid sai.
-     * Giữ nguyên xuống dòng; cắt ở fmi_note_max() ký tự.
+     * Lưu lời nhắc (HTML từ trình soạn). Lọc HTML; rỗng sau khi lọc = XOÁ lời nhắc.
+     * Trả ['ok'=>true,'note'=>html đã lưu ('' nếu đã xoá)] hoặc ['ok'=>false,'message'=>...].
+     * Quá fmi_note_max() ký tự hiển thị → từ chối (không tự cắt, tránh làm hỏng định dạng).
      */
     function fmi_set_note($product_id, $note, $by = 0)
     {
         fmi_ensure_tables();
         $pid = (int) $product_id;
-        if ($pid <= 0) return false;
-        $note = str_replace(["\r\n", "\r"], "\n", (string) $note);
-        $note = trim($note);
-        if (function_exists('mb_substr')) $note = mb_substr($note, 0, fmi_note_max(), 'UTF-8');
-        else $note = substr($note, 0, fmi_note_max());
+        if ($pid <= 0) return ['ok' => false, 'message' => 'Thiếu sản phẩm.'];
 
-        if ($note === '') {
+        $clean = fmi_note_sanitize_html($note);
+        if ($clean['html'] === '') {
             db_delete('product_formula_notes', "product_id = $pid");
-            return '';
+            return ['ok' => true, 'note' => ''];
+        }
+        $len = function_exists('mb_strlen') ? mb_strlen($clean['text'], 'UTF-8') : strlen($clean['text']);
+        if ($len > fmi_note_max()) {
+            return ['ok' => false, 'message' => 'Lời nhắc dài ' . $len . ' ký tự, tối đa ' . fmi_note_max() . '.'];
+        }
+        if (strlen($clean['html']) > fmi_note_html_max()) {
+            return ['ok' => false, 'message' => 'Định dạng lời nhắc quá phức tạp, hãy rút gọn.'];
         }
         db_query("INSERT INTO product_formula_notes (product_id, note, updated_by, updated_at)
-                  VALUES ($pid, '" . escape_string($note) . "', " . (int) $by . ", '" . fmi_now() . "')
+                  VALUES ($pid, '" . escape_string($clean['html']) . "', " . (int) $by . ", '" . fmi_now() . "')
                   ON DUPLICATE KEY UPDATE note = VALUES(note), updated_by = VALUES(updated_by), updated_at = VALUES(updated_at)");
-        return $note;
+        return ['ok' => true, 'note' => $clean['html']];
+    }
+
+    /* ============================================================
+     *  MÔ TẢ CÔNG THỨC (chữ thuần, gắn với HÌNH công thức)
+     * ============================================================ */
+
+    /** Độ dài tối đa của mô tả (ký tự). */
+    function fmi_desc_max() { return 300; }
+
+    /**
+     * Sản lượng dùng làm khoá mô tả cho (sản phẩm, sản lượng thẻ): nếu đã có hình phủ sản lượng này
+     * (đúng hoặc lân cận ±3%) → khoá theo sản lượng GỐC của hình đó, để mô tả đi theo hình;
+     * chưa có hình → khoá theo chính sản lượng thẻ (khi nạp hình đúng sản lượng này sẽ khớp).
+     */
+    function fmi_desc_key($product_id, $quantity)
+    {
+        $img = fmi_find_image($product_id, $quantity);
+        return $img ? (int) $img['source_quantity'] : (int) round((float) $quantity);
+    }
+
+    /** Mô tả của hình công thức đang hiển thị cho (sản phẩm, sản lượng thẻ) — chữ thuần, '' nếu chưa có. */
+    function fmi_get_desc($product_id, $quantity)
+    {
+        fmi_ensure_tables();
+        $pid = (int) $product_id;
+        if ($pid <= 0) return '';
+        $q = fmi_desc_key($pid, $quantity);
+        $row = db_fetch_row("SELECT description FROM product_formula_descs WHERE product_id = $pid AND quantity = $q LIMIT 1");
+        return $row ? trim((string) $row['description']) : '';
+    }
+
+    /**
+     * Lưu mô tả. Rỗng (sau trim) = XOÁ. Giữ xuống dòng. Quá fmi_desc_max() ký tự → từ chối.
+     * Trả ['ok'=>true,'description'=>chuỗi đã lưu ('' nếu xoá),'quantity'=>khoá] hoặc ['ok'=>false,'message'=>...].
+     */
+    function fmi_set_desc($product_id, $quantity, $text, $by = 0)
+    {
+        fmi_ensure_tables();
+        $pid = (int) $product_id;
+        if ($pid <= 0) return ['ok' => false, 'message' => 'Thiếu sản phẩm.'];
+        $q = fmi_desc_key($pid, $quantity);
+        if ($q <= 0) return ['ok' => false, 'message' => 'Chưa có sản lượng để gắn mô tả.'];
+
+        $text = str_replace(["\r\n", "\r"], "\n", (string) $text);
+        // Byte UTF-8 sai (client lỗi/độc) → thay bằng '?' để json_encode phản hồi không bị hỏng.
+        if (function_exists('mb_convert_encoding')) $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+        $text = trim($text);
+        if ($text === '') {
+            db_delete('product_formula_descs', "product_id = $pid AND quantity = $q");
+            return ['ok' => true, 'description' => '', 'quantity' => $q];
+        }
+        $len = function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
+        if ($len > fmi_desc_max()) {
+            return ['ok' => false, 'message' => 'Mô tả dài ' . $len . ' ký tự, tối đa ' . fmi_desc_max() . '.'];
+        }
+        db_query("INSERT INTO product_formula_descs (product_id, quantity, description, updated_by, updated_at)
+                  VALUES ($pid, $q, '" . escape_string($text) . "', " . (int) $by . ", '" . fmi_now() . "')
+                  ON DUPLICATE KEY UPDATE description = VALUES(description), updated_by = VALUES(updated_by), updated_at = VALUES(updated_at)");
+        return ['ok' => true, 'description' => $text, 'quantity' => $q];
     }
 
     /* ============================================================

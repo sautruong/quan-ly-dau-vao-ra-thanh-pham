@@ -1082,7 +1082,18 @@
         var fxNoteSave = document.getElementById('pf-fx-notesave');
         var fxNoteDel = document.getElementById('pf-fx-notedel');
         var fxNoteCancel = document.getElementById('pf-fx-notecancel');
-        var curPid = 0, curQty = 0, curApproved = false, curNote = '';
+        // Mô tả công thức (admin): khối hiển thị + nút + ô nhập (chữ thuần).
+        var fxDesc = document.getElementById('pf-fx-desc');
+        var fxDescT = document.getElementById('pf-fx-desc-t');
+        var fxDescBtn = document.getElementById('pf-fx-descbtn');
+        var fxDescBtnT = document.getElementById('pf-fx-descbtn-t');
+        var fxDescEdit = document.getElementById('pf-fx-descedit');
+        var fxDescText = document.getElementById('pf-fx-desctext');
+        var fxDescCount = document.getElementById('pf-fx-desccount');
+        var fxDescSave = document.getElementById('pf-fx-descsave');
+        var fxDescDel = document.getElementById('pf-fx-descdel');
+        var fxDescCancel = document.getElementById('pf-fx-desccancel');
+        var curPid = 0, curQty = 0, curApproved = false, curNote = '', curDesc = '';
         // Nhắc duyệt sau "XUẤT KH": danh sách SP chưa duyệt (rmItems) + tập đã duyệt trong phiên này (rmDone).
         var rmItems = [], rmDone = {}, rmActive = false;
 
@@ -1111,26 +1122,96 @@
             } else if (fxAdmin) { fxAdmin.style.display = 'none'; }
             curNote = String(res.note || '');
             renderNote();
+            curDesc = String(res.description || '');
+            renderDesc();
         }
 
         /* ---- Lời nhắc (admin nhập; NV thấy trước hình) ---- */
         function renderNote() {
             var has = curNote !== '';
             if (fxRemind) fxRemind.style.display = has ? '' : 'none';
-            if (fxRemindT) fxRemindT.textContent = curNote;
+            if (fxRemindT) fxRemindT.innerHTML = curNote;   // HTML đã được server lọc (b/i/u/ul/li/màu)
             if (fxNoteBtnT) fxNoteBtnT.textContent = has ? 'Sửa lời nhắc' : 'Nhập lời nhắc';
             if (fxNoteBtn) fxNoteBtn.classList.toggle('is-on', has);
             closeNoteEdit();
         }
+
+        /* ---- Trình soạn lời nhắc: B / I / U / gạch đầu dòng / màu chữ cơ bản (contenteditable + execCommand) ---- */
+        var fxRtBar = document.getElementById('pf-fx-rt-bar');
+        var NOTE_MAX = 500;   // ký tự hiển thị (khớp fmi_note_max() phía server)
+        function rtText() { return (fxNoteText ? fxNoteText.textContent : '').replace(/^[\s ]+|[\s ]+$/g, ''); }
+        function rtHtml() { return (fxNoteText && rtText()) ? fxNoteText.innerHTML : ''; }   // rỗng chữ = rỗng (→ xoá lời nhắc)
         function updNoteCount() {
-            if (fxNoteCount && fxNoteText) fxNoteCount.textContent = fxNoteText.value.length + '/' + (fxNoteText.maxLength > 0 ? fxNoteText.maxLength : 500);
+            var n = rtText().length;
+            if (fxNoteCount) { fxNoteCount.textContent = n + '/' + NOTE_MAX; fxNoteCount.classList.toggle('is-over', n > NOTE_MAX); }
+            if (fxNoteSave) fxNoteSave.disabled = n > NOTE_MAX;
         }
+        function rgbToHex(s) {
+            var m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(String(s || ''));
+            if (!m) return /^#[0-9a-f]{6}$/i.test(s) ? String(s).toLowerCase() : '';
+            return '#' + [m[1], m[2], m[3]].map(function (v) { return ('0' + Math.min(255, parseInt(v, 10)).toString(16)).slice(-2); }).join('');
+        }
+        function rtSync() {   // sáng nút B/I/U/danh sách + chấm màu theo vị trí con trỏ
+            if (!fxRtBar || !fxNoteText) return;
+            var sel = window.getSelection();
+            if (!sel || !sel.anchorNode || !fxNoteText.contains(sel.anchorNode)) return;
+            ['bold', 'italic', 'underline', 'insertUnorderedList'].forEach(function (c) {
+                var b = fxRtBar.querySelector('[data-cmd="' + c + '"]'), on = false;
+                try { on = document.queryCommandState(c); } catch (x) {}
+                if (b) b.classList.toggle('is-on', !!on);
+            });
+            var hex = '';
+            try { hex = rgbToHex(document.queryCommandValue('foreColor')); } catch (x) {}
+            fxRtBar.querySelectorAll('.pf-rt-color').forEach(function (s) { s.classList.toggle('is-on', !!hex && s.getAttribute('data-color') === hex); });
+        }
+        function rtExec(cmd, val) {
+            if (!fxNoteText) return;
+            fxNoteText.focus();
+            // Chỉ màu dùng CSS (<span style=color>); B/I/U để mặc định ra <b>/<i>/<u> cho server lọc giữ lại.
+            try { document.execCommand('styleWithCSS', false, cmd === 'foreColor'); } catch (x) {}
+            try { document.execCommand(cmd, false, val || null); } catch (x) {}
+            try { document.execCommand('styleWithCSS', false, false); } catch (x) {}
+            updNoteCount(); rtSync();
+        }
+        if (fxRtBar) {
+            // mousedown KHÔNG được cướp focus/vùng chọn của ô soạn thì định dạng mới áp đúng đoạn đang bôi.
+            fxRtBar.addEventListener('mousedown', function (e) { if (e.target.closest('.pf-rt-btn, .pf-rt-color')) e.preventDefault(); });
+            fxRtBar.addEventListener('click', function (e) {
+                var b = e.target.closest('.pf-rt-btn');
+                if (b) { rtExec(b.getAttribute('data-cmd')); return; }
+                var c = e.target.closest('.pf-rt-color');
+                if (c) rtExec('foreColor', c.getAttribute('data-color'));
+            });
+        }
+        if (fxNoteText) {
+            fxNoteText.addEventListener('input', function () {
+                // Xoá sạch chữ thì dọn luôn thẻ còn sót (<br>…) để placeholder hiện lại; giữ nếu đang có gạch đầu dòng.
+                if (!fxNoteText.textContent && !fxNoteText.querySelector('li')) fxNoteText.innerHTML = '';
+                updNoteCount();
+            });
+            // Dán = chỉ lấy CHỮ THUẦN (tránh kéo theo định dạng/rác từ Word, web…); định dạng do thanh công cụ quyết định.
+            fxNoteText.addEventListener('paste', function (e) {
+                e.preventDefault();
+                var t = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+                try { document.execCommand('insertText', false, t); } catch (x) {}
+            });
+            fxNoteText.addEventListener('drop', function (e) { e.preventDefault(); });
+            fxNoteText.addEventListener('keyup', rtSync);
+            fxNoteText.addEventListener('mouseup', rtSync);
+        }
+        document.addEventListener('selectionchange', rtSync);
+
         function openNoteEdit() {
             if (!fxNoteEdit || !fxNoteText) return;
-            fxNoteText.value = curNote; updNoteCount();
+            fxNoteText.innerHTML = curNote; updNoteCount();
             if (fxNoteDel) fxNoteDel.style.display = curNote ? '' : 'none';
             fxNoteEdit.style.display = '';
             fxNoteText.focus();
+            try {   // đặt con trỏ ở cuối nội dung
+                var r = document.createRange(); r.selectNodeContents(fxNoteText); r.collapse(false);
+                var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+            } catch (x) {}
+            rtSync();
         }
         function closeNoteEdit() { if (fxNoteEdit) fxNoteEdit.style.display = 'none'; }
         function saveNote(text) {
@@ -1143,16 +1224,60 @@
                     toast(res.note ? 'Đã lưu lời nhắc.' : 'Đã xóa lời nhắc.');
                 } else toast((res && res.message) || 'Lưu lời nhắc thất bại.');
             }).catch(function () { toast('Lỗi mạng khi lưu lời nhắc.'); })
-              .then(function () { [fxNoteSave, fxNoteDel, fxNoteCancel].forEach(function (b) { if (b) b.disabled = false; }); });
+              .then(function () { [fxNoteSave, fxNoteDel, fxNoteCancel].forEach(function (b) { if (b) b.disabled = false; }); updNoteCount(); });
         }
         if (fxNoteBtn) fxNoteBtn.addEventListener('click', function () {
             if (fxNoteEdit && fxNoteEdit.style.display !== 'none') closeNoteEdit(); else openNoteEdit();
         });
-        if (fxNoteText) fxNoteText.addEventListener('input', updNoteCount);
         if (fxNoteCancel) fxNoteCancel.addEventListener('click', closeNoteEdit);
-        if (fxNoteSave) fxNoteSave.addEventListener('click', function () { saveNote(fxNoteText ? fxNoteText.value : ''); });
+        if (fxNoteSave) fxNoteSave.addEventListener('click', function () { saveNote(rtHtml()); });
         if (fxNoteDel) fxNoteDel.addEventListener('click', function () {
             if (confirm('Xóa lời nhắc của công thức này?')) saveNote('');
+        });
+
+        /* ---- Mô tả công thức (admin nhập; NV thấy ở chân hình một lúc rồi ẩn) ---- */
+        var DESC_MAX = 300;   // khớp fmi_desc_max() phía server
+        function renderDesc() {
+            var has = curDesc !== '';
+            if (fxDesc) fxDesc.style.display = has ? '' : 'none';
+            if (fxDescT) fxDescT.textContent = curDesc;
+            if (fxDescBtnT) fxDescBtnT.textContent = has ? 'Sửa mô tả' : 'Nhập mô tả';
+            if (fxDescBtn) fxDescBtn.classList.toggle('is-on', has);
+            closeDescEdit();
+        }
+        function updDescCount() {
+            var n = fxDescText ? fxDescText.value.trim().length : 0;
+            if (fxDescCount) { fxDescCount.textContent = n + '/' + DESC_MAX; fxDescCount.classList.toggle('is-over', n > DESC_MAX); }
+            if (fxDescSave) fxDescSave.disabled = n > DESC_MAX;
+        }
+        function openDescEdit() {
+            if (!fxDescEdit || !fxDescText) return;
+            fxDescText.value = curDesc; updDescCount();
+            if (fxDescDel) fxDescDel.style.display = curDesc ? '' : 'none';
+            fxDescEdit.style.display = '';
+            fxDescText.focus();
+        }
+        function closeDescEdit() { if (fxDescEdit) fxDescEdit.style.display = 'none'; }
+        function saveDesc(text) {
+            if (!curPid) return;
+            var pid = curPid;
+            [fxDescSave, fxDescDel, fxDescCancel].forEach(function (b) { if (b) b.disabled = true; });
+            postForm('formula_desc_save', { product_id: pid, quantity: curQty, description: text }).then(function (res) {
+                if (res && res.ok) {
+                    if (pid === curPid) { curDesc = String(res.description || ''); renderDesc(); }
+                    toast(res.description ? 'Đã lưu mô tả.' : 'Đã xóa mô tả.');
+                } else toast((res && res.message) || 'Lưu mô tả thất bại.');
+            }).catch(function () { toast('Lỗi mạng khi lưu mô tả.'); })
+              .then(function () { [fxDescSave, fxDescDel, fxDescCancel].forEach(function (b) { if (b) b.disabled = false; }); updDescCount(); });
+        }
+        if (fxDescBtn) fxDescBtn.addEventListener('click', function () {
+            if (fxDescEdit && fxDescEdit.style.display !== 'none') closeDescEdit(); else openDescEdit();
+        });
+        if (fxDescText) fxDescText.addEventListener('input', updDescCount);
+        if (fxDescCancel) fxDescCancel.addEventListener('click', closeDescEdit);
+        if (fxDescSave) fxDescSave.addEventListener('click', function () { saveDesc(fxDescText ? fxDescText.value : ''); });
+        if (fxDescDel) fxDescDel.addEventListener('click', function () {
+            if (confirm('Xóa mô tả của công thức này?')) saveDesc('');
         });
         function openFx(pid) {
             curPid = pid; curQty = cardQty(pid);
@@ -1167,7 +1292,7 @@
         }
         function closeFx() {
             if (fxBackdrop) fxBackdrop.classList.remove('is-open');
-            closeNoteEdit();
+            closeNoteEdit(); closeDescEdit();
             // Đang trong lượt "nhắc duyệt công thức" → quay lại danh sách (SP đã duyệt được gạch khỏi danh sách).
             if (rmActive) showReminder();
         }
@@ -1178,20 +1303,27 @@
         var noteProd = document.getElementById('pf-note-prod');
         var noteText = document.getElementById('pf-note-text');
         var noteBar = document.getElementById('pf-note-barfill');
+        var noteOk = document.getElementById('pf-note-ok');   // nút "Đã hiểu": bỏ qua nhanh sang hình
         var noteTimer = 0, noteBusy = false;
-        var NOTE_FADE_OUT = 900;       // ms: thời gian ẩn dần
+        var NOTE_FADE_OUT = 900;       // ms: thời gian ẩn dần (hết giờ tự ẩn)
+        var NOTE_FADE_FAST = 180;      // ms: mờ nhanh khi NV chủ động bỏ qua (Đã hiểu / chạm)
         var NOTE_SKIP_AFTER = 1000;    // ms: chạm sớm hơn mốc này bị bỏ qua (tránh bấm lỡ tay là mất lời nhắc)
 
-        function noteHoldMs(text) {    // thời gian đọc: ~2,5s + 60ms/ký tự, kẹp 3,5s…12s
-            return Math.min(12000, Math.max(3500, 2500 + String(text).length * 60));
+        function noteHoldMs(len) {     // thời gian đọc: ~2,5s + 60ms/ký tự (chữ hiển thị), kẹp 3,5s…12s
+            return Math.min(12000, Math.max(3500, 2500 + (parseInt(len, 10) || 0) * 60));
+        }
+        function noteTextLen(html) {   // số chữ hiển thị của lời nhắc (HTML đã được server lọc)
+            var d = document.createElement('div'); d.innerHTML = html;
+            return (d.textContent || '').length;
         }
         function showNoteThen(note, prodName, next) {
             if (!noteOv || !noteCard || !note || noteBusy) { if (!noteBusy) next(); return; }
             noteBusy = true;
-            var hold = noteHoldMs(note), openedAt = Date.now(), finished = false;
+            var hold = noteHoldMs(noteTextLen(note)), openedAt = Date.now(), finished = false;
             if (noteProd) noteProd.textContent = prodName || '';
-            if (noteText) noteText.textContent = note;
+            if (noteText) noteText.innerHTML = note;   // HTML đã được server lọc
             noteCard.className = 'pf-note-card';
+            noteCard.style.transition = '';
             if (noteBar) { noteBar.style.transition = 'none'; noteBar.style.width = '100%'; }
             noteOv.classList.add('is-open');
             noteOv.setAttribute('aria-hidden', 'false');
@@ -1202,20 +1334,26 @@
                     if (noteBar) { noteBar.style.transition = 'width ' + hold + 'ms linear'; noteBar.style.width = '0%'; }
                 });
             });
-            function finish() {
+            function finish(fast) {
                 if (finished) return; finished = true;
                 clearTimeout(noteTimer);
                 noteOv.removeEventListener('click', onTap);
+                if (noteOk) noteOk.removeEventListener('click', onOk);
+                var fade = fast === true ? NOTE_FADE_FAST : NOTE_FADE_OUT;
+                if (fast === true) noteCard.style.transition = 'opacity ' + NOTE_FADE_FAST + 'ms ease';
                 noteCard.classList.remove('is-in'); noteCard.classList.add('is-out');   // ẩn dần
                 noteTimer = setTimeout(function () {
                     noteOv.classList.remove('is-open');
                     noteOv.setAttribute('aria-hidden', 'true');
                     noteBusy = false;
                     next();                                                              // rồi mới tới hình công thức
-                }, NOTE_FADE_OUT);
+                }, fade);
             }
-            function onTap() { if (Date.now() - openedAt >= NOTE_SKIP_AFTER) finish(); }
+            // Chạm nền: bỏ qua nhưng chỉ sau NOTE_SKIP_AFTER (chống lỡ tay). Nút "Đã hiểu": chủ động → bỏ qua ngay.
+            function onTap() { if (Date.now() - openedAt >= NOTE_SKIP_AFTER) finish(true); }
+            function onOk(e) { e.stopPropagation(); finish(true); }
             noteOv.addEventListener('click', onTap);
+            if (noteOk) noteOk.addEventListener('click', onOk);
             noteTimer = setTimeout(finish, hold);
         }
 
@@ -1231,7 +1369,8 @@
                     .then(function (r) { return r.json(); }).then(function (res) {
                         if (!res || !res.ok || !res.allowed) { toast('Chưa có hình công thức cho sản lượng này.'); return; }
                         var show = function () {
-                            if (res.has_image) openZoom(res.image_url);
+                            // Truyền kèm lời nhắc (nút "Xem lại lời nhắc") + mô tả (chữ ở chân hình rồi ẩn).
+                            if (res.has_image) openZoom(res.image_url, String(res.note || ''), nameOf(pid), String(res.description || ''));
                             else toast('Chưa có hình công thức cho sản lượng này.');
                         };
                         // Có lời nhắc → hiện lời nhắc trước (mỗi lần xem đều hiện), hết thì mới tới hình.
@@ -1240,8 +1379,9 @@
             }
         });
         if (fxClose) fxClose.addEventListener('click', closeFx);
-        if (fxBackdrop) fxBackdrop.addEventListener('click', function (e) { if (e.target === fxBackdrop) closeFx(); });
-        if (fxImg) fxImg.addEventListener('click', function () { if (fxImg.src) openZoom(fxImg.src); });
+        // Modal thiết lập công thức (admin): CHỈ đóng khi bấm đúng nút × (hoặc Hủy ở ô lời nhắc) — bấm ra nền ngoài KHÔNG đóng,
+        // để không mất lời nhắc đang soạn dở / thao tác dở do lỡ chạm.
+        if (fxImg) fxImg.addEventListener('click', function () { if (fxImg.src) openZoom(fxImg.src, curNote, nameOf(curPid), curDesc); });
 
         if (fxUpload && fxFile) {
             fxUpload.addEventListener('click', function () { fxFile.click(); });
@@ -1257,6 +1397,12 @@
                         if (res && res.ok) {
                             fxImg.src = res.image_url + '?t=' + Date.now(); fxImg.style.display = ''; fxEmpty.style.display = 'none';
                             if (fxNote) fxNote.textContent = ''; toast('Đã lưu ảnh công thức.');
+                            // Mô tả đi theo HÌNH: hình mới đúng sản lượng có thể khác hình lân cận trước đó → nạp lại mô tả đúng.
+                            var upPid = curPid;
+                            fetch(ACTF + 'formula_image_get&product_id=' + upPid + '&quantity=' + curQty, { credentials: 'same-origin' })
+                                .then(function (r) { return r.json(); }).then(function (g) {
+                                    if (g && g.ok && upPid === curPid) { curDesc = String(g.description || ''); renderDesc(); }
+                                }).catch(function () {});
                         } else toast((res && res.message) || 'Lưu ảnh thất bại.');
                     }).catch(function () { toast('Lỗi mạng khi tải ảnh.'); });
             });
@@ -1320,19 +1466,75 @@
         var zs = { scale: 1, tx: 0, ty: 0 }, ptrs = {}, startDist = 0, startScale = 1, panStart = null;
 
         function applyZoom() { if (zoomImg) zoomImg.style.transform = 'translate(' + zs.tx + 'px,' + zs.ty + 'px) scale(' + zs.scale + ')'; }
-        function openZoom(url) {
-            if (!zoom || !zoomImg) return;
-            zoomImg.src = url; zs = { scale: 1, tx: 0, ty: 0 }; applyZoom(); zoom.classList.add('is-open');
+        /* Nút "Xem lại lời nhắc" ở chân hình → modal có nút × (đóng thì trở lại hình công thức). */
+        var zoomNoteBtn = document.getElementById('pf-zoom-note-btn');
+        var nmBackdrop = document.getElementById('pf-nm-backdrop');
+        var nmClose = document.getElementById('pf-nm-close');
+        var nmProd = document.getElementById('pf-nm-prod');
+        var nmText = document.getElementById('pf-nm-text');
+        var zoomNote = '', zoomNoteProd = '';
+
+        function openNoteModal() {
+            if (!nmBackdrop || !zoomNote) return;
+            if (nmProd) nmProd.textContent = zoomNoteProd;
+            if (nmText) nmText.innerHTML = zoomNote;   // HTML đã được server lọc
+            nmBackdrop.classList.add('is-open'); nmBackdrop.setAttribute('aria-hidden', 'false');
         }
-        function closeZoom() { if (zoom) zoom.classList.remove('is-open'); }
+        function closeNoteModal() {
+            if (nmBackdrop) { nmBackdrop.classList.remove('is-open'); nmBackdrop.setAttribute('aria-hidden', 'true'); }
+        }
+        if (zoomNoteBtn) zoomNoteBtn.addEventListener('click', function (e) { e.stopPropagation(); openNoteModal(); });
+        if (nmClose) nmClose.addEventListener('click', closeNoteModal);
+        if (nmBackdrop) nmBackdrop.addEventListener('click', function (e) { if (e.target === nmBackdrop) closeNoteModal(); });
+
+        /* Mô tả công thức ở CHÂN hình: hiện một lúc rồi ẩn dần; chạm (click) vào hình → hiện lại rồi lại ẩn sau một lúc. */
+        var zoomDescEl = document.getElementById('pf-zoom-desc');
+        var zoomDesc = '', descTimer = 0, zMoved = false, zStart = null;
+        var DESC_SHOW_MS = 5000;     // mô tả hiện đúng 5 giây rồi tự ẩn (cố định, không phụ thuộc độ dài)
+        // fast=true: NV chủ động chạm để ẩn → mờ nhanh (is-fast); hết giờ tự ẩn thì mờ êm như cũ.
+        function hideZoomDesc(fast) {
+            clearTimeout(descTimer);
+            if (!zoomDescEl) return;
+            zoomDescEl.classList.toggle('is-fast', fast === true);
+            zoomDescEl.classList.remove('is-show');
+        }
+        function showZoomDesc() {
+            if (!zoomDescEl || !zoomDesc) return;
+            clearTimeout(descTimer);
+            zoomDescEl.classList.remove('is-fast');
+            zoomDescEl.classList.add('is-show');
+            descTimer = setTimeout(hideZoomDesc, DESC_SHOW_MS);   // hết 5s → tự ẩn (đối số = undefined → mờ êm)
+        }
+
+        function openZoom(url, note, prodName, desc) {
+            if (!zoom || !zoomImg) return;
+            zoomNote = String(note || ''); zoomNoteProd = prodName || '';
+            if (zoomNoteBtn) zoomNoteBtn.style.display = zoomNote ? '' : 'none';   // không có lời nhắc → không có nút
+            zoom.classList.toggle('has-nbtn', !!zoomNote);                          // mô tả nằm trên nút này khi có
+            closeNoteModal();
+            hideZoomDesc();
+            zoomDesc = String(desc || '');
+            if (zoomDescEl) zoomDescEl.textContent = zoomDesc;                      // chữ thuần → textContent
+            zoomImg.src = url; zs = { scale: 1, tx: 0, ty: 0 }; applyZoom(); zoom.classList.add('is-open');
+            if (zoomDesc) requestAnimationFrame(function () { requestAnimationFrame(showZoomDesc); });   // chờ 1 nhịp để hiệu ứng hiện mượt
+        }
+        function closeZoom() { closeNoteModal(); hideZoomDesc(); if (zoom) zoom.classList.remove('is-open'); }
         if (zoomClose) zoomClose.addEventListener('click', closeZoom);
-        if (zoom) zoom.addEventListener('click', function (e) { if (e.target === zoom) closeZoom(); });
+        if (zoom) zoom.addEventListener('click', function (e) {
+            if (e.target === zoom) { closeZoom(); return; }
+            // Chạm vào hình (không phải sau khi kéo/zoom): mô tả đang hiện → ẨN NGAY (không đợi hết giờ); đang ẩn → hiện lại.
+            if (e.target === zoomImg && !zMoved && zoomDesc) {
+                if (zoomDescEl && zoomDescEl.classList.contains('is-show')) hideZoomDesc(true); else showZoomDesc();
+            }
+        });
 
         if (zoomImg) {
             zoomImg.addEventListener('pointerdown', function (e) {
                 try { zoomImg.setPointerCapture(e.pointerId); } catch (x) {}
                 ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
                 var ids = Object.keys(ptrs);
+                if (ids.length === 1) { zMoved = false; zStart = { x: e.clientX, y: e.clientY }; }
+                else zMoved = true;   // 2 ngón = đang zoom, không tính là "chạm"
                 if (ids.length === 2) {
                     var a = ptrs[ids[0]], b = ptrs[ids[1]];
                     startDist = Math.hypot(a.x - b.x, a.y - b.y) || 1; startScale = zs.scale;
@@ -1341,6 +1543,7 @@
             zoomImg.addEventListener('pointermove', function (e) {
                 if (!ptrs[e.pointerId]) return;
                 ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+                if (zStart && Math.hypot(e.clientX - zStart.x, e.clientY - zStart.y) > 8) zMoved = true;   // kéo > 8px = đang kéo hình
                 var ids = Object.keys(ptrs);
                 if (ids.length === 2) {
                     var a = ptrs[ids[0]], b = ptrs[ids[1]];

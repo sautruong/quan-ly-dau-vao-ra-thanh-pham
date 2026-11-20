@@ -980,8 +980,30 @@ function formula_image_getAction()
         'image_url'       => $img ? $img['image_file'] : '',
         'source_quantity' => $img ? $img['source_quantity'] : 0,
         'exact'           => $img ? (bool) $img['exact'] : false,
-        'note'            => fmi_get_note($pid),   // lời nhắc: NV thấy TRƯỚC khi xem hình
+        'note'            => fmi_get_note($pid),   // lời nhắc (HTML đã lọc): NV thấy TRƯỚC khi xem hình
+        'description'     => fmi_get_desc($pid, $qty),   // mô tả (chữ thuần): hiện ở CHÂN hình rồi ẩn
     ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/** JSON: admin lưu / xoá MÔ TẢ của hình công thức (POST product_id, quantity = sản lượng thẻ, description; rỗng = xoá). */
+function formula_desc_saveAction()
+{
+    header('Content-Type: application/json; charset=utf-8');
+    permission_require_admin(true);
+    fmi_boot();
+    $user = permission_current_user();
+    $res  = fmi_set_desc(
+        (int) ($_POST['product_id'] ?? 0),
+        (int) ($_POST['quantity'] ?? 0),
+        (string) ($_POST['description'] ?? ''),
+        $user ? (int) $user['id'] : 0
+    );
+    if (empty($res['ok'])) {
+        echo json_encode(['ok' => false, 'message' => $res['message'] ?? 'Lưu mô tả thất bại.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    echo json_encode(['ok' => true, 'description' => $res['description']], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -993,12 +1015,13 @@ function formula_note_saveAction()
     fmi_boot();
     $user  = permission_current_user();
     $pid   = (int) ($_POST['product_id'] ?? 0);
-    $saved = fmi_set_note($pid, (string) ($_POST['note'] ?? ''), $user ? (int) $user['id'] : 0);
-    if ($saved === false) {
-        echo json_encode(['ok' => false, 'message' => 'Thiếu sản phẩm.'], JSON_UNESCAPED_UNICODE);
+    // Lời nhắc là HTML định dạng đơn giản (b/i/u/ul/li/màu) — fmi_set_note lọc rồi mới lưu, trả HTML đã lọc.
+    $res = fmi_set_note($pid, (string) ($_POST['note'] ?? ''), $user ? (int) $user['id'] : 0);
+    if (empty($res['ok'])) {
+        echo json_encode(['ok' => false, 'message' => $res['message'] ?? 'Lưu lời nhắc thất bại.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    echo json_encode(['ok' => true, 'note' => $saved], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => true, 'note' => $res['note']], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
